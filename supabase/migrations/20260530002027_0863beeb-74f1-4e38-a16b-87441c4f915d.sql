@@ -1,0 +1,13 @@
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'public_function_cv';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'medical_exam';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'contraloria';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'procuraduria';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'criminal_record';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'corrective_measures';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'health_affiliation';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'pension_affiliation';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'arl_affiliation';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'redam';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'disqualifications';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'assets_declaration';
+ALTER TYPE public.doc_type ADD VALUE IF NOT EXISTS 'bank_account';

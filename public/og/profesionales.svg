@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Humanix Profesionales">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A192F"/>
+      <stop offset="55%" stop-color="#122E54"/>
+      <stop offset="100%" stop-color="#214A82"/>
+    </linearGradient>
+    <linearGradient id="copper" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FFB86B"/>
+      <stop offset="100%" stop-color="#FF7A4C"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.2" cy="0.15" r="0.6">
+      <stop offset="0%" stop-color="#00E5A8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00E5A8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g font-family="Inter, 'Space Grotesk', system-ui, sans-serif" fill="#FFFFFF">
+    <text x="80" y="140" font-size="28" font-weight="600" fill="url(#copper)" letter-spacing="6">HUMANIX · PROFESIONALES</text>
+    <text x="80" y="240" font-size="86" font-weight="700">Trabaja con</text>
+    <text x="80" y="340" font-size="86" font-weight="700">respaldo y</text>
+    <text x="80" y="440" font-size="86" font-weight="700" fill="url(#copper)">pagos al instante.</text>
+    <text x="80" y="530" font-size="28" font-weight="500" opacity="0.85">RETHUS · Trust Score · Nequi · Turnos por hora, jornada o mes</text>
+  </g>
+  <g transform="translate(980,430)">
+    <circle r="110" fill="url(#copper)" opacity="0.18"/>
+    <circle r="70" fill="url(#copper)" opacity="0.28"/>
+    <circle r="38" fill="url(#copper)"/>
+    <path d="M0 -18 v36 M-18 0 h36" stroke="#0A192F" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

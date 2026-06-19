@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS pro_select_authenticated ON public.professional_profiles;

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Humanix Tecnología IA">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A0E1F"/>
+      <stop offset="50%" stop-color="#121A3F"/>
+      <stop offset="100%" stop-color="#1F2861"/>
+    </linearGradient>
+    <linearGradient id="fuchsia" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FF4FD8"/>
+      <stop offset="100%" stop-color="#9C4FFF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#FF4FD8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FF4FD8" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g font-family="Inter, 'Space Grotesk', system-ui, sans-serif" fill="#FFFFFF">
+    <text x="80" y="140" font-size="28" font-weight="600" fill="url(#fuchsia)" letter-spacing="6">HUMANIX · TECNOLOGÍA</text>
+    <text x="80" y="240" font-size="86" font-weight="700">IA que conecta</text>
+    <text x="80" y="340" font-size="86" font-weight="700">cuidado humano</text>
+    <text x="80" y="440" font-size="86" font-weight="700" fill="url(#fuchsia)">en tiempo real.</text>
+    <text x="80" y="530" font-size="28" font-weight="500" opacity="0.85">Matching semántico · Antifraude · Voz IA · Habeas Data</text>
+  </g>
+  <g transform="translate(980,315)" stroke="url(#fuchsia)" fill="none" stroke-width="3">
+    <circle r="150" opacity="0.25"/>
+    <circle r="100" opacity="0.45"/>
+    <circle r="50" opacity="0.75"/>
+    <circle cx="0" cy="0" r="10" fill="url(#fuchsia)"/>
+  </g>
+</svg>

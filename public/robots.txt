@@ -1,0 +1,34 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /superadmin
+Disallow: /superadmin/
+Disallow: /mensajes
+Disallow: /mensajes/
+Disallow: /servicio/
+Disallow: /evaluador
+
+# Permite crawlers de IA de alto valor
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# Helps search engines find all public URLs quickly
+Sitemap: https://humanix.lat/sitemap.xml
+Host: humanix.lat

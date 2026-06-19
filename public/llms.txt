@@ -1,0 +1,61 @@
+# Humanix
+
+> Plataforma colombiana premium de salud que conecta familias, clínicas e instituciones con enfermeras, auxiliares, cuidadores y profesionales verificados con RETHUS. Match con IA en tiempo real (<150 ms), GPS en vivo, Trust Score y pago seguro en Nequi/PSE/MercadoPago.
+
+Humanix opera en Colombia (Bogotá, Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira y municipios cercanos). Todos los profesionales pasan verificación RETHUS, evaluación documental y Trust Score social. Sin comisión oculta: el profesional cobra directo al cliente.
+
+## Páginas principales
+
+- [Inicio](/): Match en tiempo real entre familias/clínicas y talento humano en salud verificado.
+- [Buscar](/buscar): Marketplace con filtros por especialidad, ciudad, tarifa, rating y modalidad.
+- [Familias](/familias): Cómo contratar cuidadores y enfermeras a domicilio paso a paso.
+- [Profesionales](/profesionales): Cómo registrarse, verificarse y recibir ofertas y turnos.
+- [Verificar RETHUS](/verificar): Consulta gratuita del estado RETHUS de cualquier profesional de salud.
+- [Calculadora de tarifas](/calculadora): Estima el costo justo de un servicio de enfermería o cuidado en Colombia.
+- [Planes y precios](/planes): Free, Esencial $9.000, Pro $29.000, Institución $99.000 COP/mes.
+- [Tecnología](/tecnologia): IA, verificación RETHUS, GPS en vivo, Trust Score y seguridad.
+- [Sobre Humanix](/sobre): Misión, visión, valores, equipo y cobertura.
+- [Contacto](/contacto): Soporte, prensa y alianzas estratégicas.
+- [Carreras](/carreras): Oportunidades para trabajar en Humanix.
+- [Prensa](/prensa): Kit de prensa y contacto para medios.
+
+## Servicios y especialidades
+
+- [Enfermería domiciliaria 24/7](/enfermeria-domiciliaria): Atención de enfermería profesional en casa.
+- [Cuidado adulto mayor](/cuidado-adulto-mayor): Acompañamiento y cuidado integral para personas mayores.
+- [Cuidado postoperatorio](/cuidado-postoperatorio): Recuperación en casa tras cirugía.
+- [Cuidado pediátrico](/cuidado-pediatrico): Enfermería y cuidado especializado para niños.
+- [Cuidado paliativo](/cuidado-paliativo): Acompañamiento humano en enfermedades avanzadas.
+- [Cuidador a domicilio](/cuidador-domicilio): Cuidadores capacitados y verificados.
+- [Auxiliar de enfermería](/auxiliar-enfermeria): Auxiliares con certificación RETHUS.
+
+## Ciudades con cobertura
+
+- [Enfermería en Bogotá](/enfermeria-bogota): Cobertura en norte, sur, centro y municipios (Chía, Soacha, Cajicá).
+- [Enfermería en Medellín](/enfermeria-medellin): Área metropolitana del Valle de Aburrá.
+- [Enfermería en Cali](/enfermeria-cali): Cali y municipios del Valle del Cauca.
+- [Enfermería en Barranquilla](/enfermeria-barranquilla): Barranquilla y área metropolitana.
+- [Enfermería en Cartagena](/enfermeria-cartagena): Cartagena de Indias.
+- [Enfermería en Bucaramanga](/enfermeria-bucaramanga): Bucaramanga y área metropolitana.
+- [Enfermería en Pereira](/enfermeria-pereira): Pereira y Eje Cafetero.
+
+## Recursos y guías
+
+- [Recursos](/recursos): Centro de guías sobre cuidado en casa, RETHUS y mercado laboral en salud.
+- [¿Cuánto cuesta una enfermera a domicilio?](/recursos/cuanto-cuesta-enfermera-domicilio)
+- [Cómo verificar RETHUS paso a paso](/recursos/como-verificar-rethus)
+- [Guía completa de cuidado del adulto mayor](/recursos/cuidado-adulto-mayor-guia)
+- [Cuidado postoperatorio en casa](/recursos/postoperatorio-en-casa)
+- [Signos de alarma en paciente crónico](/recursos/signos-alarma-paciente-cronico)
+- [Contratar un cuidador de confianza](/recursos/contratar-cuidador-confianza)
+
+## Legal y cumplimiento
+
+- [Términos y condiciones](/terminos)
+- [Política de privacidad](/privacidad)
+- [Habeas Data](/habeas-data)
+- [Cumplimiento normativo](/cumplimiento)
+
+## Opcional / experimental
+
+- [Cosmos](/cosmos): Imagen astronómica diaria de NASA traducida al español con IA.

@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "audit_insert_authenticated" ON public.audit_log;
