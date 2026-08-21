@@ -3,7 +3,7 @@ import { Logo } from "./Logo";
 import { SocialIcons } from "./SocialIcons";
 import { CONTACT } from "@/lib/social";
 
-type FooterLink = { label: string; to?: string; href?: string };
+type FooterLink = { label: string; to?: string; href?: string; search?: Record<string, string> };
 
 const cols: { title: string; links: FooterLink[] }[] = [
   {
@@ -35,7 +35,7 @@ const cols: { title: string; links: FooterLink[] }[] = [
     links: [
       { label: "Familias", to: "/familias" },
       { label: "Profesionales", to: "/profesionales" },
-      { label: "Clínicas e IPS", to: "/talento-humano" },
+      { label: "Clínicas e IPS", to: "/auth", search: { role: "institution" } },
       { label: "Buscar cuidado", to: "/buscar" },
       { label: "Planes", to: "/planes" },
       { label: "Calculadora de costos", to: "/calculadora" },
@@ -109,6 +109,7 @@ export function Footer() {
                     {l.to ? (
                       <Link
                         to={l.to as never}
+                        search={l.search as never}
                         className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {l.label}
