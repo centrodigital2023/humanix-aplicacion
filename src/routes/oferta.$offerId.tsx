@@ -1,18 +1,9 @@
 // Página pública de una oferta de empleo con JobPosting JSON-LD (indexable).
-// Renderiza detalles leídos desde Supabase (lectura anónima vía RLS) y CTA de
-// contratación. Las ofertas cerradas / bloqueadas retornan 404 SEO-friendly.
-import { useEffect, useState } from "react";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import {
-  Loader2,
-  MapPin,
-  Clock,
-  Briefcase,
-  ArrowLeft,
-  Building2,
-  User,
-  CheckCircle2,
-} from "lucide-react";
+// Cargada vía loader SSR (lectura anónima vía RLS): el HTML inicial ya trae
+// el contenido real para crawlers. Ofertas cerradas / bloqueadas / inexistentes
+// lanzan notFound() y responden con un 404 HTTP real (no un 200 "no disponible").
+import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { MapPin, Clock, Briefcase, ArrowLeft, Building2, User, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
@@ -68,30 +59,48 @@ const EMPLOYMENT_TYPE: Record<Offer["modality"], string> = {
 };
 
 export const Route = createFileRoute("/oferta/$offerId")({
-  head: ({ params }) => {
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("job_offers")
+      .select(
+        "id, title, description, modality, amount, city, address, specialty_required, requirements, poster_type, status, reserved_until, start_date, end_date, shifts_count, lat, lng, created_at, updated_at, blocked",
+      )
+      .eq("id", params.offerId)
+      .maybeSingle();
+    const offer = data as Offer | null;
+    if (!offer || offer.blocked || offer.status !== "open") throw notFound();
+    return { offer };
+  },
+  head: ({ params, loaderData }) => {
+    const offer = loaderData?.offer;
     const url = `${SITE_URL}/oferta/${params.offerId}`;
+    if (!offer) {
+      return {
+        meta: [{ title: `Oferta no disponible · ${SITE_NAME}` }, { name: "robots", content: "noindex,nofollow" }],
+        links: [{ rel: "canonical", href: url }],
+      };
+    }
+    const title = `${offer.title} · Oferta de empleo en salud`;
+    const description = (
+      offer.description ??
+      `Oferta de ${MODALITY_LABEL[offer.modality]} en ${offer.city}. Aplica desde Humanix con pagos en Nequi y respaldo de verificación RETHUS.`
+    ).slice(0, 160);
     return {
       meta: [
-        { title: `Oferta de empleo en salud · ${SITE_NAME}` },
-        {
-          name: "description",
-          content:
-            "Oferta verificada de trabajo en salud: cuidado, enfermería o medicina. Aplica desde Humanix con pagos en Nequi y respaldo de verificación RETHUS.",
-        },
+        { title: `${title} · ${SITE_NAME}` },
+        { name: "description", content: description },
         {
           name: "robots",
           content: "index,follow,max-image-preview:large,max-snippet:-1",
         },
         { property: "og:type", content: "article" },
         { property: "og:url", content: url },
-        { property: "og:title", content: `Oferta de empleo en salud · ${SITE_NAME}` },
-        {
-          property: "og:description",
-          content: "Aplica a esta oferta de talento humano en salud verificada en Colombia.",
-        },
+        { property: "og:title", content: `${title} · ${SITE_NAME}` },
+        { property: "og:description", content: description },
         { name: "twitter:card", content: "summary_large_image" },
       ],
       links: [{ rel: "canonical", href: url }],
+      scripts: [{ type: "application/ld+json", children: seo.jsonLdString(jobPostingLd(offer)) }],
     };
   },
   component: OfferPublicPage,
@@ -182,56 +191,7 @@ function jobPostingLd(offer: Offer): Record<string, unknown> {
 }
 
 function OfferPublicPage() {
-  const { offerId } = useParams({ from: "/oferta/$offerId" });
-  const [loading, setLoading] = useState(true);
-  const [offer, setOffer] = useState<Offer | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await supabase
-        .from("job_offers")
-        .select(
-          "id, title, description, modality, amount, city, address, specialty_required, requirements, poster_type, status, reserved_until, start_date, end_date, shifts_count, lat, lng, created_at, updated_at, blocked",
-        )
-        .eq("id", offerId)
-        .maybeSingle();
-      if (!active) return;
-      setOffer((data as Offer | null) ?? null);
-      setLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [offerId]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando oferta…
-      </div>
-    );
-  }
-
-  if (!offer || offer.blocked || offer.status !== "open") {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="pt-32 pb-20 mx-auto max-w-3xl px-4 text-center">
-          <h1 className="font-display text-3xl font-bold">Oferta no disponible</h1>
-          <p className="mt-2 text-muted-foreground">
-            Esta oferta fue cerrada, cubierta o retirada por el publicador.
-          </p>
-          <Button variant="hero" asChild className="mt-6">
-            <Link to="/buscar" search={{ tab: "ofertas" }}>
-              Ver ofertas abiertas
-            </Link>
-          </Button>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  const { offer } = Route.useLoaderData();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -241,10 +201,6 @@ function OfferPublicPage() {
           { name: "Ofertas", path: "/buscar?tab=ofertas" },
           { name: offer.title, path: `/oferta/${offer.id}` },
         ]}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: seo.jsonLdString(jobPostingLd(offer)) }}
       />
 
       <Navbar />

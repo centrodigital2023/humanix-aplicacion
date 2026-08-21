@@ -19,6 +19,7 @@ export const Route = createFileRoute("/cosmos")({
         "Imagen astronómica del día (APOD) de NASA traducida al español por IA. Una pausa cósmica para inspirar el cuidado humano.",
       image: `${SITE_URL}/og/tecnologia.svg`,
       imageAlt: "Humanix Cosmos · APOD de NASA",
+      noindex: true,
     }),
   component: CosmosPage,
 });

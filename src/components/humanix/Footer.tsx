@@ -42,6 +42,7 @@ const cols: { title: string; links: FooterLink[] }[] = [
       { label: "Tecnología IA", to: "/tecnologia" },
       { label: "Recursos", to: "/recursos" },
       { label: "Sobre Humanix", to: "/sobre" },
+      { label: "Prensa", to: "/prensa" },
       { label: "Contacto", to: "/contacto" },
     ],
   },
