@@ -13,6 +13,9 @@ import { FamilyFlow } from "@/components/humanix/simple/FamilyFlow";
 import { InstitutionFlow } from "@/components/humanix/simple/InstitutionFlow";
 import { ProfessionalFlow } from "@/components/humanix/simple/ProfessionalFlow";
 import { TINTS, type Tint } from "@/components/humanix/simple/ui";
+import { LiveNearby } from "@/components/humanix/simple/LiveNearby";
+import { FeatureHub } from "@/components/humanix/simple/FeatureHub";
+import { PlanStrip } from "@/components/humanix/simple/PlanStrip";
 import { VoiceProvider } from "@/components/humanix/simple/voice";
 import { useAppUser, pathForRole } from "@/hooks/use-app-user";
 import {
@@ -221,6 +224,33 @@ function Home() {
           {audience === "familias" && <FamilyFlow />}
           {audience === "instituciones" && <InstitutionFlow user={user} />}
           {audience === "profesionales" && <ProfessionalFlow user={user} />}
+        </section>
+
+        <section aria-labelledby="map-title" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <h2 id="map-title" className="font-display text-2xl font-bold sm:text-3xl">
+            📍 {audience === "profesionales" ? "Ofertas en el mapa" : "Cerca de ti, en vivo"}
+          </h2>
+          <div className="mt-5">
+            <LiveNearby audience={audience} user={user} />
+          </div>
+        </section>
+
+        <section aria-labelledby="hub-title" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <h2 id="hub-title" className="font-display text-2xl font-bold sm:text-3xl">
+            Todo en Humanix
+          </h2>
+          <div className="mt-5">
+            <FeatureHub audience={audience} />
+          </div>
+        </section>
+
+        <section aria-labelledby="plans-title" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <h2 id="plans-title" className="font-display text-2xl font-bold sm:text-3xl">
+            Planes
+          </h2>
+          <div className="mt-5">
+            <PlanStrip audience={audience} user={user} />
+          </div>
         </section>
 
         <section aria-labelledby="how-title" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">

@@ -481,7 +481,7 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
         <Link
           to={isInstitution ? "/dashboard/institucion" : "/auth"}
           search={isInstitution ? undefined : ({ role: "institution", mode: "signin" } as never)}
-          className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-base font-bold text-[#0f4c81] transition hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
+          className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-base font-bold text-trust-deep transition hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
         >
           {isInstitution ? "Abrir panel" : "Ya tengo cuenta"}
           <ArrowRight className="h-5 w-5" aria-hidden="true" />

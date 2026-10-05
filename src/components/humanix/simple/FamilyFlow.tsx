@@ -2,7 +2,6 @@
 //   1. ¿Para quién?  2. ¿Cuándo?  3. ¿Dónde?
 // Autoguardado; la cuenta se pide solo al tocar "Pedir".
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -18,6 +17,7 @@ import { CONTACT } from "@/lib/social";
 import { loadDraft, saveDraft, whatsappLink } from "@/lib/audience";
 import { PictoCard, StepDots, ghostBtn, okBtn, primaryBtn, type Tint } from "./ui";
 import { useSpeakOnChange, useVoice } from "./voice";
+import { QuickBooking, type BookablePro } from "./QuickBooking";
 
 type NeedKey = "elder" | "kids" | "post-op" | "chronic";
 type WhenKey = "now" | "today" | "tomorrow";
@@ -104,7 +104,6 @@ const isVerified = (p: Pro) => Boolean(p.verified || p.rethus_verified);
 const firstName = (p: Pro) => (p.full_name ?? "Profesional").split(" ").slice(0, 2).join(" ");
 
 export function FamilyFlow() {
-  const navigate = useNavigate();
   const { say } = useVoice();
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
@@ -113,6 +112,7 @@ export function FamilyFlow() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Pro[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [booking, setBooking] = useState<BookablePro | null>(null);
 
   useEffect(() => {
     setDraft(loadDraft(DRAFT_KEY, EMPTY));
@@ -229,19 +229,14 @@ export function FamilyFlow() {
     setResults(null);
   };
 
-  const requestPro = async (pro: Pro) => {
+  const requestPro = (pro: Pro) => {
     if (!pro.user_id) return;
-    const { data } = await supabase.auth.getSession();
-    if (data.session) navigate({ to: "/profesional/$proId", params: { proId: pro.user_id } });
-    else
-      navigate({
-        to: "/auth",
-        search: {
-          role: "family",
-          mode: "signup",
-          redirect: `/profesional/${pro.user_id}`,
-        } as never,
-      });
+    setBooking({
+      id: pro.user_id,
+      name: firstName(pro),
+      hourlyRate: pro.hourly_rate,
+      avatarUrl: pro.avatar_url,
+    });
   };
 
   const waText = (pro?: Pro) =>
@@ -545,6 +540,12 @@ export function FamilyFlow() {
           </div>
         )}
       </div>
+      <QuickBooking
+        pro={booking}
+        onClose={() => setBooking(null)}
+        defaultAddress={draft.place && draft.place !== MY_LOCATION ? draft.place : ""}
+        defaultCoords={draft.coords}
+      />
     </section>
   );
 }
