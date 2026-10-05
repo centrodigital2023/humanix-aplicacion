@@ -1,13 +1,12 @@
 // Home "Humanix simple": una pantalla que cambia según quién eres
 // (Familias / IPS-EPS / Profesionales). Imágenes grandes + pocas palabras,
 // guía por voz para quien no lee, sin publicidad ni urgencias falsas.
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MessageCircle } from "lucide-react";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
-import { AudienceSwitcher } from "@/components/humanix/simple/AudienceSwitcher";
 import { EasyReadToggle, VoiceToggle } from "@/components/humanix/simple/AccessibilityTools";
 import { FamilyFlow } from "@/components/humanix/simple/FamilyFlow";
 import { InstitutionFlow } from "@/components/humanix/simple/InstitutionFlow";
@@ -19,14 +18,9 @@ import { PlanStrip } from "@/components/humanix/simple/PlanStrip";
 import { MyBookings } from "@/components/humanix/simple/MyBookings";
 import { PendingBookingResume } from "@/components/humanix/simple/PendingBookingResume";
 import { VoiceProvider } from "@/components/humanix/simple/voice";
-import { useAppUser } from "@/hooks/use-app-user";
-import {
-  AUDIENCE_COPY,
-  AUDIENCE_STORAGE_KEY,
-  parseAudience,
-  whatsappLink,
-  type Audience,
-} from "@/lib/audience";
+import { useAudience } from "@/hooks/use-audience";
+import { ProfileChooser } from "@/components/humanix/simple/ProfileChooser";
+import { AUDIENCE_COPY, parseAudience, whatsappLink, type Audience } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
 import { buildSeo, SITE_NAME } from "@/lib/seo";
 
@@ -117,70 +111,88 @@ function Index() {
 function Home() {
   const { para, pedir } = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
-  const { user } = useAppUser({ requireAuth: false });
-  const audience: Audience = para ?? "familias";
-  const copy = AUDIENCE_COPY[audience];
+  const { audience: current, locked, ready, user, choose, clear } = useAudience();
 
-  const setAudience = useCallback(
-    (next: Audience) => {
-      try {
-        localStorage.setItem(AUDIENCE_STORAGE_KEY, next);
-      } catch {
-        /* ignore */
-      }
-      navigate({ search: { para: next }, replace: true, resetScroll: false });
-    },
-    [navigate],
-  );
-
-  // Sin ?para= en la URL: recuerda el último perfil elegido.
+  // Enlaces con ?para= (registro, anuncios) fijan el perfil, salvo que la cuenta ya lo defina.
   useEffect(() => {
-    if (para) return;
-    try {
-      const stored = parseAudience(localStorage.getItem(AUDIENCE_STORAGE_KEY));
-      if (stored && stored !== "familias") setAudience(stored);
-    } catch {
-      /* ignore */
-    }
-  }, [para, setAudience]);
+    if (para && !locked && para !== current) choose(para);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [para, locked]);
 
-  return (
+  const audience: Audience | undefined = locked ? current : (para ?? current);
+
+  const shell = (children: React.ReactNode) => (
     <div className="relative min-h-screen overflow-x-clip bg-canvas text-foreground">
       {/* Fondo cálido y sereno */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[720px] bg-[radial-gradient(900px_420px_at_15%_0%,color-mix(in_oklab,var(--trust)_14%,transparent),transparent_70%),radial-gradient(700px_380px_at_95%_10%,color-mix(in_oklab,var(--ok)_14%,transparent),transparent_70%)]"
       />
-
       <a
         href="#contenido"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-xl focus:bg-trust focus:px-4 focus:py-3 focus:text-trust-foreground"
       >
         Saltar al contenido
       </a>
-
       <Navbar static />
+      {children}
+      <Footer />
+      <HabeasDataConsent />
+    </div>
+  );
 
-      {/* Selector persistente: siempre visible al hacer scroll */}
-      <div className="sticky top-0 z-40 bg-canvas/85 backdrop-blur-md">
-        <div className="mx-auto max-w-6xl px-4 py-2 sm:px-6">
-          <AudienceSwitcher value={audience} onChange={setAudience} panelId="contenido" />
+  // Mientras sabemos quién es (sesión / elección guardada), un espacio sereno.
+  if (!audience && !ready) {
+    return shell(<main id="contenido" className="min-h-[60vh]" aria-busy="true" />);
+  }
+
+  // Sin perfil: solo la pregunta "¿Quién eres?".
+  if (!audience) {
+    return shell(
+      <main id="contenido" tabIndex={-1} className="relative z-10 outline-none">
+        <div className="mx-auto flex max-w-6xl justify-end gap-2 px-4 pt-4 sm:px-6">
+          <VoiceToggle />
+          <EasyReadToggle />
         </div>
-      </div>
+        <ProfileChooser
+          onChoose={(a) => {
+            choose(a);
+            navigate({ search: { para: a }, replace: true, resetScroll: false });
+          }}
+        />
+      </main>,
+    );
+  }
 
-      <main
-        id="contenido"
-        role="tabpanel"
-        aria-labelledby={`audience-tab-${audience}`}
-        tabIndex={-1}
-        className="relative z-10 outline-none"
-      >
+  const copy = AUDIENCE_COPY[audience];
+
+  return shell(
+    <>
+      <main id="contenido" tabIndex={-1} className="relative z-10 outline-none">
         <section className="mx-auto max-w-6xl px-4 pb-4 pt-6 sm:px-6 sm:pt-10">
           <div
             key={audience}
             className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:flex-row sm:items-end sm:justify-between"
           >
             <div>
+              <p className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-card px-4 text-base font-bold shadow-sm ring-1 ring-border">
+                  <span aria-hidden="true">{copy.emoji}</span>
+                  {copy.tab}
+                </span>
+                {!locked && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clear();
+                      navigate({ search: {}, replace: true, resetScroll: false });
+                    }}
+                    className="min-h-10 rounded-full px-3 text-sm font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    Cambiar
+                  </button>
+                )}
+              </p>
               <h1 className="font-display text-[2.4rem] font-bold leading-[1.05] tracking-tight text-trust sm:text-6xl">
                 {copy.title}
               </h1>
@@ -285,9 +297,6 @@ function Home() {
           </a>
         </section>
       </main>
-
-      <Footer />
-      <HabeasDataConsent />
-    </div>
+    </>,
   );
 }

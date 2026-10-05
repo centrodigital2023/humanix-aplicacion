@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/humanix/Logo";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
 import { loadPendingBooking, type PendingBooking } from "@/lib/family-journey";
+import { AUDIENCE_COPY, readStoredAudience } from "@/lib/audience";
 import { SocialIcons } from "@/components/humanix/SocialIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -88,6 +89,34 @@ const roleConfig: Record<
   },
 };
 
+// Mensaje del registro según el perfil: cada quien ve solo lo suyo.
+const ROLE_PITCH: Record<Role, { title: string; points: { emoji: string; text: string }[] }> = {
+  family: {
+    title: "Cuidado en casa, con confianza",
+    points: [
+      { emoji: "✅", text: "Personas verificadas cerca de ti" },
+      { emoji: "💵", text: "Ves el precio antes de pedir" },
+      { emoji: "📍", text: "Sigues el servicio en el mapa" },
+    ],
+  },
+  institution: {
+    title: "Turnos cubiertos, sin estrés",
+    points: [
+      { emoji: "👩‍⚕️", text: "Candidatos verificados en minutos" },
+      { emoji: "📝", text: "Publica turnos con plantillas" },
+      { emoji: "🔔", text: "Alertas de documentos por vencer" },
+    ],
+  },
+  professional: {
+    title: "Trabaja cerca de casa",
+    points: [
+      { emoji: "📲", text: "Ofertas cerca de ti" },
+      { emoji: "💵", text: "Ves el pago antes de aceptar" },
+      { emoji: "🛡️", text: "Tu verificación RETHUS te respalda" },
+    ],
+  },
+};
+
 function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
@@ -95,10 +124,22 @@ function AuthPage() {
   // Si vino con ?role=professional desde /profesionales, lo respetamos.
   // Si no vino con rol, ocultamos profesional y dejamos solo family/institution.
   const allowProfessional = search.role === "professional";
-  const visibleRoles: Role[] = allowProfessional
-    ? (["professional", "family", "institution"] as Role[])
-    : (["family", "institution"] as Role[]);
+  // Perfil ya elegido en la home (o enviado en el enlace): solo se muestra ese.
+  const [fixedRole, setFixedRole] = useState<Role | null>(search.role ?? null);
+  useEffect(() => {
+    if (search.role) return;
+    const stored = readStoredAudience();
+    if (stored) setFixedRole(AUDIENCE_COPY[stored].authRole);
+  }, [search.role]);
+  const visibleRoles: Role[] = fixedRole
+    ? [fixedRole]
+    : allowProfessional
+      ? (["professional", "family", "institution"] as Role[])
+      : (["family", "institution"] as Role[]);
   const [role, setRole] = useState<Role>(search.role ?? "family");
+  useEffect(() => {
+    if (fixedRole) setRole(fixedRole);
+  }, [fixedRole]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -305,27 +346,17 @@ function AuthPage() {
               Humanix
             </span>
             <h1 className="mt-3 font-display text-3xl xl:text-4xl font-bold leading-tight text-balance">
-              Crea tu cuenta y empieza a conectar{" "}
-              <span className="text-gradient-bio">en minutos</span>.
+              {ROLE_PITCH[role].title}
             </h1>
-            <p className="mt-4 text-muted-foreground leading-relaxed max-w-md">
-              Verificación RETHUS, asistente de IA para tu perfil, ofertas en tiempo real y pagos
-              inmediatos. Todo en un solo lugar.
-            </p>
-
-            <ul className="mt-8 space-y-3 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-biosensor" />
-                Match con familias y clínicas a menos de 150 ms
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-copper" />
-                Trust Score y reputación verificable
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-fuchsia-neural" />
-                Cobros inmediatos en Nequi, PSE y RappiPay (próximamente)
-              </li>
+            <ul className="mt-8 space-y-4 text-lg">
+              {ROLE_PITCH[role].points.map((pt) => (
+                <li key={pt.text} className="flex items-center gap-3">
+                  <span aria-hidden="true" className="text-2xl">
+                    {pt.emoji}
+                  </span>
+                  {pt.text}
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -536,9 +567,15 @@ function AuthPage() {
 
             {mode === "signup" && (
               <div className="mb-5">
-                <Label className="mb-2 block">¿Cómo te identificas?</Label>
+                <Label className="mb-2 block">{fixedRole ? "Tu perfil" : "¿Cómo te identificas?"}</Label>
                 <div
-                  className={`grid gap-2 ${visibleRoles.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}
+                  className={`grid gap-2 ${
+                    visibleRoles.length === 1
+                      ? "grid-cols-1"
+                      : visibleRoles.length === 2
+                        ? "grid-cols-2"
+                        : "grid-cols-3"
+                  }`}
                 >
                   {visibleRoles.map((r) => {
                     const c = roleConfig[r];
@@ -563,7 +600,7 @@ function AuthPage() {
                     );
                   })}
                 </div>
-                {!allowProfessional && (
+                {!allowProfessional && !fixedRole && (
                   <p className="text-[11px] text-muted-foreground mt-2">
                     ¿Eres profesional de la salud?{" "}
                     <Link to="/profesionales" className="underline hover:text-foreground">

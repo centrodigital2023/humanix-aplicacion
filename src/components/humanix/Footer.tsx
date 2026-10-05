@@ -2,12 +2,22 @@ import { Link } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { SocialIcons } from "./SocialIcons";
 import { CONTACT } from "@/lib/social";
+import { useAudience } from "@/hooks/use-audience";
+import type { Audience } from "@/lib/audience";
 
-type FooterLink = { label: string; to?: string; href?: string; search?: Record<string, string> };
+type FooterLink = {
+  label: string;
+  to?: string;
+  href?: string;
+  search?: Record<string, string>;
+  /** Solo para estos perfiles (si falta, para todos). */
+  only?: Audience[];
+};
 
-const cols: { title: string; links: FooterLink[] }[] = [
+const cols: { title: string; links: FooterLink[]; only?: Audience[] }[] = [
   {
     title: "Servicios de cuidado",
+    only: ["familias"],
     links: [
       { label: "Enfermería domiciliaria 24/7", to: "/enfermeria-domiciliaria" },
       { label: "Cuidado adulto mayor", to: "/cuidado-adulto-mayor" },
@@ -20,6 +30,7 @@ const cols: { title: string; links: FooterLink[] }[] = [
   },
   {
     title: "Ciudades",
+    only: ["familias"],
     links: [
       { label: "Bogotá", to: "/enfermeria-bogota" },
       { label: "Medellín", to: "/enfermeria-medellin" },
@@ -33,12 +44,17 @@ const cols: { title: string; links: FooterLink[] }[] = [
   {
     title: "Plataforma",
     links: [
-      { label: "Familias", to: "/familias" },
-      { label: "Profesionales", to: "/profesionales" },
-      { label: "Clínicas e IPS", to: "/auth", search: { role: "institution" } },
-      { label: "Buscar cuidado", to: "/buscar" },
+      { label: "Familias", to: "/familias", only: ["familias"] },
+      { label: "Profesionales", to: "/profesionales", only: ["profesionales"] },
+      {
+        label: "Clínicas e IPS",
+        to: "/auth",
+        search: { role: "institution" },
+        only: ["instituciones"],
+      },
+      { label: "Buscar cuidado", to: "/buscar", only: ["familias"] },
       { label: "Planes", to: "/planes" },
-      { label: "Calculadora de costos", to: "/calculadora" },
+      { label: "Calculadora de costos", to: "/calculadora", only: ["familias", "profesionales"] },
       { label: "Tecnología IA", to: "/tecnologia" },
       { label: "Recursos", to: "/recursos" },
       { label: "Sobre Humanix", to: "/sobre" },
@@ -59,6 +75,12 @@ const cols: { title: string; links: FooterLink[] }[] = [
 ];
 
 export function Footer() {
+  // Cada perfil ve solo sus enlaces; sin perfil elegido se muestra todo.
+  const { audience } = useAudience();
+  const fits = (only?: Audience[]) => !audience || !only || only.includes(audience);
+  const visibleCols = cols
+    .filter((c) => fits(c.only))
+    .map((c) => ({ ...c, links: c.links.filter((l) => fits(l.only)) }));
   return (
     <footer className="border-t border-border">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14">
@@ -84,10 +106,7 @@ export function Footer() {
                 </a>
               </p>
               <p>
-                <a
-                  href={CONTACT.emailUrl}
-                  className="hover:text-foreground transition-colors"
-                >
+                <a href={CONTACT.emailUrl} className="hover:text-foreground transition-colors">
                   {CONTACT.email}
                 </a>
               </p>
@@ -100,7 +119,7 @@ export function Footer() {
               humanix.lat
             </p>
           </div>
-          {cols.map((col, idx) => (
+          {visibleCols.map((col, idx) => (
             <div key={col.title} className={idx === 2 ? "lg:col-span-3" : "lg:col-span-2"}>
               <p className="text-sm font-semibold mb-3">{col.title}</p>
               <ul className="space-y-2">
@@ -131,7 +150,8 @@ export function Footer() {
 
         <div className="mt-8 sm:mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Humanix Colombia · humanix.lat · Todos los derechos reservados.
+            © {new Date().getFullYear()} Humanix Colombia · humanix.lat · Todos los derechos
+            reservados.
           </p>
           <div className="flex items-center gap-4">
             <p className="text-xs text-muted-foreground">

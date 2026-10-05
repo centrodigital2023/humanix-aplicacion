@@ -31,6 +31,7 @@ import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { buildSeo } from "@/lib/seo";
 import { usePlan } from "@/hooks/use-plan";
 import { useAppUser } from "@/hooks/use-app-user";
+import { useAudience } from "@/hooks/use-audience";
 import { PlanNameGate } from "@/components/humanix/PlanNameGate";
 
 type SearchParams = {
@@ -180,7 +181,11 @@ function BuscarPage() {
     setCity(search.city ?? "");
   }, [search.q, search.specialty, search.city]);
 
-  const tab = search.tab ?? "profesionales";
+  // Cada perfil ve solo lo suyo: familias e IPS buscan profesionales; profesionales, ofertas.
+  const { audience } = useAudience();
+  const lockedTab =
+    audience === "profesionales" ? "ofertas" : audience ? "profesionales" : undefined;
+  const tab = lockedTab ?? search.tab ?? "profesionales";
 
   // ── Fetch professionals ────────────────────────────────────────────────────
   const loadPros = useCallback(async () => {
@@ -354,38 +359,48 @@ function BuscarPage() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
               <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-                Talento Humano
+                {lockedTab === "ofertas"
+                  ? "Ofertas para ti"
+                  : lockedTab === "profesionales"
+                    ? "Profesionales verificados"
+                    : "Talento Humano"}
               </h1>
               <p className="mt-2 text-muted-foreground text-sm sm:text-base">
-                Encuentra el profesional o la oferta de salud ideal en Colombia.
+                {lockedTab === "ofertas"
+                  ? "Turnos y servicios cerca de ti, con el pago claro."
+                  : lockedTab === "profesionales"
+                    ? "Personas revisadas por Humanix, cerca de ti."
+                    : "Encuentra el profesional o la oferta de salud ideal en Colombia."}
               </p>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-1">
-              <button
-                onClick={() =>
-                  navigate({ search: (p: SearchT) => ({ ...p, tab: "profesionales" }) })
-                }
-                className={`px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition ${
-                  tab === "profesionales"
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <UsersIcon className="h-4 w-4" />
-                Profesionales
-              </button>
-              <button
-                onClick={() => navigate({ search: (p: SearchT) => ({ ...p, tab: "ofertas" }) })}
-                className={`px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition ${
-                  tab === "ofertas"
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Briefcase className="h-4 w-4" />
-                Ofertas
-              </button>
-            </div>
+            {!lockedTab && (
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-1">
+                <button
+                  onClick={() =>
+                    navigate({ search: (p: SearchT) => ({ ...p, tab: "profesionales" }) })
+                  }
+                  className={`px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition ${
+                    tab === "profesionales"
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <UsersIcon className="h-4 w-4" />
+                  Profesionales
+                </button>
+                <button
+                  onClick={() => navigate({ search: (p: SearchT) => ({ ...p, tab: "ofertas" }) })}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition ${
+                    tab === "ofertas"
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Briefcase className="h-4 w-4" />
+                  Ofertas
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Search bar */}
@@ -625,13 +640,23 @@ function BuscarPage() {
               ) : view === "list" ? (
                 <div className="flex flex-col gap-3">
                   {Array.from(new Map(pros.map((p) => [p.user_id, p])).values()).map((p) => (
-                    <ProCardRow key={`pro-${p.user_id}`} pro={p} userLoc={userLoc} canViewNames={canViewNames} />
+                    <ProCardRow
+                      key={`pro-${p.user_id}`}
+                      pro={p}
+                      userLoc={userLoc}
+                      canViewNames={canViewNames}
+                    />
                   ))}
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Array.from(new Map(pros.map((p) => [p.user_id, p])).values()).map((p) => (
-                    <ProCard key={`pro-${p.user_id}`} pro={p} userLoc={userLoc} canViewNames={canViewNames} />
+                    <ProCard
+                      key={`pro-${p.user_id}`}
+                      pro={p}
+                      userLoc={userLoc}
+                      canViewNames={canViewNames}
+                    />
                   ))}
                 </div>
               )
@@ -662,7 +687,15 @@ function BuscarPage() {
   );
 }
 
-function ProCard({ pro, userLoc, canViewNames }: { pro: Pro; userLoc: LatLng | null; canViewNames: boolean }) {
+function ProCard({
+  pro,
+  userLoc,
+  canViewNames,
+}: {
+  pro: Pro;
+  userLoc: LatLng | null;
+  canViewNames: boolean;
+}) {
   const name = pro.profiles?.full_name ?? "Profesional Humanix";
   const city = pro.profiles?.city ?? pro.service_cities?.[0] ?? "Colombia";
   const rating = Number(pro.avg_rating ?? 0);
@@ -689,7 +722,11 @@ function ProCard({ pro, userLoc, canViewNames }: { pro: Pro; userLoc: LatLng | n
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold truncate">
-              <PlanNameGate name={pro.profiles?.full_name ?? null} canView={canViewNames} fallback="Profesional Humanix" />
+              <PlanNameGate
+                name={pro.profiles?.full_name ?? null}
+                canView={canViewNames}
+                fallback="Profesional Humanix"
+              />
             </h3>
             {pro.verified && <CheckCircle2 className="h-4 w-4 text-biosensor shrink-0" />}
             <StatusBadge status={status} reservedUntil={pro.reserved_until} />
@@ -901,7 +938,15 @@ function OfferCard({ offer, userLoc }: { offer: Offer; userLoc: LatLng | null })
 
 // ── Vista lista compacta ─────────────────────────────────────────────────────
 
-function ProCardRow({ pro, userLoc, canViewNames }: { pro: Pro; userLoc: LatLng | null; canViewNames: boolean }) {
+function ProCardRow({
+  pro,
+  userLoc,
+  canViewNames,
+}: {
+  pro: Pro;
+  userLoc: LatLng | null;
+  canViewNames: boolean;
+}) {
   const name = pro.profiles?.full_name ?? "Profesional Humanix";
   const city = pro.profiles?.city ?? pro.service_cities?.[0] ?? "Colombia";
   const rating = Number(pro.avg_rating ?? 0);
@@ -926,7 +971,12 @@ function ProCardRow({ pro, userLoc, canViewNames }: { pro: Pro; userLoc: LatLng 
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <PlanNameGate name={pro.profiles?.full_name ?? null} canView={canViewNames} fallback="Profesional Humanix" className="font-semibold truncate" />
+          <PlanNameGate
+            name={pro.profiles?.full_name ?? null}
+            canView={canViewNames}
+            fallback="Profesional Humanix"
+            className="font-semibold truncate"
+          />
           {pro.verified && <CheckCircle2 className="h-3.5 w-3.5 text-biosensor shrink-0" />}
           <StatusBadge status={status} reservedUntil={pro.reserved_until} />
         </div>

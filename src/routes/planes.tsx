@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
 import { usePlan } from "@/hooks/use-plan";
 import { useAppUser } from "@/hooks/use-app-user";
+import { useAudience } from "@/hooks/use-audience";
+import type { Audience } from "@/lib/audience";
 import { computeCta } from "@/lib/planCta";
 
 const PLAN_FAQS = [
@@ -33,7 +35,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Cuál es la diferencia entre Esencial y Pro?",
-    a: "Esencial es ideal para familias y profesionales que quieren todo activo. Pro agrega boost de visibilidad en búsquedas, coach de carrera IA y sugerencias de mensajes — pensado para profesionales que quieren más servicios.",
+    a: "Esencial deja todo activo. Pro agrega boost de visibilidad en búsquedas, coach de carrera IA y sugerencias de mensajes — pensado para profesionales que quieren más servicios.",
   },
   {
     q: "¿Cómo funciona el plan Institución?",
@@ -313,14 +315,39 @@ function CellIcon({ value }: { value: boolean | string }) {
   return <span className="text-xs text-muted-foreground">{value}</span>;
 }
 
+const PLANS_BY_AUDIENCE: Record<Audience, PlanKey[]> = {
+  familias: ["free", "essential_monthly"],
+  instituciones: ["free", "institution_monthly"],
+  profesionales: ["free", "essential_monthly", "pro_monthly"],
+};
+
+// Textos de cada plan dirigidos solo al perfil activo (sin nombrar a los demás).
+const PLAN_LINE: Partial<Record<Audience, Partial<Record<PlanKey, string>>>> = {
+  familias: { essential_monthly: "Para tener todo activo con tu familia." },
+  profesionales: { essential_monthly: "Para profesionales que quieren todo activo." },
+};
+
+// Preguntas que solo tienen sentido para ciertos perfiles.
+const FAQ_ONLY: Record<string, Audience[]> = {
+  "¿Cuál es la diferencia entre Esencial y Pro?": ["profesionales"],
+  "¿Cómo funciona el plan Institución?": ["instituciones"],
+};
+
+const COMPARE_KEY = {
+  free: "free",
+  essential_monthly: "essential",
+  pro_monthly: "pro",
+  institution_monthly: "institution",
+} as const;
+
 function PlansPage() {
   const { user, loading: userLoading } = useAppUser({ requireAuth: false });
-  const {
-    plan: currentPlan,
-    cancelAtPeriodEnd,
-    loading: planLoading,
-  } = usePlan(user?.id ?? null);
+  const { plan: currentPlan, cancelAtPeriodEnd, loading: planLoading } = usePlan(user?.id ?? null);
   const loading = userLoading || planLoading;
+  // Cada perfil ve solo sus planes.
+  const { audience } = useAudience();
+  const shown = audience ? PLANS_BY_AUDIENCE[audience] : DISPLAY.map((d) => d.key);
+  const plans = DISPLAY.filter((d) => shown.includes(d.key));
   const [acting, setActing] = useState<PlanKey | null>(null);
   const autoTriggered = useRef(false);
 
@@ -413,7 +440,6 @@ function PlansPage() {
 
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 pb-12 sm:pt-28 sm:pb-20">
-
         {/* HERO --------------------------------------------------------- */}
         <header className="text-center max-w-2xl mx-auto">
           <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-fuchsia-neural/10 text-fuchsia-neural border border-fuchsia-neural/30 font-medium">
@@ -424,8 +450,8 @@ function PlansPage() {
           </h1>
           <p className="mt-3 text-muted-foreground text-base sm:text-lg">
             Pagos en pesos colombianos.{" "}
-            <span className="font-semibold text-foreground">Sin permanencia.</span>{" "}
-            Cancela cuando quieras.
+            <span className="font-semibold text-foreground">Sin permanencia.</span> Cancela cuando
+            quieras.
           </p>
           {/* Trust badges */}
           <div className="mt-5 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
@@ -444,9 +470,15 @@ function PlansPage() {
         {/* PRICING CARDS ----------------------------------------------- */}
         <section
           aria-label="Planes de suscripción"
-          className="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6"
+          className={`mt-12 grid gap-6 md:grid-cols-2 ${
+            plans.length >= 4
+              ? "lg:grid-cols-4"
+              : plans.length === 3
+                ? "lg:grid-cols-3"
+                : "lg:mx-auto lg:max-w-4xl"
+          }`}
         >
-          {DISPLAY.map((d) => {
+          {plans.map((d) => {
             const def = PLAN_CATALOG[d.key];
             const Icon = d.icon;
             const cta = computeCta(d.key, ctx);
@@ -470,7 +502,9 @@ function PlansPage() {
                   <Icon className="h-5 w-5" />
                 </div>
                 <h2 className="mt-3 font-display text-xl font-semibold">{def.label}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{def.audience}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                  {(audience && PLAN_LINE[audience]?.[d.key]) ?? def.audience}
+                </p>
                 <div className="mt-4 pb-4 border-b border-border">
                   <span className="text-3xl sm:text-4xl font-bold font-display">
                     {def.priceLabel}
@@ -490,7 +524,13 @@ function PlansPage() {
                 <Button
                   className="mt-6 w-full"
                   variant={
-                    def.highlight ? "copper" : d.tone === "fuchsia" ? "hero" : d.tone === "bio" ? "default" : "outline"
+                    def.highlight
+                      ? "copper"
+                      : d.tone === "fuchsia"
+                        ? "hero"
+                        : d.tone === "bio"
+                          ? "default"
+                          : "outline"
                   }
                   disabled={loading || acting === d.key || cta.disabled}
                   onClick={() => choose(d.key)}
@@ -519,7 +559,7 @@ function PlansPage() {
                   <th className="py-4 pl-6 pr-4 text-left font-semibold text-foreground w-2/5">
                     Funcionalidad
                   </th>
-                  {DISPLAY.map((d) => {
+                  {plans.map((d) => {
                     const def = PLAN_CATALOG[d.key];
                     return (
                       <th
@@ -532,9 +572,7 @@ function PlansPage() {
                           <span>{def.label}</span>
                           <span
                             className={`text-xs font-normal ${
-                              def.highlight
-                                ? "text-copper"
-                                : "text-muted-foreground"
+                              def.highlight ? "text-copper" : "text-muted-foreground"
                             }`}
                           >
                             {def.priceLabel}
@@ -555,18 +593,14 @@ function PlansPage() {
                     }`}
                   >
                     <td className="py-3 pl-6 pr-4 text-foreground/90 leading-snug">{row.label}</td>
-                    <td className="py-3 px-3 text-center">
-                      <CellIcon value={row.free} />
-                    </td>
-                    <td className="py-3 px-3 text-center bg-copper/5">
-                      <CellIcon value={row.essential} />
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <CellIcon value={row.pro} />
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <CellIcon value={row.institution} />
-                    </td>
+                    {plans.map((d) => (
+                      <td
+                        key={d.key}
+                        className={`py-3 px-3 text-center ${d.key === "essential_monthly" ? "bg-copper/5" : ""}`}
+                      >
+                        <CellIcon value={row[COMPARE_KEY[d.key]]} />
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -580,7 +614,9 @@ function PlansPage() {
             Preguntas frecuentes
           </h2>
           <div className="space-y-3">
-            {PLAN_FAQS.map((f) => (
+            {PLAN_FAQS.filter(
+              (f) => !audience || !FAQ_ONLY[f.q] || FAQ_ONLY[f.q].includes(audience),
+            ).map((f) => (
               <details
                 key={f.q}
                 className="group rounded-xl border border-border bg-card p-4 [&_summary::-webkit-details-marker]:hidden"

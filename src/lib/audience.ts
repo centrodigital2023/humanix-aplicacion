@@ -76,3 +76,44 @@ export function saveDraft<T>(key: string, value: T) {
 export function whatsappLink(phone: string, text: string) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
 }
+
+// ── Perfil elegido: una sola experiencia de punta a punta ──────────────────
+
+const AUDIENCE_EVENT = "humanix-audience-change";
+
+type Role = "family" | "institution" | "professional" | string;
+
+/** Perfil según los roles de la cuenta (null si es staff/admin o no aplica). */
+export function audienceFromRoles(roles: Role[]): Audience | null {
+  if (roles.includes("institution")) return "instituciones";
+  if (roles.includes("professional")) return "profesionales";
+  if (roles.includes("family")) return "familias";
+  return null;
+}
+
+export function readStoredAudience(): Audience | undefined {
+  try {
+    return parseAudience(localStorage.getItem(AUDIENCE_STORAGE_KEY));
+  } catch {
+    return undefined;
+  }
+}
+
+export function storeAudience(a: Audience | null) {
+  try {
+    if (a) localStorage.setItem(AUDIENCE_STORAGE_KEY, a);
+    else localStorage.removeItem(AUDIENCE_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new Event(AUDIENCE_EVENT));
+}
+
+export function onAudienceChange(cb: () => void) {
+  window.addEventListener(AUDIENCE_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(AUDIENCE_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
