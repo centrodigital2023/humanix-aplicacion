@@ -52,6 +52,17 @@
   --color-fuchsia-neural-foreground: var(--fuchsia-neural-foreground);
   --color-space: var(--space);
 
+  /* Paleta operativa "Humanix simple" (home por perfil, WCAG AA) */
+  --color-canvas: var(--canvas);
+  --color-trust: var(--trust);
+  --color-trust-foreground: var(--trust-foreground);
+  --color-ok: var(--ok);
+  --color-ok-foreground: var(--ok-foreground);
+  --color-warn: var(--warn);
+  --color-warn-foreground: var(--warn-foreground);
+  --color-sos: var(--sos);
+  --color-sos-foreground: var(--sos-foreground);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -122,6 +133,18 @@
   --chart-3: oklch(0.66 0.13 50);
   --chart-4: oklch(0.2 0.075 260);
   --chart-5: oklch(0.57 0.19 252);
+
+  /* Paleta operativa: fondo calmante, azul de confianza clínica,
+     esmeralda = verificado/disponible, ámbar = en revisión, rojo = solo SOS */
+  --canvas: #f9fafb;
+  --trust: #0f4c81;
+  --trust-foreground: #ffffff;
+  --ok: #047857; /* texto/fondo sólido AA sobre blanco; #10B981 para acentos suaves */
+  --ok-foreground: #ffffff;
+  --warn: #b45309;
+  --warn-foreground: #ffffff;
+  --sos: #dc2626;
+  --sos-foreground: #ffffff;
 }
 
 .dark {
@@ -151,6 +174,29 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.82 0.19 165);
+
+  --canvas: oklch(0.17 0.018 268);
+  --trust: #7cb4e8;
+  --trust-foreground: #0b1b2b;
+  --ok: #34d399;
+  --ok-foreground: #052e1f;
+  --warn: #fbbf24;
+  --warn-foreground: #2b1a00;
+  --sos: #f87171;
+  --sos-foreground: #2b0606;
+}
+
+/* Modo "Lectura fácil": todo crece (Tailwind usa rem), más interlineado y
+   espaciado entre letras. Se activa con la clase .easy-read en <html>. */
+html.easy-read {
+  font-size: 118.75%;
+}
+html.easy-read body {
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+html.easy-read .easy-hide {
+  display: none !important;
 }
 
 @theme inline {
