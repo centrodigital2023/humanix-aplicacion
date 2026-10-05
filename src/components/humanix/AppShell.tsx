@@ -302,7 +302,12 @@ export function AppShell({
               to="/buscar"
               className="hidden md:inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-card text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
             >
-              <Search className="h-4 w-4" /> Buscar talento o turno…
+              <Search className="h-4 w-4" />{" "}
+              {user.primaryRole === "family"
+                ? "Buscar cuidado…"
+                : user.primaryRole === "professional"
+                  ? "Buscar ofertas…"
+                  : "Buscar talento…"}
             </Link>
 
             <button
@@ -360,11 +365,18 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 px-4 sm:px-6 py-4 sm:py-6 safe-x">{children}</main>
+        <main className="flex-1 safe-x">
+          {/* safe-x fija el padding lateral al área segura; el margen va adentro
+              para que no se anule (antes el contenido tocaba los bordes en móvil). */}
+          <div className="px-4 sm:px-6 py-4 pb-28 sm:py-6 lg:pb-6">{children}</div>
+        </main>
       </div>
 
       {/* Bottom nav mobile */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] safe-x">
+      <nav
+        data-bottom-nav
+        className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] safe-x"
+      >
         <div className="grid grid-cols-5 h-16">
           {phoneNav.map((item) => {
             const Icon = item.icon;

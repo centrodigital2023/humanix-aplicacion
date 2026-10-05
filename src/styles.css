@@ -647,3 +647,18 @@ html.easy-read .easy-hide {
     animation: none !important;
   }
 }
+
+/* En paneles con barra inferior (móvil), la burbuja de WhatsApp sube para no
+   tapar el menú. */
+@media (max-width: 1023px) {
+  body:has([data-bottom-nav]) .hx-wa-bubble {
+    bottom: 5.5rem !important;
+  }
+}
+/* En escritorio, dentro de los paneles, a la derecha para no tapar el menú lateral. */
+@media (min-width: 1024px) {
+  body:has([data-bottom-nav]) .hx-wa-bubble {
+    left: auto !important;
+    right: 1.5rem !important;
+  }
+}

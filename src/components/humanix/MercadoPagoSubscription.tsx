@@ -26,9 +26,12 @@ const PAID_PLANS: PlanKey[] = ["essential_monthly", "pro_monthly", "institution_
 export function MercadoPagoSubscription({
   userId,
   defaultPlan = "pro_monthly",
+  plans = PAID_PLANS,
 }: {
   userId: string;
   defaultPlan?: PlanKey;
+  /** Planes a mostrar (cada perfil ve solo los suyos). */
+  plans?: PlanKey[];
 }) {
   const plan = usePlan(userId);
   const [busy, setBusy] = useState<PlanKey | "cancel" | "resume" | null>(null);
@@ -154,8 +157,10 @@ export function MercadoPagoSubscription({
         </p>
       )}
 
-      <div className="mt-5 grid sm:grid-cols-3 gap-2">
-        {PAID_PLANS.map((key) => {
+      <div
+        className={`mt-5 grid gap-2 ${plans.length >= 3 ? "sm:grid-cols-3" : plans.length === 2 ? "sm:grid-cols-2" : ""}`}
+      >
+        {plans.map((key) => {
           const def = PLAN_CATALOG[key];
           const isCurrent = plan.plan === key;
           const isSelected = selected === key;

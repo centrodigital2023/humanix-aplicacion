@@ -91,7 +91,7 @@ export function FloatingWAChat() {
       <button
         onClick={() => setOpen((v) => !v)}
         style={{ left: "1rem", right: "auto", bottom: "1rem" }}
-        className="fixed bottom-4 left-4 right-auto z-[99] h-14 w-14 rounded-full bg-emerald-500 text-white shadow-[0_8px_24px_rgba(16,185,129,0.45)] hover:bg-emerald-600 hover:scale-110 transition-all flex items-center justify-center group"
+        className="hx-wa-bubble fixed bottom-4 left-4 right-auto z-[99] h-14 w-14 rounded-full bg-emerald-500 text-white shadow-[0_8px_24px_rgba(16,185,129,0.45)] hover:bg-emerald-600 hover:scale-110 transition-all flex items-center justify-center group"
         aria-label="Abrir chat de WhatsApp"
       >
         {open ? (
