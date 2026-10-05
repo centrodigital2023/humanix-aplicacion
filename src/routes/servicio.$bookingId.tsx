@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/humanix/Navbar";
+import { JourneySteps } from "@/components/humanix/simple/JourneySteps";
 import { LiveTracking } from "@/components/humanix/LiveTracking";
 import { BookingChat } from "@/components/humanix/BookingChat";
 import { PaidContactCard } from "@/components/humanix/PaidContactCard";
@@ -245,11 +246,23 @@ function ServicePage() {
                 <CircleDollarSign className="h-6 w-6" />
                 {COP(booking.total_amount)}
               </p>
-              <p className="text-[10px] text-muted-foreground">
-                Retención según tipo de contratante (Ley 1819/2016)
-              </p>
+              {isClient ? (
+                <p className="text-sm font-semibold text-foreground">
+                  💵 Pagas directo a {peerName.split(" ")[0]} al terminar
+                </p>
+              ) : (
+                <p className="text-[10px] text-muted-foreground">
+                  Retención según tipo de contratante (Ley 1819/2016)
+                </p>
+              )}
             </div>
           </header>
+
+          {isClient && (
+            <div className="mt-6 rounded-[2rem] border-2 border-primary/20 bg-card p-5 shadow-lg shadow-primary/5 sm:p-6">
+              <JourneySteps status={booking.status} proName={peerName} />
+            </div>
+          )}
 
           {!cancelled && !completed && (
             <div className="mt-6 grid lg:grid-cols-[1fr_360px] gap-4">

@@ -39,11 +39,11 @@ export function PaidContactCard({ bookingId, peerName, isPaid, amountCOP }: Prop
   if (!isPaid) {
     return (
       <div className="rounded-2xl border border-dashed border-border bg-card/70 p-5 text-sm text-muted-foreground">
-        <p className="font-semibold text-foreground mb-1">Comunicación bloqueada</p>
+        <p className="font-semibold text-foreground mb-1">🔒 Chat y llamada al aceptar</p>
         <p>
-          Podrás contactar a <span className="font-medium text-foreground">{peerName}</span> por
-          WhatsApp o por la bandeja de Humanix cuando el servicio sea aceptado y el pago por{" "}
-          <span className="font-semibold">{COP}</span> quede confirmado.
+          Podrás escribir o llamar a <span className="font-medium text-foreground">{peerName}</span>{" "}
+          apenas se acepte el servicio. Total acordado:{" "}
+          <span className="font-semibold">{COP}</span>, que se paga directo al terminar.
         </p>
       </div>
     );

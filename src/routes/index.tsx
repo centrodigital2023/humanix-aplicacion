@@ -16,6 +16,8 @@ import { TINTS, type Tint } from "@/components/humanix/simple/ui";
 import { LiveNearby } from "@/components/humanix/simple/LiveNearby";
 import { FeatureHub } from "@/components/humanix/simple/FeatureHub";
 import { PlanStrip } from "@/components/humanix/simple/PlanStrip";
+import { MyBookings } from "@/components/humanix/simple/MyBookings";
+import { PendingBookingResume } from "@/components/humanix/simple/PendingBookingResume";
 import { VoiceProvider } from "@/components/humanix/simple/voice";
 import { useAppUser } from "@/hooks/use-app-user";
 import {
@@ -29,9 +31,13 @@ import { CONTACT } from "@/lib/social";
 import { buildSeo, SITE_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { para?: Audience } => {
+  validateSearch: (search: Record<string, unknown>): { para?: Audience; pedir?: "1" } => {
     const para = parseAudience(search.para);
-    return para ? { para } : {};
+    const out: { para?: Audience; pedir?: "1" } = {};
+    if (para) out.para = para;
+    // Vuelve del registro con un pedido guardado para confirmar.
+    if (search.pedir === "1" || search.pedir === 1) out.pedir = "1";
+    return out;
   },
   head: () =>
     buildSeo({
@@ -109,7 +115,7 @@ function Index() {
 }
 
 function Home() {
-  const { para } = Route.useSearch();
+  const { para, pedir } = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
   const { user } = useAppUser({ requireAuth: false });
   const audience: Audience = para ?? "familias";
@@ -188,7 +194,19 @@ function Home() {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 pb-10 sm:px-6" aria-label={copy.cta}>
-          {audience === "familias" && <FamilyFlow />}
+          {audience === "familias" && (
+            <div className="space-y-5">
+              <PendingBookingResume
+                user={user}
+                autoOpen={pedir === "1"}
+                onConsumed={() =>
+                  navigate({ search: { para: "familias" }, replace: true, resetScroll: false })
+                }
+              />
+              {user && <MyBookings userId={user.id} />}
+              <FamilyFlow />
+            </div>
+          )}
           {audience === "instituciones" && <InstitutionFlow user={user} />}
           {audience === "profesionales" && <ProfessionalFlow user={user} />}
         </section>

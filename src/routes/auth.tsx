@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/humanix/Logo";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
+import { loadPendingBooking, type PendingBooking } from "@/lib/family-journey";
 import { SocialIcons } from "@/components/humanix/SocialIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -109,6 +110,13 @@ function AuthPage() {
     lng: null,
   });
   const [address, setAddress] = useState("");
+  // Pedido armado en la home antes de registrarse (se confirma al volver).
+  const [pendingBooking, setPendingBooking] = useState<PendingBooking | null>(null);
+  useEffect(() => {
+    const p = loadPendingBooking();
+    setPendingBooking(p);
+    if (p?.address && p.address !== "Mi ubicación actual") setAddress((a) => a || p.address);
+  }, []);
 
   // Email verification step (after signup). Supabase sends a 6-digit OTP code
   // to the email; we must verify it with `verifyOtp` to activate the account.
@@ -482,6 +490,20 @@ function AuthPage() {
                   : "Ingresa con tu correo y contraseña"}
               </p>
             </div>
+            {pendingBooking && (
+              <div
+                role="status"
+                className="mb-5 flex items-center gap-3 rounded-2xl border-2 border-primary/25 bg-primary/5 p-4"
+              >
+                <span aria-hidden="true" className="text-3xl">
+                  🧡
+                </span>
+                <p className="text-base font-semibold leading-snug">
+                  Un paso más para pedir a {pendingBooking.proName.split(" ")[0]}. Tu pedido queda
+                  guardado.
+                </p>
+              </div>
+            )}
             <div
               role="tablist"
               aria-label="Elige entre crear cuenta o iniciar sesión"

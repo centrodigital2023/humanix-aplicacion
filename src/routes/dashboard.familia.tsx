@@ -39,6 +39,7 @@ import { WearableConnections } from "@/components/humanix/WearableConnections";
 import { distanceKm, formatKm } from "@/lib/geo";
 import { toast } from "sonner";
 import { useAppUser } from "@/hooks/use-app-user";
+import { MyBookings } from "@/components/humanix/simple/MyBookings";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { usePlan } from "@/hooks/use-plan";
@@ -523,6 +524,9 @@ function FamilyDashboard() {
       }
     >
       <div className="space-y-8">
+
+        {/* Mismo "Mis pedidos" que en la home: pasos + seguimiento en el mapa */}
+        {user && <MyBookings userId={user.id} />}
 
         {user && <SmartFamilyProfileForm userId={user.id} />}
 

@@ -64,8 +64,15 @@ export function BookNowButton({
     try {
       const { data: sess } = await supabase.auth.getSession();
       if (!sess.session) {
-        toast.error("Inicia sesión para contratar.");
-        navigate({ to: "/auth" });
+        toast("Crea tu cuenta gratis para confirmar. Te traemos de vuelta aquí.");
+        navigate({
+          to: "/auth",
+          search: {
+            role: "family",
+            mode: "signup",
+            redirect: window.location.pathname,
+          } as never,
+        });
         return;
       }
       const scheduled_at = new Date(date).toISOString();

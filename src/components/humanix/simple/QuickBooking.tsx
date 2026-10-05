@@ -10,6 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { getBrowserLocation, type LatLng } from "@/lib/geo";
 import { CONTACT } from "@/lib/social";
 import { whatsappLink } from "@/lib/audience";
+import {
+  clearPendingBooking,
+  savePendingBooking,
+  whenToDate,
+  type WhenKey,
+} from "@/lib/family-journey";
 import { PictoCard, okBtn, primaryBtn, type Tint } from "./ui";
 import { useVoice } from "./voice";
 
@@ -20,8 +26,6 @@ export type BookablePro = {
   avatarUrl?: string | null;
 };
 
-type WhenKey = "now" | "afternoon" | "tomorrow";
-
 const WHENS: Array<{ key: WhenKey; emoji: string; label: string; tint: Tint }> = [
   { key: "now", emoji: "⚡", label: "Ya", tint: "amber" },
   { key: "afternoon", emoji: "☀️", label: "Esta tarde", tint: "sky" },
@@ -29,22 +33,6 @@ const WHENS: Array<{ key: WhenKey; emoji: string; label: string; tint: Tint }> =
 ];
 
 const HOURS = [2, 4, 8, 12, 24];
-
-function whenToDate(w: WhenKey): Date {
-  const d = new Date();
-  d.setSeconds(0, 0);
-  if (w === "now") {
-    d.setMinutes(0);
-    d.setHours(d.getHours() + 1);
-  } else if (w === "afternoon") {
-    d.setMinutes(0);
-    d.setHours(Math.max(d.getHours() + 2, 14));
-  } else {
-    d.setDate(d.getDate() + 1);
-    d.setHours(8, 0);
-  }
-  return d;
-}
 
 const COP = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -58,16 +46,20 @@ export function QuickBooking({
   onClose,
   defaultAddress = "",
   defaultCoords = null,
+  initialWhen = "now",
+  initialHours = 4,
 }: {
   pro: BookablePro | null;
   onClose: () => void;
   defaultAddress?: string;
   defaultCoords?: LatLng | null;
+  initialWhen?: WhenKey;
+  initialHours?: number;
 }) {
   const navigate = useNavigate();
   const { say } = useVoice();
-  const [when, setWhen] = useState<WhenKey>("now");
-  const [hours, setHours] = useState(4);
+  const [when, setWhen] = useState<WhenKey>(initialWhen);
+  const [hours, setHours] = useState(initialHours);
   const [address, setAddress] = useState(defaultAddress);
   const [coords, setCoords] = useState<LatLng | null>(defaultCoords);
   const [locating, setLocating] = useState(false);
@@ -76,6 +68,11 @@ export function QuickBooking({
 
   useEffect(() => {
     if (!pro) return;
+    // Cada vez que se abre: arranca con lo que ya sabemos (búsqueda o pedido guardado).
+    setWhen(initialWhen);
+    setHours(initialHours);
+    setAddress(defaultAddress);
+    setCoords(defaultCoords);
     setError(null);
     say(`Pedir a ${pro.name}. ¿Cuándo y cuántas horas?`);
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !busy && onClose();
@@ -109,10 +106,22 @@ export function QuickBooking({
     setError(null);
     const { data: sess } = await supabase.auth.getSession();
     if (!sess.session) {
+      // Guardamos el pedido tal cual y lo retomamos al volver del registro.
+      savePendingBooking({
+        proId: pro.id,
+        proName: pro.name,
+        hourlyRate: pro.hourlyRate,
+        avatarUrl: pro.avatarUrl ?? null,
+        when,
+        hours,
+        address: address.trim(),
+        coords,
+      });
       setBusy(false);
+      say("Crea tu cuenta gratis. Tu pedido queda guardado.");
       navigate({
         to: "/auth",
-        search: { role: "family", mode: "signup", redirect: `/profesional/${pro.id}` } as never,
+        search: { role: "family", mode: "signup", redirect: "/?para=familias&pedir=1" } as never,
       });
       return;
     }
@@ -139,6 +148,7 @@ export function QuickBooking({
       say("No se pudo pedir. Intenta otra vez.");
       return;
     }
+    clearPendingBooking();
     say("Listo. Te llevamos al seguimiento.");
     navigate({ to: "/servicio/$bookingId", params: { bookingId: data.id } });
   };

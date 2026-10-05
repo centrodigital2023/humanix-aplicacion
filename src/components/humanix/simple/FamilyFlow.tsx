@@ -545,6 +545,9 @@ export function FamilyFlow() {
         onClose={() => setBooking(null)}
         defaultAddress={draft.place && draft.place !== MY_LOCATION ? draft.place : ""}
         defaultCoords={draft.coords}
+        initialWhen={
+          draft.when === "today" ? "afternoon" : draft.when === "tomorrow" ? "tomorrow" : "now"
+        }
       />
     </section>
   );
