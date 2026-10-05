@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2, Lock, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -97,9 +98,7 @@ function ResetPasswordPage() {
       <div className="mx-auto max-w-md px-4 sm:px-6 py-10">
         <div className="flex items-center justify-between">
           <Logo />
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Volver al inicio
-          </Link>
+          <HomeButton />
         </div>
 
         <div className="mt-10 rounded-3xl border border-border bg-card/95 backdrop-blur-xl shadow-[var(--shadow-elegant)] p-6 sm:p-8">

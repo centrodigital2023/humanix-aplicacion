@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-route
 import {
   ArrowLeft,
   ChevronRight,
-  Home,
   LogOut,
   Menu,
   Moon,
@@ -13,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "./Logo";
+import { HomeButton } from "./HomeButton";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 import type { AppRole, AppUser } from "@/hooks/use-app-user";
@@ -277,13 +277,7 @@ export function AppShell({
               <ArrowLeft className="h-4 w-4" /> Volver
             </button>
 
-            <button
-              onClick={() => navigate({ to: "/" })}
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-2.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-              title="Inicio"
-            >
-              <Home className="h-4 w-4" />
-            </button>
+            <HomeButton />
 
             <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
               {(crumbs ?? [{ label: title }]).map((c, i, arr) => (

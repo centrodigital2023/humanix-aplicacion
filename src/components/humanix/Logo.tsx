@@ -1,4 +1,11 @@
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({
+  className = "",
+  wordmarkClassName = "",
+}: {
+  className?: string;
+  /** Clases para el texto "Humanix" (p. ej. ocultarlo en móvil). */
+  wordmarkClassName?: string;
+}) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-cyber overflow-hidden">
@@ -19,7 +26,7 @@ export function Logo({ className = "" }: { className?: string }) {
         </svg>
         <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-biosensor animate-pulse-ring" />
       </div>
-      <span className="font-display text-xl font-bold tracking-tight">
+      <span className={`font-display text-xl font-bold tracking-tight ${wordmarkClassName}`}>
         Human<span className="text-biosensor">i</span>x
       </span>
     </div>

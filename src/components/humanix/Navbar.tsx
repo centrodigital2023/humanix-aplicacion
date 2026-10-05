@@ -1,7 +1,8 @@
 // Barra superior única de Humanix (misma en la home y en el resto del sitio):
 // logo · 3 perfiles (Familias / IPS-EPS / Profesional) · WhatsApp · Entrar / Mi panel.
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { HomeButton } from "./HomeButton";
 import { Menu, MessageCircle, Moon, Sun, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { useTheme } from "@/hooks/use-theme";
@@ -17,6 +18,7 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
   const { user } = useAppUser({ requireAuth: false });
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const isHome = useRouterState({ select: (st) => st.location.pathname === "/" });
 
   useEffect(() => {
     if (isStatic) return;
@@ -58,7 +60,7 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
         className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6"
       >
         <Link to="/" aria-label="Humanix, inicio">
-          <Logo />
+          <Logo wordmarkClassName={isHome ? "" : "hidden sm:inline"} />
         </Link>
 
         {!isStatic && (
@@ -78,6 +80,7 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
         )}
 
         <div className="flex items-center gap-2">
+          {!isHome && <HomeButton />}
           <button
             type="button"
             onClick={toggleTheme}
@@ -106,7 +109,9 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
               onClick={() => setOpen(!open)}
               aria-label="Menú"
               aria-expanded={open}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-full hover:bg-accent lg:hidden"
+              className={`h-12 w-12 items-center justify-center rounded-full hover:bg-accent lg:hidden ${
+                isHome ? "inline-flex" : "hidden sm:inline-flex"
+              }`}
             >
               {open ? (
                 <X className="h-6 w-6" aria-hidden="true" />

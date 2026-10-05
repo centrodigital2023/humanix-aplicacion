@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Loader2,
@@ -463,7 +464,10 @@ function InstitutionDashboard() {
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
           {/* Brand */}
           <div className="flex items-center gap-3 min-w-0">
-            <Logo />
+            <span className="hidden sm:block">
+              <Logo />
+            </span>
+            <HomeButton />
             <div className="hidden sm:block min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold truncate max-w-[200px]">{instName}</p>

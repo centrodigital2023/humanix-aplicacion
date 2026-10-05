@@ -10,6 +10,7 @@
  *  3. Proporciona el código para entrada manual en caso de que se escanee sin la app.
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { HomeButton } from "@/components/humanix/HomeButton";
 import { z } from "zod";
 import {
   Smartphone,
@@ -147,6 +148,7 @@ function PairPage() {
   if (!code || !provider || !patientId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <HomeButton className="fixed left-4 top-4" />
         <Card className="max-w-sm w-full p-6 text-center space-y-4">
           <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto">
             <Info className="h-6 w-6 text-amber-500" />
@@ -168,6 +170,7 @@ function PairPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-500/5 via-background to-sky-500/5 flex items-center justify-center p-4">
+      <HomeButton className="fixed left-4 top-4" />
       <div className="max-w-sm w-full space-y-4">
 
         {/* Header */}

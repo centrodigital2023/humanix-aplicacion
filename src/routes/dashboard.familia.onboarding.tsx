@@ -2,6 +2,7 @@
 // por texto/voz, sugerencias dinámicas y conexión hiper-inteligente con
 // /buscar (especialidad pre-seleccionada) y /quick-care.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
   Loader2,
@@ -450,7 +451,10 @@ function FamilyOnboarding() {
   return (
     <div className="min-h-screen bg-background bg-aurora">
       <header className="mx-auto max-w-3xl px-4 sm:px-6 py-6 flex items-center justify-between">
-        <Logo />
+        <div className="flex items-center gap-3">
+          <Logo />
+          <HomeButton />
+        </div>
         <Link
           to="/dashboard/familia"
           className="text-xs text-muted-foreground hover:text-foreground"

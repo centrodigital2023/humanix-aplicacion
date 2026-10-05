@@ -4,6 +4,7 @@
 // real al CTA del banner. Los crawlers de Facebook/LinkedIn/X leen las
 // OG tags antes de seguir la redirección, mostrando el preview correcto.
 import { useEffect } from "react";
+import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_NAME, SITE_URL, SOCIAL_IMAGE_URL } from "@/lib/seo";
@@ -127,9 +128,7 @@ function BannerSharePage() {
           <p className="text-sm text-muted-foreground mb-4">
             El enlace que abriste ya no está activo.
           </p>
-          <Link to="/" className="text-biosensor hover:underline text-sm">
-            Ir al inicio de Humanix
-          </Link>
+          <HomeButton />
         </div>
       </div>
     );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Loader2,
@@ -295,9 +296,7 @@ function AuthPage() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
         <div className="flex items-center justify-between gap-3">
           <Logo />
-          <Link to="/" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground whitespace-nowrap">
-            ← Inicio
-          </Link>
+          <HomeButton />
         </div>
 
         <div className="mt-6 sm:mt-10 grid lg:grid-cols-2 gap-8 lg:gap-10 items-start">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
@@ -479,7 +480,10 @@ function ProDashboard() {
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Logo />
+            <span className="hidden sm:block">
+              <Logo />
+            </span>
+            <HomeButton />
             <span className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-biosensor/10 text-biosensor border border-biosensor/20 font-medium">
               <Stethoscope className="h-3 w-3" /> Profesional
             </span>
