@@ -188,13 +188,15 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  // La home simple ya muestra WhatsApp en la cabecera y al final; la burbuja
-  // flotante taparía botones en el celular.
-  const isHome = useRouterState({ select: (s) => s.location.pathname === "/" });
+  // En la home y el registro el WhatsApp ya está en la página; la burbuja
+  // flotante taparía el botón principal en el celular.
+  const hideBubble = useRouterState({
+    select: (s) => s.location.pathname === "/" || s.location.pathname === "/auth",
+  });
   return (
     <>
       <Outlet />
-      {!isHome && (
+      {!hideBubble && (
         <Suspense fallback={null}>
           <FloatingWAChat />
         </Suspense>

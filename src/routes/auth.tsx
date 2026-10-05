@@ -11,6 +11,7 @@ import {
   Stethoscope,
   MapPin,
   ShieldCheck,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/humanix/Logo";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
 import { loadPendingBooking, type PendingBooking } from "@/lib/family-journey";
-import { AUDIENCE_COPY, readStoredAudience } from "@/lib/audience";
+import { AUDIENCE_COPY, readStoredAudience, storeAudience, whatsappLink } from "@/lib/audience";
+import { CONTACT } from "@/lib/social";
 import { SocialIcons } from "@/components/humanix/SocialIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -35,11 +37,11 @@ export const Route = createFileRoute("/auth")({
         ? search.redirect
         : undefined;
     const m = search.mode;
-    const mode: "signin" | "signup" | undefined =
-      m === "signin" || m === "signup" ? m : undefined;
-    const ref = typeof search.ref === "string" && /^[A-Z0-9]{6,12}$/i.test(search.ref)
-      ? search.ref.toUpperCase()
-      : undefined;
+    const mode: "signin" | "signup" | undefined = m === "signin" || m === "signup" ? m : undefined;
+    const ref =
+      typeof search.ref === "string" && /^[A-Z0-9]{6,12}$/i.test(search.ref)
+        ? search.ref.toUpperCase()
+        : undefined;
     const out: { role?: Role; redirect?: string; mode?: "signin" | "signup"; ref?: string } = {};
     if (role) out.role = role;
     if (redirect) out.redirect = redirect;
@@ -135,8 +137,11 @@ function AuthPage() {
     ? [fixedRole]
     : allowProfessional
       ? (["professional", "family", "institution"] as Role[])
-      : (["family", "institution"] as Role[]);
+      : (["family"] as Role[]);
   const [role, setRole] = useState<Role>(search.role ?? "family");
+  // Familia: registro mínimo (nombre, celular, correo, contraseña).
+  const isFamily = role === "family";
+  const [showPassword, setShowPassword] = useState(false);
   useEffect(() => {
     if (fixedRole) setRole(fixedRole);
   }, [fixedRole]);
@@ -228,9 +233,14 @@ function AuthPage() {
           void (async () => {
             try {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await (supabase as any).rpc("apply_referral_code", { p_code: _code, p_new_user_id: _uid });
+              await (supabase as any).rpc("apply_referral_code", {
+                p_code: _code,
+                p_new_user_id: _uid,
+              });
               localStorage.removeItem("humanix_ref_code");
-            } catch { /* silencio — no bloquear el registro */ }
+            } catch {
+              /* silencio — no bloquear el registro */
+            }
           })();
         }
 
@@ -250,9 +260,7 @@ function AuthPage() {
           // Email-not-confirmed surface → push user into OTP step instead of failing.
           if (/not confirmed|email.*confirm/i.test(error.message)) {
             setNeedsOtp(true);
-            toast.info(
-              "Tu cuenta aún no está verificada. Te reenviamos el código a tu email.",
-            );
+            toast.info("Tu cuenta aún no está verificada. Te reenviamos el código a tu email.");
             await supabase.auth.resend({ type: "signup", email });
             return;
           }
@@ -442,7 +450,8 @@ function AuthPage() {
                   </form>
                 )}
               </div>
-            ) : needsOtp ? (              <div>
+            ) : needsOtp ? (
+              <div>
                 <div className="mb-6 text-center">
                   <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-biosensor/10 text-biosensor mb-3">
                     <ShieldCheck className="h-7 w-7" />
@@ -510,282 +519,349 @@ function AuthPage() {
               </div>
             ) : (
               <>
-            <div className="mb-6 text-center">
-              <h2 className="font-display text-2xl font-bold">
-                {mode === "signup" ? "Crea tu cuenta" : "Bienvenido de nuevo"}
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {mode === "signup"
-                  ? "Regístrate gratis en menos de 1 minuto"
-                  : "Ingresa con tu correo y contraseña"}
-              </p>
-            </div>
-            {pendingBooking && (
-              <div
-                role="status"
-                className="mb-5 flex items-center gap-3 rounded-2xl border-2 border-primary/25 bg-primary/5 p-4"
-              >
-                <span aria-hidden="true" className="text-3xl">
-                  🧡
-                </span>
-                <p className="text-base font-semibold leading-snug">
-                  Un paso más para pedir a {pendingBooking.proName.split(" ")[0]}. Tu pedido queda
-                  guardado.
-                </p>
-              </div>
-            )}
-            <div
-              role="tablist"
-              aria-label="Elige entre crear cuenta o iniciar sesión"
-              className="flex items-center gap-1 rounded-xl bg-muted p-1 mb-6"
-            >
-              <button
-                role="tab"
-                aria-selected={mode === "signup"}
-                onClick={() => setMode("signup")}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition ${
-                  mode === "signup"
-                    ? "bg-foreground text-background shadow"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Crear cuenta
-              </button>
-              <button
-                role="tab"
-                aria-selected={mode === "signin"}
-                onClick={() => setMode("signin")}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition ${
-                  mode === "signin"
-                    ? "bg-foreground text-background shadow"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Entrar
-              </button>
-            </div>
-
-            {mode === "signup" && (
-              <div className="mb-5">
-                <Label className="mb-2 block">{fixedRole ? "Tu perfil" : "¿Cómo te identificas?"}</Label>
-                <div
-                  className={`grid gap-2 ${
-                    visibleRoles.length === 1
-                      ? "grid-cols-1"
-                      : visibleRoles.length === 2
-                        ? "grid-cols-2"
-                        : "grid-cols-3"
-                  }`}
-                >
-                  {visibleRoles.map((r) => {
-                    const c = roleConfig[r];
-                    const active = role === r;
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className={`p-3 rounded-xl border text-left transition ${
-                          active
-                            ? "border-foreground bg-foreground/5"
-                            : "border-border hover:border-foreground/30"
-                        }`}
-                      >
-                        <span aria-hidden="true" className="text-2xl leading-none">
-                          {c.emoji}
-                        </span>
-                        <p className="mt-2 text-sm font-bold">{c.label}</p>
-                        <p className="text-xs text-muted-foreground leading-tight">{c.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-                {!allowProfessional && !fixedRole && (
-                  <p className="text-[11px] text-muted-foreground mt-2">
-                    ¿Eres profesional de la salud?{" "}
-                    <Link to="/profesionales" className="underline hover:text-foreground">
-                      Empieza por aquí
-                    </Link>
-                    .
+                <div className="mb-6 text-center">
+                  <h2 className="font-display text-2xl font-bold">
+                    {mode === "signup" ? "Crea tu cuenta" : "Bienvenido de nuevo"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {mode === "signup"
+                      ? "Regístrate gratis en menos de 1 minuto"
+                      : "Ingresa con tu correo y contraseña"}
                   </p>
-                )}
-              </div>
-            )}
-
-            <form onSubmit={submit} className="space-y-4">
-              {mode === "signup" && (
-                <>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="fullName">Nombre completo</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        required
-                        className="pl-9"
-                        placeholder="María García"
-                      />
-                    </div>
-                  </div>
-                  {role === "institution" && (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="institutionName">Nombre de la institución</Label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="institutionName"
-                          value={institutionName}
-                          onChange={(e) => setInstitutionName(e.target.value)}
-                          required
-                          className="pl-9"
-                          placeholder="Clínica Reina Sofía"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="phone">Teléfono</Label>
-                      <Input
-                        id="phone"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="3001234567"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="city">Ciudad</Label>
-                      <Input
-                        id="city"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="Bogotá"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Ubicación principal de servicio — tarjeta interactiva pequeña
-                      que se marca automáticamente con el GPS del dispositivo. */}
-                  <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-biosensor" />
-                          Ubicación principal de servicio
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Se marca automáticamente con tu dispositivo. Puedes ajustar tocando el
-                          mapa o activar seguimiento en tiempo real.
-                        </p>
-                      </div>
-                    </div>
-                    <LocationPicker
-                      lat={coords.lat}
-                      lng={coords.lng}
-                      defaultCity={city || "Bogotá"}
-                      height={160}
-                      onChange={(lat, lng, addr) => {
-                        setCoords({ lat, lng });
-                        if (addr && !address) setAddress(addr);
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Correo</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="pl-9"
-                    placeholder="tu@email.com"
-                  />
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Contraseña</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={8}
-                    className="pl-9"
-                    placeholder="Mínimo 8 caracteres"
-                  />
-                </div>
-                {mode === "signin" && (
-                  <div className="text-right">
-                    <button
-                      type="button"
-                      onClick={() => setForgotMode(true)}
-                      className="text-xs text-muted-foreground hover:text-biosensor underline underline-offset-2"
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === "signup" ? "Crear cuenta" : "Entrar"}
-              </Button>
-            </form>
-
-            <div className="mt-5 pt-5 border-t border-border/60 text-center">
-              {mode === "signup" ? (
-                <p className="text-sm text-muted-foreground">
-                  ¿Ya tienes cuenta?{" "}
-                  <button
-                    type="button"
-                    onClick={() => setMode("signin")}
-                    className="font-semibold text-foreground hover:text-biosensor underline underline-offset-2"
+                {pendingBooking && (
+                  <div
+                    role="status"
+                    className="mb-5 flex items-center gap-3 rounded-2xl border-2 border-primary/25 bg-primary/5 p-4"
                   >
-                    Inicia sesión
-                  </button>
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  ¿Aún no tienes cuenta?{" "}
+                    <span aria-hidden="true" className="text-3xl">
+                      🧡
+                    </span>
+                    <p className="text-base font-semibold leading-snug">
+                      Un paso más para pedir a {pendingBooking.proName.split(" ")[0]}. Tu pedido
+                      queda guardado.
+                    </p>
+                  </div>
+                )}
+                <div
+                  role="tablist"
+                  aria-label="Elige entre crear cuenta o iniciar sesión"
+                  className="flex items-center gap-1 rounded-xl bg-muted p-1 mb-6"
+                >
                   <button
-                    type="button"
+                    role="tab"
+                    aria-selected={mode === "signup"}
                     onClick={() => setMode("signup")}
-                    className="font-semibold text-foreground hover:text-biosensor underline underline-offset-2"
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition ${
+                      mode === "signup"
+                        ? "bg-foreground text-background shadow"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    Créala gratis
+                    Crear cuenta
                   </button>
+                  <button
+                    role="tab"
+                    aria-selected={mode === "signin"}
+                    onClick={() => setMode("signin")}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition ${
+                      mode === "signin"
+                        ? "bg-foreground text-background shadow"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Entrar
+                  </button>
+                </div>
+
+                {mode === "signup" &&
+                  (visibleRoles.length === 1 ? (
+                    <div className="mb-5 flex items-center gap-3 rounded-2xl bg-primary/5 p-4 ring-1 ring-primary/15">
+                      <span aria-hidden="true" className="text-4xl leading-none">
+                        {roleConfig[visibleRoles[0]].emoji}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-lg font-bold">{roleConfig[visibleRoles[0]].label}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {roleConfig[visibleRoles[0]].desc}
+                        </p>
+                      </div>
+                      {!search.role && (
+                        <Link
+                          to="/"
+                          onClick={() => storeAudience(null)}
+                          className="shrink-0 text-sm font-semibold text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                        >
+                          Cambiar
+                        </Link>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-5">
+                      <Label className="mb-2 block">¿Cómo te identificas?</Label>
+                      <div
+                        className={`grid gap-2 ${visibleRoles.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}
+                      >
+                        {visibleRoles.map((r) => {
+                          const c = roleConfig[r];
+                          const active = role === r;
+                          return (
+                            <button
+                              key={r}
+                              type="button"
+                              onClick={() => setRole(r)}
+                              className={`p-3 rounded-xl border text-left transition ${
+                                active
+                                  ? "border-foreground bg-foreground/5"
+                                  : "border-border hover:border-foreground/30"
+                              }`}
+                            >
+                              <span aria-hidden="true" className="text-2xl leading-none">
+                                {c.emoji}
+                              </span>
+                              <p className="mt-2 text-sm font-bold">{c.label}</p>
+                              <p className="text-xs text-muted-foreground leading-tight">
+                                {c.desc}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+
+                <form onSubmit={submit} className="space-y-4">
+                  {mode === "signup" && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="fullName" className="text-base">
+                          Tu nombre
+                        </Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="fullName"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            required
+                            autoComplete="name"
+                            className="h-12 pl-9 text-base"
+                            placeholder="María García"
+                          />
+                        </div>
+                      </div>
+                      {role === "institution" && (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="institutionName">Nombre de la institución</Label>
+                          <div className="relative">
+                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="institutionName"
+                              value={institutionName}
+                              onChange={(e) => setInstitutionName(e.target.value)}
+                              required
+                              className="pl-9"
+                              placeholder="Clínica Reina Sofía"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {isFamily ? (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="phone" className="text-base">
+                            Tu celular
+                          </Label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="phone"
+                              type="tel"
+                              inputMode="numeric"
+                              autoComplete="tel"
+                              value={phone}
+                              onChange={(e) => setPhone(e.target.value)}
+                              className="h-12 pl-9 text-base"
+                              placeholder="300 123 4567"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="phone">Teléfono</Label>
+                              <Input
+                                id="phone"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="3001234567"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="city">Ciudad</Label>
+                              <Input
+                                id="city"
+                                value={city}
+                                onChange={(e) => setCity(e.target.value)}
+                                placeholder="Bogotá"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Ubicación principal de servicio — tarjeta interactiva pequeña
+                      que se marca automáticamente con el GPS del dispositivo. */}
+                          <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-semibold flex items-center gap-1.5">
+                                  <MapPin className="h-3.5 w-3.5 text-biosensor" />
+                                  Ubicación principal de servicio
+                                </p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  Se marca automáticamente con tu dispositivo. Puedes ajustar
+                                  tocando el mapa o activar seguimiento en tiempo real.
+                                </p>
+                              </div>
+                            </div>
+                            <LocationPicker
+                              lat={coords.lat}
+                              lng={coords.lng}
+                              defaultCity={city || "Bogotá"}
+                              height={160}
+                              onChange={(lat, lng, addr) => {
+                                setCoords({ lat, lng });
+                                if (addr && !address) setAddress(addr);
+                              }}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-base">
+                      {isFamily && mode === "signup" ? "Tu correo" : "Correo"}
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="h-12 pl-9 text-base"
+                        placeholder="tu@email.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password" className="text-base">
+                      {mode === "signup" ? "Crea una contraseña" : "Contraseña"}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={8}
+                        className="h-12 pl-9 pr-20 text-base"
+                        placeholder="Mínimo 8 letras o números"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-pressed={showPassword}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? "Ocultar" : "Ver"}
+                      </button>
+                    </div>
+                    {mode === "signin" && (
+                      <div className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => setForgotMode(true)}
+                          className="text-xs text-muted-foreground hover:text-biosensor underline underline-offset-2"
+                        >
+                          ¿Olvidaste tu contraseña?
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="xl"
+                    className="w-full text-lg"
+                    disabled={loading}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {mode === "signup" ? "Crear mi cuenta" : "Entrar"}
+                  </Button>
+                </form>
+
+                <div className="mt-5 pt-5 border-t border-border/60 text-center">
+                  {mode === "signup" ? (
+                    <p className="text-sm text-muted-foreground">
+                      ¿Ya tienes cuenta?{" "}
+                      <button
+                        type="button"
+                        onClick={() => setMode("signin")}
+                        className="font-semibold text-foreground hover:text-biosensor underline underline-offset-2"
+                      >
+                        Inicia sesión
+                      </button>
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      ¿Aún no tienes cuenta?{" "}
+                      <button
+                        type="button"
+                        onClick={() => setMode("signup")}
+                        className="font-semibold text-foreground hover:text-biosensor underline underline-offset-2"
+                      >
+                        Créala gratis
+                      </button>
+                    </p>
+                  )}
+                </div>
+
+                <a
+                  href={whatsappLink(
+                    CONTACT.whatsappNumber,
+                    "Hola Humanix, necesito ayuda para crear mi cuenta.",
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-2xl text-base font-semibold text-ok hover:bg-ok/5"
+                >
+                  <span aria-hidden="true">💬</span> ¿Te ayudamos? Escríbenos por WhatsApp
+                </a>
+
+                <p className="mt-2 text-xs text-muted-foreground text-center">
+                  Al continuar aceptas los términos, política de privacidad y tratamiento de datos
+                  personales (Habeas Data) de Humanix.
                 </p>
-              )}
-            </div>
 
-            <p className="mt-4 text-xs text-muted-foreground text-center">
-              Al continuar aceptas los términos, política de privacidad y tratamiento de datos
-              personales (Habeas Data) de Humanix.
-            </p>
-
-            <div className="mt-6 pt-4 border-t border-border">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/70 text-center mb-3">
-                Conéctate con Humanix
-              </p>
-              <div className="flex justify-center">
-                <SocialIcons size="sm" />
-              </div>
-            </div>
+                <div
+                  className={`mt-6 pt-4 border-t border-border ${mode === "signup" ? "hidden" : ""}`}
+                >
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/70 text-center mb-3">
+                    Conéctate con Humanix
+                  </p>
+                  <div className="flex justify-center">
+                    <SocialIcons size="sm" />
+                  </div>
+                </div>
               </>
             )}
           </div>
