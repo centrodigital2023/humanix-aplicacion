@@ -1,5 +1,5 @@
 // Reserva en un toque (familias): cuándo, cuántas horas, dónde → total claro.
-// Crea un service_booking real (igual que "Contratar ahora") y lleva al
+// Crea un service_booking real (igual que BookNowButton) y lleva al
 // seguimiento en vivo /servicio/$id. El pago es directo al profesional
 // (payment_mode por defecto: direct_to_professional), sin cobros ocultos.
 import { useEffect, useState } from "react";

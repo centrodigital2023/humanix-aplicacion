@@ -4,7 +4,7 @@
 import { useCallback, useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MessageCircle } from "lucide-react";
-import { Logo } from "@/components/humanix/Logo";
+import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
 import { AudienceSwitcher } from "@/components/humanix/simple/AudienceSwitcher";
@@ -17,7 +17,7 @@ import { LiveNearby } from "@/components/humanix/simple/LiveNearby";
 import { FeatureHub } from "@/components/humanix/simple/FeatureHub";
 import { PlanStrip } from "@/components/humanix/simple/PlanStrip";
 import { VoiceProvider } from "@/components/humanix/simple/voice";
-import { useAppUser, pathForRole } from "@/hooks/use-app-user";
+import { useAppUser } from "@/hooks/use-app-user";
 import {
   AUDIENCE_COPY,
   AUDIENCE_STORAGE_KEY,
@@ -153,40 +153,7 @@ function Home() {
         Saltar al contenido
       </a>
 
-      <header className="relative z-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <Link to="/" search={{ para: audience }} aria-label="Humanix, inicio">
-            <Logo />
-          </Link>
-          <nav aria-label="Cuenta" className="flex items-center gap-2">
-            <a
-              href={whatsappLink(CONTACT.whatsappNumber, "Hola Humanix, necesito ayuda.")}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Ayuda por WhatsApp"
-              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-card shadow-sm transition hover:shadow-md active:scale-95"
-            >
-              <MessageCircle className="h-6 w-6 text-ok" aria-hidden="true" />
-            </a>
-            {user ? (
-              <Link
-                to={pathForRole(user.primaryRole)}
-                className="inline-flex min-h-12 items-center rounded-full bg-trust px-5 text-base font-bold text-trust-foreground shadow-md active:scale-95"
-              >
-                Mi panel
-              </Link>
-            ) : (
-              <Link
-                to="/auth"
-                search={{ role: copy.authRole, mode: "signin" } as never}
-                className="inline-flex min-h-12 items-center rounded-full bg-card px-5 text-base font-bold shadow-sm transition hover:shadow-md active:scale-95"
-              >
-                Entrar
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
+      <Navbar static />
 
       {/* Selector persistente: siempre visible al hacer scroll */}
       <div className="sticky top-0 z-40 bg-canvas/85 backdrop-blur-md">

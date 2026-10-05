@@ -39,6 +39,13 @@ Deno.serve(async (req) => {
       ? rawOrigin
       : "https://humanix.lat";
 
+    // Panel al que vuelve cada perfil tras pagar (lista cerrada, sin open-redirect).
+    const RETURN_PATHS = new Set(["/dashboard/profesional", "/dashboard/familia", "/dashboard/institucion"]);
+    const returnPath =
+      typeof body.return_to === "string" && RETURN_PATHS.has(body.return_to)
+        ? body.return_to
+        : "/dashboard/profesional";
+
     const title =
       plan === "essential_monthly"
         ? "Humanix Esencial · Suscripción mensual"
@@ -57,9 +64,9 @@ Deno.serve(async (req) => {
       ],
       payer: { email },
       back_urls: {
-        success: `${origin}/dashboard/profesional?mp=success`,
-        failure: `${origin}/dashboard/profesional?mp=failure`,
-        pending: `${origin}/dashboard/profesional?mp=pending`,
+        success: `${origin}${returnPath}?mp=success`,
+        failure: `${origin}${returnPath}?mp=failure`,
+        pending: `${origin}${returnPath}?mp=pending`,
       },
       auto_return: "approved",
       external_reference: userId,

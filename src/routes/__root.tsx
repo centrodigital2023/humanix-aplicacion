@@ -8,6 +8,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { GlobalExperience } from "@/components/humanix/GlobalExperience";
 import * as seo from "@/lib/seo";
 const {
   DEFAULT_LOCALE,
@@ -199,6 +200,7 @@ function RootComponent() {
         </Suspense>
       )}
       <Toaster richColors position="top-right" />
+      <GlobalExperience />
     </>
   );
 }

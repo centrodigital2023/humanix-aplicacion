@@ -92,43 +92,43 @@
 :root {
   --radius: 0.875rem;
 
-  /* Light — Blanco absoluto + acentos premium */
-  --background: oklch(0.985 0.006 248);
-  --foreground: oklch(0.17 0.045 258);
-  --card: oklch(1 0.002 248);
-  --card-foreground: oklch(0.18 0.04 260);
-  --popover: oklch(1 0.002 248);
-  --popover-foreground: oklch(0.18 0.04 260);
+  /* Light — blanco cálido, azul de confianza clínica */
+  --background: #f9fafb;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
 
-  /* Primary = verde biosensor (acción) */
-  --primary: oklch(0.78 0.18 165);
-  --primary-foreground: oklch(0.16 0.04 260);
+  /* Primary = azul de confianza (acción) */
+  --primary: #0f4c81;
+  --primary-foreground: #ffffff;
 
-  --secondary: oklch(0.952 0.016 250);
-  --secondary-foreground: oklch(0.2 0.04 260);
+  --secondary: #eef3f8;
+  --secondary-foreground: #0f2a44;
 
-  --muted: oklch(0.948 0.012 250);
-  --muted-foreground: oklch(0.47 0.036 258);
+  --muted: #f1f4f7;
+  --muted-foreground: #4b5563;
 
-  --accent: oklch(0.96 0.015 80);
-  --accent-foreground: oklch(0.2 0.04 260);
+  --accent: #e8f0f8;
+  --accent-foreground: #0f4c81;
 
-  --destructive: oklch(0.62 0.24 5);
-  --destructive-foreground: oklch(0.99 0 0);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
 
-  --border: oklch(0.885 0.018 255);
-  --input: oklch(0.885 0.018 255);
-  --ring: oklch(0.78 0.18 165);
+  --border: #e3e8ef;
+  --input: #d6dde6;
+  --ring: #0f4c81;
 
-  /* Marca Humanix — valores fijos en ambos modos */
-  --cyber: oklch(0.2 0.075 260); /* premium navy */
-  --cyber-foreground: oklch(0.98 0 0);
-  --biosensor: oklch(0.78 0.18 165); /* premium mint */
-  --biosensor-foreground: oklch(0.16 0.04 260);
-  --copper: oklch(0.69 0.145 63); /* premium gold */
-  --copper-foreground: oklch(0.99 0 0);
-  --fuchsia-neural: oklch(0.56 0.24 355); /* premium fuchsia */
-  --fuchsia-neural-foreground: oklch(0.99 0 0);
+  /* Marca Humanix — unificada con la paleta operativa (confianza clínica) */
+  --cyber: #0b3a63; /* azul profundo */
+  --cyber-foreground: #ffffff;
+  --biosensor: #047857; /* esmeralda: verificado / disponible */
+  --biosensor-foreground: #ffffff;
+  --copper: #b45309; /* ámbar: en revisión / destacado */
+  --copper-foreground: #ffffff;
+  --fuchsia-neural: #0f4c81; /* antes fucsia: ahora azul (sin colores de alarma fuera de SOS) */
+  --fuchsia-neural-foreground: #ffffff;
   --space: oklch(0.22 0.012 270); /* #1E2025 */
 
   --chart-1: oklch(0.82 0.19 165);
@@ -159,8 +159,8 @@
   --popover: oklch(0.225 0.02 268);
   --popover-foreground: oklch(0.98 0.005 250);
 
-  --primary: oklch(0.82 0.19 165);
-  --primary-foreground: oklch(0.16 0.04 260);
+  --primary: #7cb4e8;
+  --primary-foreground: #0b1b2b;
 
   --secondary: oklch(0.285 0.024 268);
   --secondary-foreground: oklch(0.98 0 0);
@@ -168,15 +168,15 @@
   --muted: oklch(0.285 0.024 268);
   --muted-foreground: oklch(0.76 0.022 258);
 
-  --accent: oklch(0.66 0.13 50);
-  --accent-foreground: oklch(0.99 0 0);
+  --accent: #1e3a5f;
+  --accent-foreground: #e6f0fa;
 
   --destructive: oklch(0.62 0.24 5);
   --destructive-foreground: oklch(0.99 0 0);
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.82 0.19 165);
+  --ring: #7cb4e8;
 
   --canvas: oklch(0.17 0.018 268);
   --trust: #7cb4e8;
@@ -187,6 +187,15 @@
   --warn-foreground: #2b1a00;
   --sos: #f87171;
   --sos-foreground: #2b0606;
+
+  /* Marca en modo oscuro: tonos claros para mantener contraste AA */
+  --cyber: #0b2e4f;
+  --biosensor: #34d399;
+  --biosensor-foreground: #052e1f;
+  --copper: #fbbf24;
+  --copper-foreground: #2b1a00;
+  --fuchsia-neural: #7cb4e8;
+  --fuchsia-neural-foreground: #0b1b2b;
 }
 
 /* Modo "Lectura fácil": todo crece (Tailwind usa rem), más interlineado y
@@ -382,8 +391,8 @@ html.easy-read .easy-hide {
   .text-gradient-bio {
     background: linear-gradient(
       135deg,
-      var(--biosensor) 0%,
-      color-mix(in oklab, var(--biosensor) 50%, var(--copper)) 100%
+      var(--primary) 0%,
+      var(--biosensor) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -573,7 +582,7 @@ html.easy-read .easy-hide {
     background: linear-gradient(
       135deg,
       var(--fuchsia-neural) 0%,
-      color-mix(in oklab, var(--fuchsia-neural) 60%, var(--copper)) 100%
+      color-mix(in oklab, var(--fuchsia-neural) 60%, var(--biosensor)) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;

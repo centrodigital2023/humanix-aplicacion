@@ -5,11 +5,11 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { AppUser } from "@/hooks/use-app-user";
+import { pathForRole, type AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
 import { computeCta } from "@/lib/planCta";
 import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
-import type { Audience } from "@/lib/audience";
+import { AUDIENCE_COPY, type Audience } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
 import { whatsappLink } from "@/lib/audience";
 import { useVoice } from "./voice";
@@ -77,12 +77,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
         navigate({
           to: "/auth",
           search: {
-            role:
-              audience === "familias"
-                ? "family"
-                : audience === "instituciones"
-                  ? "institution"
-                  : "professional",
+            role: AUDIENCE_COPY[audience].authRole,
             mode: "signup",
           } as never,
         });
@@ -91,7 +86,11 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
     if (action.kind === "login") {
       navigate({
         to: "/auth",
-        search: { mode: "signup", redirect: `/?para=${audience}` } as never,
+        search: {
+          role: AUDIENCE_COPY[audience].authRole,
+          mode: "signup",
+          redirect: `/?para=${audience}`,
+        } as never,
       });
       return;
     }
@@ -100,7 +99,12 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
     say("Te llevamos a pagar de forma segura.");
     try {
       const { data, error: err } = await supabase.functions.invoke("mp-create-subscription", {
-        body: { plan: key, amount: PLAN_CATALOG[key].amountCOP, email: user?.email },
+        body: {
+          plan: key,
+          amount: PLAN_CATALOG[key].amountCOP,
+          email: user?.email,
+          return_to: user ? pathForRole(user.primaryRole) : "/dashboard/profesional",
+        },
       });
       if (err) throw err;
       const url =

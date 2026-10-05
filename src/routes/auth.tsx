@@ -61,22 +61,25 @@ type Role = "professional" | "family" | "institution";
 
 const roleConfig: Record<
   Role,
-  { label: string; desc: string; icon: typeof Stethoscope; accent: string }
+  { label: string; emoji: string; desc: string; icon: typeof Stethoscope; accent: string }
 > = {
   professional: {
     label: "Profesional",
+    emoji: "👩‍⚕️",
     desc: "Enfermero, auxiliar o cuidador",
     icon: Stethoscope,
     accent: "biosensor",
   },
   family: {
     label: "Familia",
+    emoji: "👨‍👩‍👧",
     desc: "Busco cuidado para un familiar",
     icon: HeartHandshake,
     accent: "copper",
   },
   institution: {
-    label: "IPS / Clínica",
+    label: "IPS / EPS",
+    emoji: "🏥",
     desc: "Publico ofertas para mi institución",
     icon: Building2,
     accent: "fuchsia-neural",
@@ -506,7 +509,7 @@ function AuthPage() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Iniciar sesión
+                Entrar
               </button>
             </div>
 
@@ -518,7 +521,6 @@ function AuthPage() {
                 >
                   {visibleRoles.map((r) => {
                     const c = roleConfig[r];
-                    const Icon = c.icon;
                     const active = role === r;
                     return (
                       <button
@@ -531,9 +533,11 @@ function AuthPage() {
                             : "border-border hover:border-foreground/30"
                         }`}
                       >
-                        <Icon className={`h-4 w-4 text-${c.accent}`} />
-                        <p className="mt-2 text-xs font-semibold">{c.label}</p>
-                        <p className="text-[10px] text-muted-foreground leading-tight">{c.desc}</p>
+                        <span aria-hidden="true" className="text-2xl leading-none">
+                          {c.emoji}
+                        </span>
+                        <p className="mt-2 text-sm font-bold">{c.label}</p>
+                        <p className="text-xs text-muted-foreground leading-tight">{c.desc}</p>
                       </button>
                     );
                   })}
@@ -681,7 +685,7 @@ function AuthPage() {
 
               <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === "signup" ? "Crear cuenta" : "Iniciar sesión"}
+                {mode === "signup" ? "Crear cuenta" : "Entrar"}
               </Button>
             </form>
 

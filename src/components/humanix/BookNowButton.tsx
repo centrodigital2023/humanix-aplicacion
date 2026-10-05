@@ -1,4 +1,4 @@
-// "Contratar ahora" — crea un service_booking y abre /servicio/$id.
+// "Pedir" — crea un service_booking y abre /servicio/$id.
 // Usado en cards de profesionales y en cards de ofertas (precarga datos).
 import { useState } from "react";
 import { Loader2, Calendar, Clock, MapPin, ShieldCheck } from "lucide-react";
@@ -115,7 +115,7 @@ export function BookNowButton({
           size === "lg" ? "px-5 py-3 text-sm" : "px-3.5 py-2 text-xs"
         } ${fullWidth ? "w-full" : ""} ${variant === "copper" ? btnClass : ""} ${className ?? ""}`}
       >
-        Contratar ahora
+        Pedir
       </button>
 
       {open && (
@@ -129,11 +129,11 @@ export function BookNowButton({
           >
             <header className="px-5 py-4 border-b border-border">
               <p className="text-[10px] uppercase tracking-widest text-copper font-semibold">
-                Reserva de servicio
+                Pedir servicio
               </p>
-              <h3 className="font-display text-xl font-bold">Confirmar contratación</h3>
+              <h3 className="font-display text-xl font-bold">Confirma tu pedido</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                Quedará reservado por 15 días según las normas de Humanix.
+                Pagas directo al profesional al terminar. Sin cobros ocultos.
               </p>
             </header>
 
@@ -197,7 +197,7 @@ export function BookNowButton({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                      Total a pagar
+                      Total
                     </p>
                     <p className="font-display text-2xl font-bold text-biosensor">{COP(total)}</p>
                   </div>
@@ -235,7 +235,7 @@ export function BookNowButton({
                 disabled={busy}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-copper text-copper-foreground font-semibold py-2.5 text-sm shadow-[var(--shadow-glow-copper)] disabled:opacity-60"
               >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y pagar"}
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : `Confirmar · ${COP(total)}`}
               </button>
             </footer>
           </div>
