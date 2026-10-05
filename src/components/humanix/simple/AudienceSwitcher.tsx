@@ -2,6 +2,7 @@
 // Patrón ARIA "tabs": flechas ← → / Inicio / Fin para moverse con teclado.
 import { useRef } from "react";
 import { AUDIENCES, AUDIENCE_COPY, type Audience } from "@/lib/audience";
+import { useVoice } from "./voice";
 
 type Props = {
   value: Audience;
@@ -11,10 +12,16 @@ type Props = {
 
 export function AudienceSwitcher({ value, onChange, panelId }: Props) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const { say } = useVoice();
+
+  const choose = (a: Audience) => {
+    say(`${AUDIENCE_COPY[a].tab}. ${AUDIENCE_COPY[a].title}`);
+    onChange(a);
+  };
 
   const focusAt = (index: number) => {
     const i = (index + AUDIENCES.length) % AUDIENCES.length;
-    onChange(AUDIENCES[i]);
+    choose(AUDIENCES[i]);
     refs.current[i]?.focus();
   };
 
@@ -31,7 +38,7 @@ export function AudienceSwitcher({ value, onChange, panelId }: Props) {
     <div
       role="tablist"
       aria-label="¿Quién eres?"
-      className="grid grid-cols-3 gap-1.5 rounded-2xl border border-border bg-card p-1.5 shadow-sm"
+      className="grid grid-cols-3 gap-1 rounded-[1.4rem] bg-card p-1.5 shadow-lg shadow-trust/10 ring-1 ring-border"
     >
       {AUDIENCES.map((a, index) => {
         const copy = AUDIENCE_COPY[a];
@@ -48,9 +55,9 @@ export function AudienceSwitcher({ value, onChange, panelId }: Props) {
             aria-selected={active}
             aria-controls={panelId}
             tabIndex={active ? 0 : -1}
-            onClick={() => onChange(a)}
+            onClick={() => choose(a)}
             onKeyDown={(e) => onKeyDown(e, index)}
-            className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-center font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trust focus-visible:ring-offset-2 sm:flex-row sm:gap-2 sm:text-base ${
+            className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-center font-bold transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trust focus-visible:ring-offset-2 sm:flex-row sm:gap-2 sm:text-base ${
               active
                 ? "bg-trust text-trust-foreground shadow-md"
                 : "text-foreground hover:bg-trust/10"

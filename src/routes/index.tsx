@@ -1,17 +1,19 @@
-// Home "Humanix simple": una sola pantalla que cambia según quién eres
-// (Familias / IPS-EPS / Profesionales), sin publicidad, sin contadores de
-// urgencia y con accesibilidad cognitiva (audio + letra grande).
-import { useCallback, useEffect, useRef } from "react";
+// Home "Humanix simple": una pantalla que cambia según quién eres
+// (Familias / IPS-EPS / Profesionales). Imágenes grandes + pocas palabras,
+// guía por voz para quien no lee, sin publicidad ni urgencias falsas.
+import { useCallback, useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDown, BadgeCheck, EyeOff, MessageCircle, Receipt, ShieldCheck } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Logo } from "@/components/humanix/Logo";
 import { Footer } from "@/components/humanix/Footer";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
 import { AudienceSwitcher } from "@/components/humanix/simple/AudienceSwitcher";
-import { EasyReadToggle, ListenButton } from "@/components/humanix/simple/AccessibilityTools";
+import { EasyReadToggle, VoiceToggle } from "@/components/humanix/simple/AccessibilityTools";
 import { FamilyFlow } from "@/components/humanix/simple/FamilyFlow";
 import { InstitutionFlow } from "@/components/humanix/simple/InstitutionFlow";
 import { ProfessionalFlow } from "@/components/humanix/simple/ProfessionalFlow";
+import { TINTS, type Tint } from "@/components/humanix/simple/ui";
+import { VoiceProvider } from "@/components/humanix/simple/voice";
 import { useAppUser, pathForRole } from "@/hooks/use-app-user";
 import {
   AUDIENCE_COPY,
@@ -30,78 +32,85 @@ export const Route = createFileRoute("/")({
   },
   head: () =>
     buildSeo({
-      title: `${SITE_NAME} · Cuidado en casa y talento en salud verificado en Colombia`,
+      title: `${SITE_NAME} · Cuidado en casa y talento en salud verificado`,
       path: "/",
       appendSiteName: false,
       description:
-        "Encuentra enfermeras y cuidadores con documentos revisados, cubre turnos de tu IPS o EPS y recibe ofertas como profesional de la salud. Precio claro, sin publicidad.",
+        "Enfermeras y cuidadores verificados cerca de ti. Turnos cubiertos para IPS y EPS. Ofertas para profesionales de la salud. Precio claro, sin publicidad.",
     }),
   component: Index,
 });
 
-const HOW: Record<Audience, Array<{ title: string; text: string }>> = {
+type Pic = { emoji: string; label: string; tint: Tint };
+
+const HOW: Record<Audience, Pic[]> = {
   familias: [
-    {
-      title: "Cuéntanos qué necesitas",
-      text: "Tres preguntas sencillas. No tienes que registrarte para buscar.",
-    },
-    {
-      title: "Elige entre 3 personas",
-      text: "Con foto, documentos revisados, experiencia y precio claro.",
-    },
-    {
-      title: "Mira cuándo va llegando",
-      text: "Sigue el servicio desde tu celular y califica al terminar.",
-    },
+    { emoji: "👆", label: "Elige", tint: "sky" },
+    { emoji: "🤝", label: "Conoce", tint: "rose" },
+    { emoji: "🏡", label: "Cuidado en casa", tint: "emerald" },
   ],
   instituciones: [
-    { title: "Publica el turno", text: "Usa una plantilla por rol y horario. Toma un minuto." },
-    {
-      title: "Recibe candidatos validados",
-      text: "Ordenados por cercanía, especialidad y documentos.",
-    },
-    {
-      title: "Controla tu operación",
-      text: "Turnos abiertos, cubiertos y credenciales por vencer en un panel.",
-    },
+    { emoji: "📝", label: "Publica", tint: "sky" },
+    { emoji: "👩‍⚕️", label: "Elige candidato", tint: "violet" },
+    { emoji: "✅", label: "Turno cubierto", tint: "emerald" },
   ],
   profesionales: [
-    { title: "Activa tu disponibilidad", text: "Un solo botón. Lo apagas cuando quieras." },
-    { title: "Recibe ofertas cerca", text: "Ves el pago y la zona antes de aceptar." },
-    { title: "Trabaja con respaldo", text: "Pagos claros y un historial que habla por ti." },
+    { emoji: "🟢", label: "Actívate", tint: "emerald" },
+    { emoji: "📲", label: "Recibe ofertas", tint: "sky" },
+    { emoji: "💵", label: "Cobra claro", tint: "amber" },
   ],
 };
 
-const PROMISES = [
-  {
-    icon: BadgeCheck,
-    title: "Documentos revisados",
-    text: "Revisamos identidad, títulos y RETHUS de cada profesional.",
-  },
-  {
-    icon: Receipt,
-    title: "Precio total antes de confirmar",
-    text: "Sin costos ocultos ni renovaciones automáticas sin avisar.",
-  },
-  {
-    icon: EyeOff,
-    title: "Sin publicidad en tu proceso",
-    text: "Nada de anuncios mientras buscas o das cuidado.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Tus datos protegidos",
-    text: "Cumplimos la Ley 1581 de 2012 (Habeas Data).",
-  },
+const PROMISES: Pic[] = [
+  { emoji: "🛡️", label: "Verificados", tint: "emerald" },
+  { emoji: "💲", label: "Precio claro", tint: "amber" },
+  { emoji: "🚫", label: "Sin anuncios", tint: "rose" },
+  { emoji: "🔒", label: "Datos seguros", tint: "sky" },
 ];
 
+function PicRow({ items, numbered }: { items: Pic[]; numbered?: boolean }) {
+  const Tag = numbered ? "ol" : "ul";
+  return (
+    <Tag
+      className={`grid gap-3 ${items.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}
+    >
+      {items.map((p, i) => (
+        <li
+          key={p.label}
+          className="flex flex-col items-center gap-3 rounded-3xl bg-card p-4 text-center shadow-sm"
+        >
+          <span
+            aria-hidden="true"
+            className={`relative flex h-16 w-16 items-center justify-center rounded-full text-3xl sm:h-20 sm:w-20 sm:text-4xl ${TINTS[p.tint]}`}
+          >
+            {p.emoji}
+            {numbered && (
+              <span className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-trust text-sm font-bold text-trust-foreground">
+                {i + 1}
+              </span>
+            )}
+          </span>
+          <span className="text-base font-bold leading-tight sm:text-lg">{p.label}</span>
+        </li>
+      ))}
+    </Tag>
+  );
+}
+
 function Index() {
+  return (
+    <VoiceProvider>
+      <Home />
+    </VoiceProvider>
+  );
+}
+
+function Home() {
   const { para } = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
   const { user } = useAppUser({ requireAuth: false });
   const audience: Audience = para ?? "familias";
   const copy = AUDIENCE_COPY[audience];
-  const flowHeadingRef = useRef<HTMLDivElement>(null);
 
   const setAudience = useCallback(
     (next: Audience) => {
@@ -126,13 +135,14 @@ function Index() {
     }
   }, [para, setAudience]);
 
-  const goToFlow = () => {
-    flowHeadingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    flowHeadingRef.current?.focus({ preventScroll: true });
-  };
-
   return (
-    <div className="min-h-screen bg-canvas text-foreground">
+    <div className="relative min-h-screen overflow-x-clip bg-canvas text-foreground">
+      {/* Fondo cálido y sereno */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[720px] bg-[radial-gradient(900px_420px_at_15%_0%,color-mix(in_oklab,var(--trust)_14%,transparent),transparent_70%),radial-gradient(700px_380px_at_95%_10%,color-mix(in_oklab,var(--ok)_14%,transparent),transparent_70%)]"
+      />
+
       <a
         href="#contenido"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-xl focus:bg-trust focus:px-4 focus:py-3 focus:text-trust-foreground"
@@ -140,8 +150,8 @@ function Index() {
         Saltar al contenido
       </a>
 
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <header className="relative z-10">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" search={{ para: audience }} aria-label="Humanix, inicio">
             <Logo />
           </Link>
@@ -150,15 +160,15 @@ function Index() {
               href={whatsappLink(CONTACT.whatsappNumber, "Hola Humanix, necesito ayuda.")}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold hover:bg-muted sm:inline-flex"
+              aria-label="Ayuda por WhatsApp"
+              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-card shadow-sm transition hover:shadow-md active:scale-95"
             >
-              <MessageCircle className="h-4 w-4 text-ok" aria-hidden="true" />
-              Ayuda
+              <MessageCircle className="h-6 w-6 text-ok" aria-hidden="true" />
             </a>
             {user ? (
               <Link
                 to={pathForRole(user.primaryRole)}
-                className="inline-flex min-h-11 items-center rounded-full bg-trust px-4 text-sm font-bold text-trust-foreground hover:bg-trust/90"
+                className="inline-flex min-h-12 items-center rounded-full bg-trust px-5 text-base font-bold text-trust-foreground shadow-md active:scale-95"
               >
                 Mi panel
               </Link>
@@ -166,9 +176,9 @@ function Index() {
               <Link
                 to="/auth"
                 search={{ role: copy.authRole, mode: "signin" } as never}
-                className="inline-flex min-h-11 items-center rounded-full border-2 border-border px-4 text-sm font-bold hover:border-trust"
+                className="inline-flex min-h-12 items-center rounded-full bg-card px-5 text-base font-bold shadow-sm transition hover:shadow-md active:scale-95"
               >
-                Ingresar
+                Entrar
               </Link>
             )}
           </nav>
@@ -176,11 +186,8 @@ function Index() {
       </header>
 
       {/* Selector persistente: siempre visible al hacer scroll */}
-      <div
-        className="sticky top-0 z-40 border-b border-border bg-canvas/95 backdrop-blur"
-        data-no-read
-      >
-        <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6">
+      <div className="sticky top-0 z-40 bg-canvas/85 backdrop-blur-md">
+        <div className="mx-auto max-w-6xl px-4 py-2 sm:px-6">
           <AudienceSwitcher value={audience} onChange={setAudience} panelId="contenido" />
         </div>
       </div>
@@ -190,94 +197,77 @@ function Index() {
         role="tabpanel"
         aria-labelledby={`audience-tab-${audience}`}
         tabIndex={-1}
+        className="relative z-10 outline-none"
       >
-        <section className="mx-auto max-w-6xl px-4 pb-6 pt-8 sm:px-6 sm:pt-14">
-          <div className="flex flex-wrap gap-2" data-no-read>
-            <ListenButton targetId="contenido" />
-            <EasyReadToggle />
-          </div>
-          <h1 className="mt-6 max-w-3xl font-display text-4xl font-bold leading-[1.1] tracking-tight text-trust sm:text-5xl lg:text-6xl">
-            {copy.title}
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg text-muted-foreground sm:text-xl">{copy.subtitle}</p>
-          <button
-            type="button"
-            onClick={goToFlow}
-            className="mt-7 inline-flex min-h-16 items-center gap-3 rounded-2xl bg-trust px-7 text-lg font-bold text-trust-foreground shadow-md transition hover:bg-trust/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trust focus-visible:ring-offset-2"
+        <section className="mx-auto max-w-6xl px-4 pb-4 pt-6 sm:px-6 sm:pt-10">
+          <div
+            key={audience}
+            className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:flex-row sm:items-end sm:justify-between"
           >
-            {copy.cta}
-            <ArrowDown className="h-5 w-5" aria-hidden="true" />
-          </button>
+            <div>
+              <h1 className="font-display text-[2.4rem] font-bold leading-[1.05] tracking-tight text-trust sm:text-6xl">
+                {copy.title}
+              </h1>
+              <p className="mt-3 text-xl text-muted-foreground sm:text-2xl">{copy.subtitle}</p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <VoiceToggle />
+              <EasyReadToggle />
+            </div>
+          </div>
         </section>
 
-        <section className="mx-auto max-w-6xl scroll-mt-24 px-4 py-6 sm:px-6" aria-label={copy.cta}>
-          <div ref={flowHeadingRef} tabIndex={-1} className="scroll-mt-28 outline-none" />
+        <section className="mx-auto max-w-6xl px-4 pb-10 sm:px-6" aria-label={copy.cta}>
           {audience === "familias" && <FamilyFlow />}
           {audience === "instituciones" && <InstitutionFlow user={user} />}
           {audience === "profesionales" && <ProfessionalFlow user={user} />}
         </section>
 
-        <section aria-labelledby="how-title" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <section aria-labelledby="how-title" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <h2 id="how-title" className="font-display text-2xl font-bold sm:text-3xl">
             Así de fácil
           </h2>
-          <ol className="mt-6 grid gap-4 md:grid-cols-3">
-            {HOW[audience].map((s, i) => (
-              <li key={s.title} className="rounded-3xl border border-border bg-card p-6">
-                <span
-                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-trust text-xl font-bold text-trust-foreground"
-                  aria-hidden="true"
-                >
-                  {i + 1}
-                </span>
-                <h3 className="mt-4 text-xl font-bold">
-                  <span className="sr-only">Paso {i + 1}: </span>
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-base text-muted-foreground">{s.text}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section aria-labelledby="trust-title" className="bg-card py-12">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 id="trust-title" className="font-display text-2xl font-bold sm:text-3xl">
-              Nuestro compromiso contigo
-            </h2>
-            <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {PROMISES.map((p) => (
-                <li key={p.title} className="rounded-3xl border border-border bg-background p-6">
-                  <p.icon className="h-8 w-8 text-ok" aria-hidden="true" />
-                  <h3 className="mt-3 text-lg font-bold">{p.title}</h3>
-                  <p className="mt-1 text-base text-muted-foreground">{p.text}</p>
-                </li>
-              ))}
-            </ul>
+          <div className="mt-5">
+            <PicRow items={HOW[audience]} numbered />
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <div className="flex flex-col items-start justify-between gap-4 rounded-3xl bg-trust p-6 text-trust-foreground sm:flex-row sm:items-center sm:p-8">
-            <div>
-              <h2 className="font-display text-2xl font-bold">
-                ¿Prefieres hablar con una persona?
-              </h2>
-              <p className="mt-1 text-base opacity-90">Te ayudamos por WhatsApp, paso a paso.</p>
-            </div>
-            <a
-              href={whatsappLink(
-                CONTACT.whatsappNumber,
-                `Hola Humanix, vengo de la sección "${copy.tab}" y necesito ayuda.`,
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-14 items-center gap-2 rounded-2xl bg-white px-6 text-base font-bold text-[#0f4c81] hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-trust"
-            >
-              <MessageCircle className="h-5 w-5" aria-hidden="true" />
-              Escribir por WhatsApp
-            </a>
+        <section aria-labelledby="trust-title" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <h2 id="trust-title" className="font-display text-2xl font-bold sm:text-3xl">
+            Te cuidamos
+          </h2>
+          <div className="mt-5">
+            <PicRow items={PROMISES} />
           </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 pb-14 pt-6 sm:px-6">
+          <a
+            href={whatsappLink(
+              CONTACT.whatsappNumber,
+              `Hola Humanix, soy de "${copy.tab}" y necesito ayuda.`,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center justify-between gap-4 rounded-[2rem] bg-ok p-6 text-ok-foreground shadow-xl shadow-ok/25 transition hover:-translate-y-0.5 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ok/40 sm:p-8"
+          >
+            <span className="flex items-center gap-4">
+              <span
+                aria-hidden="true"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/20 text-4xl"
+              >
+                💬
+              </span>
+              <span>
+                <span className="block font-display text-2xl font-bold">¿Te ayudamos?</span>
+                <span className="block text-lg opacity-90">Escríbenos por WhatsApp</span>
+              </span>
+            </span>
+            <MessageCircle
+              className="h-8 w-8 shrink-0 transition group-hover:scale-110"
+              aria-hidden="true"
+            />
+          </a>
         </section>
       </main>
 

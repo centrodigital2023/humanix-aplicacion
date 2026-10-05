@@ -1,42 +1,79 @@
-// Flujo operativo para IPS / EPS:
-//  - Publicación express de turnos con plantillas por rol y horario.
-//  - Antes de publicar, muestra cuántos profesionales encajan (dato real).
-//  - Sin sesión: guarda el borrador, pide cuenta y al volver queda listo para publicar.
-//  - Con sesión institucional: métricas reales del panel (abiertos / por cubrir / cubiertos).
+// IPS / EPS: publicar un turno con plantillas (rol + horario) en un minuto.
+// Muestra candidatos reales que encajan y, con sesión, métricas reales.
+// Sin sesión: guarda el borrador y lo recupera tras crear la cuenta.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, CheckCircle2, Loader2, Send, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, Minus, Plus, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppUser } from "@/hooks/use-app-user";
 import { loadDraft, saveDraft } from "@/lib/audience";
+import { PictoCard, primaryBtn, type Tint } from "./ui";
+import { useSpeakOnChange, useVoice } from "./voice";
 
-type RoleTpl = { key: string; emoji: string; label: string; specialty: string; suggested: number };
-type ScheduleTpl = { key: string; label: string; hint: string; modality: "shift" | "hour" };
+type RoleTpl = {
+  key: string;
+  emoji: string;
+  label: string;
+  tint: Tint;
+  specialty: string;
+  suggested: number;
+};
+type ScheduleTpl = {
+  key: string;
+  emoji: string;
+  label: string;
+  hint: string;
+  tint: Tint;
+  modality: "shift" | "hour";
+};
 
 const ROLES: RoleTpl[] = [
   {
     key: "jefe",
     emoji: "🩺",
-    label: "Enfermero(a) jefe",
+    label: "Enfermería jefe",
+    tint: "sky",
     specialty: "Enfermería",
     suggested: 220000,
   },
   {
     key: "aux",
     emoji: "💉",
-    label: "Auxiliar de enfermería",
+    label: "Auxiliar",
+    tint: "emerald",
     specialty: "Auxiliar",
     suggested: 140000,
   },
-  { key: "cuidador", emoji: "🤝", label: "Cuidador(a)", specialty: "Cuidador", suggested: 110000 },
-  { key: "terapia", emoji: "🦾", label: "Terapeuta", specialty: "Terapia", suggested: 180000 },
+  {
+    key: "cuidador",
+    emoji: "🤝",
+    label: "Cuidador",
+    tint: "rose",
+    specialty: "Cuidador",
+    suggested: 110000,
+  },
+  {
+    key: "terapia",
+    emoji: "🦾",
+    label: "Terapeuta",
+    tint: "violet",
+    specialty: "Terapia",
+    suggested: 180000,
+  },
 ];
 
 const SCHEDULES: ScheduleTpl[] = [
-  { key: "dia", label: "Día", hint: "7 a. m. – 7 p. m.", modality: "shift" },
-  { key: "noche", label: "Noche", hint: "7 p. m. – 7 a. m.", modality: "shift" },
-  { key: "24h", label: "24 horas", hint: "Turno completo", modality: "shift" },
-  { key: "horas", label: "Por horas", hint: "Valor por hora", modality: "hour" },
+  { key: "dia", emoji: "☀️", label: "Día", hint: "7am–7pm", tint: "amber", modality: "shift" },
+  { key: "noche", emoji: "🌙", label: "Noche", hint: "7pm–7am", tint: "violet", modality: "shift" },
+  { key: "24h", emoji: "🕐", label: "24 horas", hint: "Completo", tint: "sky", modality: "shift" },
+  {
+    key: "horas",
+    emoji: "⏱️",
+    label: "Por horas",
+    hint: "Valor hora",
+    tint: "emerald",
+    modality: "hour",
+  },
 ];
 
 type ShiftDraft = {
@@ -74,8 +111,12 @@ const COP = (n: number) =>
 
 type Metrics = { open: number; soon: number; filled: number };
 
+const field =
+  "min-h-16 w-full rounded-2xl border-2 border-border bg-background px-4 text-lg font-semibold outline-none focus:border-trust";
+
 export function InstitutionFlow({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
+  const { say } = useVoice();
   const [draft, setDraft] = useState<ShiftDraft>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
   const [matches, setMatches] = useState<number | null>(null);
@@ -85,7 +126,9 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
   const [publishError, setPublishError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
 
-  const isInstitution = Boolean(user?.roles.some((r) => r === "institution"));
+  const isInstitution = Boolean(user?.roles.includes("institution"));
+
+  useSpeakOnChange(hydrated ? "¿A quién necesitas? Luego elige el horario." : "");
 
   useEffect(() => {
     setDraft(loadDraft(DRAFT_KEY, { ...EMPTY, date: todayISO() }));
@@ -101,7 +144,7 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     [draft.schedule],
   );
 
-  // Candidatos que encajan (perfil + ciudad), con pequeño debounce mientras escribe.
+  // Candidatos reales que encajan (rol + ciudad), con debounce mientras escribe.
   useEffect(() => {
     if (!hydrated) return;
     const t = setTimeout(async () => {
@@ -109,10 +152,11 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
         .from("public_professionals_safe")
         .select("user_id", { count: "exact", head: true })
         .eq("active", true)
-        .ilike("specialty", `%${role.specialty}%`);
+        .ilike("specialty", `%${role.specialty}%`)
+        .abortSignal(AbortSignal.timeout(10000));
       if (draft.city.trim()) q = q.contains("service_cities", [draft.city.trim()]);
       const { count, error } = await q;
-      setMatches(error ? null : (count ?? 0));
+      setMatches(error ? -1 : (count ?? 0));
     }, 400);
     return () => clearTimeout(t);
   }, [hydrated, role.specialty, draft.city]);
@@ -151,11 +195,12 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
 
   const validate = () => {
     const e: Partial<Record<keyof ShiftDraft, string>> = {};
-    if (!draft.city.trim()) e.city = "Escribe la ciudad del turno.";
-    if (!draft.amount || draft.amount <= 0) e.amount = "Escribe cuánto pagas por el turno.";
-    if (!draft.people || draft.people < 1) e.people = "Debe ser al menos 1 persona.";
+    if (!draft.city.trim()) e.city = "Escribe la ciudad.";
+    if (!draft.amount || draft.amount <= 0) e.amount = "Escribe el pago.";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    const first = Object.values(e)[0];
+    if (first) say(first);
+    return !first;
   };
 
   const publish = async (ev: React.FormEvent) => {
@@ -163,18 +208,14 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     if (!validate()) return;
 
     if (!user) {
-      // Guardamos todo y pedimos cuenta; al volver el formulario sigue lleno.
       navigate({
         to: "/auth",
         search: { role: "institution", mode: "signup", redirect: "/?para=instituciones" } as never,
       });
       return;
     }
-
     if (!isInstitution && !user.roles.includes("family")) {
-      setPublishError(
-        "Esta cuenta es de profesional. Para publicar turnos entra con una cuenta de IPS o EPS.",
-      );
+      setPublishError("Entra con una cuenta de IPS o EPS para publicar.");
       return;
     }
 
@@ -183,8 +224,8 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     const { error } = await supabase.from("job_offers").insert({
       posted_by: user.id,
       poster_type: isInstitution ? "institution" : "family",
-      title: `${role.label} · turno ${schedule.label.toLowerCase()}`,
-      description: `${schedule.label} (${schedule.hint}). Personas requeridas: ${draft.people}.`,
+      title: `${role.label} · ${schedule.label}`,
+      description: `${schedule.label} (${schedule.hint}). Personas: ${draft.people}.`,
       specialty_required: role.specialty,
       city: draft.city.trim(),
       modality: schedule.modality,
@@ -196,270 +237,253 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     setBusy(false);
     if (error) {
       console.error(error);
-      setPublishError(
-        "No pudimos publicar el turno. Tus datos siguen guardados; intenta de nuevo.",
-      );
+      setPublishError("No se pudo publicar. Tus datos siguen aquí; intenta otra vez.");
+      say("No se pudo publicar. Intenta otra vez.");
       return;
     }
     setPublished(true);
+    say("Turno publicado.");
   };
 
-  const fieldClass =
-    "min-h-14 w-full rounded-2xl border-2 border-border bg-background px-4 text-lg outline-none focus:border-trust";
-
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
       <form
         onSubmit={publish}
         noValidate
-        aria-labelledby="shift-title"
-        className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-8"
+        aria-labelledby="shift-q"
+        className="rounded-[2rem] border border-border bg-card/80 p-4 shadow-xl shadow-trust/5 backdrop-blur sm:p-8"
       >
-        <h3 id="shift-title" className="font-display text-2xl font-bold sm:text-3xl">
-          Publica un turno en 1 minuto
-        </h3>
-        <p className="mt-1 text-base text-muted-foreground">
-          Elige una plantilla y ajusta lo necesario.
-        </p>
-
-        <fieldset className="mt-6">
-          <legend className="text-base font-semibold">1. ¿A quién necesitas?</legend>
-          <div className="mt-3 grid grid-cols-2 gap-3">
+        <fieldset>
+          <legend id="shift-q" className="font-display text-3xl font-bold">
+            ¿A quién necesitas?
+          </legend>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {ROLES.map((r) => (
-              <button
+              <PictoCard
                 key={r.key}
-                type="button"
-                aria-pressed={draft.role === r.key}
-                onClick={() => update({ role: r.key, amount: r.suggested })}
-                className={`flex min-h-16 items-center gap-3 rounded-2xl border-2 px-4 text-left font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trust ${
-                  draft.role === r.key
-                    ? "border-trust bg-trust/10"
-                    : "border-border bg-background hover:border-trust"
-                }`}
-              >
-                <span className="text-2xl" aria-hidden="true">
-                  {r.emoji}
-                </span>
-                {r.label}
-              </button>
+                size="md"
+                emoji={r.emoji}
+                label={r.label}
+                tint={r.tint}
+                selected={draft.role === r.key}
+                onSelect={() => update({ role: r.key, amount: r.suggested })}
+              />
             ))}
           </div>
         </fieldset>
 
-        <fieldset className="mt-6">
-          <legend className="text-base font-semibold">2. ¿En qué horario?</legend>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <fieldset className="mt-7">
+          <legend className="font-display text-2xl font-bold">¿Horario?</legend>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {SCHEDULES.map((s) => (
-              <button
+              <PictoCard
                 key={s.key}
-                type="button"
-                aria-pressed={draft.schedule === s.key}
-                onClick={() => update({ schedule: s.key })}
-                className={`min-h-16 rounded-2xl border-2 px-3 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trust ${
-                  draft.schedule === s.key
-                    ? "border-trust bg-trust/10"
-                    : "border-border bg-background hover:border-trust"
-                }`}
-              >
-                <span className="block font-bold">{s.label}</span>
-                <span className="block text-xs text-muted-foreground">{s.hint}</span>
-              </button>
+                size="md"
+                emoji={s.emoji}
+                label={s.label}
+                hint={s.hint}
+                tint={s.tint}
+                selected={draft.schedule === s.key}
+                onSelect={() => update({ schedule: s.key })}
+              />
             ))}
           </div>
         </fieldset>
 
-        <fieldset className="mt-6">
-          <legend className="text-base font-semibold">3. ¿Dónde, cuándo y cuánto?</legend>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="shift-city" className="text-sm font-semibold">
-                Ciudad
-              </label>
-              <input
-                id="shift-city"
-                value={draft.city}
-                onChange={(e) => update({ city: e.target.value })}
-                placeholder="Ej: Medellín"
-                aria-invalid={Boolean(errors.city)}
-                aria-describedby={errors.city ? "shift-city-err" : undefined}
-                className={`${fieldClass} mt-1`}
-              />
-              {errors.city && (
-                <p id="shift-city-err" role="alert" className="mt-1 text-sm font-medium text-warn">
-                  {errors.city}
-                </p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="shift-date" className="text-sm font-semibold">
-                Fecha de inicio
-              </label>
-              <input
-                id="shift-date"
-                type="date"
-                min={todayISO()}
-                value={draft.date}
-                onChange={(e) => update({ date: e.target.value })}
-                className={`${fieldClass} mt-1`}
-              />
-            </div>
-            <div>
-              <label htmlFor="shift-people" className="text-sm font-semibold">
-                ¿Cuántas personas?
-              </label>
-              <input
-                id="shift-people"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                value={draft.people}
-                onChange={(e) => update({ people: Number(e.target.value) })}
-                aria-invalid={Boolean(errors.people)}
-                aria-describedby={errors.people ? "shift-people-err" : undefined}
-                className={`${fieldClass} mt-1`}
-              />
-              {errors.people && (
-                <p
-                  id="shift-people-err"
-                  role="alert"
-                  className="mt-1 text-sm font-medium text-warn"
-                >
-                  {errors.people}
-                </p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="shift-amount" className="text-sm font-semibold">
-                Pago {schedule.modality === "hour" ? "por hora" : "por turno"} (COP)
-              </label>
-              <input
-                id="shift-amount"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1000}
-                value={draft.amount || ""}
-                onChange={(e) => update({ amount: Number(e.target.value) })}
-                aria-invalid={Boolean(errors.amount)}
-                aria-describedby={errors.amount ? "shift-amount-err" : "shift-amount-hint"}
-                className={`${fieldClass} mt-1`}
-              />
-              {errors.amount ? (
-                <p
-                  id="shift-amount-err"
-                  role="alert"
-                  className="mt-1 text-sm font-medium text-warn"
-                >
-                  {errors.amount}
-                </p>
-              ) : (
-                <p id="shift-amount-hint" className="mt-1 text-sm text-muted-foreground">
-                  {draft.amount > 0
-                    ? `${COP(draft.amount)} · lo ve el profesional antes de aceptar`
-                    : ""}
-                </p>
-              )}
+        <div className="mt-7 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="shift-city" className="text-base font-bold">
+              📍 Ciudad
+            </label>
+            <input
+              id="shift-city"
+              value={draft.city}
+              onChange={(e) => update({ city: e.target.value })}
+              placeholder="Medellín"
+              aria-invalid={Boolean(errors.city)}
+              aria-describedby={errors.city ? "shift-city-err" : undefined}
+              className={`${field} mt-2`}
+            />
+            {errors.city && (
+              <p
+                id="shift-city-err"
+                role="alert"
+                className="mt-1 text-base font-semibold text-warn"
+              >
+                {errors.city}
+              </p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="shift-date" className="text-base font-bold">
+              📅 Fecha
+            </label>
+            <input
+              id="shift-date"
+              type="date"
+              min={todayISO()}
+              value={draft.date}
+              onChange={(e) => update({ date: e.target.value })}
+              className={`${field} mt-2`}
+            />
+          </div>
+          <div>
+            <span id="shift-people-label" className="text-base font-bold">
+              👥 Personas
+            </span>
+            <div
+              role="group"
+              aria-labelledby="shift-people-label"
+              className="mt-2 flex min-h-16 items-center justify-between rounded-2xl border-2 border-border bg-background p-1.5"
+            >
+              <button
+                type="button"
+                aria-label="Una persona menos"
+                onClick={() => update({ people: Math.max(1, draft.people - 1) })}
+                className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted active:scale-90"
+              >
+                <Minus className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <span className="text-2xl font-bold" aria-live="polite">
+                {draft.people}
+              </span>
+              <button
+                type="button"
+                aria-label="Una persona más"
+                onClick={() => update({ people: Math.min(50, draft.people + 1) })}
+                className="flex h-12 w-12 items-center justify-center rounded-xl bg-trust text-trust-foreground active:scale-90"
+              >
+                <Plus className="h-5 w-5" aria-hidden="true" />
+              </button>
             </div>
           </div>
-        </fieldset>
+          <div>
+            <label htmlFor="shift-amount" className="text-base font-bold">
+              💵 Pago {schedule.modality === "hour" ? "por hora" : "por turno"}
+            </label>
+            <input
+              id="shift-amount"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1000}
+              value={draft.amount || ""}
+              onChange={(e) => update({ amount: Number(e.target.value) })}
+              aria-invalid={Boolean(errors.amount)}
+              aria-describedby={errors.amount ? "shift-amount-err" : "shift-amount-hint"}
+              className={`${field} mt-2`}
+            />
+            {errors.amount ? (
+              <p
+                id="shift-amount-err"
+                role="alert"
+                className="mt-1 text-base font-semibold text-warn"
+              >
+                {errors.amount}
+              </p>
+            ) : (
+              <p id="shift-amount-hint" className="mt-1 text-sm text-muted-foreground">
+                {draft.amount > 0 ? COP(draft.amount) : ""}
+              </p>
+            )}
+          </div>
+        </div>
 
-        <p className="mt-6 flex items-center gap-2 text-base" aria-live="polite">
-          <Users className="h-5 w-5 text-trust" aria-hidden="true" />
+        <p
+          className="mt-6 flex items-center gap-3 rounded-2xl bg-trust/5 p-4 text-lg"
+          aria-live="polite"
+        >
+          <span className="text-2xl" aria-hidden="true">
+            👩‍⚕️
+          </span>
           {matches === null ? (
-            "Calculando candidatos…"
+            "Buscando candidatos…"
           ) : matches > 0 ? (
             <span>
-              <strong>{matches}</strong>{" "}
-              {matches === 1 ? "profesional encaja" : "profesionales encajan"} con este turno
-              {draft.city.trim() ? ` en ${draft.city.trim()}` : ""}.
+              <strong className="text-trust">{matches}</strong>{" "}
+              {matches === 1 ? "candidato disponible" : "candidatos disponibles"}
             </span>
           ) : (
-            "Aún no hay perfiles exactos; te avisamos apenas aparezcan."
+            "Te avisamos cuando haya candidatos"
           )}
         </p>
 
         {published ? (
           <div
             role="status"
-            className="mt-5 flex items-start gap-3 rounded-2xl bg-ok/10 p-4 text-ok"
+            className="mt-5 flex items-center gap-3 rounded-2xl bg-ok/10 p-5 animate-in zoom-in-95"
           >
-            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0" aria-hidden="true" />
+            <CheckCircle2 className="h-8 w-8 shrink-0 text-ok" aria-hidden="true" />
             <div>
-              <p className="text-lg font-bold">Turno publicado</p>
-              <p className="text-base text-foreground">
-                Te avisaremos cuando lleguen candidatos.{" "}
-                <Link to="/dashboard/institucion" className="font-semibold text-trust underline">
-                  Ver mi panel
-                </Link>
-              </p>
+              <p className="text-xl font-bold text-ok">¡Turno publicado!</p>
+              <Link
+                to="/dashboard/institucion"
+                className="text-base font-bold text-trust underline"
+              >
+                Ver mi panel
+              </Link>
             </div>
           </div>
         ) : (
-          <button
-            type="submit"
-            disabled={busy}
-            className="mt-5 flex min-h-16 w-full items-center justify-center gap-3 rounded-2xl bg-trust px-5 text-lg font-bold text-trust-foreground transition hover:bg-trust/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trust focus-visible:ring-offset-2 disabled:opacity-70"
-          >
+          <button type="submit" disabled={busy} className={`${primaryBtn} mt-5`}>
             {busy ? (
               <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
             ) : (
               <Send className="h-6 w-6" aria-hidden="true" />
             )}
-            {user ? "Publicar turno" : "Publicar turno (crear cuenta gratis)"}
+            Publicar turno
           </button>
         )}
         {publishError && (
-          <p role="alert" className="mt-2 text-sm font-medium text-warn">
+          <p role="alert" className="mt-2 text-base font-semibold text-warn">
             {publishError}
           </p>
         )}
         {!user && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Tus datos quedan guardados mientras creas la cuenta.
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            Cuenta gratis · tus datos quedan guardados
           </p>
         )}
       </form>
 
       <aside
         aria-labelledby="panel-title"
-        className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-8"
+        className="rounded-[2rem] bg-trust p-6 text-trust-foreground shadow-xl shadow-trust/20 sm:p-8"
       >
-        <h3 id="panel-title" className="font-display text-xl font-bold">
-          {isInstitution ? "Tu operación hoy" : "Así se ve tu panel"}
+        <h3 id="panel-title" className="font-display text-2xl font-bold">
+          {isInstitution ? "Tu operación hoy" : "Tu panel"}
         </h3>
-        <dl className="mt-5 grid grid-cols-1 gap-3">
+        <dl className="mt-5 grid gap-3">
           {[
-            { label: "Turnos abiertos", value: metrics?.open, tone: "text-trust" },
-            { label: "Por cubrir en 48 horas", value: metrics?.soon, tone: "text-warn" },
-            { label: "Turnos cubiertos", value: metrics?.filled, tone: "text-ok" },
+            { emoji: "📋", label: "Abiertos", value: metrics?.open },
+            { emoji: "⏳", label: "Por cubrir (48 h)", value: metrics?.soon },
+            { emoji: "✅", label: "Cubiertos", value: metrics?.filled },
           ].map((m) => (
             <div
               key={m.label}
-              className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3"
+              className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-4"
             >
-              <dt className="text-base font-medium">{m.label}</dt>
-              <dd className={`font-display text-2xl font-bold ${m.tone}`}>{m.value ?? "—"}</dd>
+              <dt className="flex items-center gap-3 text-lg font-semibold">
+                <span aria-hidden="true" className="text-2xl">
+                  {m.emoji}
+                </span>
+                {m.label}
+              </dt>
+              <dd className="font-display text-3xl font-bold">{m.value ?? "—"}</dd>
             </div>
           ))}
         </dl>
-        <ul className="mt-6 space-y-3 text-base">
-          {[
-            "Candidatos ordenados por cercanía, especialidad y documentos.",
-            "Alertas cuando una credencial está por vencer.",
-            "Historial de cada servicio para auditoría.",
-          ].map((t) => (
-            <li key={t} className="flex gap-2">
-              <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-ok" aria-hidden="true" />
-              {t}
-            </li>
-          ))}
+        <ul className="mt-6 space-y-2 text-base opacity-90">
+          <li>🎯 Candidatos por cercanía y perfil</li>
+          <li>🔔 Alerta de documentos por vencer</li>
+          <li>🧾 Historial de cada servicio</li>
         </ul>
         <Link
           to={isInstitution ? "/dashboard/institucion" : "/auth"}
           search={isInstitution ? undefined : ({ role: "institution", mode: "signin" } as never)}
-          className="mt-6 flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-border px-4 font-semibold hover:border-trust focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trust"
+          className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-base font-bold text-[#0f4c81] transition hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
         >
-          {isInstitution ? "Abrir panel completo" : "Ya tengo cuenta: entrar"}
+          {isInstitution ? "Abrir panel" : "Ya tengo cuenta"}
           <ArrowRight className="h-5 w-5" aria-hidden="true" />
         </Link>
       </aside>

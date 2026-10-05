@@ -1,5 +1,12 @@
 import { Suspense, lazy } from "react";
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import {
+  Outlet,
+  Link,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  useRouterState,
+} from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import * as seo from "@/lib/seo";
 const {
@@ -180,12 +187,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  // La home simple ya muestra WhatsApp en la cabecera y al final; la burbuja
+  // flotante taparía botones en el celular.
+  const isHome = useRouterState({ select: (s) => s.location.pathname === "/" });
   return (
     <>
       <Outlet />
-      <Suspense fallback={null}>
-        <FloatingWAChat />
-      </Suspense>
+      {!isHome && (
+        <Suspense fallback={null}>
+          <FloatingWAChat />
+        </Suspense>
+      )}
       <Toaster richColors position="top-right" />
     </>
   );
