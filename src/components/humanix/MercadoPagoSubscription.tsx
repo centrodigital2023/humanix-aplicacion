@@ -64,7 +64,24 @@ export function MercadoPagoSubscription({
       if (!url) throw new Error("No se obtuvo URL de pago");
       window.location.href = url;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error con Mercado Pago");
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("Edge Function") || msg.includes("Failed to send")) {
+        const def = PLAN_CATALOG[key];
+        const waText = encodeURIComponent(
+          `Hola Humanix 👋, quiero activar el plan ${def.label} (${def.priceLabel}). Mi correo: ${(await supabase.auth.getSession()).data.session?.user.email ?? ""}`,
+        );
+        toast("Activa tu plan por WhatsApp", {
+          description: "El pago en línea está en mantenimiento. Te atendemos al instante.",
+          action: {
+            label: "Abrir WhatsApp",
+            onClick: () =>
+              window.open(`https://wa.me/573147444715?text=${waText}`, "_blank", "noopener"),
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.error(msg || "Error con Mercado Pago");
+      }
     } finally {
       setBusy(null);
     }

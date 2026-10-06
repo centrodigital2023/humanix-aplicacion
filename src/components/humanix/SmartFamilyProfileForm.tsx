@@ -12,6 +12,7 @@ import {
   MessageCircle,
   FileText,
   Camera,
+  KeyRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,17 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
       .from("family-docs")
       .createSignedUrl(form.id_doc_url, 60);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const resetPassword = async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    const email = sess.session?.user.email;
+    if (!email) return toast.error("No se encontró tu correo");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset`,
+    });
+    if (error) toast.error(error.message);
+    else toast.success(`Enviamos un enlace a ${email}. Revisa tu correo.`);
   };
 
   const save = async () => {
@@ -273,14 +285,17 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-between gap-2">
+        <Button type="button" variant="ghost" size="sm" onClick={resetPassword} className="text-muted-foreground">
+          <KeyRound className="h-3.5 w-3.5 mr-1.5" /> Cambiar contraseña
+        </Button>
         <Button onClick={save} disabled={saving}>
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Save className="h-4 w-4" />
           )}
-          <span className="ml-1.5">Guardar datos</span>
+          <span className="ml-1.5">Guardar</span>
         </Button>
       </div>
     </Card>

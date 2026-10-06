@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Trash2, Loader2, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Trash2, Loader2, AlertTriangle, ShieldAlert, Ban } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,19 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [pendingPayments, setPendingPayments] = useState(false);
+
+  useEffect(() => {
+    if (role !== "family") return;
+    supabase
+      .from("service_bookings" as never)
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", userId)
+      .in("payment_status", ["pending", "due"])
+      .then(({ count }) => {
+        if ((count ?? 0) > 0) setPendingPayments(true);
+      });
+  }, [userId, role]);
 
   async function deleteProfile() {
     setBusy(true);
@@ -88,13 +101,20 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          className="border-destructive/40 text-destructive hover:bg-destructive/10"
-          onClick={() => setOpen(true)}
-        >
-          <Trash2 className="h-4 w-4 mr-1" /> Eliminar mi perfil
-        </Button>
+        {pendingPayments ? (
+          <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+            <Ban className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>No puedes eliminar tu perfil mientras tengas <strong>pagos pendientes</strong> a profesionales. Salda los servicios primero.</span>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10"
+            onClick={() => setOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-1" /> Eliminar mi perfil
+          </Button>
+        )}
       </Card>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
