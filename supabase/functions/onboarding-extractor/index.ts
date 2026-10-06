@@ -1,7 +1,7 @@
 // Onboarding Extractor — extrae datos estructurados del perfil profesional
 // a partir de texto libre, usando tool calling.
 
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const TOOL = {
   type: "function",
@@ -58,7 +58,8 @@ const TOOL = {
 } as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
     if (!text || typeof text !== "string") {
       return new Response(JSON.stringify({ error: "text requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -108,14 +109,14 @@ Deno.serve(async (req) => {
           JSON.stringify({
             error: resp.status === 429 ? "Demasiadas solicitudes." : "Créditos IA agotados.",
           }),
-          { status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: resp.status, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const t = await resp.text();
       console.error("Gateway error:", resp.status, t);
       return new Response(JSON.stringify({ error: "Error del servicio IA" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -123,18 +124,18 @@ Deno.serve(async (req) => {
     const call = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!call) {
       return new Response(JSON.stringify({ profile: {} }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const profile = JSON.parse(call.function.arguments || "{}");
     return new Response(JSON.stringify({ profile }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("onboarding-extractor error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

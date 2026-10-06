@@ -1,10 +1,11 @@
 // embed-offer — genera y guarda el embedding de una oferta del usuario autenticado.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 import { embedText } from "../_shared/embed.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
     if (!offer_id)
       return new Response(JSON.stringify({ error: "offer_id requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
 
     const admin = createClient(
@@ -28,12 +29,12 @@ Deno.serve(async (req) => {
     if (!o)
       return new Response(JSON.stringify({ error: "Oferta no encontrada" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     if (o.posted_by !== auth.userId) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -64,13 +65,13 @@ Deno.serve(async (req) => {
     });
 
     return new Response(JSON.stringify({ ok: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("embed-offer error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

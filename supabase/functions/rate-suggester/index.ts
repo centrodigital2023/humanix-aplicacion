@@ -1,7 +1,7 @@
 // Rate Suggester — sugiere tarifas en COP (hora/turno/mes) y una bio profesional
 // para profesionales de la salud en Colombia, basado en su perfil.
 
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const TOOL = {
   type: "function",
@@ -32,7 +32,8 @@ const TOOL = {
 } as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
   try {
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
     if (!profile) {
       return new Response(JSON.stringify({ error: "profile requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -81,32 +82,32 @@ Deno.serve(async (req) => {
           JSON.stringify({
             error: resp.status === 429 ? "Demasiadas solicitudes." : "Créditos IA agotados.",
           }),
-          { status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: resp.status, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const t = await resp.text();
       console.error("Gateway error:", resp.status, t);
       return new Response(JSON.stringify({ error: "Error IA" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const data = await resp.json();
     const call = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!call) {
       return new Response(JSON.stringify({ suggestion: {} }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const suggestion = JSON.parse(call.function.arguments || "{}");
     return new Response(JSON.stringify({ suggestion }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("rate-suggester error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

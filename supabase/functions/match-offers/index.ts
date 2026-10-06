@@ -1,7 +1,7 @@
 // Match Offers — recomienda 3-5 ofertas que mejor encajan con el perfil del profesional.
 // Recibe { profile, offers } y devuelve { matches: [{offer_id, score, reason}] }.
 
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const TOOL = {
   type: "function",
@@ -32,7 +32,8 @@ const TOOL = {
 } as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
   try {
@@ -40,12 +41,12 @@ Deno.serve(async (req) => {
     if (!profile || !Array.isArray(offers)) {
       return new Response(JSON.stringify({ error: "profile y offers requeridos" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     if (offers.length === 0) {
       return new Response(JSON.stringify({ matches: [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -89,32 +90,32 @@ Deno.serve(async (req) => {
           JSON.stringify({
             error: resp.status === 429 ? "Demasiadas solicitudes." : "Créditos IA agotados.",
           }),
-          { status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: resp.status, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const t = await resp.text();
       console.error("Gateway error:", resp.status, t);
       return new Response(JSON.stringify({ error: "Error IA" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const data = await resp.json();
     const call = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!call) {
       return new Response(JSON.stringify({ matches: [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const parsed = JSON.parse(call.function.arguments || "{}");
     return new Response(JSON.stringify({ matches: parsed.matches ?? [] }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("match-offers error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

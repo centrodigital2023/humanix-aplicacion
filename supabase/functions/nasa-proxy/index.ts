@@ -6,7 +6,7 @@
 // Si se pasa `translate=true` se traduce/explica al español neutro colombiano con Lovable AI.
 // Es público para lectura simple; la traducción con IA requiere JWT.
 
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 async function translateEs(text: string): Promise<string> {
   const key = Deno.env.get("LOVABLE_API_KEY");
@@ -36,7 +36,8 @@ async function translateEs(text: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
     const url = new URL(req.url);
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     } else {
       return new Response(JSON.stringify({ error: "endpoint no soportado" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
       console.error("NASA upstream error", r.status, t.slice(0, 200));
       return new Response(JSON.stringify({ error: `NASA API: ${r.status}` }), {
         status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const data = await r.json();
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify(normalized), {
       headers: {
-        ...corsHeaders,
+        ...cors,
         "Content-Type": "application/json",
         // Auth-gated translated responses must never hit a shared cache.
         "Cache-Control": translate ? "private, no-store" : "public, max-age=1800",
@@ -134,7 +135,7 @@ Deno.serve(async (req) => {
     console.error("nasa-proxy error", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

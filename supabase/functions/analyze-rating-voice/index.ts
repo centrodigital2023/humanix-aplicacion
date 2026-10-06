@@ -1,9 +1,10 @@
 // Analiza un audio de valoración: transcribe + clasifica sentimiento con Gemini.
 // Recibe { audio_base64, mime_type } y devuelve { transcript, sentiment, score, summary, alert }.
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
@@ -13,14 +14,14 @@ Deno.serve(async (req) => {
     if (!audio_base64) {
       return new Response(JSON.stringify({ error: "audio_base64 requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     // Tope defensivo: ~10 MB binario ≈ 14 MB en base64. Evita ataques DoS/costos IA.
     if (typeof audio_base64 !== "string" || audio_base64.length > 14_000_000) {
       return new Response(JSON.stringify({ error: "audio demasiado grande" }), {
         status: 413,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const mt = (mime_type as string) || "audio/webm";
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
     if (!ALLOWED_AUDIO.some((a) => mt.startsWith(a))) {
       return new Response(JSON.stringify({ error: "mime_type no permitido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -103,20 +104,20 @@ Deno.serve(async (req) => {
       if (upstream.status === 429) {
         return new Response(
           JSON.stringify({ error: "Demasiadas solicitudes. Intenta en un minuto." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 429, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       if (upstream.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos IA agotados." }), {
           status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         });
       }
       const t = await upstream.text();
       console.error("Gateway error:", upstream.status, t);
       return new Response(JSON.stringify({ error: "Error del servicio IA" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -126,13 +127,13 @@ Deno.serve(async (req) => {
     if (!parsed) throw new Error("Respuesta IA inválida");
 
     return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("analyze-rating-voice error:", e);
     return new Response(
       JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }
 });

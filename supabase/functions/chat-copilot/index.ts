@@ -1,7 +1,7 @@
 // chat-copilot — sugerencias de respuesta para el chat 1:1.
 // Recibe { conversation_id, role_hint } y devuelve { suggestions: string[] }.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const TOOL = {
   type: "function",
@@ -25,7 +25,8 @@ const TOOL = {
 } as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
     if (conv.poster_id !== auth.userId && conv.professional_id !== auth.userId) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const role =
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
       if (creditsErr.message?.includes("ai_credits_exhausted")) {
         return new Response(
           JSON.stringify({ error: "Créditos IA agotados para este mes. Mejora tu plan para obtener más." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 402, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       throw creditsErr;
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
           }),
           {
             status: aiResp.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...cors, "Content-Type": "application/json" },
           },
         );
       }
@@ -123,13 +124,13 @@ Deno.serve(async (req) => {
     const parsed = call ? JSON.parse(call.function.arguments || "{}") : { suggestions: [] };
 
     return new Response(JSON.stringify({ suggestions: parsed.suggestions ?? [] }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("chat-copilot error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

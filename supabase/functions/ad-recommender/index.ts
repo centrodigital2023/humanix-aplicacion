@@ -1,6 +1,6 @@
 // ad-recommender — sugiere copy publicitario, audiencia y score de un banner.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const TOOL = {
   type: "function",
@@ -31,7 +31,8 @@ const TOOL = {
 } as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
     if (!isStaff) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
           }),
           {
             status: aiResp.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...cors, "Content-Type": "application/json" },
           },
         );
       }
@@ -106,13 +107,13 @@ Deno.serve(async (req) => {
       .insert({ user_id: auth.userId, feature: "ad-recommender", credits_used: 1 });
 
     return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("ad-recommender error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

@@ -1,7 +1,7 @@
 // Humanix Assistant — chat IA con streaming (SSE) usando Lovable AI Gateway.
 // Acepta { messages, persona } y devuelve un stream OpenAI-compat.
 
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 // Simple in-memory IP rate limiter (per edge function instance).
 // Protege de abuso anónimo que dispararía costos del Lovable AI gateway.
@@ -44,7 +44,8 @@ const SYSTEM_BY_PERSONA: Record<string, string> = {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   // Require authenticated Supabase user — evita abuso anónimo del gateway IA.
   const auth = await requireUser(req);
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
   if (rateLimited(auth.userId)) {
     return new Response(
       JSON.stringify({ error: "Demasiadas solicitudes. Intenta en un minuto." }),
-      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 429, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }
 
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "messages requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     // Límite defensivo: evita payloads gigantes que disparen tokens.
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
     if (messages.length > 30 || totalChars > 12_000) {
       return new Response(
         JSON.stringify({ error: "Conversación demasiado larga. Reinicia el chat." }),
-        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 413, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
@@ -100,31 +101,31 @@ Deno.serve(async (req) => {
       if (upstream.status === 429) {
         return new Response(
           JSON.stringify({ error: "Demasiadas solicitudes. Intenta en unos segundos." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 429, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       if (upstream.status === 402) {
         return new Response(
           JSON.stringify({ error: "Créditos IA agotados. Recarga en Configuración." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 402, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const t = await upstream.text();
       console.error("Gateway error:", upstream.status, t);
       return new Response(JSON.stringify({ error: "Error del servicio IA" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
     return new Response(upstream.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      headers: { ...cors, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
     console.error("humanix-assistant error:", e);
     return new Response(
       JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }
 });

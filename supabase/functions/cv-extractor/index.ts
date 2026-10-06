@@ -1,7 +1,7 @@
 // CV Extractor — extrae perfil profesional desde un PDF/imagen de hoja de vida
 // usando un modelo multimodal con tool calling.
 
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const ALLOWED_MIME_PREFIXES = ["application/pdf", "image/"];
 const MAX_BYTES = 20 * 1024 * 1024; // 20 MB (límite Gemini inline)
@@ -53,7 +53,8 @@ const TOOL = {
 } as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     if (!file_url || typeof file_url !== "string") {
       return new Response(JSON.stringify({ error: "file_url requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -76,14 +77,14 @@ Deno.serve(async (req) => {
     } catch {
       return new Response(JSON.stringify({ error: "URL inválida" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const allowedHost = new URL(supabaseUrl).hostname;
     if (parsed.protocol !== "https:" || parsed.hostname !== allowedHost) {
       return new Response(JSON.stringify({ error: "URL de archivo no permitida" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -107,14 +108,14 @@ Deno.serve(async (req) => {
     if (!ALLOWED_MIME_PREFIXES.some((p) => mt.startsWith(p))) {
       return new Response(JSON.stringify({ error: "Tipo de archivo no permitido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const sizeHeader = headResp.headers.get("content-length");
     if (sizeHeader && Number(sizeHeader) > MAX_BYTES) {
       return new Response(JSON.stringify({ error: "Archivo demasiado grande (máx 20MB)" }), {
         status: 413,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -141,7 +142,7 @@ Deno.serve(async (req) => {
       if (buf.byteLength > MAX_BYTES) {
         return new Response(JSON.stringify({ error: "Archivo demasiado grande (máx 20MB)" }), {
           status: 413,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         });
       }
       // base64 chunked para evitar "Maximum call stack size exceeded"
@@ -186,14 +187,14 @@ Deno.serve(async (req) => {
           JSON.stringify({
             error: resp.status === 429 ? "Demasiadas solicitudes." : "Créditos IA agotados.",
           }),
-          { status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: resp.status, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const t = await resp.text();
       console.error("Gateway error:", resp.status, t);
       return new Response(JSON.stringify({ error: "Error del servicio IA" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -201,18 +202,18 @@ Deno.serve(async (req) => {
     const call = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!call) {
       return new Response(JSON.stringify({ profile: {} }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const profile = JSON.parse(call.function.arguments || "{}");
     return new Response(JSON.stringify({ profile }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("cv-extractor error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

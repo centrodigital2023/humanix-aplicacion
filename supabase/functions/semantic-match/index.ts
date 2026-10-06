@@ -3,7 +3,7 @@
 // mode="pro-to-offers": dado el user autenticado, top ofertas.
 // mode="text-to-pros": dado un texto libre (necesidad de familia), genera embedding ad-hoc y busca pros.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 async function embed(text: string): Promise<number[]> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -18,7 +18,8 @@ async function embed(text: string): Promise<number[]> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
@@ -61,7 +62,7 @@ Deno.serve(async (req) => {
         }))
         .filter((r: { user_id?: string }) => r.user_id);
       return new Response(JSON.stringify({ matches: result }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
         }))
         .filter((r: { id?: string }) => r.id);
       return new Response(JSON.stringify({ matches: result }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -150,19 +151,19 @@ Deno.serve(async (req) => {
         credits_used: 1,
       });
       return new Response(JSON.stringify({ matches: result }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
     return new Response(JSON.stringify({ error: "mode inválido" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("semantic-match error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

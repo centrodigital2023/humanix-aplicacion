@@ -1,9 +1,10 @@
 // promo-image-gen — genera una imagen base de fondo para tarjetas promocionales
 // usando Lovable AI (google/gemini-3-flash-image-preview / nano-banana-2).
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
@@ -12,7 +13,7 @@ Deno.serve(async (req) => {
     if (!prompt || typeof prompt !== "string") {
       return new Response(JSON.stringify({ error: "prompt requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
         const status = copyResp.status;
         return new Response(
           JSON.stringify({ error: status === 429 ? "Demasiadas solicitudes" : status === 402 ? "Créditos IA agotados" : "Error IA" }),
-          { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const copyData = await copyResp.json();
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
       let parsed: any = null;
       try { parsed = JSON.parse(cleaned); } catch { parsed = { body: cleaned }; }
       return new Response(JSON.stringify({ copy: parsed }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
           JSON.stringify({
             error: status === 429 ? "Demasiadas solicitudes, intenta en un momento" : "Créditos IA agotados",
           }),
-          { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const t = await aiResp.text();
@@ -99,13 +100,13 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ image: imageUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("promo-image-gen error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

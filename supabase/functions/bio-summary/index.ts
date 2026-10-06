@@ -1,7 +1,7 @@
 // Bio Summary — genera (o regenera) la bio profesional y un resumen IA listo
 // para publicar, con tono cálido y específico para salud en Colombia.
 
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const TOOL = {
   type: "function",
@@ -34,7 +34,8 @@ const TOOL = {
 } as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
     if (!profile || typeof profile !== "object") {
       return new Response(JSON.stringify({ error: "profile requerido" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -85,32 +86,32 @@ Deno.serve(async (req) => {
           JSON.stringify({
             error: resp.status === 429 ? "Demasiadas solicitudes." : "Créditos IA agotados.",
           }),
-          { status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: resp.status, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
       const t = await resp.text();
       console.error("Gateway error:", resp.status, t);
       return new Response(JSON.stringify({ error: "Error IA" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const data = await resp.json();
     const call = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!call) {
       return new Response(JSON.stringify({ result: {} }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const result = JSON.parse(call.function.arguments || "{}");
     return new Response(JSON.stringify({ result }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("bio-summary error:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });
