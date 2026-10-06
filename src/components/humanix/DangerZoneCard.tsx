@@ -19,15 +19,14 @@ import { toast } from "sonner";
 
 type Props = {
   userId: string;
-  role: "family" | "professional";
+  role: "family" | "professional" | "institution";
   onDeleted?: () => void;
 };
 
 /**
- * Zona de peligro: el usuario puede eliminar SU PROPIO perfil.
- * Nunca el de otros (RLS enforced en Supabase: delete policy usa auth.uid() = user_id).
- * Borra el perfil de dominio (family_profiles / professional_profiles) y documentos,
- * pero mantiene la cuenta auth viva (el usuario puede volver a registrarse).
+ * Zona de peligro: el usuario puede eliminarse COMPLETAMENTE de la plataforma.
+ * Invoca la edge function `delete-account` (service role) que borra todos los datos
+ * y la cuenta auth. Irreversible.
  */
 export function DangerZoneCard({ userId, role, onDeleted }: Props) {
   const navigate = useNavigate();
@@ -51,31 +50,16 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
   async function deleteProfile() {
     setBusy(true);
     try {
-      if (role === "family") {
-        // Borrar docs de la familia
-        await supabase.from("family_documents" as never).delete().eq("user_id", userId);
-        await supabase.from("family_profiles").delete().eq("user_id", userId);
-      } else {
-        await supabase.from("professional_documents").delete().eq("user_id", userId);
-        await supabase.from("professional_references").delete().eq("user_id", userId);
-        await supabase.from("professional_profiles").delete().eq("user_id", userId);
-      }
+      const { error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
 
-      // Quitar el rol (family / professional). Superadmin/staff no se tocan.
-      await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId)
-        .in("role", role === "family" ? ["family"] : ["professional"]);
-
-      toast.success("Tu perfil fue eliminado.");
+      toast.success("Tu cuenta fue eliminada completamente de Humanix.");
       onDeleted?.();
 
-      // Cerrar sesión y volver al inicio.
       await supabase.auth.signOut();
       navigate({ to: "/" });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo eliminar");
+      toast.error(e instanceof Error ? e.message : "No se pudo eliminar la cuenta. Intenta de nuevo.");
     } finally {
       setBusy(false);
       setOpen(false);
@@ -83,7 +67,7 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
     }
   }
 
-  const kind = role === "family" ? "familiar" : "profesional";
+  const kind = role === "family" ? "familiar" : role === "institution" ? "institucional" : "profesional";
 
   return (
     <>
@@ -126,8 +110,8 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                Se borrarán tus datos de perfil, documentos anexados y referencias. Las reservas
-                y calificaciones históricas se conservan por obligación legal (Ley 1581/2012).
+                Se eliminará <strong>toda tu información</strong>: perfil, documentos, mensajes,
+                suscripción y tu cuenta de acceso. Esta acción es <strong>irreversible</strong>.
               </span>
               <span className="block">
                 Para confirmar, escribe <strong>ELIMINAR</strong> abajo:
