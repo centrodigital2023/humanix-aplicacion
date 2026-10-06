@@ -157,18 +157,15 @@ function SuperadminPage() {
     if (!window.confirm(`¿Eliminar completamente a "${name}"? Esta acción no se puede deshacer.`)) return;
     setDeleting(uid);
     try {
-      await Promise.all([
-        supabase.from("professional_profiles").delete().eq("user_id", uid),
-        supabase.from("family_profiles").delete().eq("user_id", uid),
-        supabase.from("institution_profiles").delete().eq("user_id", uid),
-        supabase.from("user_roles").delete().eq("user_id", uid),
-      ]);
-      await supabase.from("profiles").delete().eq("user_id", uid);
-      toast.success(`Usuario "${name}" eliminado de la plataforma`);
+      const { error } = await supabase.functions.invoke("delete-account", {
+        body: { target_user_id: uid },
+      });
+      if (error) throw error;
+      toast.success(`Usuario "${name}" eliminado completamente de la plataforma`);
       setRegisteredUsers((prev) => prev.filter((u) => u.user_id !== uid));
       setStats((s) => ({ ...s, users: Math.max(0, s.users - 1) }));
     } catch (err) {
-      toast.error("Error al eliminar usuario");
+      toast.error(err instanceof Error ? err.message : "Error al eliminar usuario");
       console.error(err);
     } finally {
       setDeleting(null);

@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
-  const userId = auth.userId;
+  const callerUserId = auth.userId;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -24,7 +24,27 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(supabaseUrl, serviceKey);
-  const summary: Record<string, unknown> = { user_id: userId };
+
+  // Superadmin puede borrar a otro usuario pasando { target_user_id }
+  let userId = callerUserId;
+  const body = await req.json().catch(() => ({}));
+  if (body.target_user_id && body.target_user_id !== callerUserId) {
+    // Verificar que el caller es superadmin
+    const { data: callerRoles } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", callerUserId);
+    const isSuperadmin = (callerRoles ?? []).some((r: { role: string }) => r.role === "superadmin");
+    if (!isSuperadmin) {
+      return new Response(JSON.stringify({ error: "Solo superadmin puede borrar otros usuarios" }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    userId = body.target_user_id;
+  }
+
+  const summary: Record<string, unknown> = { user_id: userId, deleted_by: callerUserId };
 
   // ── 2) Storage: archivos del usuario ────────────────────────────────────
 
