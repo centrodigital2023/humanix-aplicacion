@@ -605,6 +605,25 @@ function ProDashboard() {
                 <StatPill icon={<Star className="h-3.5 w-3.5" />} label="Rating" value={(profile?.avg_rating ?? 0).toFixed(1)} />
                 <StatPill icon={<TrendingUp className="h-3.5 w-3.5" />} label="Ofertas" value={String(offers.length)} />
               </div>
+
+              {/* Public profile link */}
+              {userId && (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <Link
+                    to="/profesional/$proId"
+                    params={{ proId: userId }}
+                    className="flex-1 text-center text-xs font-medium text-biosensor border border-biosensor/30 rounded-xl py-2 hover:bg-biosensor/5 transition-colors"
+                  >
+                    Ver mi perfil público →
+                  </Link>
+                  <button
+                    onClick={() => setTab("perfil")}
+                    className="flex-1 text-center text-xs font-medium text-muted-foreground border border-border rounded-xl py-2 hover:bg-muted/30 transition-colors"
+                  >
+                    Editar perfil
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Profile completion */}
@@ -678,12 +697,12 @@ function ProDashboard() {
               <QuickAction icon={<FileText className="h-5 w-5 text-fuchsia-neural" />} label="Subir documentos" sub={`${Object.keys(docSummary).length} subidos`} onClick={() => setTab("documentos")} />
               <QuickAction icon={<CalendarDays className="h-5 w-5 text-biosensor" />} label="Mi agenda" sub="Disponibilidad" onClick={() => setTab("agenda")} />
               <QuickAction icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />} label="Re-evaluar Trust" sub={`Score: ${trust}/100`} onClick={validateWithAI} loading={validating} />
-              <QuickAction icon={<HeartPulse className="h-5 w-5 text-rose-500" />} label="Monitoreo de pacientes" sub="Signos vitales y alertas en vivo" to="/dashboard/monitoreo" />
+              <QuickAction icon={<HeartPulse className="h-5 w-5 text-rose-500" />} label="Monitoreo de pacientes" sub="Signos vitales y alertas en vivo" onClick={() => { const el = document.getElementById("clinical-monitor-section"); el?.scrollIntoView({ behavior: "smooth" }); }} />
             </div>
 
             {/* Monitoreo Clínico propio del profesional */}
             {userId && (
-              <div className="space-y-2">
+              <div id="clinical-monitor-section" className="space-y-2">
                 <p className="text-sm font-semibold flex items-center gap-1.5">
                   <HeartPulse className="h-4 w-4 text-rose-500 animate-pulse" />
                   Mis signos vitales
@@ -762,6 +781,23 @@ function ProDashboard() {
                 </Button>
               </div>
             </div>
+
+            {/* Public profile preview link */}
+            {userId && (
+              <div className="rounded-2xl border border-biosensor/20 bg-biosensor/5 p-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-biosensor">Vista pública de tu perfil</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Así te ven las familias e instituciones al buscarte.</p>
+                </div>
+                <Link
+                  to="/profesional/$proId"
+                  params={{ proId: userId }}
+                  className="shrink-0 text-xs font-semibold text-biosensor border border-biosensor/40 rounded-xl px-3 py-1.5 hover:bg-biosensor/10 transition-colors"
+                >
+                  Previsualizar →
+                </Link>
+              </div>
+            )}
 
             {/* Profile form */}
             <div className="rounded-2xl border border-border bg-card/95 p-5">
