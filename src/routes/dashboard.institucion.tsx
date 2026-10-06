@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { HomeButton } from "@/components/humanix/HomeButton";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Loader2,
   Building2,
@@ -201,6 +201,7 @@ function InstitutionDashboard() {
   const { user, loading: authLoading, logout } = useAppUser({
     allow: ["institution", "superadmin"],
   });
+  const navigate = useNavigate();
 
   const [tab, setTab] = useState<Tab>("inicio");
   // dataLoading: Phase 1 (profile + offers + apps) pending — shows inbox skeleton
@@ -298,7 +299,19 @@ function InstitutionDashboard() {
         if (signal.current.cancelled) return;
 
         // Commit Phase 1 state — inbox + offers tabs render immediately
-        if (instRes.data) setInstProfile(instRes.data as InstitutionProfile);
+        if (instRes.data) {
+          setInstProfile(instRes.data as InstitutionProfile);
+          // Redirigir al onboarding si el perfil no está completo
+          const p = instRes.data as { onboarding_complete?: boolean; institution_name?: string };
+          if (!p.onboarding_complete && !p.institution_name) {
+            navigate({ to: "/dashboard/institucion/onboarding" });
+            return;
+          }
+        } else {
+          // Sin perfil → onboarding
+          navigate({ to: "/dashboard/institucion/onboarding" });
+          return;
+        }
         setOffers((offersRes.data ?? []) as Offer[]);
 
         const apps = stripJoin((appsRes.data ?? []) as ApplicationRowRaw[]);
@@ -457,8 +470,26 @@ function InstitutionDashboard() {
     instProfile?.institution_name || user.fullName || "Mi institución";
   const instType = instProfile?.institution_type ?? "IPS / Clínica";
 
+  const onboardingIncomplete = instProfile && !instProfile.nit && !instProfile.city;
+
   return (
     <div className="min-h-screen bg-background text-foreground bg-aurora pb-20 lg:pb-0">
+      {/* ── Banner onboarding incompleto ── */}
+      {onboardingIncomplete && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <p className="text-sm text-amber-700 dark:text-amber-400 flex-1">
+            <span className="font-semibold">Tu perfil está incompleto.</span> Complétalo para aparecer en búsquedas y contratar profesionales.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-500/40 text-amber-700 hover:bg-amber-500/10 shrink-0"
+            onClick={() => navigate({ to: "/dashboard/institucion/onboarding" })}
+          >
+            Completar perfil →
+          </Button>
+        </div>
+      )}
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
