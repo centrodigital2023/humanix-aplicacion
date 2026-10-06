@@ -112,7 +112,7 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
     const email = sess.session?.user.email;
     if (!email) return toast.error("No se encontró tu correo");
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) toast.error(error.message);
     else toast.success(`Enviamos un enlace a ${email}. Revisa tu correo.`);
