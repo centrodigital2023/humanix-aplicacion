@@ -219,7 +219,19 @@ function Home() {
               <FamilyFlow />
             </div>
           )}
-          {audience === "instituciones" && <InstitutionFlow user={user} />}
+          {audience === "instituciones" && (
+            <>
+              <InstitutionFlow user={user} />
+              <div className="mt-4 text-center">
+                <a
+                  href="/eps-ips"
+                  className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition"
+                >
+                  Conoce todo lo que Humanix ofrece para EPS e IPS →
+                </a>
+              </div>
+            </>
+          )}
           {audience === "profesionales" && <ProfessionalFlow user={user} />}
         </section>
 

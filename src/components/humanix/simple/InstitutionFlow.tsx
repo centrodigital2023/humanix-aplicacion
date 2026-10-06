@@ -210,7 +210,7 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     if (!user) {
       navigate({
         to: "/auth",
-        search: { role: "institution", mode: "signup", redirect: "/?para=instituciones" } as never,
+        search: { role: "institution", mode: "signup" } as never,
       });
       return;
     }

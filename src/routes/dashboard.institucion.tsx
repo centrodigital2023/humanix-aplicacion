@@ -119,6 +119,7 @@ type InstitutionProfile = {
   verified: boolean | null;
   nit: string | null;
   compliance_fuid: boolean;
+  onboarding_complete?: boolean;
 };
 
 const COP = (n: number | null | undefined) =>
@@ -470,7 +471,8 @@ function InstitutionDashboard() {
     instProfile?.institution_name || user.fullName || "Mi institución";
   const instType = instProfile?.institution_type ?? "IPS / Clínica";
 
-  const onboardingIncomplete = instProfile && !instProfile.nit && !instProfile.city;
+  const onboardingIncomplete =
+    instProfile && !instProfile.onboarding_complete && (!instProfile.nit || !instProfile.city);
 
   return (
     <div className="min-h-screen bg-background text-foreground bg-aurora pb-20 lg:pb-0">

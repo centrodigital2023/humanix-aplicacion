@@ -192,7 +192,9 @@ function AuthPage() {
 
   // Redirect if already logged in
   useEffect(() => {
-    const target = search.redirect ?? "/dashboard";
+    const defaultTarget =
+      role === "institution" ? "/dashboard/institucion/onboarding" : "/dashboard";
+    const target = search.redirect ?? defaultTarget;
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: target });
     });
@@ -200,7 +202,7 @@ function AuthPage() {
       if (session) navigate({ to: target });
     });
     return () => sub.subscription.unsubscribe();
-  }, [navigate, search.redirect]);
+  }, [navigate, search.redirect, role]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +213,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}${search.redirect ?? "/dashboard"}`,
+            emailRedirectTo: `${window.location.origin}${search.redirect ?? (role === "institution" ? "/dashboard/institucion/onboarding" : "/dashboard")}`,
             data: {
               full_name: fullName,
               phone,

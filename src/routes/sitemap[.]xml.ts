@@ -43,6 +43,7 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: "/recursos/postoperatorio-en-casa", priority: 0.78, changefreq: "monthly" },
   { path: "/recursos/signos-alarma-paciente-cronico", priority: 0.78, changefreq: "monthly" },
   { path: "/recursos/contratar-cuidador-confianza", priority: 0.78, changefreq: "monthly" },
+  { path: "/eps-ips", priority: 0.88, changefreq: "weekly" },
   { path: "/tecnologia", priority: 0.8, changefreq: "weekly" },
   { path: "/sobre", priority: 0.8, changefreq: "weekly" },
   { path: "/carreras", priority: 0.78, changefreq: "weekly" },
