@@ -303,9 +303,9 @@ function InstitutionDashboard() {
         // Commit Phase 1 state — inbox + offers tabs render immediately
         if (instRes.data) {
           setInstProfile(instRes.data as InstitutionProfile);
-          // Redirigir al onboarding si el perfil no está completo
-          const p = instRes.data as { onboarding_complete?: boolean; institution_name?: string };
-          if (!p.onboarding_complete && !p.institution_name) {
+          // Redirigir al onboarding si no ha sido completado
+          const p = instRes.data as { onboarding_complete?: boolean };
+          if (!p.onboarding_complete) {
             navigate({ to: "/dashboard/institucion/onboarding" });
             return;
           }

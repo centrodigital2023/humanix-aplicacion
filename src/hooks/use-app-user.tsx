@@ -95,7 +95,21 @@ export function useAppUser(options: { requireAuth?: boolean; allow?: AppRole[] }
         }
 
         const list = (rolesRes.data?.map((r) => r.role) ?? []) as AppRole[];
-        const finalRoles = list.length ? list : (["family"] as AppRole[]);
+
+        // If user_roles is empty (trigger race or new user), fall back to
+        // the role stored in auth user metadata before defaulting to "family".
+        let finalRoles: AppRole[];
+        if (list.length) {
+          finalRoles = list;
+        } else {
+          const { data: authData } = await supabase.auth.getUser();
+          const metaRole = authData?.user?.user_metadata?.role as AppRole | undefined;
+          if (metaRole && (["professional", "family", "institution"] as AppRole[]).includes(metaRole)) {
+            finalRoles = [metaRole];
+          } else {
+            finalRoles = ["family"];
+          }
+        }
         const primary = pickPrimary(finalRoles);
 
         // Route restriction → redirect to the user's own panel (do NOT setUser).

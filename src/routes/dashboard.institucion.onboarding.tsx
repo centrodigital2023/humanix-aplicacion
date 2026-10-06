@@ -70,6 +70,21 @@ function InstitutionOnboarding() {
     habeas_data: false,
   });
 
+  // Redirect if onboarding already completed
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("institution_profiles" as never)
+      .select("onboarding_complete")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }: { data: Record<string, unknown> | null }) => {
+        if (data?.onboarding_complete) {
+          navigate({ to: "/dashboard/institucion", replace: true });
+        }
+      });
+  }, [user, navigate]);
+
   // Prefill si ya tiene perfil parcial
   useEffect(() => {
     if (!user) return;

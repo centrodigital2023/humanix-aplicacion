@@ -192,8 +192,10 @@ function AuthPage() {
 
   // Redirect if already logged in
   useEffect(() => {
+    // For institutions: go to dashboard (it checks onboarding_complete and
+    // redirects to onboarding if needed). Never hardcode /onboarding here.
     const defaultTarget =
-      role === "institution" ? "/dashboard/institucion/onboarding" : "/dashboard";
+      role === "institution" ? "/dashboard/institucion" : "/dashboard";
     const target = search.redirect ?? defaultTarget;
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: target });
@@ -213,7 +215,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}${search.redirect ?? (role === "institution" ? "/dashboard/institucion/onboarding" : "/dashboard")}`,
+            emailRedirectTo: `${window.location.origin}${search.redirect ?? (role === "institution" ? "/dashboard/institucion" : "/dashboard")}`,
             data: {
               full_name: fullName,
               phone,
