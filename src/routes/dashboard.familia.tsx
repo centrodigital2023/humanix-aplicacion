@@ -510,45 +510,56 @@ function FamilyDashboard() {
       nav={getNav()}
       title={
         user.fullName && !user.fullName.includes("@")
-          ? `Hola, ${user.fullName.split(" ")[0]}`
+          ? `Hola, ${user.fullName.split(" ")[0]} 👋`
           : "Hola 👋"
       }
       subtitle="¿Qué necesitas hoy?"
-      crumbs={[{ label: "Inicio", to: "/" }, { label: "Familia" }]}
+      crumbs={[{ label: "🏠 Inicio", to: "/" }, { label: "Familia" }]}
       badge={{ label: "Familia", tone: "copper" }}
-      actions={
-        <>
-          <HiringCopilot />
-        </>
-      }
+      actions={<HiringCopilot />}
     >
-      <div className="space-y-8">
-        {/* 1. Lo importante, con imágenes grandes */}
+      <div className="space-y-6">
+
+        {/* Acciones rápidas */}
         <FamilyQuickActions />
 
-        {/* 2. Mis pedidos: pasos + seguimiento en el mapa (igual que en la home) */}
+        {/* Mis servicios activos */}
         {user && <MyBookings userId={user.id} />}
 
-        {/* Bitácora del turno activo — tiempo real */}
+        {/* Bitácora turno activo */}
         {user?.id && <ActiveCareFeedSection clientId={user.id} />}
 
-        {/* Valoraciones pendientes (bidireccional) */}
+        {/* Valoraciones pendientes */}
         {user?.id && <PendingRatingsCard userId={user.id} role="family" />}
 
-        {/* 3. Mapa en vivo simple: tocar un profesional → Pedir */}
+        {/* Mapa en vivo */}
         <section aria-labelledby="fam-map" className="space-y-3">
-          <h2 id="fam-map" className="font-display text-2xl font-bold">
-            📍 Cerca de ti, en vivo
+          <h2 id="fam-map" className="font-display text-xl font-bold flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-copper" /> Cerca de ti
           </h2>
           <LiveNearby audience="familias" user={user} />
         </section>
 
-        {/* Planes y suscripción */}
-        <section id="planes">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-2xl font-bold">💎 Tu plan</h2>
-            <Link to="/planes" className="text-sm font-semibold text-primary hover:underline">
-              Ver planes →
+        {/* ── AGENDA ─────────────────────────────────────── */}
+        {user?.id && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-biosensor" />
+              <h2 className="font-display text-xl font-bold">Mi agenda</h2>
+            </div>
+            <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
+            <ProposalsInbox userId={user.id} role="family" />
+          </section>
+        )}
+
+        {/* ── PAGO / PLAN ─────────────────────────────────── */}
+        <section id="planes" className="rounded-[2rem] bg-gradient-to-br from-card to-card/60 p-6 ring-1 ring-border shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-xl font-bold flex items-center gap-2">
+              <Crown className="h-5 w-5 text-copper" /> Tu plan
+            </h2>
+            <Link to="/planes" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+              Ver planes <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
           {user?.id && (
@@ -560,48 +571,37 @@ function FamilyDashboard() {
           )}
         </section>
 
-        {/* 4. Mis datos (se abre solo cuando hace falta) */}
+        {/* ── PERFIL ──────────────────────────────────────── */}
         <details
           id="mis-datos"
           className="group rounded-[2rem] bg-card p-5 shadow-sm ring-1 ring-border"
         >
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-xl font-bold">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-lg font-bold">
             <span className="flex items-center gap-3">
-              <span aria-hidden="true" className="text-2xl">
-                👤
-              </span>{" "}
-              Mis datos
+              <span aria-hidden="true">👤</span> Mi perfil
             </span>
-            <span
+            <ChevronRight
               aria-hidden="true"
-              className="text-muted-foreground transition group-open:rotate-180"
-            >
-              ⌄
-            </span>
+              className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
+            />
           </summary>
           <div className="mt-4">{user && <SmartFamilyProfileForm userId={user.id} />}</div>
         </details>
 
-        {/* 5. Herramientas avanzadas, guardadas para no saturar */}
+        {/* ── HERRAMIENTAS AVANZADAS ──────────────────────── */}
         <details className="group rounded-[2rem] bg-card p-5 shadow-sm ring-1 ring-border">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-xl font-bold">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-lg font-bold">
             <span className="flex items-center gap-3">
-              <span aria-hidden="true" className="text-2xl">
-                🧰
-              </span>{" "}
-              Más opciones
+              <Activity className="h-5 w-5 text-muted-foreground" /> Más herramientas
             </span>
-            <span
+            <ChevronRight
               aria-hidden="true"
-              className="text-muted-foreground transition group-open:rotate-180"
-            >
-              ⌄
-            </span>
+              className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
+            />
           </summary>
-          <p className="mt-2 text-base text-muted-foreground">
-            Salud en vivo, solicitudes publicadas, agenda, propuestas y tu cuenta.
-          </p>
           <div className="mt-6 space-y-8">
+
+            {/* Mapa completo con ubicación */}
             {user && (
               <div>
                 <LiveMapSection
@@ -617,7 +617,7 @@ function FamilyDashboard() {
                 />
                 {savingLoc && (
                   <p className="text-[11px] text-muted-foreground mt-2">
-                    <Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Guardando ubicación…
+                    <Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Guardando…
                   </p>
                 )}
               </div>
@@ -631,12 +631,12 @@ function FamilyDashboard() {
               <Kpi icon={ShieldCheck} label="Cubiertas" value={filled} tone="bio" />
             </section>
 
-            {/* Monitoreo clínico en vivo — panel embebido */}
+            {/* Salud en vivo */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-rose-500 animate-pulse" />
-                  Monitoreo Clínico
+                <h2 className="font-display text-base font-semibold flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-rose-500 animate-pulse" />
+                  Salud en vivo
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
                   </span>
@@ -655,13 +655,11 @@ function FamilyDashboard() {
             {/* Buzón de postulaciones */}
             <section>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-                  <Inbox className="h-5 w-5 text-fuchsia-neural" />
-                  Buzón de postulaciones
+                <h2 className="font-display text-base font-semibold flex items-center gap-2">
+                  <Inbox className="h-4 w-4 text-fuchsia-neural" />
+                  Postulaciones
                 </h2>
-                <span className="text-xs text-muted-foreground">
-                  {applications.length} en total
-                </span>
+                <span className="text-xs text-muted-foreground">{applications.length} en total</span>
               </div>
               {dataLoading ? (
                 <Card className="p-6 text-center text-sm text-muted-foreground">
@@ -670,10 +668,8 @@ function FamilyDashboard() {
               ) : applications.length === 0 ? (
                 <Card className="p-8 text-center">
                   <Inbox className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="font-semibold">Aún no tienes postulaciones</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Publica una solicitud o usa el buscador para encontrar profesionales.
-                  </p>
+                  <p className="font-semibold">Sin postulaciones aún</p>
+                  <p className="text-sm text-muted-foreground mt-1">Publica una solicitud para recibirlas.</p>
                 </Card>
               ) : (
                 <div className="grid gap-3">
@@ -692,18 +688,16 @@ function FamilyDashboard() {
                             <img
                               src={pro.avatar_url}
                               alt={pro.full_name ?? ""}
-                              className="h-12 w-12 rounded-full object-cover border border-border shrink-0"
+                              className="h-11 w-11 rounded-full object-cover border border-border shrink-0"
                             />
                           ) : (
-                            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
+                            <div className="h-11 w-11 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
                               {(pro?.full_name ?? "?").slice(0, 1).toUpperCase()}
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold truncate">
-                                {pro?.full_name ?? "Profesional"}
-                              </p>
+                              <p className="font-semibold truncate">{pro?.full_name ?? "Profesional"}</p>
                               {stars > 0 && (
                                 <span className="inline-flex items-center gap-0.5 text-xs text-copper">
                                   <Star className="h-3 w-3 fill-copper" />
@@ -713,40 +707,26 @@ function FamilyDashboard() {
                               <StatusPill status={a.status} />
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {pro?.specialty ?? "Profesional de la salud"} · {pro?.city ?? "—"}
-                              {pro?.hourly_rate
-                                ? ` · $${pro.hourly_rate.toLocaleString("es-CO")}/h`
-                                : ""}
+                              {pro?.specialty ?? "Salud"} · {pro?.city ?? "—"}
+                              {pro?.hourly_rate ? ` · $${pro.hourly_rate.toLocaleString("es-CO")}/h` : ""}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              Para:{" "}
-                              <span className="font-medium text-foreground">
-                                {offer?.title ?? "Solicitud"}
-                              </span>
-                              {a.proposed_amount
-                                ? ` · Propone $${a.proposed_amount.toLocaleString("es-CO")} COP`
-                                : ""}
+                              {offer?.title ?? "Solicitud"}
+                              {a.proposed_amount ? ` · $${a.proposed_amount.toLocaleString("es-CO")} COP` : ""}
                             </p>
                             {a.message && (
-                              <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">
-                                "{a.message}"
-                              </p>
+                              <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">"{a.message}"</p>
                             )}
                           </div>
                         </div>
-                        <div className="flex sm:flex-col gap-2 sm:w-40 shrink-0">
+                        <div className="flex sm:flex-col gap-2 sm:w-36 shrink-0">
                           <Button size="sm" variant="hero" asChild className="flex-1">
                             <Link to="/profesional/$proId" params={{ proId: a.professional_id }}>
                               Ver perfil
                             </Link>
                           </Button>
                           {wa && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              asChild
-                              className="flex-1 border-biosensor/40 text-biosensor hover:bg-biosensor/5"
-                            >
+                            <Button size="sm" variant="outline" asChild className="flex-1 border-biosensor/40 text-biosensor hover:bg-biosensor/5">
                               <a href={wa} target="_blank" rel="noopener noreferrer">
                                 <Phone className="h-3.5 w-3.5 mr-1" /> WhatsApp
                               </a>
@@ -760,144 +740,92 @@ function FamilyDashboard() {
               )}
             </section>
 
-            {/* Live status bar */}
             <LivePulseBar role="family" />
 
             {/* Profesionales cercanos */}
             <section>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-                    <Users className="h-5 w-5 text-fuchsia-neural" />
-                    Profesionales cerca de ti
-                  </h2>
-                  <Link
-                    to="/buscar"
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Ver todos →
-                  </Link>
-                </div>
-                <p className="text-xs text-muted-foreground mb-3">
-                  {familyCoords.lat != null
-                    ? "Ordenados por cercanía a tu ubicación."
-                    : "Marca tu ubicación para ver la distancia exacta de cada profesional."}
-                </p>
-                {nearbyPros.length === 0 ? (
-                  <Card className="p-6 text-center text-sm text-muted-foreground">
-                    Aún no hay profesionales con ubicación pública en tu zona.
-                  </Card>
-                ) : (
-                  <div className="grid gap-2">
-                    {nearbyPros.map((p) => (
-                      <Card key={`np-${p.user_id}`} className="p-3 flex items-center gap-3">
-                        <div className="relative shrink-0">
-                          {p.avatar_url ? (
-                            <img
-                              src={p.avatar_url}
-                              alt={p.full_name ?? ""}
-                              className="h-10 w-10 rounded-full object-cover border border-border"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
-                              {(p.full_name ?? "?").slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                          <span
-                            className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${p.available ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            <PlanNameGate
-                              name={p.full_name}
-                              canView={canViewNames}
-                              fallback="Profesional"
-                            />
-                          </p>
-                          <p className="text-[11px] text-muted-foreground truncate">
-                            {p.specialty ?? "Salud"} · {p.city ?? "—"}
-                            {p.avg_rating != null && p.avg_rating > 0 && (
-                              <>
-                                {" · "}
-                                <Star className="h-2.5 w-2.5 inline fill-copper text-copper" />{" "}
-                                {Number(p.avg_rating).toFixed(1)}
-                              </>
-                            )}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          {p.km != null ? (
-                            <span className="text-xs font-semibold text-biosensor">
-                              {formatKm(p.km)}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">sin distancia</span>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="block mt-1 text-xs h-7"
-                            asChild
-                          >
-                            <Link to="/profesional/$proId" params={{ proId: p.user_id }}>
-                              Ver
-                            </Link>
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-                {nearby.length > 0 && (
-                  <p className="text-[11px] text-muted-foreground mt-3">
-                    {nearby.length} otra{nearby.length === 1 ? "" : "s"} solicitud
-                    {nearby.length === 1 ? "" : "es"} activa{nearby.length === 1 ? "" : "s"} en{" "}
-                    {familyCity} —{" "}
-                    <Link to="/buscar" className="underline hover:text-foreground">
-                      ver mercado
-                    </Link>
-                  </p>
-                )}
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-base font-semibold flex items-center gap-2">
+                  <Users className="h-4 w-4 text-fuchsia-neural" /> Profesionales cercanos
+                </h2>
+                <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">
+                  Ver todos →
+                </Link>
               </div>
+              {nearbyPros.length === 0 ? (
+                <Card className="p-6 text-center text-sm text-muted-foreground">
+                  Aún no hay profesionales con ubicación pública en tu zona.
+                </Card>
+              ) : (
+                <div className="grid gap-2">
+                  {nearbyPros.map((p) => (
+                    <Card key={`np-${p.user_id}`} className="p-3 flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        {p.avatar_url ? (
+                          <img src={p.avatar_url} alt={p.full_name ?? ""} className="h-10 w-10 rounded-full object-cover border border-border" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
+                            {(p.full_name ?? "?").slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${p.available ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          <PlanNameGate name={p.full_name} canView={canViewNames} fallback="Profesional" />
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {p.specialty ?? "Salud"} · {p.city ?? "—"}
+                          {p.avg_rating != null && p.avg_rating > 0 && (
+                            <> · <Star className="h-2.5 w-2.5 inline fill-copper text-copper" /> {Number(p.avg_rating).toFixed(1)}</>
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {p.km != null ? (
+                          <span className="text-xs font-semibold text-biosensor">{formatKm(p.km)}</span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">—</span>
+                        )}
+                        <Button size="sm" variant="outline" className="block mt-1 text-xs h-7" asChild>
+                          <Link to="/profesional/$proId" params={{ proId: p.user_id }}>Ver</Link>
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              {nearby.length > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-3">
+                  {nearby.length} solicitud{nearby.length !== 1 ? "es" : ""} activa{nearby.length !== 1 ? "s" : ""} en {familyCity} —{" "}
+                  <Link to="/buscar" className="underline hover:text-foreground">ver mercado</Link>
+                </p>
+              )}
             </section>
 
             {/* Mis solicitudes */}
             <section>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display text-lg font-semibold">Mis solicitudes</h2>
-                <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">
-                  Ver todas →
-                </Link>
+                <h2 className="font-display text-base font-semibold">Mis solicitudes</h2>
+                <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">Ver todas →</Link>
               </div>
               {offers.length === 0 ? (
                 <Card className="p-10 text-center">
                   <Heart className="h-8 w-8 text-copper mx-auto mb-3" />
-                  <p className="font-semibold">Aún no has publicado solicitudes</p>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                    Publicar una solicitud es{" "}
-                    <span className="font-semibold text-emerald-600">gratis</span>. Empieza con una
-                    búsqueda directa o usa el copiloto IA.
-                  </p>
+                  <p className="font-semibold">Sin solicitudes aún</p>
+                  <p className="text-sm text-muted-foreground mt-1">Publicar es <span className="font-semibold text-emerald-600">gratis</span>.</p>
                   <div className="mt-4 flex flex-wrap gap-2 justify-center">
                     <HiringCopilot />
-                    <Button variant="outline" asChild>
-                      <Link to="/buscar">Buscar ahora</Link>
-                    </Button>
+                    <Button variant="outline" asChild><Link to="/buscar">Buscar ahora</Link></Button>
                   </div>
                 </Card>
               ) : (
                 <div className="grid gap-3">
                   {Array.from(new Map(offers.map((o) => [o.id, o])).values()).map((o) => (
-                    <Card
-                      key={`my-offer-${o.id}`}
-                      className="p-4 flex items-center justify-between gap-3 flex-wrap"
-                    >
+                    <Card key={`my-offer-${o.id}`} className="p-4 flex items-center justify-between gap-3 flex-wrap">
                       <div>
                         <p className="font-medium">{o.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {o.city} · {o.modality} · ${o.amount.toLocaleString("es-CO")} COP
-                        </p>
+                        <p className="text-xs text-muted-foreground">{o.city} · {o.modality} · ${o.amount.toLocaleString("es-CO")} COP</p>
                       </div>
                       <StatusPill status={o.status} />
                     </Card>
@@ -906,12 +834,10 @@ function FamilyDashboard() {
               )}
             </section>
 
-            {/* Mapa de mis solicitudes */}
+            {/* Mapa de solicitudes */}
             {offers.some((o) => o.lat != null && o.lng != null) && (
               <section>
-                <h2 className="font-display text-lg font-semibold mb-3">
-                  Tus solicitudes en el mapa
-                </h2>
+                <h2 className="font-display text-base font-semibold mb-3">Solicitudes en el mapa</h2>
                 <OffersMap
                   points={offers
                     .filter((o) => o.lat != null && o.lng != null)
@@ -928,15 +854,7 @@ function FamilyDashboard() {
               </section>
             )}
 
-            {/* Agenda de necesidades (azul) + bandeja de propuestas */}
-            {user?.id && (
-              <section className="space-y-4">
-                <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
-                <ProposalsInbox userId={user.id} role="family" />
-              </section>
-            )}
-
-            {/* Zona de peligro: eliminar mi propio perfil */}
+            {/* Zona de peligro */}
             {user?.id && <DangerZoneCard userId={user.id} role="family" />}
           </div>
         </details>
