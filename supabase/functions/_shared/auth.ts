@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 // Allowlist of trusted origins for browser-side calls. Server-to-server callers
 // (no Origin header) get the canonical site origin, which is harmless for them.
-const ALLOWED_ORIGIN = /^https:\/\/([a-z0-9-]+\.)?(humanix\.lat|lovable\.app|lovableproject\.com)$/i;
+const ALLOWED_ORIGIN = /^(https?:\/\/localhost(:\d+)?|https:\/\/([a-z0-9-]+\.)?(humanix\.lat|lovable\.app|lovableproject\.com))$/i;
 const DEFAULT_ORIGIN = "https://humanix.lat";
 
 export function buildCorsHeaders(req?: Request): Record<string, string> {

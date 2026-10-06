@@ -1,6 +1,6 @@
 // Crea preferencia de Mercado Pago para suscripción mensual del profesional a Humanix.
 // Devuelve init_point para redirigir al checkout.
-import { corsHeaders, requireUser } from "../_shared/auth.ts";
+import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 
 const MP_BASE = "https://api.mercadopago.com";
 
@@ -11,7 +11,8 @@ const PRICE_BY_PLAN: Record<string, number> = {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
       console.error("MP preference error:", r.status, t);
       return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     const pref = await r.json();
@@ -115,13 +116,13 @@ Deno.serve(async (req) => {
         sandbox_init_point: pref.sandbox_init_point,
         preference_id: pref.id,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("mp-create-subscription:", e);
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });
