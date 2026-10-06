@@ -687,7 +687,7 @@ function AuthPage() {
                             />
                           </div>
                         </div>
-                      ) : (
+                      ) : role === "professional" ? (
                         <>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
@@ -710,8 +710,7 @@ function AuthPage() {
                             </div>
                           </div>
 
-                          {/* Ubicación principal de servicio — tarjeta interactiva pequeña
-                      que se marca automáticamente con el GPS del dispositivo. */}
+                          {/* Ubicación principal de servicio — solo para profesionales */}
                           <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <div>
@@ -737,7 +736,7 @@ function AuthPage() {
                             />
                           </div>
                         </>
-                      )}
+                      ) : null /* institución: solo nombre + correo + contraseña; el resto va en el onboarding */}
                     </>
                   )}
 

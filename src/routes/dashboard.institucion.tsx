@@ -45,6 +45,7 @@ import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
 import { IpsBranchBilling } from "@/components/humanix/IpsBranchBilling";
 import { SmartInstitutionProfileForm } from "@/components/humanix/SmartInstitutionProfileForm";
+import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { HumanixAssistant } from "@/components/humanix/HumanixAssistant";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
 import { OffersMap, type MapPoint } from "@/components/humanix/OffersMap";
@@ -281,7 +282,7 @@ function InstitutionDashboard() {
 
           supabase
             .from("institution_profiles")
-            .select("institution_name, institution_type, city, verified, nit, compliance_fuid")
+            .select("institution_name, institution_type, city, verified, nit, compliance_fuid, onboarding_complete")
             .eq("user_id", uid)
             .maybeSingle(),
 
@@ -1039,6 +1040,9 @@ function InstitutionDashboard() {
               <div className="p-4">
                 <SmartInstitutionProfileForm userId={user.id} />
               </div>
+            </div>
+            <div className="mt-4">
+              <DangerZoneCard userId={user.id} role="institution" />
             </div>
           </div>
         )}
