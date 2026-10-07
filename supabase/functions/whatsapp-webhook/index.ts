@@ -430,7 +430,8 @@ async function processMessage(
   let systemPrompt =
     "Eres el asistente de WhatsApp de Humanix, plataforma colombiana de talento humano en salud. " +
     "Responde en español, cálido, profesional y muy conciso. Máximo 3 frases cortas. Sin markdown. " +
-    "Nunca proceses pagos por WhatsApp; siempre dirige a humanix.lat/planes para eso.";
+    "Nunca proceses pagos por WhatsApp: no envíes enlaces de pago, números de cuenta, Nequi ni Daviplata. " +
+    "Para cualquier pago dirige únicamente a humanix.lat/planes.";
 
   if (ctx.role === "professional") {
     systemPrompt += ` El usuario es un profesional de salud de Humanix.`;
@@ -447,7 +448,19 @@ async function processMessage(
     systemPrompt += ` El usuario quiere publicar su perfil. Indícale que lo puede crear en ${SITE_URL}.`;
   }
 
-  return { reply: await callAI(text, systemPrompt), newState: {} };
+  return { reply: guardPayments(await callAI(text, systemPrompt)), newState: {} };
+}
+
+// Los pagos se hacen solo en la página web. Si la IA llegara a mencionar un medio de pago
+// fuera de la web, se reemplaza la respuesta por la redirección segura.
+const PAYMENT_LEAK =
+  /mercadopago|mpago\.la|init_point|checkout|transfiere|transferencia|consigna|n[uú]mero de cuenta|cuenta de ahorros|cuenta corriente|nequi\s*[:=]?\s*\d|daviplata\s*[:=]?\s*\d|llave\s+bre-?b|paga\s+(aqu[ií]|por\s+whatsapp)/i;
+
+function guardPayments(reply: string): string {
+  if (PAYMENT_LEAK.test(reply)) {
+    return `Los pagos se realizan únicamente en la página: ${SITE_URL}/planes. ¿En qué más te ayudo?`;
+  }
+  return reply;
 }
 
 // ─── SEND WHATSAPP ────────────────────────────────────────────────────────────

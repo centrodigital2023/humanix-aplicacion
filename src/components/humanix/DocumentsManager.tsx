@@ -304,6 +304,7 @@ export function DocumentsManager({
       const newDoc = row as unknown as Doc;
       setDocs((prev) => [newDoc, ...prev]);
       toast.success("Documento subido. Verificando con IA…");
+      void supabase.functions.invoke("fraud-detector", { body: {} }).catch(() => {});
 
       const { data: signed } = await supabase.storage
         .from("professional-docs")

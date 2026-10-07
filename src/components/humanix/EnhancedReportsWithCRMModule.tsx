@@ -305,27 +305,24 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
         return;
       }
 
-      toast.loading("Enviando campaña...");
-
       const { error } = await supabase.from("crm_campaigns").insert([
         {
           organization_id: userId,
           campaign_name: campaignForm.campaign_name,
           campaign_type: campaignForm.campaign_type,
-          status: "sent",
+          status: "draft",
           segment: campaignForm.segment,
-          sent_at: new Date().toISOString(),
           total_recipients: selectedContacts.length,
-          open_rate: Math.random() * 40 + 20, // Mock
-          click_rate: Math.random() * 10 + 5,
-          conversion_rate: Math.random() * 3 + 1,
+          open_rate: null,
+          click_rate: null,
+          conversion_rate: null,
         },
       ]);
 
       if (error) throw error;
 
       toast.success(
-        `Campaña enviada a ${selectedContacts.length} contactos`
+        `Campaña guardada como borrador para ${selectedContacts.length} contactos. El envío masivo aún no está habilitado.`
       );
       setShowNewCampaign(false);
       setCampaignForm({
@@ -418,18 +415,35 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
               </Card>
             </div>
 
-            {/* Gráfico simulado */}
+            {/* Contactos nuevos por mes (datos reales) */}
             <Card className="p-4 bg-muted/30">
-              <p className="font-semibold text-sm mb-3">Tendencia de contactos</p>
-              <div className="h-24 flex items-end gap-1">
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 bg-fuchsia-neural/50 rounded-t"
-                    style={{ height: `${Math.random() * 100}%` }}
-                  />
-                ))}
-              </div>
+              <p className="font-semibold text-sm mb-3">Contactos nuevos por mes</p>
+              {(() => {
+                const now = new Date();
+                const months = Array.from({ length: 12 }, (_, i) => {
+                  const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+                  return { key: `${d.getFullYear()}-${d.getMonth()}`, count: 0 };
+                });
+                for (const c of contacts as Array<{ created_at?: string }>) {
+                  if (!c.created_at) continue;
+                  const d = new Date(c.created_at);
+                  const m = months.find((x) => x.key === `${d.getFullYear()}-${d.getMonth()}`);
+                  if (m) m.count++;
+                }
+                const max = Math.max(1, ...months.map((m) => m.count));
+                return (
+                  <div className="h-24 flex items-end gap-1">
+                    {months.map((m) => (
+                      <div
+                        key={m.key}
+                        title={`${m.count} contacto${m.count === 1 ? "" : "s"}`}
+                        className="flex-1 bg-fuchsia-neural/50 rounded-t"
+                        style={{ height: `${(m.count / max) * 100}%`, minHeight: m.count ? 2 : 0 }}
+                      />
+                    ))}
+                  </div>
+                );
+              })()}
               <p className="text-xs text-muted-foreground mt-2 text-center">
                 Últimos 12 meses
               </p>
@@ -557,19 +571,19 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                       <div>
                         <p className="text-muted-foreground">Aperturas</p>
                         <p className="font-semibold">
-                          {campaign.open_rate?.toFixed(1)}%
+                          {campaign.open_rate != null ? `${campaign.open_rate.toFixed(1)}%` : "—"}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Clics</p>
                         <p className="font-semibold">
-                          {campaign.click_rate?.toFixed(1)}%
+                          {campaign.click_rate != null ? `${campaign.click_rate.toFixed(1)}%` : "—"}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Conversión</p>
                         <p className="font-semibold">
-                          {campaign.conversion_rate?.toFixed(1)}%
+                          {campaign.conversion_rate != null ? `${campaign.conversion_rate.toFixed(1)}%` : "—"}
                         </p>
                       </div>
                     </div>

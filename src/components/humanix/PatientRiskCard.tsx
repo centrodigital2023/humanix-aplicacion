@@ -4,7 +4,8 @@
  */
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { humanixAi } from "@/lib/humanixAi";
+import { computeRisk, type VitalReading } from "@/lib/patientRisk";
+import { toast } from "sonner";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -207,18 +208,23 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
   const generateRiskScore = async () => {
     setGenerating(true);
     try {
-      // Call Humanix AI clinical engine
-      const result = await humanixAi.raw<{
-        score: number;
-        level: RiskLevel;
-        factors: RiskFactor[];
-        ai_summary: string;
-        recommendations: Array<{ priority: string; action: string; rationale?: string }>;
-        trend: string;
-      }>("patient-risk-score", { patient_id: patientId });
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: readings, error: rErr } = await sb
+        .from("vital_signs")
+        .select("type, value, recorded_at")
+        .eq("patient_id", patientId)
+        .gte("recorded_at", since)
+        .order("recorded_at", { ascending: false })
+        .limit(500);
+      if (rErr) throw rErr;
 
-      // Store result
       const previousScore = riskData?.score ?? null;
+      const result = computeRisk((readings ?? []) as VitalReading[], previousScore);
+      if (!result) {
+        toast.info("Sin mediciones de los últimos 7 días para calcular el riesgo.");
+        return;
+      }
+
       const { data, error } = await sb
         .from("patient_risk_scores")
         .insert({
@@ -226,7 +232,7 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
           score: result.score,
           level: result.level,
           factors: result.factors,
-          ai_summary: result.ai_summary,
+          ai_summary: result.summary,
           recommendations: result.recommendations,
           trend: result.trend,
           previous_score: previousScore,
@@ -237,33 +243,9 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
 
       if (error) throw error;
       if (data) setRiskData(data as RiskScore);
-    } catch {
-      // Edge function may not exist yet — use mock for dev
-      const mockScore: RiskScore = {
-        id: crypto.randomUUID(),
-        patient_id: patientId,
-        score: 42,
-        level: "medium",
-        factors: [
-          { name: "Frecuencia cardíaca", weight: 25, value: "Elevada (112 lpm)", direction: "increase" },
-          { name: "SpO₂", weight: 20, value: "Límite (93%)", direction: "decrease" },
-          { name: "Presión arterial", weight: 18, value: "Controlada (128/82)", direction: "neutral" },
-          { name: "Temperatura", weight: 15, value: "Normal (36.8°C)", direction: "neutral" },
-          { name: "Adherencia medicamentos", weight: 12, value: "Alta (92%)", direction: "neutral" },
-          { name: "Historial hospitalizaciones", weight: 10, value: "1 en últimos 6 meses", direction: "increase" },
-        ],
-        ai_summary:
-          "El paciente presenta un riesgo moderado principalmente por episodios de taquicardia leve y saturación de oxígeno en límite inferior. La presión arterial está bien controlada con la medicación actual. Se recomienda monitoreo estrecho de FC y SpO₂ durante las próximas 48 horas.",
-        recommendations: [
-          { priority: "high", action: "Monitorear FC cada 4 horas y SpO₂ continua durante 48 h", rationale: "FC elevada recurrente" },
-          { priority: "medium", action: "Revisar dosis de broncodilatador con médico tratante", rationale: "SpO₂ en límite 93%" },
-          { priority: "low", action: "Mantener registro de actividad física diaria", rationale: "Meta 5.000 pasos/día" },
-        ],
-        trend: "stable",
-        previous_score: 38,
-        calculated_at: new Date().toISOString(),
-      };
-      setRiskData(mockScore);
+    } catch (err) {
+      console.error("[PatientRiskCard] generateRiskScore:", err);
+      toast.error("No se pudo calcular el riesgo. Inténtalo de nuevo.");
     } finally {
       setGenerating(false);
     }

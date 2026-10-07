@@ -1,1 +1,28 @@
 project_id = "ncyzoswhszhttdoxhqdh"
+
+# Funciones que reciben llamadas externas (webhooks, cron, DB webhooks, flujos anónimos).
+# Cada una valida su propio secreto/firma dentro del código; sin esto Supabase exige
+# un JWT de usuario y rechaza con 401 las llamadas de Mercado Pago, Meta, pg_net, etc.
+[functions.mp-webhook]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.care-alerts]
+verify_jwt = false
+
+[functions.clinical-alert-notify]
+verify_jwt = false
+
+[functions.rethus-weekly-check]
+verify_jwt = false
+
+[functions.wearable-ingest]
+verify_jwt = false
+
+[functions.send-validation-otp]
+verify_jwt = false
+
+[functions.verify-validation-otp]
+verify_jwt = false

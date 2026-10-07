@@ -67,7 +67,6 @@ import { Route as SuperadminMarketingRouteImport } from './routes/superadmin.mar
 import { Route as SuperadminFraudeRouteImport } from './routes/superadmin.fraude'
 import { Route as SuperadminCrmRouteImport } from './routes/superadmin.crm'
 import { Route as SuperadminAuditoriaRouteImport } from './routes/superadmin.auditoria'
-import { Route as SuperadminActivarRouteImport } from './routes/superadmin.activar'
 import { Route as ServicioBookingIdRouteImport } from './routes/servicio.$bookingId'
 import { Route as RecursosSlugRouteImport } from './routes/recursos.$slug'
 import { Route as ProfesionalProIdRouteImport } from './routes/profesional.$proId'
@@ -376,11 +375,6 @@ const SuperadminAuditoriaRoute = SuperadminAuditoriaRouteImport.update({
   path: '/auditoria',
   getParentRoute: () => SuperadminRoute,
 } as any)
-const SuperadminActivarRoute = SuperadminActivarRouteImport.update({
-  id: '/activar',
-  path: '/activar',
-  getParentRoute: () => SuperadminRoute,
-} as any)
 const ServicioBookingIdRoute = ServicioBookingIdRouteImport.update({
   id: '/servicio/$bookingId',
   path: '/servicio/$bookingId',
@@ -532,7 +526,6 @@ export interface FileRoutesByFullPath {
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
-  '/superadmin/activar': typeof SuperadminActivarRoute
   '/superadmin/auditoria': typeof SuperadminAuditoriaRoute
   '/superadmin/crm': typeof SuperadminCrmRoute
   '/superadmin/fraude': typeof SuperadminFraudeRoute
@@ -608,7 +601,6 @@ export interface FileRoutesByTo {
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
-  '/superadmin/activar': typeof SuperadminActivarRoute
   '/superadmin/auditoria': typeof SuperadminAuditoriaRoute
   '/superadmin/crm': typeof SuperadminCrmRoute
   '/superadmin/fraude': typeof SuperadminFraudeRoute
@@ -687,7 +679,6 @@ export interface FileRoutesById {
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
-  '/superadmin/activar': typeof SuperadminActivarRoute
   '/superadmin/auditoria': typeof SuperadminAuditoriaRoute
   '/superadmin/crm': typeof SuperadminCrmRoute
   '/superadmin/fraude': typeof SuperadminFraudeRoute
@@ -767,7 +758,6 @@ export interface FileRouteTypes {
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
-    | '/superadmin/activar'
     | '/superadmin/auditoria'
     | '/superadmin/crm'
     | '/superadmin/fraude'
@@ -843,7 +833,6 @@ export interface FileRouteTypes {
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
-    | '/superadmin/activar'
     | '/superadmin/auditoria'
     | '/superadmin/crm'
     | '/superadmin/fraude'
@@ -921,7 +910,6 @@ export interface FileRouteTypes {
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
-    | '/superadmin/activar'
     | '/superadmin/auditoria'
     | '/superadmin/crm'
     | '/superadmin/fraude'
@@ -1403,13 +1391,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperadminAuditoriaRouteImport
       parentRoute: typeof SuperadminRoute
     }
-    '/superadmin/activar': {
-      id: '/superadmin/activar'
-      path: '/activar'
-      fullPath: '/superadmin/activar'
-      preLoaderRoute: typeof SuperadminActivarRouteImport
-      parentRoute: typeof SuperadminRoute
-    }
     '/servicio/$bookingId': {
       id: '/servicio/$bookingId'
       path: '/servicio/$bookingId'
@@ -1591,7 +1572,6 @@ const RecursosRouteWithChildren = RecursosRoute._addFileChildren(
 )
 
 interface SuperadminRouteChildren {
-  SuperadminActivarRoute: typeof SuperadminActivarRoute
   SuperadminAuditoriaRoute: typeof SuperadminAuditoriaRoute
   SuperadminCrmRoute: typeof SuperadminCrmRoute
   SuperadminFraudeRoute: typeof SuperadminFraudeRoute
@@ -1605,7 +1585,6 @@ interface SuperadminRouteChildren {
 }
 
 const SuperadminRouteChildren: SuperadminRouteChildren = {
-  SuperadminActivarRoute: SuperadminActivarRoute,
   SuperadminAuditoriaRoute: SuperadminAuditoriaRoute,
   SuperadminCrmRoute: SuperadminCrmRoute,
   SuperadminFraudeRoute: SuperadminFraudeRoute,

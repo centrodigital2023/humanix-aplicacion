@@ -96,11 +96,11 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
       { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
       { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
-      { rel: "dns-prefetch", href: "https://dfdhsalujoxhqrcngbuy.supabase.co" },
+      { rel: "dns-prefetch", href: "https://ncyzoswhszhttdoxhqdh.supabase.co" },
       { rel: "dns-prefetch", href: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "preconnect", href: "https://dfdhsalujoxhqrcngbuy.supabase.co" },
+      { rel: "preconnect", href: "https://ncyzoswhszhttdoxhqdh.supabase.co" },
       // Preload (non-blocking) then attach as stylesheet on load — mejora FCP/LCP
       {
         rel: "preload",

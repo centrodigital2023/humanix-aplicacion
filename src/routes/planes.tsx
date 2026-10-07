@@ -656,6 +656,9 @@ function PlansPage() {
               WhatsApp +57 314 744 4715
             </a>
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            El WhatsApp es solo para resolver dudas. Los pagos se realizan únicamente en esta página.
+          </p>
           <Link
             to="/"
             className="mt-4 text-xs text-muted-foreground hover:text-foreground inline-block transition-colors"

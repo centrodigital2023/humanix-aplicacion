@@ -49,6 +49,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
+import { humanixAi } from "@/lib/humanixAi";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -324,11 +325,12 @@ export function ProAgendaModule({ userId }: { userId: string }) {
       const history = (vitalHistory[bookingId] ?? []).slice(0, 5);
       const vitalsSummary = history.map((v) => `${v.reading_type}: ${v.value}${v.unit ?? ""}`).join(", ");
       const prompt = `Eres un asistente clínico. Convierte estas notas en formato SOAP (Subjetivo, Objetivo, Análisis, Plan) en español claro y conciso. Paciente: ${booking.client_name ?? "sin nombre"}. Servicio: ${booking.offer_title ?? "visita domiciliaria"}. Signos vitales recientes: ${vitalsSummary || "sin registro"}. Notas del profesional: "${raw}"`;
-      const { data, error } = await (supabase as any).functions.invoke("humanix-ai-chat", {
-        body: { messages: [{ role: "user", content: prompt }] },
-      });
-      if (error) throw error;
-      const structured = data?.reply ?? data?.content ?? data?.message ?? "";
+      const structured = (
+        await humanixAi.assistant({
+          messages: [{ role: "user", content: prompt }],
+          persona: "professional",
+        })
+      ).trim();
       if (structured) {
         setNotes((p) => ({ ...p, [bookingId]: structured }));
         toast.success("✨ Nota estructurada en formato SOAP");

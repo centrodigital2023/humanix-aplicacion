@@ -19,6 +19,7 @@ import { LiveTracking } from "@/components/humanix/LiveTracking";
 import { BookingChat } from "@/components/humanix/BookingChat";
 import { PaidContactCard } from "@/components/humanix/PaidContactCard";
 import { VoiceRating } from "@/components/humanix/VoiceRating";
+import { ServiceContractCard } from "@/components/humanix/ServiceContractCard";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
 import { toast } from "sonner";
 
@@ -356,6 +357,12 @@ function ServicePage() {
                   isPaid={PAID_STATUSES.has(booking.status)}
                   amountCOP={booking.total_amount}
                 />
+                {booking.status !== "pending" && (isClient || isProfessional) && (
+                  <ServiceContractCard
+                    bookingId={booking.id}
+                    party={isClient ? "family" : "professional"}
+                  />
+                )}
                 <BookingChat
                   conversationId={conversationId}
                   currentUserId={userId}
