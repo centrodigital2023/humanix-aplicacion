@@ -209,6 +209,15 @@ function Home() {
       {children}
       <Footer />
       <HabeasDataConsent />
+      {/* Acceso admin — punto apenas visible, abajo a la derecha */}
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/superadmin" })}
+        aria-label="Administración"
+        className="fixed bottom-2 right-2 z-30 h-4 w-4 cursor-pointer rounded-full opacity-10 transition-opacity hover:opacity-50 focus-visible:opacity-80 focus-visible:outline-none"
+      >
+        <span className="block h-2 w-2 rounded-full bg-foreground/60 mx-auto mt-1" />
+      </button>
     </div>
   );
 
