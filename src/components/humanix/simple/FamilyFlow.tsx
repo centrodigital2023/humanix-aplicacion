@@ -435,12 +435,12 @@ export function FamilyFlow() {
                         <img
                           src={pro.avatar_url}
                           alt={`Foto de ${pro.full_name ?? "profesional"}`}
-                          className="h-24 w-24 rounded-full object-cover ring-4 ring-ok/30"
+                          className={`h-24 w-24 rounded-full object-cover ring-4 ${isVerified(pro) ? "ring-ok/40 ring-verified" : "ring-border"}`}
                           loading="lazy"
                         />
                       ) : (
                         <div
-                          className="flex h-24 w-24 items-center justify-center rounded-full bg-trust/10 text-4xl font-bold text-trust"
+                          className={`flex h-24 w-24 items-center justify-center rounded-full bg-trust/10 text-4xl font-bold text-trust ring-4 ${isVerified(pro) ? "ring-ok/40 ring-verified" : "ring-border"}`}
                           aria-hidden="true"
                         >
                           {(pro.full_name ?? "?").charAt(0)}
@@ -452,10 +452,14 @@ export function FamilyFlow() {
                       </p>
                       <div className="mt-3 flex flex-wrap justify-center gap-2">
                         {isVerified(pro) ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/10 px-3 py-1.5 text-sm font-bold text-ok">
-                            <BadgeCheck className="h-4 w-4" aria-hidden="true" />
-                            Verificado
-                          </span>
+                          <>
+                            <span className="badge-rethus">
+                              RETHUS verificado
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-trust/10 px-3 py-1.5 text-xs font-bold text-trust">
+                              🛡️ Puerta Segura incluida
+                            </span>
+                          </>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-warn/10 px-3 py-1.5 text-sm font-bold text-warn">
                             En revisión

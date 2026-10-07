@@ -1,9 +1,10 @@
 // Home "Humanix simple": una pantalla que cambia según quién eres
 // (Familias / IPS-EPS / Profesionales). Imágenes grandes + pocas palabras,
 // guía por voz para quien no lee, sin publicidad ni urgencias falsas.
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MessageCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
@@ -44,6 +45,75 @@ export const Route = createFileRoute("/")({
     }),
   component: Index,
 });
+
+// Phase 6 — North Star live stats strip
+type LiveStats = { services_today: number; pros_available: number; families_month: number };
+
+function NorthStarStrip() {
+  const [stats, setStats] = useState<LiveStats | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const [{ count: svc }, { count: pros }, { count: fam }] = await Promise.all([
+          supabase
+            .from("service_bookings")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", today),
+          supabase
+            .from("professional_profiles")
+            .select("user_id", { count: "exact", head: true })
+            .eq("available", true)
+            .eq("active", true),
+          supabase
+            .from("service_bookings")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", new Date(Date.now() - 30 * 86400_000).toISOString()),
+        ]);
+        if (active)
+          setStats({
+            services_today: svc ?? 0,
+            pros_available: pros ?? 0,
+            families_month: fam ?? 0,
+          });
+      } catch {
+        // non-fatal
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  if (!stats) return null;
+
+  const items = [
+    { n: stats.services_today, label: "Servicios hoy", emoji: "🩺" },
+    { n: stats.pros_available, label: "Profesionales disponibles ahora", emoji: "🟢" },
+    { n: stats.families_month, label: "Familias atendidas este mes", emoji: "👨‍👩‍👧" },
+  ];
+
+  return (
+    <div
+      aria-label="Actividad en vivo"
+      className="mx-auto max-w-6xl px-4 sm:px-6"
+    >
+      <ul className="flex flex-wrap justify-center gap-3">
+        {items.map((item, i) => (
+          <li
+            key={item.label}
+            style={{ animationDelay: `${i * 120}ms` }}
+            className="stat-live inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-semibold shadow-sm ring-1 ring-border"
+          >
+            <span aria-hidden="true">{item.emoji}</span>
+            <span className="font-bold tabular-nums">{item.n.toLocaleString("es-CO")}</span>
+            <span className="text-muted-foreground">{item.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 type Pic = { emoji: string; label: string; tint: Tint };
 
@@ -205,6 +275,8 @@ function Home() {
             </div>
           </div>
         </section>
+
+        <NorthStarStrip />
 
         <section className="mx-auto max-w-6xl px-4 pb-10 sm:px-6" aria-label={copy.cta}>
           {audience === "familias" && (

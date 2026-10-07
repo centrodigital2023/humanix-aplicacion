@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AppUser } from "@/hooks/use-app-user";
 import { TINTS, primaryBtn } from "./ui";
 import { useSpeakOnChange, useVoice } from "./voice";
+import { ProfessionalShareCard, type ProCardData } from "@/components/humanix/ProfessionalShareCard";
 
 type Offer = {
   id: string;
@@ -47,6 +48,7 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [proCity, setProCity] = useState<string | null>(null);
+  const [proCardData, setProCardData] = useState<ProCardData | null>(null);
 
   useSpeakOnChange("¿Puedes trabajar ahora? Toca el botón grande.");
 
@@ -54,14 +56,38 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
     if (!user || !isPro) return;
     let active = true;
     (async () => {
-      const { data } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
         .from("professional_profiles")
-        .select("available, home_city")
+        .select("available, home_city, full_name, avatar_url, specialty, years_experience, avg_rating, verified, rethus_verified")
         .eq("user_id", user.id)
         .maybeSingle();
       if (!active || !data) return;
-      setAvailable(Boolean(data.available));
-      setProCity(data.home_city ?? null);
+      const d = data as {
+        available?: boolean | null; home_city?: string | null;
+        full_name?: string | null; avatar_url?: string | null; specialty?: string | null;
+        years_experience?: number | null; avg_rating?: number | null;
+        verified?: boolean | null; rethus_verified?: boolean | null;
+      };
+      setAvailable(Boolean(d.available));
+      setProCity(d.home_city ?? null);
+      if (d.full_name) {
+        const slug = d.full_name
+          .toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+          .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        setProCardData({
+          name: d.full_name,
+          username: slug || user.id,
+          photoUrl: d.avatar_url ?? undefined,
+          specialty: d.specialty ?? "Profesional de salud",
+          city: d.home_city ?? "Colombia",
+          yearsExp: d.years_experience ?? 0,
+          rating: d.avg_rating ?? undefined,
+          rethusBadge: Boolean(d.verified || d.rethus_verified),
+          certBadge: Boolean(d.verified),
+          availableNow: available,
+        });
+      }
     })();
     return () => {
       active = false;
@@ -282,6 +308,18 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
           ))}
         </ul>
       </section>
+      {isPro && proCardData && (
+        <section
+          aria-label="Tu tarjeta profesional"
+          className="mt-5 card-viral rounded-[2rem] p-4 sm:p-6"
+        >
+          <h3 className="font-display text-xl font-bold mb-1">Tu tarjeta profesional</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Compártela antes de cada servicio. Tu familia sabe exactamente quién viene.
+          </p>
+          <ProfessionalShareCard pro={proCardData} compact />
+        </section>
+      )}
     </div>
   );
 }
