@@ -27,6 +27,7 @@ function AdminLogin() {
   const [codeDigits, setCodeDigits] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -64,6 +65,26 @@ function AdminLogin() {
       setTimeout(() => codeRefs.current[0]?.focus(), 120);
     } catch {
       setError("Error de conexión. Intenta otra vez.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const forgotPassword = async () => {
+    const mail = email.trim().toLowerCase();
+    if (!mail) {
+      setError("Escribe tu correo para recuperar la contraseña.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await supabase.auth.resetPasswordForEmail(mail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setNotice("Si el correo existe, te enviamos un enlace para restablecer la contraseña.");
+    } catch {
+      setError("No se pudo enviar el correo. Intenta otra vez.");
     } finally {
       setBusy(false);
     }
@@ -223,6 +244,21 @@ function AdminLogin() {
                   {error}
                 </p>
               )}
+
+              {notice && (
+                <p role="status" className="text-xs font-semibold text-emerald-300 bg-emerald-500/10 rounded-lg px-3 py-2 border border-emerald-500/20">
+                  {notice}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={forgotPassword}
+                disabled={busy}
+                className="block w-full text-center text-xs text-white/40 hover:text-white/70 transition"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
 
               <button
                 type="submit"

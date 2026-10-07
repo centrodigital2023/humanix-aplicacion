@@ -87,6 +87,9 @@ function SuperadminPage() {
   const [noteBody, setNoteBody] = useState("");
   const [sendingNote, setSendingNote] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [newPw, setNewPw] = useState("");
+  const [newPw2, setNewPw2] = useState("");
+  const [savingPw, setSavingPw] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "ops" | "comms">("overview");
 
   // ── Derived platform health score (0–100) ────────────────────────────────
@@ -204,6 +207,18 @@ function SuperadminPage() {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const changePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPw.length < 10) { toast.error("Usa al menos 10 caracteres"); return; }
+    if (newPw !== newPw2) { toast.error("Las contraseñas no coinciden"); return; }
+    setSavingPw(true);
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    setSavingPw(false);
+    if (error) { toast.error(error.message); return; }
+    setNewPw(""); setNewPw2("");
+    toast.success("Contraseña actualizada");
   };
 
   const sendNote = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -615,6 +630,22 @@ function SuperadminPage() {
                 }
               </PremiumCard>
             </div>
+
+            <PremiumCard title="Seguridad · Cambiar contraseña" icon={Lock} subtitle="Actualiza la contraseña de tu cuenta de administrador">
+              <form onSubmit={changePassword} className="grid sm:grid-cols-3 gap-3 items-end">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-white/50 uppercase tracking-wider">Nueva contraseña</Label>
+                  <Input type="password" autoComplete="new-password" required value={newPw} onChange={(e) => setNewPw(e.target.value)} className="bg-white/[0.04] border-white/10 text-white" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-white/50 uppercase tracking-wider">Confirmar</Label>
+                  <Input type="password" autoComplete="new-password" required value={newPw2} onChange={(e) => setNewPw2(e.target.value)} className="bg-white/[0.04] border-white/10 text-white" />
+                </div>
+                <Button type="submit" disabled={savingPw || !newPw} variant="hero">
+                  {savingPw ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+                </Button>
+              </form>
+            </PremiumCard>
 
             {/* Docs y revisión de profesionales */}
             <div className="grid sm:grid-cols-2 gap-3">
