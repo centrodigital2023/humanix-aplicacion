@@ -191,7 +191,11 @@ function RootComponent() {
   // En la home y el registro el WhatsApp ya está en la página; la burbuja
   // flotante taparía el botón principal en el celular.
   const hideBubble = useRouterState({
-    select: (s) => s.location.pathname === "/" || s.location.pathname === "/auth",
+    select: (s) =>
+      s.location.pathname === "/" ||
+      s.location.pathname === "/auth" ||
+      s.location.pathname === "/admin" ||
+      s.location.pathname.startsWith("/superadmin"),
   });
   return (
     <>

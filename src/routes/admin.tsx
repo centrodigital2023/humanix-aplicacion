@@ -41,7 +41,7 @@ function AdminLogin() {
         .eq("user_id", data.session.user.id)
         .eq("role", "superadmin")
         .maybeSingle();
-      if (roleRow) navigate({ to: "/superadmin" });
+      if (roleRow) navigate({ to: "/superadmin", replace: true });
     });
   }, [navigate]);
 
@@ -101,7 +101,7 @@ function AdminLogin() {
       }
       setPhase("loading");
       await new Promise((r) => setTimeout(r, 600));
-      navigate({ to: "/superadmin" });
+      navigate({ to: "/superadmin", replace: true });
     } catch {
       setError("Error de verificación. Intenta otra vez.");
     } finally {
