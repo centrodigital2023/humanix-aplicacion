@@ -21,6 +21,7 @@ import { VoiceProvider } from "@/components/humanix/simple/voice";
 import { useAudience } from "@/hooks/use-audience";
 import { ProfileChooser } from "@/components/humanix/simple/ProfileChooser";
 import { AUDIENCE_COPY, parseAudience, whatsappLink, type Audience } from "@/lib/audience";
+import { LeadCaptureWidget } from "@/components/humanix/LeadCaptureWidget";
 import { CONTACT } from "@/lib/social";
 import { buildSeo, SITE_NAME } from "@/lib/seo";
 
@@ -309,6 +310,7 @@ function Home() {
           </a>
         </section>
       </main>
+      <LeadCaptureWidget userId={user?.id} />
     </>,
   );
 }
