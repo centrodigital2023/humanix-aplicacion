@@ -36,6 +36,13 @@
       "when": 1791402313115,
       "tag": "0004_lead_captures",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791402331015,
+      "tag": "0005_grants_new_tables",
+      "breakpoints": true
     }
   ]
 }
