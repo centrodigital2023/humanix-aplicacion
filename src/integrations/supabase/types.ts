@@ -104,6 +104,95 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_credit_packs_catalog: {
+        Row: {
+          active: boolean
+          bonus_pct: number
+          created_at: string
+          credits: number
+          description: string | null
+          id: string
+          name: string
+          price_cop: number
+          sort_order: number
+          validity_days: number
+        }
+        Insert: {
+          active?: boolean
+          bonus_pct?: number
+          created_at?: string
+          credits: number
+          description?: string | null
+          id: string
+          name: string
+          price_cop: number
+          sort_order?: number
+          validity_days?: number
+        }
+        Update: {
+          active?: boolean
+          bonus_pct?: number
+          created_at?: string
+          credits?: number
+          description?: string | null
+          id?: string
+          name?: string
+          price_cop?: number
+          sort_order?: number
+          validity_days?: number
+        }
+        Relationships: []
+      }
+      ai_credit_topups: {
+        Row: {
+          created_at: string
+          credits: number
+          credits_used: number
+          expires_at: string
+          id: string
+          mp_payment_id: string | null
+          mp_preference_id: string | null
+          pack_id: string | null
+          price_cop: number
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          credits_used?: number
+          expires_at: string
+          id?: string
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          pack_id?: string | null
+          price_cop: number
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          credits_used?: number
+          expires_at?: string
+          id?: string
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          pack_id?: string | null
+          price_cop?: number
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_credit_topups_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "ai_credit_packs_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_credits_ledger: {
         Row: {
           created_at: string
@@ -302,6 +391,148 @@ export type Database = {
             columns: ["job_offer_id"]
             isOneToOne: false
             referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      care_logs: {
+        Row: {
+          alert_reason: string | null
+          booking_id: string
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          is_alert: boolean
+          notified_at: string | null
+          patient_name: string | null
+          photo_url: string | null
+          professional_id: string
+          vital_diastolic: number | null
+          vital_heart_rate: number | null
+          vital_oxygen: number | null
+          vital_systolic: number | null
+          vital_temperature: number | null
+        }
+        Insert: {
+          alert_reason?: string | null
+          booking_id: string
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          is_alert?: boolean
+          notified_at?: string | null
+          patient_name?: string | null
+          photo_url?: string | null
+          professional_id: string
+          vital_diastolic?: number | null
+          vital_heart_rate?: number | null
+          vital_oxygen?: number | null
+          vital_systolic?: number | null
+          vital_temperature?: number | null
+        }
+        Update: {
+          alert_reason?: string | null
+          booking_id?: string
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          is_alert?: boolean
+          notified_at?: string | null
+          patient_name?: string | null
+          photo_url?: string | null
+          professional_id?: string
+          vital_diastolic?: number | null
+          vital_heart_rate?: number | null
+          vital_oxygen?: number | null
+          vital_systolic?: number | null
+          vital_temperature?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinical_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          actual_value: number
+          alert_type: string
+          booking_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          notified_at: string | null
+          notified_email: boolean
+          notified_push: boolean
+          notified_whatsapp: boolean
+          patient_id: string
+          resolved_at: string | null
+          severity: string
+          status: string
+          tenant_id: string | null
+          threshold_value: number | null
+          unit: string | null
+          vital_sign_id: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_value: number
+          alert_type: string
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          notified_at?: string | null
+          notified_email?: boolean
+          notified_push?: boolean
+          notified_whatsapp?: boolean
+          patient_id: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string | null
+          threshold_value?: number | null
+          unit?: string | null
+          vital_sign_id?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_value?: number
+          alert_type?: string
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          notified_at?: string | null
+          notified_email?: boolean
+          notified_push?: boolean
+          notified_whatsapp?: boolean
+          patient_id?: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string | null
+          threshold_value?: number | null
+          unit?: string | null
+          vital_sign_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_alerts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -2895,6 +3126,36 @@ export type Database = {
           professionals_total: number
         }[]
       }
+      grant_ai_credits: {
+        Args: {
+          p_credits: number
+          p_mp_payment_id?: string
+          p_mp_preference_id?: string
+          p_pack_id: string
+          p_price_cop: number
+          p_user_id: string
+          p_validity_days?: number
+        }
+        Returns: {
+          created_at: string
+          credits: number
+          credits_used: number
+          expires_at: string
+          id: string
+          mp_payment_id: string | null
+          mp_preference_id: string | null
+          pack_id: string | null
+          price_cop: number
+          source: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_credit_topups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2935,6 +3196,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      platform_commission_pct: { Args: { p_user_id: string }; Returns: number }
       publish_profile: { Args: { _validation_id?: string }; Returns: Json }
       redeem_staff_invitation: {
         Args: { _token: string }
