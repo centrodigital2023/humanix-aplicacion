@@ -13,6 +13,7 @@ import { Route as VerificarRouteImport } from './routes/verificar'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as TecnologiaRouteImport } from './routes/tecnologia'
 import { Route as TalentoHumanoRouteImport } from './routes/talento-humano'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ValidacionRouteImport } from './routes/validacion'
 import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
 import { Route as SuperadminRouteImport } from './routes/superadmin'
@@ -121,6 +122,11 @@ const TecnologiaRoute = TecnologiaRouteImport.update({
 const TalentoHumanoRoute = TalentoHumanoRouteImport.update({
   id: '/talento-humano',
   path: '/talento-humano',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ValidacionRoute = ValidacionRouteImport.update({
@@ -511,6 +517,7 @@ export interface FileRoutesByFullPath {
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/validacion': typeof ValidacionRoute
+  '/admin': typeof AdminRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
@@ -579,6 +586,7 @@ export interface FileRoutesByTo {
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/validacion': typeof ValidacionRoute
+  '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
@@ -650,6 +658,7 @@ export interface FileRoutesById {
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/validacion': typeof ValidacionRoute
+  '/admin': typeof AdminRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
@@ -721,6 +730,7 @@ export interface FileRouteTypes {
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
     | '/superadmin/validacion'
+    | '/admin'
     | '/validacion'
     | '/dashboard/'
     | '/superadmin/'
@@ -789,6 +799,7 @@ export interface FileRouteTypes {
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
     | '/superadmin/validacion'
+    | '/admin'
     | '/validacion'
     | '/dashboard'
     | '/superadmin'
@@ -859,6 +870,7 @@ export interface FileRouteTypes {
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
     | '/superadmin/validacion'
+    | '/admin'
     | '/validacion'
     | '/dashboard/'
     | '/superadmin/'
@@ -907,6 +919,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SobreRoute: typeof SobreRoute
+  AdminRoute: typeof AdminRoute
   ValidacionRoute: typeof ValidacionRoute
   SuperadminRoute: typeof SuperadminRouteWithChildren
   TalentoHumanoRoute: typeof TalentoHumanoRoute
@@ -1417,6 +1430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardFamiliaOnboardingRouteImport
       parentRoute: typeof DashboardFamiliaRoute
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/validacion': {
       id: '/validacion'
       path: '/validacion'
@@ -1549,6 +1569,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SobreRoute: SobreRoute,
+  AdminRoute: AdminRoute,
   ValidacionRoute: ValidacionRoute,
   SuperadminRoute: SuperadminRouteWithChildren,
   TalentoHumanoRoute: TalentoHumanoRoute,
