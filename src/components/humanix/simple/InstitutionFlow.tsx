@@ -245,13 +245,20 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     say("Turno publicado.");
   };
 
+  const offerShareText = published
+    ? encodeURIComponent(
+        `🏥 Turno disponible en Humanix · ${role.label} (${schedule.label}) en ${draft.city || "Colombia"}. Aplica en humanix.lat`,
+      )
+    : "";
+
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+    /* Phase 1: audience tinted background for institutional brand */
+    <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr] audience-instituciones rounded-[2rem] p-4 sm:p-6">
       <form
         onSubmit={publish}
         noValidate
         aria-labelledby="shift-q"
-        className="rounded-[2rem] border border-border bg-card/80 p-4 shadow-xl shadow-trust/5 backdrop-blur sm:p-8"
+        className="rounded-[2rem] border border-border bg-card/90 p-4 shadow-xl shadow-trust/5 backdrop-blur sm:p-8"
       >
         <fieldset>
           <legend id="shift-q" className="font-display text-3xl font-bold">
@@ -409,20 +416,45 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
         </p>
 
         {published ? (
+          /* Phase 3: micro-delight success card */
           <div
             role="status"
-            className="mt-5 flex items-center gap-3 rounded-2xl bg-ok/10 p-5 animate-in zoom-in-95"
+            className="mt-5 space-y-3 rounded-2xl bg-ok/10 p-5 animate-in zoom-in-95"
           >
-            <CheckCircle2 className="h-8 w-8 shrink-0 text-ok" aria-hidden="true" />
-            <div>
-              <p className="text-xl font-bold text-ok">¡Turno publicado!</p>
-              <Link
-                to="/dashboard/institucion"
-                className="text-base font-bold text-trust underline"
-              >
-                Ver mi panel
-              </Link>
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-8 w-8 shrink-0 text-ok" aria-hidden="true" />
+              <div>
+                <p className="text-xl font-bold text-ok">¡Turno publicado!</p>
+                {matches !== null && matches > 0 && (
+                  <p className="text-sm font-semibold text-muted-foreground">
+                    {matches} candidatos verificados ya pueden verlo
+                  </p>
+                )}
+              </div>
             </div>
+            {/* Phase 2: FUID compliance badge on successful publish */}
+            <div className="flex items-center gap-2">
+              <span className="badge-rethus text-xs font-bold">FUID</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                Solo candidatos con documentos al día reciben esta oferta
+              </span>
+            </div>
+            {/* Phase 4: viral share CTA — share the offer, never payments */}
+            <a
+              href={`https://wa.me/?text=${offerShareText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-4 text-sm font-bold text-white transition hover:bg-[#1ebe5d] active:scale-[0.98]"
+            >
+              <span aria-hidden="true">📤</span>
+              Compartir oferta por WhatsApp
+            </a>
+            <Link
+              to="/dashboard/institucion"
+              className="block text-center text-base font-bold text-trust underline"
+            >
+              Ver mi panel
+            </Link>
           </div>
         ) : (
           <button type="submit" disabled={busy} className={`${primaryBtn} mt-5`}>
@@ -473,7 +505,12 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
             </div>
           ))}
         </dl>
-        <ul className="mt-6 space-y-2 text-base opacity-90">
+        {/* Phase 2: FUID compliance trust badge in panel */}
+        <div className="mt-5 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3">
+          <span className="badge-rethus text-xs font-bold">FUID</span>
+          <span className="text-sm font-semibold">Compliance verificado</span>
+        </div>
+        <ul className="mt-4 space-y-2 text-base opacity-90">
           <li>🎯 Candidatos por cercanía y perfil</li>
           <li>🔔 Alerta de documentos por vencer</li>
           <li>🧾 Historial de cada servicio</li>

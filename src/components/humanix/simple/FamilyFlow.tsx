@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
-  BadgeCheck,
   Loader2,
   MapPin,
   MessageCircle,

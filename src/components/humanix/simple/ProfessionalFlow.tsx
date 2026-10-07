@@ -85,7 +85,7 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
           rating: d.avg_rating ?? undefined,
           rethusBadge: Boolean(d.verified || d.rethus_verified),
           certBadge: Boolean(d.verified),
-          availableNow: available,
+          availableNow: Boolean(d.available),
         });
       }
     })();
