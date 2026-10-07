@@ -83,6 +83,27 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_code_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_credits_ledger: {
         Row: {
           created_at: string
@@ -1270,6 +1291,36 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_captures: {
+        Row: {
+          care_scope: string | null
+          contact_channel: string | null
+          created_at: string
+          email: string | null
+          frequency: string | null
+          id: string
+          whatsapp: string | null
+        }
+        Insert: {
+          care_scope?: string | null
+          contact_channel?: string | null
+          created_at?: string
+          email?: string | null
+          frequency?: string | null
+          id?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          care_scope?: string | null
+          contact_channel?: string | null
+          created_at?: string
+          email?: string | null
+          frequency?: string | null
+          id?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -2331,6 +2382,131 @@ export type Database = {
         }
         Relationships: []
       }
+      validation_otps: {
+        Row: {
+          attempts: number
+          channel: string
+          code: string
+          contact: string
+          created_at: string
+          expires_at: string
+          id: string
+          response_id: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          code: string
+          contact: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          response_id?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          code?: string
+          contact?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          response_id?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_otps_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "validation_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_responses: {
+        Row: {
+          comments: string | null
+          competitors: string | null
+          created_at: string
+          current_solutions: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          key_benefit: string | null
+          pain_point: string | null
+          premium_activated: boolean | null
+          profile_type: string
+          promo_code: string | null
+          retention_channels: string | null
+          score_benefit: number | null
+          score_clear_problem: number | null
+          score_competitive_adv: number | null
+          score_demand: number | null
+          score_passion: number | null
+          score_reach: number | null
+          service_offer: string | null
+          target_customer: string | null
+          total_score: number | null
+          whatsapp: string | null
+          willingness_pct: number | null
+        }
+        Insert: {
+          comments?: string | null
+          competitors?: string | null
+          created_at?: string
+          current_solutions?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          key_benefit?: string | null
+          pain_point?: string | null
+          premium_activated?: boolean | null
+          profile_type?: string
+          promo_code?: string | null
+          retention_channels?: string | null
+          score_benefit?: number | null
+          score_clear_problem?: number | null
+          score_competitive_adv?: number | null
+          score_demand?: number | null
+          score_passion?: number | null
+          score_reach?: number | null
+          service_offer?: string | null
+          target_customer?: string | null
+          total_score?: number | null
+          whatsapp?: string | null
+          willingness_pct?: number | null
+        }
+        Update: {
+          comments?: string | null
+          competitors?: string | null
+          created_at?: string
+          current_solutions?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          key_benefit?: string | null
+          pain_point?: string | null
+          premium_activated?: boolean | null
+          profile_type?: string
+          promo_code?: string | null
+          retention_channels?: string | null
+          score_benefit?: number | null
+          score_clear_problem?: number | null
+          score_competitive_adv?: number | null
+          score_demand?: number | null
+          score_passion?: number | null
+          score_reach?: number | null
+          service_offer?: string | null
+          target_customer?: string | null
+          total_score?: number | null
+          whatsapp?: string | null
+          willingness_pct?: number | null
+        }
+        Relationships: []
+      }
       vital_signs_readings: {
         Row: {
           created_at: string
@@ -2889,12 +3065,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2918,11 +3094,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2943,11 +3119,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2968,11 +3144,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2985,11 +3161,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
