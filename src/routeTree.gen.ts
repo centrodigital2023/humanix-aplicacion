@@ -63,6 +63,7 @@ import { Route as SuperadminMarketplaceRouteImport } from './routes/superadmin.m
 import { Route as SuperadminMarketingRouteImport } from './routes/superadmin.marketing'
 import { Route as SuperadminFraudeRouteImport } from './routes/superadmin.fraude'
 import { Route as SuperadminCrmRouteImport } from './routes/superadmin.crm'
+import { Route as SuperadminActivarRouteImport } from './routes/superadmin.activar'
 import { Route as SuperadminAuditoriaRouteImport } from './routes/superadmin.auditoria'
 import { Route as ServicioBookingIdRouteImport } from './routes/servicio.$bookingId'
 import { Route as RecursosSlugRouteImport } from './routes/recursos.$slug'
@@ -78,6 +79,7 @@ import { Route as DashboardFamiliaRouteImport } from './routes/dashboard.familia
 import { Route as DashboardEpsRouteImport } from './routes/dashboard.eps'
 import { Route as BBannerIdRouteImport } from './routes/b.$bannerId'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
+import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
 import { Route as CreditosRouteImport } from './routes/creditos'
 import { Route as PagoExitoRouteImport } from './routes/pago.exito'
 import { Route as PagoFalloRouteImport } from './routes/pago.fallo'
@@ -374,6 +376,11 @@ const SuperadminCrmRoute = SuperadminCrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => SuperadminRoute,
 } as any)
+const SuperadminActivarRoute = SuperadminActivarRouteImport.update({
+  id: '/activar',
+  path: '/activar',
+  getParentRoute: () => SuperadminRoute,
+} as any)
 const SuperadminAuditoriaRoute = SuperadminAuditoriaRouteImport.update({
   id: '/auditoria',
   path: '/auditoria',
@@ -423,6 +430,11 @@ const DashboardMonitoreoRoute = DashboardMonitoreoRouteImport.update({
   id: '/monitoreo',
   path: '/monitoreo',
   getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardInstitucionOnboardingRoute = DashboardInstitucionOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => DashboardInstitucionRoute,
 } as any)
 const DashboardInstitucionRoute = DashboardInstitucionRouteImport.update({
   id: '/institucion',
@@ -497,7 +509,8 @@ export interface FileRoutesByFullPath {
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
-  '/dashboard/institucion': typeof DashboardInstitucionRoute
+  '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
+  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
@@ -507,6 +520,7 @@ export interface FileRoutesByFullPath {
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
+  '/superadmin/activar': typeof SuperadminActivarRoute
   '/superadmin/auditoria': typeof SuperadminAuditoriaRoute
   '/superadmin/crm': typeof SuperadminCrmRoute
   '/superadmin/fraude': typeof SuperadminFraudeRoute
@@ -566,7 +580,8 @@ export interface FileRoutesByTo {
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
-  '/dashboard/institucion': typeof DashboardInstitucionRoute
+  '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
+  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
@@ -576,6 +591,7 @@ export interface FileRoutesByTo {
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
+  '/superadmin/activar': typeof SuperadminActivarRoute
   '/superadmin/auditoria': typeof SuperadminAuditoriaRoute
   '/superadmin/crm': typeof SuperadminCrmRoute
   '/superadmin/fraude': typeof SuperadminFraudeRoute
@@ -638,7 +654,8 @@ export interface FileRoutesById {
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
-  '/dashboard/institucion': typeof DashboardInstitucionRoute
+  '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
+  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
@@ -648,6 +665,7 @@ export interface FileRoutesById {
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
+  '/superadmin/activar': typeof SuperadminActivarRoute
   '/superadmin/auditoria': typeof SuperadminAuditoriaRoute
   '/superadmin/crm': typeof SuperadminCrmRoute
   '/superadmin/fraude': typeof SuperadminFraudeRoute
@@ -712,6 +730,7 @@ export interface FileRouteTypes {
     | '/dashboard/eps'
     | '/dashboard/familia'
     | '/dashboard/institucion'
+    | '/dashboard/institucion/onboarding'
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
@@ -721,6 +740,7 @@ export interface FileRouteTypes {
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
+    | '/superadmin/activar'
     | '/superadmin/auditoria'
     | '/superadmin/crm'
     | '/superadmin/fraude'
@@ -781,6 +801,7 @@ export interface FileRouteTypes {
     | '/dashboard/eps'
     | '/dashboard/familia'
     | '/dashboard/institucion'
+    | '/dashboard/institucion/onboarding'
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
@@ -790,6 +811,7 @@ export interface FileRouteTypes {
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
+    | '/superadmin/activar'
     | '/superadmin/auditoria'
     | '/superadmin/crm'
     | '/superadmin/fraude'
@@ -852,6 +874,7 @@ export interface FileRouteTypes {
     | '/dashboard/eps'
     | '/dashboard/familia'
     | '/dashboard/institucion'
+    | '/dashboard/institucion/onboarding'
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
@@ -861,6 +884,7 @@ export interface FileRouteTypes {
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
+    | '/superadmin/activar'
     | '/superadmin/auditoria'
     | '/superadmin/crm'
     | '/superadmin/fraude'
@@ -1451,8 +1475,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperadminValidacionRouteImport
       parentRoute: typeof SuperadminRouteImport
     }
+    '/superadmin/activar': {
+      id: '/superadmin/activar'
+      path: '/activar'
+      fullPath: '/superadmin/activar'
+      preLoaderRoute: typeof SuperadminActivarRouteImport
+      parentRoute: typeof SuperadminRouteImport
+    }
+    '/dashboard/institucion/onboarding': {
+      id: '/dashboard/institucion/onboarding'
+      path: '/onboarding'
+      fullPath: '/dashboard/institucion/onboarding'
+      preLoaderRoute: typeof DashboardInstitucionOnboardingRouteImport
+      parentRoute: typeof DashboardInstitucionRoute
+    }
   }
 }
+
+interface DashboardInstitucionRouteChildren {
+  DashboardInstitucionOnboardingRoute: typeof DashboardInstitucionOnboardingRoute
+}
+
+const DashboardInstitucionRouteChildren: DashboardInstitucionRouteChildren = {
+  DashboardInstitucionOnboardingRoute: DashboardInstitucionOnboardingRoute,
+}
+
+const DashboardInstitucionRouteWithChildren =
+  DashboardInstitucionRoute._addFileChildren(DashboardInstitucionRouteChildren)
 
 interface DashboardFamiliaRouteChildren {
   DashboardFamiliaOnboardingRoute: typeof DashboardFamiliaOnboardingRoute
@@ -1468,7 +1517,7 @@ const DashboardFamiliaRouteWithChildren =
 interface DashboardRouteChildren {
   DashboardEpsRoute: typeof DashboardEpsRoute
   DashboardFamiliaRoute: typeof DashboardFamiliaRouteWithChildren
-  DashboardInstitucionRoute: typeof DashboardInstitucionRoute
+  DashboardInstitucionRoute: typeof DashboardInstitucionRouteWithChildren
   DashboardMonitoreoRoute: typeof DashboardMonitoreoRoute
   DashboardProfesionalRoute: typeof DashboardProfesionalRoute
   DashboardWhatsappRoute: typeof DashboardWhatsappRoute
@@ -1478,7 +1527,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEpsRoute: DashboardEpsRoute,
   DashboardFamiliaRoute: DashboardFamiliaRouteWithChildren,
-  DashboardInstitucionRoute: DashboardInstitucionRoute,
+  DashboardInstitucionRoute: DashboardInstitucionRouteWithChildren,
   DashboardMonitoreoRoute: DashboardMonitoreoRoute,
   DashboardProfesionalRoute: DashboardProfesionalRoute,
   DashboardWhatsappRoute: DashboardWhatsappRoute,
@@ -1502,6 +1551,7 @@ const RecursosRouteWithChildren = RecursosRoute._addFileChildren(
 )
 
 interface SuperadminRouteChildren {
+  SuperadminActivarRoute: typeof SuperadminActivarRoute
   SuperadminAuditoriaRoute: typeof SuperadminAuditoriaRoute
   SuperadminCrmRoute: typeof SuperadminCrmRoute
   SuperadminFraudeRoute: typeof SuperadminFraudeRoute
@@ -1515,6 +1565,7 @@ interface SuperadminRouteChildren {
 }
 
 const SuperadminRouteChildren: SuperadminRouteChildren = {
+  SuperadminActivarRoute: SuperadminActivarRoute,
   SuperadminAuditoriaRoute: SuperadminAuditoriaRoute,
   SuperadminCrmRoute: SuperadminCrmRoute,
   SuperadminFraudeRoute: SuperadminFraudeRoute,

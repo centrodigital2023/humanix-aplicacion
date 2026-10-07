@@ -6,7 +6,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, Lock, Mail, ShieldCheck, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/admin" as any)({
+export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
       { name: "robots", content: "noindex,nofollow,noarchive" },
