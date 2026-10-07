@@ -1223,6 +1223,42 @@ export type Database = {
         }
         Relationships: []
       }
+      function_execution_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          execution_id: string | null
+          function_name: string
+          id: string
+          metadata: Json
+          status: string
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          execution_id?: string | null
+          function_name: string
+          id?: string
+          metadata?: Json
+          status: string
+          trigger_type: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          execution_id?: string | null
+          function_name?: string
+          id?: string
+          metadata?: Json
+          status?: string
+          trigger_type?: string
+        }
+        Relationships: []
+      }
       institution_documents: {
         Row: {
           ai_extracted: Json | null
@@ -1758,6 +1794,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_webhook_events: {
+        Row: {
+          error_code: string | null
+          event_type: string | null
+          external_event_id: string
+          id: string
+          payload_hash: string | null
+          processed: boolean
+          processed_at: string | null
+          provider: string
+          received_at: string
+          signature_valid: boolean
+        }
+        Insert: {
+          error_code?: string | null
+          event_type?: string | null
+          external_event_id: string
+          id?: string
+          payload_hash?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          provider: string
+          received_at?: string
+          signature_valid?: boolean
+        }
+        Update: {
+          error_code?: string | null
+          event_type?: string | null
+          external_event_id?: string
+          id?: string
+          payload_hash?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          provider?: string
+          received_at?: string
+          signature_valid?: boolean
+        }
+        Relationships: []
       }
       pqrs_tickets: {
         Row: {
