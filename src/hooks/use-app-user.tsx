@@ -65,8 +65,14 @@ export function useAppUser(options: { requireAuth?: boolean; allow?: AppRole[] }
     const safeRedirect = (to: string) => {
       if (redirectedRef.current) return;
       redirectedRef.current = true;
-      navigate({ to, replace: true }).catch(() => {
-        if (typeof window !== "undefined") window.location.replace(to);
+      // When bouncing to /auth, preserve the current path so the user lands
+      // back here after a successful login (e.g. /superadmin → /auth?redirect=/superadmin).
+      const destination =
+        to === "/auth" && typeof window !== "undefined" && window.location.pathname !== "/"
+          ? `/auth?redirect=${encodeURIComponent(window.location.pathname)}`
+          : to;
+      navigate({ to: destination as any, replace: true }).catch(() => {
+        if (typeof window !== "undefined") window.location.replace(destination);
       });
     };
 

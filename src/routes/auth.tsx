@@ -192,20 +192,38 @@ function AuthPage() {
 
   // Redirect if already logged in
   useEffect(() => {
-    // For institutions: go to dashboard (it checks onboarding_complete and
-    // redirects to onboarding if needed). Never hardcode /onboarding here.
-    const defaultTarget =
-      role === "institution"
-        ? "/dashboard/institucion"
-        : role === "professional"
-        ? "/dashboard/profesional"
-        : "/dashboard";
-    const target = search.redirect ?? defaultTarget;
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: target });
+    // If a specific ?redirect= was set (e.g. from superadmin layout bounce),
+    // honour it immediately without role inference.
+    if (search.redirect) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) navigate({ to: search.redirect as any });
+      });
+      const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+        if (session) navigate({ to: search.redirect as any });
+      });
+      return () => sub.subscription.unsubscribe();
+    }
+
+    // No redirect param: pick the correct dashboard by the user's primary role.
+    const resolveTarget = async (session: import("@supabase/supabase-js").Session) => {
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id);
+      const roles = (rolesData?.map((r) => r.role) ?? []) as string[];
+      if (roles.includes("superadmin")) return "/superadmin";
+      if (roles.includes("hr_staff")) return "/talento-humano";
+      if (roles.includes("evaluator")) return "/evaluador";
+      if (roles.includes("institution") || role === "institution") return "/dashboard/institucion";
+      if (roles.includes("professional") || role === "professional") return "/dashboard/profesional";
+      return "/dashboard";
+    };
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) navigate({ to: await resolveTarget(data.session) });
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      if (session) navigate({ to: target });
+      if (session) resolveTarget(session).then((to) => navigate({ to }));
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate, search.redirect, role]);
@@ -219,7 +237,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}${search.redirect ?? (role === "institution" ? "/dashboard/institucion" : "/dashboard")}`,
+            emailRedirectTo: `${window.location.origin}${search.redirect ?? (role === "institution" ? "/dashboard/institucion" : role === "professional" ? "/dashboard/profesional" : "/dashboard")}`,
             data: {
               full_name: fullName,
               phone,
