@@ -42,7 +42,7 @@ function DashboardRouter() {
         console.warn("[dashboard] safety timeout fired → /auth");
         go("/auth");
       }
-    }, 4000);
+    }, 10000);
 
     (async () => {
       try {
@@ -56,17 +56,40 @@ function DashboardRouter() {
         }
         setMsg("Redirigiendo a tu panel...");
         const uid = data.session.user.id;
+        const metaRole = data.session.user.user_metadata?.role as AppRole | undefined;
 
         const rolesPromise = supabase.from("user_roles").select("role").eq("user_id", uid);
-        const timeout = new Promise<{ data: null }>((resolve) =>
-          setTimeout(() => resolve({ data: null }), 2500),
+        const dbTimeout = new Promise<{ data: null }>((resolve) =>
+          setTimeout(() => resolve({ data: null }), 5000),
         );
-        const result = (await Promise.race([rolesPromise, timeout])) as {
+        const result = (await Promise.race([rolesPromise, dbTimeout])) as {
           data: { role: AppRole }[] | null;
         };
 
-        const list = (result.data?.map((x) => x.role) ?? []) as AppRole[];
+        let list = (result.data?.map((x) => x.role) ?? []) as AppRole[];
+
+        // If DB timed out or user_roles is empty, fall back to signup metadata
+        if (!list.length && metaRole) {
+          list = [metaRole];
+        }
+
         const primary = PRIORITY.find((p) => list.includes(p)) ?? "family";
+
+        // For institution users: check if they're EPS/IPS type → portal especializado
+        if (primary === "institution") {
+          try {
+            const { data: instData } = await supabase
+              .from("institution_profiles")
+              .select("institution_type")
+              .eq("user_id", uid)
+              .maybeSingle();
+            if (instData?.institution_type && /eps|ips/i.test(instData.institution_type)) {
+              go("/dashboard/eps");
+              return;
+            }
+          } catch { /* fall through to default */ }
+        }
+
         go(pathForRole(primary));
       } catch (err) {
         console.error("[dashboard] router error:", err);

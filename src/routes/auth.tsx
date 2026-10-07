@@ -195,7 +195,11 @@ function AuthPage() {
     // For institutions: go to dashboard (it checks onboarding_complete and
     // redirects to onboarding if needed). Never hardcode /onboarding here.
     const defaultTarget =
-      role === "institution" ? "/dashboard/institucion" : "/dashboard";
+      role === "institution"
+        ? "/dashboard/institucion"
+        : role === "professional"
+        ? "/dashboard/profesional"
+        : "/dashboard";
     const target = search.redirect ?? defaultTarget;
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: target });

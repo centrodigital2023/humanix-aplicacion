@@ -29,6 +29,7 @@ import {
   Wallet,
   Sparkles,
   Heart,
+  ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -477,6 +478,22 @@ function InstitutionDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground bg-aurora pb-20 lg:pb-0">
+      {/* ── Banner EPS/IPS portal especializado ── */}
+      {instProfile?.institution_type && /eps|ips/i.test(instProfile.institution_type) && (
+        <div className="bg-biosensor/5 border-b border-biosensor/20 px-4 py-2.5 flex items-center justify-between gap-3">
+          <p className="text-xs text-biosensor font-medium flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            Portal clínico avanzado disponible para {instProfile.institution_type}
+          </p>
+          <Link
+            to="/dashboard/eps"
+            className="shrink-0 text-xs font-bold text-biosensor border border-biosensor/30 rounded-lg px-3 py-1 hover:bg-biosensor/10 transition-colors"
+          >
+            Ir al portal EPS →
+          </Link>
+        </div>
+      )}
+
       {/* ── Banner onboarding incompleto ── */}
       {onboardingIncomplete && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
