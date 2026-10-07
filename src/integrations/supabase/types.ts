@@ -1291,6 +1291,36 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_captures: {
+        Row: {
+          care_scope: string | null
+          contact_channel: string | null
+          created_at: string
+          email: string | null
+          frequency: string | null
+          id: string
+          whatsapp: string | null
+        }
+        Insert: {
+          care_scope?: string | null
+          contact_channel?: string | null
+          created_at?: string
+          email?: string | null
+          frequency?: string | null
+          id?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          care_scope?: string | null
+          contact_channel?: string | null
+          created_at?: string
+          email?: string | null
+          frequency?: string | null
+          id?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -2351,6 +2381,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      validation_otps: {
+        Row: {
+          attempts: number
+          channel: string
+          code: string
+          contact: string
+          created_at: string
+          expires_at: string
+          id: string
+          response_id: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          code: string
+          contact: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          response_id?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          code?: string
+          contact?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          response_id?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_otps_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "validation_responses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       validation_responses: {
         Row: {
