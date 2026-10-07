@@ -61,6 +61,7 @@ import { ProposalsInbox } from "@/components/humanix/ProposalsInbox";
 import { ReferralCard } from "@/components/humanix/ReferralCard";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
+import { AgendaViewer } from "@/components/humanix/AgendaViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -136,6 +137,17 @@ type AppRow = {
   created_at: string;
 };
 
+type Booking = {
+  id: string;
+  scheduled_at: string | null;
+  status: "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled";
+  notes: string | null;
+  client_name: string | null;
+  client_avatar: string | null;
+  offer_title: string | null;
+  city: string | null;
+};
+
 const COP = (n: number | null | undefined) =>
   typeof n === "number"
     ? new Intl.NumberFormat("es-CO", {
@@ -167,6 +179,7 @@ function ProDashboard() {
   const [profile, setProfile] = useState<ProProfile | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [apps, setApps] = useState<AppRow[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [showTour, setShowTour] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
@@ -214,7 +227,7 @@ function ProDashboard() {
 
   const loadAll = async (uid: string) => {
     try {
-      const [p, pr, off, ap, docs] = await Promise.all([
+      const [p, pr, off, ap, docs, bks] = await Promise.all([
         supabase.from("professional_profiles").select("*").eq("user_id", uid).maybeSingle(),
         supabase.from("profiles").select("full_name").eq("user_id", uid).maybeSingle(),
         supabase
@@ -233,11 +246,38 @@ function ProDashboard() {
           .select("doc_type, status")
           .eq("user_id", uid)
           .neq("status", "rejected"),
+        supabase
+          .from("service_bookings")
+          .select("id, scheduled_at, status, notes, client_id, job_offer_id")
+          .eq("professional_id", uid)
+          .in("status", ["scheduled", "confirmed"])
+          .gte("scheduled_at", new Date().toISOString())
+          .order("scheduled_at", { ascending: true })
+          .limit(10),
       ]);
 
       if (pr.data?.full_name) setFullName(pr.data.full_name);
       if (off.data) setOffers(off.data as Offer[]);
       if (ap.data) setApps(ap.data as AppRow[]);
+
+      // Enrich bookings with client names and offer titles
+      if (bks.data && bks.data.length > 0) {
+        const clientIds = [...new Set((bks.data as { client_id: string }[]).map((b) => b.client_id))];
+        const offerIds = [...new Set((bks.data as { job_offer_id: string | null }[]).map((b) => b.job_offer_id).filter(Boolean))] as string[];
+        const [clients, bkOffers] = await Promise.all([
+          supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", clientIds),
+          offerIds.length ? supabase.from("job_offers").select("id, title, city").in("id", offerIds) : Promise.resolve({ data: [] }),
+        ]);
+        const clientMap = new Map((clients.data ?? []).map((c: { user_id: string; full_name: string; avatar_url: string }) => [c.user_id, c]));
+        const offerMap2 = new Map((bkOffers.data ?? []).map((o: { id: string; title: string; city: string }) => [o.id, o]));
+        setBookings((bks.data as { id: string; scheduled_at: string | null; status: "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled"; notes: string | null; client_id: string; job_offer_id: string | null }[]).map((b) => {
+          const c = clientMap.get(b.client_id) as { full_name: string; avatar_url: string } | undefined;
+          const o = b.job_offer_id ? offerMap2.get(b.job_offer_id) as { title: string; city: string } | undefined : undefined;
+          return { id: b.id, scheduled_at: b.scheduled_at, status: b.status, notes: b.notes, client_name: c?.full_name ?? null, client_avatar: c?.avatar_url ?? null, offer_title: o?.title ?? null, city: o?.city ?? null };
+        }));
+      } else {
+        setBookings([]);
+      }
 
       const summary: Record<string, boolean> = {};
       (docs.data ?? []).forEach((d: { doc_type: string }) => {
@@ -541,6 +581,29 @@ function ProDashboard() {
 
             <LivePulseBar role="professional" />
 
+            {/* Onboarding banner — only for new profiles (< 30%) */}
+            {completionPct < 30 && (
+              <div className="rounded-2xl bg-gradient-to-br from-biosensor/15 to-fuchsia-neural/10 border border-biosensor/30 p-5">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-full bg-biosensor/20 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-5 w-5 text-biosensor" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">¡Bienvenido/a, {greetingName}! Empieza aquí</p>
+                    <p className="text-xs text-muted-foreground mt-1">Completa tu perfil para aparecer en el marketplace y recibir ofertas de familias e instituciones.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button size="sm" variant="hero" onClick={() => setTab("perfil")}>
+                        <User className="h-3.5 w-3.5 mr-1.5" /> Completar perfil
+                      </Button>
+                      <Button size="sm" variant="glass" onClick={() => setTab("documentos")}>
+                        <FileText className="h-3.5 w-3.5 mr-1.5" /> Subir documentos
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Hero card */}
             <div className="rounded-2xl bg-gradient-to-br from-biosensor/10 via-background to-fuchsia-neural/10 border border-border p-5">
               <div className="flex items-start justify-between gap-4">
@@ -625,6 +688,29 @@ function ProDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Next booking preview */}
+            {bookings.length > 0 && (() => {
+              const next = bookings[0];
+              const dt = next.scheduled_at ? new Date(next.scheduled_at) : null;
+              return (
+                <div
+                  className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex items-center gap-4 cursor-pointer hover:bg-emerald-500/10 transition-colors"
+                  onClick={() => setTab("agenda")}
+                  role="button"
+                >
+                  <div className="h-10 w-10 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                    <CalendarDays className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Próximo turno</p>
+                    <p className="text-sm font-bold truncate">{next.offer_title ?? "Servicio programado"}</p>
+                    <p className="text-xs text-muted-foreground">{dt ? dt.toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}{next.city ? ` · ${next.city}` : ""}</p>
+                  </div>
+                  <span className="text-xs text-emerald-600 font-semibold shrink-0">{bookings.length} turno{bookings.length > 1 ? "s" : ""} →</span>
+                </div>
+              );
+            })()}
 
             {/* Profile completion */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
@@ -1099,7 +1185,73 @@ function ProDashboard() {
         {/* ══ TAB: AGENDA ══ */}
         {tab === "agenda" && (
           <div className="space-y-4">
-            {/* Availability calendar */}
+
+            {/* Upcoming bookings */}
+            <div className="rounded-2xl border border-border bg-card/95 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-biosensor" />
+                  <p className="text-sm font-semibold">Próximos turnos</p>
+                </div>
+                <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", bookings.length > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                  {bookings.length} agendado{bookings.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              {bookings.length === 0 ? (
+                <div className="text-center py-6 space-y-2">
+                  <CalendarDays className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                  <p className="text-sm text-muted-foreground">Sin turnos confirmados próximos</p>
+                  <p className="text-xs text-muted-foreground">Aplica a ofertas o espera que una familia te contacte.</p>
+                  <Button size="sm" variant="glass" onClick={() => setTab("ofertas")}>
+                    Ver ofertas disponibles
+                  </Button>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {bookings.map((b) => {
+                    const dt = b.scheduled_at ? new Date(b.scheduled_at) : null;
+                    return (
+                      <li key={b.id} className="flex items-center gap-3 rounded-xl bg-muted/30 px-3 py-3">
+                        {b.client_avatar ? (
+                          <img src={b.client_avatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="h-9 w-9 rounded-full bg-biosensor/10 flex items-center justify-center shrink-0">
+                            <User className="h-4 w-4 text-biosensor" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{b.offer_title ?? "Servicio"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{b.client_name ?? "Cliente"}{b.city ? ` · ${b.city}` : ""}</p>
+                          {dt && <p className="text-xs text-biosensor font-medium mt-0.5">{dt.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</p>}
+                        </div>
+                        <span className={cn("shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium", b.status === "confirmed" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600")}>
+                          {b.status === "confirmed" ? "Confirmado" : "Programado"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {/* AgendaViewer — how families/institutions see your availability */}
+            {userId && (
+              <div className="rounded-2xl border border-border bg-card/95 p-5">
+                <div className="mb-4">
+                  <p className="text-sm font-semibold">Vista semanal de disponibilidad</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Así ve tu horario una familia o institución al buscarte. Haz clic en un bloque para marcarlo libre o ocupado.</p>
+                </div>
+                <AgendaViewer
+                  targetUserId={userId}
+                  targetRole="professional"
+                  currentUserId={userId}
+                  currentRole="professional"
+                  targetHourlyRate={profile?.hourly_rate ?? null}
+                />
+              </div>
+            )}
+
+            {/* Availability calendar (slot manager) */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <div className="mb-4">
