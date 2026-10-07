@@ -10,12 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerificarRouteImport } from './routes/verificar'
+import { Route as ValidacionRouteImport } from './routes/validacion'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as TecnologiaRouteImport } from './routes/tecnologia'
 import { Route as TalentoHumanoRouteImport } from './routes/talento-humano'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as ValidacionRouteImport } from './routes/validacion'
-import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
 import { Route as SuperadminRouteImport } from './routes/superadmin'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -30,6 +28,7 @@ import { Route as MensajesRouteImport } from './routes/mensajes'
 import { Route as HabeasDataRouteImport } from './routes/habeas-data'
 import { Route as FamiliasRouteImport } from './routes/familias'
 import { Route as EvaluadorRouteImport } from './routes/evaluador'
+import { Route as EpsIpsRouteImport } from './routes/eps-ips'
 import { Route as EnfermeriaPereiraRouteImport } from './routes/enfermeria-pereira'
 import { Route as EnfermeriaMedellinRouteImport } from './routes/enfermeria-medellin'
 import { Route as EnfermeriaDomiciliariaRouteImport } from './routes/enfermeria-domiciliaria'
@@ -45,6 +44,7 @@ import { Route as CuidadoPostoperatorioRouteImport } from './routes/cuidado-post
 import { Route as CuidadoPediatricoRouteImport } from './routes/cuidado-pediatrico'
 import { Route as CuidadoPaliativoRouteImport } from './routes/cuidado-paliativo'
 import { Route as CuidadoAdultoMayorRouteImport } from './routes/cuidado-adulto-mayor'
+import { Route as CreditosRouteImport } from './routes/creditos'
 import { Route as CosmosRouteImport } from './routes/cosmos'
 import { Route as ContactoRouteImport } from './routes/contacto'
 import { Route as ConfianzaRouteImport } from './routes/confianza'
@@ -53,9 +53,12 @@ import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as BuscarRouteImport } from './routes/buscar'
 import { Route as AuxiliarEnfermeriaRouteImport } from './routes/auxiliar-enfermeria'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperadminIndexRouteImport } from './routes/superadmin.index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
 import { Route as SuperadminTestimoniosRouteImport } from './routes/superadmin.testimonios'
 import { Route as SuperadminResenasRouteImport } from './routes/superadmin.resenas'
 import { Route as SuperadminPublicidadRouteImport } from './routes/superadmin.publicidad'
@@ -63,11 +66,13 @@ import { Route as SuperadminMarketplaceRouteImport } from './routes/superadmin.m
 import { Route as SuperadminMarketingRouteImport } from './routes/superadmin.marketing'
 import { Route as SuperadminFraudeRouteImport } from './routes/superadmin.fraude'
 import { Route as SuperadminCrmRouteImport } from './routes/superadmin.crm'
-import { Route as SuperadminActivarRouteImport } from './routes/superadmin.activar'
 import { Route as SuperadminAuditoriaRouteImport } from './routes/superadmin.auditoria'
+import { Route as SuperadminActivarRouteImport } from './routes/superadmin.activar'
 import { Route as ServicioBookingIdRouteImport } from './routes/servicio.$bookingId'
 import { Route as RecursosSlugRouteImport } from './routes/recursos.$slug'
 import { Route as ProfesionalProIdRouteImport } from './routes/profesional.$proId'
+import { Route as PagoFalloRouteImport } from './routes/pago.fallo'
+import { Route as PagoExitoRouteImport } from './routes/pago.exito'
 import { Route as OfertaOfferIdRouteImport } from './routes/oferta.$offerId'
 import { Route as InstitutionProfileRouteImport } from './routes/institution.profile'
 import { Route as InstitutionFormsRouteImport } from './routes/institution.forms'
@@ -78,37 +83,17 @@ import { Route as DashboardInstitucionRouteImport } from './routes/dashboard.ins
 import { Route as DashboardFamiliaRouteImport } from './routes/dashboard.familia'
 import { Route as DashboardEpsRouteImport } from './routes/dashboard.eps'
 import { Route as BBannerIdRouteImport } from './routes/b.$bannerId'
-import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
-import { Route as CreditosRouteImport } from './routes/creditos'
-import { Route as PagoExitoRouteImport } from './routes/pago.exito'
-import { Route as PagoFalloRouteImport } from './routes/pago.fallo'
-import { Route as SplatRouteImport } from './routes/$'
+import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
 
-const SplatRoute = SplatRouteImport.update({
-  id: '/$',
-  path: '/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-
-const CreditosRoute = CreditosRouteImport.update({
-  id: '/creditos',
-  path: '/creditos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PagoExitoRoute = PagoExitoRouteImport.update({
-  id: '/pago/exito',
-  path: '/pago/exito',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PagoFalloRoute = PagoFalloRouteImport.update({
-  id: '/pago/fallo',
-  path: '/pago/fallo',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const VerificarRoute = VerificarRouteImport.update({
   id: '/verificar',
   path: '/verificar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ValidacionRoute = ValidacionRouteImport.update({
+  id: '/validacion',
+  path: '/validacion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TerminosRoute = TerminosRouteImport.update({
@@ -125,21 +110,6 @@ const TalentoHumanoRoute = TalentoHumanoRouteImport.update({
   id: '/talento-humano',
   path: '/talento-humano',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ValidacionRoute = ValidacionRouteImport.update({
-  id: '/validacion',
-  path: '/validacion',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SuperadminValidacionRoute = SuperadminValidacionRouteImport.update({
-  id: '/validacion',
-  path: '/validacion',
-  getParentRoute: () => SuperadminRoute,
 } as any)
 const SuperadminRoute = SuperadminRouteImport.update({
   id: '/superadmin',
@@ -209,6 +179,11 @@ const FamiliasRoute = FamiliasRouteImport.update({
 const EvaluadorRoute = EvaluadorRouteImport.update({
   id: '/evaluador',
   path: '/evaluador',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EpsIpsRoute = EpsIpsRouteImport.update({
+  id: '/eps-ips',
+  path: '/eps-ips',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EnfermeriaPereiraRoute = EnfermeriaPereiraRouteImport.update({
@@ -286,6 +261,11 @@ const CuidadoAdultoMayorRoute = CuidadoAdultoMayorRouteImport.update({
   path: '/cuidado-adulto-mayor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreditosRoute = CreditosRouteImport.update({
+  id: '/creditos',
+  path: '/creditos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CosmosRoute = CosmosRouteImport.update({
   id: '/cosmos',
   path: '/cosmos',
@@ -326,6 +306,16 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -340,6 +330,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardRoute,
+} as any)
+const SuperadminValidacionRoute = SuperadminValidacionRouteImport.update({
+  id: '/validacion',
+  path: '/validacion',
+  getParentRoute: () => SuperadminRoute,
 } as any)
 const SuperadminTestimoniosRoute = SuperadminTestimoniosRouteImport.update({
   id: '/testimonios',
@@ -376,14 +371,14 @@ const SuperadminCrmRoute = SuperadminCrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => SuperadminRoute,
 } as any)
-const SuperadminActivarRoute = SuperadminActivarRouteImport.update({
-  id: '/activar',
-  path: '/activar',
-  getParentRoute: () => SuperadminRoute,
-} as any)
 const SuperadminAuditoriaRoute = SuperadminAuditoriaRouteImport.update({
   id: '/auditoria',
   path: '/auditoria',
+  getParentRoute: () => SuperadminRoute,
+} as any)
+const SuperadminActivarRoute = SuperadminActivarRouteImport.update({
+  id: '/activar',
+  path: '/activar',
   getParentRoute: () => SuperadminRoute,
 } as any)
 const ServicioBookingIdRoute = ServicioBookingIdRouteImport.update({
@@ -399,6 +394,16 @@ const RecursosSlugRoute = RecursosSlugRouteImport.update({
 const ProfesionalProIdRoute = ProfesionalProIdRouteImport.update({
   id: '/profesional/$proId',
   path: '/profesional/$proId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagoFalloRoute = PagoFalloRouteImport.update({
+  id: '/pago/fallo',
+  path: '/pago/fallo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagoExitoRoute = PagoExitoRouteImport.update({
+  id: '/pago/exito',
+  path: '/pago/exito',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OfertaOfferIdRoute = OfertaOfferIdRouteImport.update({
@@ -431,11 +436,6 @@ const DashboardMonitoreoRoute = DashboardMonitoreoRouteImport.update({
   path: '/monitoreo',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardInstitucionOnboardingRoute = DashboardInstitucionOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => DashboardInstitucionRoute,
-} as any)
 const DashboardInstitucionRoute = DashboardInstitucionRouteImport.update({
   id: '/institucion',
   path: '/institucion',
@@ -456,6 +456,12 @@ const BBannerIdRoute = BBannerIdRouteImport.update({
   path: '/b/$bannerId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardInstitucionOnboardingRoute =
+  DashboardInstitucionOnboardingRouteImport.update({
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => DashboardInstitucionRoute,
+  } as any)
 const DashboardFamiliaOnboardingRoute =
   DashboardFamiliaOnboardingRouteImport.update({
     id: '/onboarding',
@@ -465,6 +471,8 @@ const DashboardFamiliaOnboardingRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/auxiliar-enfermeria': typeof AuxiliarEnfermeriaRoute
   '/buscar': typeof BuscarRoute
@@ -473,6 +481,7 @@ export interface FileRoutesByFullPath {
   '/confianza': typeof ConfianzaRoute
   '/contacto': typeof ContactoRoute
   '/cosmos': typeof CosmosRoute
+  '/creditos': typeof CreditosRoute
   '/cuidado-adulto-mayor': typeof CuidadoAdultoMayorRoute
   '/cuidado-paliativo': typeof CuidadoPaliativoRoute
   '/cuidado-pediatrico': typeof CuidadoPediatricoRoute
@@ -488,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/enfermeria-domiciliaria': typeof EnfermeriaDomiciliariaRoute
   '/enfermeria-medellin': typeof EnfermeriaMedellinRoute
   '/enfermeria-pereira': typeof EnfermeriaPereiraRoute
+  '/eps-ips': typeof EpsIpsRoute
   '/evaluador': typeof EvaluadorRoute
   '/familias': typeof FamiliasRoute
   '/habeas-data': typeof HabeasDataRoute
@@ -505,18 +515,20 @@ export interface FileRoutesByFullPath {
   '/talento-humano': typeof TalentoHumanoRoute
   '/tecnologia': typeof TecnologiaRoute
   '/terminos': typeof TerminosRoute
+  '/validacion': typeof ValidacionRoute
   '/verificar': typeof VerificarRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
-  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
+  '/pago/exito': typeof PagoExitoRoute
+  '/pago/fallo': typeof PagoFalloRoute
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
@@ -530,14 +542,15 @@ export interface FileRoutesByFullPath {
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
   '/superadmin/validacion': typeof SuperadminValidacionRoute
-  '/validacion': typeof ValidacionRoute
-  '/admin': typeof AdminRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
+  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/auxiliar-enfermeria': typeof AuxiliarEnfermeriaRoute
   '/buscar': typeof BuscarRoute
@@ -546,6 +559,7 @@ export interface FileRoutesByTo {
   '/confianza': typeof ConfianzaRoute
   '/contacto': typeof ContactoRoute
   '/cosmos': typeof CosmosRoute
+  '/creditos': typeof CreditosRoute
   '/cuidado-adulto-mayor': typeof CuidadoAdultoMayorRoute
   '/cuidado-paliativo': typeof CuidadoPaliativoRoute
   '/cuidado-pediatrico': typeof CuidadoPediatricoRoute
@@ -560,6 +574,7 @@ export interface FileRoutesByTo {
   '/enfermeria-domiciliaria': typeof EnfermeriaDomiciliariaRoute
   '/enfermeria-medellin': typeof EnfermeriaMedellinRoute
   '/enfermeria-pereira': typeof EnfermeriaPereiraRoute
+  '/eps-ips': typeof EpsIpsRoute
   '/evaluador': typeof EvaluadorRoute
   '/familias': typeof FamiliasRoute
   '/habeas-data': typeof HabeasDataRoute
@@ -576,18 +591,20 @@ export interface FileRoutesByTo {
   '/talento-humano': typeof TalentoHumanoRoute
   '/tecnologia': typeof TecnologiaRoute
   '/terminos': typeof TerminosRoute
+  '/validacion': typeof ValidacionRoute
   '/verificar': typeof VerificarRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
-  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
+  '/pago/exito': typeof PagoExitoRoute
+  '/pago/fallo': typeof PagoFalloRoute
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
@@ -601,15 +618,16 @@ export interface FileRoutesByTo {
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
   '/superadmin/validacion': typeof SuperadminValidacionRoute
-  '/validacion': typeof ValidacionRoute
-  '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
+  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/auxiliar-enfermeria': typeof AuxiliarEnfermeriaRoute
   '/buscar': typeof BuscarRoute
@@ -618,6 +636,7 @@ export interface FileRoutesById {
   '/confianza': typeof ConfianzaRoute
   '/contacto': typeof ContactoRoute
   '/cosmos': typeof CosmosRoute
+  '/creditos': typeof CreditosRoute
   '/cuidado-adulto-mayor': typeof CuidadoAdultoMayorRoute
   '/cuidado-paliativo': typeof CuidadoPaliativoRoute
   '/cuidado-pediatrico': typeof CuidadoPediatricoRoute
@@ -633,6 +652,7 @@ export interface FileRoutesById {
   '/enfermeria-domiciliaria': typeof EnfermeriaDomiciliariaRoute
   '/enfermeria-medellin': typeof EnfermeriaMedellinRoute
   '/enfermeria-pereira': typeof EnfermeriaPereiraRoute
+  '/eps-ips': typeof EpsIpsRoute
   '/evaluador': typeof EvaluadorRoute
   '/familias': typeof FamiliasRoute
   '/habeas-data': typeof HabeasDataRoute
@@ -650,18 +670,20 @@ export interface FileRoutesById {
   '/talento-humano': typeof TalentoHumanoRoute
   '/tecnologia': typeof TecnologiaRoute
   '/terminos': typeof TerminosRoute
+  '/validacion': typeof ValidacionRoute
   '/verificar': typeof VerificarRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
-  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
+  '/pago/exito': typeof PagoExitoRoute
+  '/pago/fallo': typeof PagoFalloRoute
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
@@ -675,16 +697,17 @@ export interface FileRoutesById {
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
   '/superadmin/validacion': typeof SuperadminValidacionRoute
-  '/validacion': typeof ValidacionRoute
-  '/admin': typeof AdminRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
+  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
+    | '/admin'
     | '/auth'
     | '/auxiliar-enfermeria'
     | '/buscar'
@@ -693,6 +716,7 @@ export interface FileRouteTypes {
     | '/confianza'
     | '/contacto'
     | '/cosmos'
+    | '/creditos'
     | '/cuidado-adulto-mayor'
     | '/cuidado-paliativo'
     | '/cuidado-pediatrico'
@@ -708,6 +732,7 @@ export interface FileRouteTypes {
     | '/enfermeria-domiciliaria'
     | '/enfermeria-medellin'
     | '/enfermeria-pereira'
+    | '/eps-ips'
     | '/evaluador'
     | '/familias'
     | '/habeas-data'
@@ -725,18 +750,20 @@ export interface FileRouteTypes {
     | '/talento-humano'
     | '/tecnologia'
     | '/terminos'
+    | '/validacion'
     | '/verificar'
     | '/b/$bannerId'
     | '/dashboard/eps'
     | '/dashboard/familia'
     | '/dashboard/institucion'
-    | '/dashboard/institucion/onboarding'
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
+    | '/pago/exito'
+    | '/pago/fallo'
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
@@ -750,14 +777,15 @@ export interface FileRouteTypes {
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
     | '/superadmin/validacion'
-    | '/admin'
-    | '/validacion'
     | '/dashboard/'
     | '/superadmin/'
     | '/dashboard/familia/onboarding'
+    | '/dashboard/institucion/onboarding'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$'
+    | '/admin'
     | '/auth'
     | '/auxiliar-enfermeria'
     | '/buscar'
@@ -766,6 +794,7 @@ export interface FileRouteTypes {
     | '/confianza'
     | '/contacto'
     | '/cosmos'
+    | '/creditos'
     | '/cuidado-adulto-mayor'
     | '/cuidado-paliativo'
     | '/cuidado-pediatrico'
@@ -780,6 +809,7 @@ export interface FileRouteTypes {
     | '/enfermeria-domiciliaria'
     | '/enfermeria-medellin'
     | '/enfermeria-pereira'
+    | '/eps-ips'
     | '/evaluador'
     | '/familias'
     | '/habeas-data'
@@ -796,18 +826,20 @@ export interface FileRouteTypes {
     | '/talento-humano'
     | '/tecnologia'
     | '/terminos'
+    | '/validacion'
     | '/verificar'
     | '/b/$bannerId'
     | '/dashboard/eps'
     | '/dashboard/familia'
     | '/dashboard/institucion'
-    | '/dashboard/institucion/onboarding'
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
+    | '/pago/exito'
+    | '/pago/fallo'
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
@@ -821,14 +853,15 @@ export interface FileRouteTypes {
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
     | '/superadmin/validacion'
-    | '/admin'
-    | '/validacion'
     | '/dashboard'
     | '/superadmin'
     | '/dashboard/familia/onboarding'
+    | '/dashboard/institucion/onboarding'
   id:
     | '__root__'
     | '/'
+    | '/$'
+    | '/admin'
     | '/auth'
     | '/auxiliar-enfermeria'
     | '/buscar'
@@ -837,6 +870,7 @@ export interface FileRouteTypes {
     | '/confianza'
     | '/contacto'
     | '/cosmos'
+    | '/creditos'
     | '/cuidado-adulto-mayor'
     | '/cuidado-paliativo'
     | '/cuidado-pediatrico'
@@ -852,6 +886,7 @@ export interface FileRouteTypes {
     | '/enfermeria-domiciliaria'
     | '/enfermeria-medellin'
     | '/enfermeria-pereira'
+    | '/eps-ips'
     | '/evaluador'
     | '/familias'
     | '/habeas-data'
@@ -869,18 +904,20 @@ export interface FileRouteTypes {
     | '/talento-humano'
     | '/tecnologia'
     | '/terminos'
+    | '/validacion'
     | '/verificar'
     | '/b/$bannerId'
     | '/dashboard/eps'
     | '/dashboard/familia'
     | '/dashboard/institucion'
-    | '/dashboard/institucion/onboarding'
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
+    | '/pago/exito'
+    | '/pago/fallo'
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
@@ -894,19 +931,16 @@ export interface FileRouteTypes {
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
     | '/superadmin/validacion'
-    | '/admin'
-    | '/validacion'
     | '/dashboard/'
     | '/superadmin/'
     | '/dashboard/familia/onboarding'
-    | '/creditos'
-    | '/pago/exito'
-    | '/pago/fallo'
-    | '/$'
+    | '/dashboard/institucion/onboarding'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
+  AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   AuxiliarEnfermeriaRoute: typeof AuxiliarEnfermeriaRoute
   BuscarRoute: typeof BuscarRoute
@@ -915,6 +949,7 @@ export interface RootRouteChildren {
   ConfianzaRoute: typeof ConfianzaRoute
   ContactoRoute: typeof ContactoRoute
   CosmosRoute: typeof CosmosRoute
+  CreditosRoute: typeof CreditosRoute
   CuidadoAdultoMayorRoute: typeof CuidadoAdultoMayorRoute
   CuidadoPaliativoRoute: typeof CuidadoPaliativoRoute
   CuidadoPediatricoRoute: typeof CuidadoPediatricoRoute
@@ -930,6 +965,7 @@ export interface RootRouteChildren {
   EnfermeriaDomiciliariaRoute: typeof EnfermeriaDomiciliariaRoute
   EnfermeriaMedellinRoute: typeof EnfermeriaMedellinRoute
   EnfermeriaPereiraRoute: typeof EnfermeriaPereiraRoute
+  EpsIpsRoute: typeof EpsIpsRoute
   EvaluadorRoute: typeof EvaluadorRoute
   FamiliasRoute: typeof FamiliasRoute
   HabeasDataRoute: typeof HabeasDataRoute
@@ -943,23 +979,20 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SobreRoute: typeof SobreRoute
-  AdminRoute: typeof AdminRoute
-  ValidacionRoute: typeof ValidacionRoute
   SuperadminRoute: typeof SuperadminRouteWithChildren
   TalentoHumanoRoute: typeof TalentoHumanoRoute
   TecnologiaRoute: typeof TecnologiaRoute
   TerminosRoute: typeof TerminosRoute
+  ValidacionRoute: typeof ValidacionRoute
   VerificarRoute: typeof VerificarRoute
   BBannerIdRoute: typeof BBannerIdRoute
   InstitutionFormsRoute: typeof InstitutionFormsRoute
   InstitutionProfileRoute: typeof InstitutionProfileRoute
   OfertaOfferIdRoute: typeof OfertaOfferIdRoute
-  ProfesionalProIdRoute: typeof ProfesionalProIdRoute
-  ServicioBookingIdRoute: typeof ServicioBookingIdRoute
-  CreditosRoute: typeof CreditosRoute
   PagoExitoRoute: typeof PagoExitoRoute
   PagoFalloRoute: typeof PagoFalloRoute
-  SplatRoute: typeof SplatRoute
+  ProfesionalProIdRoute: typeof ProfesionalProIdRoute
+  ServicioBookingIdRoute: typeof ServicioBookingIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -969,6 +1002,13 @@ declare module '@tanstack/react-router' {
       path: '/verificar'
       fullPath: '/verificar'
       preLoaderRoute: typeof VerificarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/validacion': {
+      id: '/validacion'
+      path: '/validacion'
+      fullPath: '/validacion'
+      preLoaderRoute: typeof ValidacionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terminos': {
@@ -1090,6 +1130,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EvaluadorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/eps-ips': {
+      id: '/eps-ips'
+      path: '/eps-ips'
+      fullPath: '/eps-ips'
+      preLoaderRoute: typeof EpsIpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/enfermeria-pereira': {
       id: '/enfermeria-pereira'
       path: '/enfermeria-pereira'
@@ -1195,6 +1242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CuidadoAdultoMayorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creditos': {
+      id: '/creditos'
+      path: '/creditos'
+      fullPath: '/creditos'
+      preLoaderRoute: typeof CreditosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cosmos': {
       id: '/cosmos'
       path: '/cosmos'
@@ -1251,6 +1305,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -1271,6 +1339,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/superadmin/validacion': {
+      id: '/superadmin/validacion'
+      path: '/validacion'
+      fullPath: '/superadmin/validacion'
+      preLoaderRoute: typeof SuperadminValidacionRouteImport
+      parentRoute: typeof SuperadminRoute
     }
     '/superadmin/testimonios': {
       id: '/superadmin/testimonios'
@@ -1328,6 +1403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperadminAuditoriaRouteImport
       parentRoute: typeof SuperadminRoute
     }
+    '/superadmin/activar': {
+      id: '/superadmin/activar'
+      path: '/activar'
+      fullPath: '/superadmin/activar'
+      preLoaderRoute: typeof SuperadminActivarRouteImport
+      parentRoute: typeof SuperadminRoute
+    }
     '/servicio/$bookingId': {
       id: '/servicio/$bookingId'
       path: '/servicio/$bookingId'
@@ -1347,6 +1429,20 @@ declare module '@tanstack/react-router' {
       path: '/profesional/$proId'
       fullPath: '/profesional/$proId'
       preLoaderRoute: typeof ProfesionalProIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pago/fallo': {
+      id: '/pago/fallo'
+      path: '/pago/fallo'
+      fullPath: '/pago/fallo'
+      preLoaderRoute: typeof PagoFalloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pago/exito': {
+      id: '/pago/exito'
+      path: '/pago/exito'
+      fullPath: '/pago/exito'
+      preLoaderRoute: typeof PagoExitoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oferta/$offerId': {
@@ -1419,33 +1515,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BBannerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/creditos': {
-      id: '/creditos'
-      path: '/creditos'
-      fullPath: '/creditos'
-      preLoaderRoute: typeof CreditosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pago/exito': {
-      id: '/pago/exito'
-      path: '/pago/exito'
-      fullPath: '/pago/exito'
-      preLoaderRoute: typeof PagoExitoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pago/fallo': {
-      id: '/pago/fallo'
-      path: '/pago/fallo'
-      fullPath: '/pago/fallo'
-      preLoaderRoute: typeof PagoFalloRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$': {
-      id: '/$'
-      path: '/$'
-      fullPath: '/$'
-      preLoaderRoute: typeof SplatRouteImport
-      parentRoute: typeof rootRouteImport
+    '/dashboard/institucion/onboarding': {
+      id: '/dashboard/institucion/onboarding'
+      path: '/onboarding'
+      fullPath: '/dashboard/institucion/onboarding'
+      preLoaderRoute: typeof DashboardInstitucionOnboardingRouteImport
+      parentRoute: typeof DashboardInstitucionRoute
     }
     '/dashboard/familia/onboarding': {
       id: '/dashboard/familia/onboarding'
@@ -1454,54 +1529,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardFamiliaOnboardingRouteImport
       parentRoute: typeof DashboardFamiliaRoute
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/validacion': {
-      id: '/validacion'
-      path: '/validacion'
-      fullPath: '/validacion'
-      preLoaderRoute: typeof ValidacionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/superadmin/validacion': {
-      id: '/superadmin/validacion'
-      path: '/validacion'
-      fullPath: '/superadmin/validacion'
-      preLoaderRoute: typeof SuperadminValidacionRouteImport
-      parentRoute: typeof SuperadminRouteImport
-    }
-    '/superadmin/activar': {
-      id: '/superadmin/activar'
-      path: '/activar'
-      fullPath: '/superadmin/activar'
-      preLoaderRoute: typeof SuperadminActivarRouteImport
-      parentRoute: typeof SuperadminRouteImport
-    }
-    '/dashboard/institucion/onboarding': {
-      id: '/dashboard/institucion/onboarding'
-      path: '/onboarding'
-      fullPath: '/dashboard/institucion/onboarding'
-      preLoaderRoute: typeof DashboardInstitucionOnboardingRouteImport
-      parentRoute: typeof DashboardInstitucionRoute
-    }
   }
 }
-
-interface DashboardInstitucionRouteChildren {
-  DashboardInstitucionOnboardingRoute: typeof DashboardInstitucionOnboardingRoute
-}
-
-const DashboardInstitucionRouteChildren: DashboardInstitucionRouteChildren = {
-  DashboardInstitucionOnboardingRoute: DashboardInstitucionOnboardingRoute,
-}
-
-const DashboardInstitucionRouteWithChildren =
-  DashboardInstitucionRoute._addFileChildren(DashboardInstitucionRouteChildren)
 
 interface DashboardFamiliaRouteChildren {
   DashboardFamiliaOnboardingRoute: typeof DashboardFamiliaOnboardingRoute
@@ -1513,6 +1542,17 @@ const DashboardFamiliaRouteChildren: DashboardFamiliaRouteChildren = {
 
 const DashboardFamiliaRouteWithChildren =
   DashboardFamiliaRoute._addFileChildren(DashboardFamiliaRouteChildren)
+
+interface DashboardInstitucionRouteChildren {
+  DashboardInstitucionOnboardingRoute: typeof DashboardInstitucionOnboardingRoute
+}
+
+const DashboardInstitucionRouteChildren: DashboardInstitucionRouteChildren = {
+  DashboardInstitucionOnboardingRoute: DashboardInstitucionOnboardingRoute,
+}
+
+const DashboardInstitucionRouteWithChildren =
+  DashboardInstitucionRoute._addFileChildren(DashboardInstitucionRouteChildren)
 
 interface DashboardRouteChildren {
   DashboardEpsRoute: typeof DashboardEpsRoute
@@ -1584,6 +1624,8 @@ const SuperadminRouteWithChildren = SuperadminRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
+  AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   AuxiliarEnfermeriaRoute: AuxiliarEnfermeriaRoute,
   BuscarRoute: BuscarRoute,
@@ -1592,6 +1634,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfianzaRoute: ConfianzaRoute,
   ContactoRoute: ContactoRoute,
   CosmosRoute: CosmosRoute,
+  CreditosRoute: CreditosRoute,
   CuidadoAdultoMayorRoute: CuidadoAdultoMayorRoute,
   CuidadoPaliativoRoute: CuidadoPaliativoRoute,
   CuidadoPediatricoRoute: CuidadoPediatricoRoute,
@@ -1607,6 +1650,7 @@ const rootRouteChildren: RootRouteChildren = {
   EnfermeriaDomiciliariaRoute: EnfermeriaDomiciliariaRoute,
   EnfermeriaMedellinRoute: EnfermeriaMedellinRoute,
   EnfermeriaPereiraRoute: EnfermeriaPereiraRoute,
+  EpsIpsRoute: EpsIpsRoute,
   EvaluadorRoute: EvaluadorRoute,
   FamiliasRoute: FamiliasRoute,
   HabeasDataRoute: HabeasDataRoute,
@@ -1620,23 +1664,20 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SobreRoute: SobreRoute,
-  AdminRoute: AdminRoute,
-  ValidacionRoute: ValidacionRoute,
   SuperadminRoute: SuperadminRouteWithChildren,
   TalentoHumanoRoute: TalentoHumanoRoute,
   TecnologiaRoute: TecnologiaRoute,
   TerminosRoute: TerminosRoute,
+  ValidacionRoute: ValidacionRoute,
   VerificarRoute: VerificarRoute,
   BBannerIdRoute: BBannerIdRoute,
   InstitutionFormsRoute: InstitutionFormsRoute,
   InstitutionProfileRoute: InstitutionProfileRoute,
   OfertaOfferIdRoute: OfertaOfferIdRoute,
-  ProfesionalProIdRoute: ProfesionalProIdRoute,
-  ServicioBookingIdRoute: ServicioBookingIdRoute,
-  CreditosRoute: CreditosRoute,
   PagoExitoRoute: PagoExitoRoute,
   PagoFalloRoute: PagoFalloRoute,
-  SplatRoute: SplatRoute,
+  ProfesionalProIdRoute: ProfesionalProIdRoute,
+  ServicioBookingIdRoute: ServicioBookingIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
