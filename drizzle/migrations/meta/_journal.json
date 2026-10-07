@@ -43,6 +43,13 @@
       "when": 1791402331015,
       "tag": "0005_grants_new_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791411200772,
+      "tag": "0006_backfill_superadmin_role",
+      "breakpoints": true
     }
   ]
 }
