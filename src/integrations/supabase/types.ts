@@ -2352,6 +2352,87 @@ export type Database = {
         }
         Relationships: []
       }
+      validation_responses: {
+        Row: {
+          comments: string | null
+          competitors: string | null
+          created_at: string
+          current_solutions: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          key_benefit: string | null
+          pain_point: string | null
+          premium_activated: boolean | null
+          profile_type: string
+          promo_code: string | null
+          retention_channels: string | null
+          score_benefit: number | null
+          score_clear_problem: number | null
+          score_competitive_adv: number | null
+          score_demand: number | null
+          score_passion: number | null
+          score_reach: number | null
+          service_offer: string | null
+          target_customer: string | null
+          total_score: number | null
+          whatsapp: string | null
+          willingness_pct: number | null
+        }
+        Insert: {
+          comments?: string | null
+          competitors?: string | null
+          created_at?: string
+          current_solutions?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          key_benefit?: string | null
+          pain_point?: string | null
+          premium_activated?: boolean | null
+          profile_type?: string
+          promo_code?: string | null
+          retention_channels?: string | null
+          score_benefit?: number | null
+          score_clear_problem?: number | null
+          score_competitive_adv?: number | null
+          score_demand?: number | null
+          score_passion?: number | null
+          score_reach?: number | null
+          service_offer?: string | null
+          target_customer?: string | null
+          total_score?: number | null
+          whatsapp?: string | null
+          willingness_pct?: number | null
+        }
+        Update: {
+          comments?: string | null
+          competitors?: string | null
+          created_at?: string
+          current_solutions?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          key_benefit?: string | null
+          pain_point?: string | null
+          premium_activated?: boolean | null
+          profile_type?: string
+          promo_code?: string | null
+          retention_channels?: string | null
+          score_benefit?: number | null
+          score_clear_problem?: number | null
+          score_competitive_adv?: number | null
+          score_demand?: number | null
+          score_passion?: number | null
+          score_reach?: number | null
+          service_offer?: string | null
+          target_customer?: string | null
+          total_score?: number | null
+          whatsapp?: string | null
+          willingness_pct?: number | null
+        }
+        Relationships: []
+      }
       vital_signs_readings: {
         Row: {
           created_at: string

@@ -8,6 +8,20 @@
       "when": 1791402264302,
       "tag": "0000_admin_code_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791402282908,
+      "tag": "0001_backfill_superadmin_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791402291037,
+      "tag": "0002_validation_responses",
+      "breakpoints": true
     }
   ]
 }
