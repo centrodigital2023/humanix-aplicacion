@@ -63,6 +63,7 @@ const NAV: NavItem[] = [
   { label: "Publicidad", to: "/superadmin/publicidad", icon: Megaphone },
   { label: "Marketing", to: "/superadmin/marketing", icon: Sparkles },
   { label: "CRM", to: "/superadmin/crm", icon: Mail },
+  { label: "Validación MLP", to: "/superadmin/validacion", icon: TrendingUp },
   { label: "Talento Humano", to: "/talento-humano", icon: Users },
   { label: "Evaluador", to: "/evaluador", icon: FileCheck },
   { label: "Marketplace", to: "/buscar", icon: Briefcase },
@@ -817,6 +818,13 @@ function SuperadminPage() {
             to="/superadmin/marketplace"
             tone="bio"
             badge={stats.offers > 0 ? { label: `${stats.offers} ofertas` } : undefined}
+          />
+          <ShortcutCard
+            icon={Star}
+            title="Validación MLP"
+            desc="Worksheet de inversionistas: KPIs, puntajes y códigos Premium entregados."
+            to="/superadmin/validacion"
+            tone="fuchsia"
           />
         </section>
 

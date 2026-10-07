@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/superadmin/validacion" as any)({
+export const Route = createFileRoute("/superadmin/validacion")({
   head: () => ({ meta: [{ name: "robots", content: "noindex,nofollow" }] }),
   component: InvestorDashboard,
 });

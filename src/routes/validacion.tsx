@@ -4,7 +4,7 @@ import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { ValidationSurvey } from "@/components/humanix/ValidationSurvey";
 
-export const Route = createFileRoute("/validacion" as any)({
+export const Route = createFileRoute("/validacion")({
   head: () =>
     buildSeo({
       title: `Valida tu idea en 5 minutos — ${SITE_NAME}`,

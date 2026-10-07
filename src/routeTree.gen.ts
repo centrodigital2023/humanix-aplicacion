@@ -13,6 +13,8 @@ import { Route as VerificarRouteImport } from './routes/verificar'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as TecnologiaRouteImport } from './routes/tecnologia'
 import { Route as TalentoHumanoRouteImport } from './routes/talento-humano'
+import { Route as ValidacionRouteImport } from './routes/validacion'
+import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
 import { Route as SuperadminRouteImport } from './routes/superadmin'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -120,6 +122,16 @@ const TalentoHumanoRoute = TalentoHumanoRouteImport.update({
   id: '/talento-humano',
   path: '/talento-humano',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ValidacionRoute = ValidacionRouteImport.update({
+  id: '/validacion',
+  path: '/validacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuperadminValidacionRoute = SuperadminValidacionRouteImport.update({
+  id: '/validacion',
+  path: '/validacion',
+  getParentRoute: () => SuperadminRoute,
 } as any)
 const SuperadminRoute = SuperadminRouteImport.update({
   id: '/superadmin',
@@ -497,6 +509,8 @@ export interface FileRoutesByFullPath {
   '/superadmin/publicidad': typeof SuperadminPublicidadRoute
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
+  '/superadmin/validacion': typeof SuperadminValidacionRoute
+  '/validacion': typeof ValidacionRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
@@ -563,6 +577,8 @@ export interface FileRoutesByTo {
   '/superadmin/publicidad': typeof SuperadminPublicidadRoute
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
+  '/superadmin/validacion': typeof SuperadminValidacionRoute
+  '/validacion': typeof ValidacionRoute
   '/dashboard': typeof DashboardIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
@@ -632,6 +648,8 @@ export interface FileRoutesById {
   '/superadmin/publicidad': typeof SuperadminPublicidadRoute
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
+  '/superadmin/validacion': typeof SuperadminValidacionRoute
+  '/validacion': typeof ValidacionRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
@@ -702,6 +720,8 @@ export interface FileRouteTypes {
     | '/superadmin/publicidad'
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
+    | '/superadmin/validacion'
+    | '/validacion'
     | '/dashboard/'
     | '/superadmin/'
     | '/dashboard/familia/onboarding'
@@ -768,6 +788,8 @@ export interface FileRouteTypes {
     | '/superadmin/publicidad'
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
+    | '/superadmin/validacion'
+    | '/validacion'
     | '/dashboard'
     | '/superadmin'
     | '/dashboard/familia/onboarding'
@@ -836,6 +858,8 @@ export interface FileRouteTypes {
     | '/superadmin/publicidad'
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
+    | '/superadmin/validacion'
+    | '/validacion'
     | '/dashboard/'
     | '/superadmin/'
     | '/dashboard/familia/onboarding'
@@ -883,6 +907,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SobreRoute: typeof SobreRoute
+  ValidacionRoute: typeof ValidacionRoute
   SuperadminRoute: typeof SuperadminRouteWithChildren
   TalentoHumanoRoute: typeof TalentoHumanoRoute
   TecnologiaRoute: typeof TecnologiaRoute
@@ -1392,6 +1417,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardFamiliaOnboardingRouteImport
       parentRoute: typeof DashboardFamiliaRoute
     }
+    '/validacion': {
+      id: '/validacion'
+      path: '/validacion'
+      fullPath: '/validacion'
+      preLoaderRoute: typeof ValidacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/superadmin/validacion': {
+      id: '/superadmin/validacion'
+      path: '/validacion'
+      fullPath: '/superadmin/validacion'
+      preLoaderRoute: typeof SuperadminValidacionRouteImport
+      parentRoute: typeof SuperadminRouteImport
+    }
   }
 }
 
@@ -1451,6 +1490,7 @@ interface SuperadminRouteChildren {
   SuperadminPublicidadRoute: typeof SuperadminPublicidadRoute
   SuperadminResenasRoute: typeof SuperadminResenasRoute
   SuperadminTestimoniosRoute: typeof SuperadminTestimoniosRoute
+  SuperadminValidacionRoute: typeof SuperadminValidacionRoute
   SuperadminIndexRoute: typeof SuperadminIndexRoute
 }
 
@@ -1463,6 +1503,7 @@ const SuperadminRouteChildren: SuperadminRouteChildren = {
   SuperadminPublicidadRoute: SuperadminPublicidadRoute,
   SuperadminResenasRoute: SuperadminResenasRoute,
   SuperadminTestimoniosRoute: SuperadminTestimoniosRoute,
+  SuperadminValidacionRoute: SuperadminValidacionRoute,
   SuperadminIndexRoute: SuperadminIndexRoute,
 }
 
@@ -1508,6 +1549,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SobreRoute: SobreRoute,
+  ValidacionRoute: ValidacionRoute,
   SuperadminRoute: SuperadminRouteWithChildren,
   TalentoHumanoRoute: TalentoHumanoRoute,
   TecnologiaRoute: TecnologiaRoute,
