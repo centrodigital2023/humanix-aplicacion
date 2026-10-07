@@ -34,7 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 
 export const Route = createFileRoute("/superadmin/auditoria")({
   head: () => ({ meta: [{ title: "Auditoría · Superadmin · Humanix" }] }),
@@ -73,7 +73,7 @@ const SEVERITY_TONE: Record<string, string> = {
 };
 
 function AuditoriaPage() {
-  const { user, loading, logout } = useAppUser({ allow: ["superadmin"] });
+  const { user, loading, logout } = useSuperadmin();
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [fetching, setFetching] = useState(false);
   const [q, setQ] = useState("");

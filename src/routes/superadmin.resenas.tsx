@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 import { StarDisplay } from "@/components/humanix/RatingCard";
 import { buildSeo } from "@/lib/seo";
 
@@ -70,7 +70,7 @@ export const Route = (createFileRoute as any)("/superadmin/resenas")({
 });
 
 function ResenasPage() {
-  const { user, logout } = useAppUser({ allow: ["superadmin"] });
+  const { user, logout } = useSuperadmin();
   const [rows, setRows] = useState<Row[]>([]);
   const [fetching, setFetching] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("all");

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/humanix/Logo";
 import { supabase } from "@/integrations/supabase/client";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/superadmin/activar")({
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/superadmin/activar")({
 });
 
 function ActivarSuperadmin() {
-  const { user, loading } = useAppUser({ requireAuth: true, allow: undefined });
+  const { user, loading } = useSuperadmin();
   const navigate = useNavigate();
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);

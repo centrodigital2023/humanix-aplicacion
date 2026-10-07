@@ -36,7 +36,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SITE_URL } from "@/lib/seo";
@@ -333,7 +333,7 @@ const TEMPLATES: Template[] = [
 // ---------------------------------------------------------------------------
 
 function MarketingPage() {
-  const { user, loading, logout } = useAppUser();
+  const { user, loading, logout } = useSuperadmin();
   const [pros, setPros] = useState<ProCard[]>([]);
   const [offers, setOffers] = useState<OfferCard[]>([]);
   const [dataLoading, setDataLoading] = useState(true);

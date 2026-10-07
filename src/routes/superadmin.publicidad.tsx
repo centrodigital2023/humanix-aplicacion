@@ -57,7 +57,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 import { ShareButtons } from "@/components/humanix/ShareButtons";
 import { PromoCards } from "@/components/humanix/PromoCards";
 import { supabase } from "@/integrations/supabase/client";
@@ -207,7 +207,7 @@ const SMART_BANNERS: Array<
 ];
 
 function PublicidadPage() {
-  const { user, loading, logout } = useAppUser({ allow: ["superadmin"] });
+  const { user, loading, logout } = useSuperadmin();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [editing, setEditing] = useState<Partial<Banner> | null>(null);
   const [open, setOpen] = useState(false);

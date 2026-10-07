@@ -47,7 +47,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 
 export const Route = createFileRoute("/superadmin/")({
   head: () => ({ meta: [{ title: "Superadmin · Humanix" }] }),
@@ -112,7 +112,7 @@ type RegisteredUser = {
 };
 
 function SuperadminPage() {
-  const { user, loading, logout } = useAppUser({ allow: ["superadmin"] });
+  const { user, loading, logout } = useSuperadmin();
   const [stats, setStats] = useState({ users: 0, professionals: 0, offers: 0, docs: 0, pending_pros: 0, blocked_pros: 0 });
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [aiAlerts, setAiAlerts] = useState<AiRating[]>([]);
@@ -328,15 +328,15 @@ function SuperadminPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="max-w-md w-full p-6 text-center space-y-3">
-          <h1 className="text-lg font-semibold">Necesitas iniciar sesión</h1>
-          <p className="text-sm text-muted-foreground">
-            Este módulo requiere permisos de superadmin.
+      <div className="min-h-screen flex items-center justify-center bg-[#030712] px-4">
+        <Card className="max-w-md w-full p-6 text-center space-y-3 bg-white/[0.04] border-white/[0.08]">
+          <h1 className="text-lg font-semibold text-white">Acceso restringido</h1>
+          <p className="text-sm text-white/50">
+            Este panel es exclusivo para administradores.
           </p>
           <div className="pt-2">
-            <Link to="/auth" className="inline-flex">
-              <Button variant="hero">Ir a iniciar sesión</Button>
+            <Link to="/admin" className="inline-flex">
+              <Button variant="hero">Ir al acceso de administrador</Button>
             </Link>
           </div>
         </Card>

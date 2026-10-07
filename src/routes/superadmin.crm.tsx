@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -104,7 +104,7 @@ type Task = {
 };
 
 function CRMPage() {
-  const { user, loading, logout } = useAppUser({ allow: ["superadmin", "hr_staff"] });
+  const { user, loading, logout } = useSuperadmin();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);

@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 import { ShareButtons } from "@/components/humanix/ShareButtons";
 
 export const Route = createFileRoute("/superadmin/marketplace")({
@@ -91,7 +91,7 @@ type Pqrs = {
 };
 
 function MarketplacePage() {
-  const { user, loading, logout } = useAppUser({ allow: ["superadmin", "hr_staff"] });
+  const { user, loading, logout } = useSuperadmin();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [tickets, setTickets] = useState<Pqrs[]>([]);
   const [search, setSearch] = useState("");

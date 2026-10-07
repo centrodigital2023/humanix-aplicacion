@@ -21,7 +21,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
-import { useAppUser } from "@/hooks/use-app-user";
+import { useSuperadmin } from "@/hooks/use-superadmin";
 
 export const Route = createFileRoute("/superadmin/fraude")({
   head: () => ({ meta: [{ title: "Anti-fraude · Superadmin · Humanix" }] }),
@@ -67,7 +67,7 @@ const SEV_COLOR: Record<Severity, string> = {
 };
 
 function FraudePage() {
-  const { user, loading, logout } = useAppUser({ allow: ["superadmin", "hr_staff"] });
+  const { user, loading, logout } = useSuperadmin();
   const [flags, setFlags] = useState<FraudFlag[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
   const [dataLoading, setDataLoading] = useState(true);
