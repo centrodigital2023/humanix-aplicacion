@@ -71,6 +71,13 @@
       "when": 1791412126365,
       "tag": "0009_booking_integrity_and_favorites",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791412176798,
+      "tag": "0010_replacement_dimensions_circle",
+      "breakpoints": true
     }
   ]
 }

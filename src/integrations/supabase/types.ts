@@ -395,6 +395,42 @@ export type Database = {
           },
         ]
       }
+      care_circle_members: {
+        Row: {
+          accepted_at: string | null
+          can_view_services: boolean
+          created_at: string
+          id: string
+          invited_email: string
+          member_id: string | null
+          owner_id: string
+          relation: string | null
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          can_view_services?: boolean
+          created_at?: string
+          id?: string
+          invited_email: string
+          member_id?: string | null
+          owner_id: string
+          relation?: string | null
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          can_view_services?: boolean
+          created_at?: string
+          id?: string
+          invited_email?: string
+          member_id?: string | null
+          owner_id?: string
+          relation?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       care_favorites: {
         Row: {
           client_id: string
@@ -2417,6 +2453,44 @@ export type Database = {
         }
         Relationships: []
       }
+      service_rating_dimensions: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          rated_id: string
+          rater_id: string
+          rater_role: string
+          scores: Json
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          rated_id: string
+          rater_id: string
+          rater_role: string
+          scores: Json
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          rated_id?: string
+          rater_id?: string
+          rater_role?: string
+          scores?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_rating_dimensions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_ratings: {
         Row: {
           ai_alert: boolean
@@ -3188,6 +3262,19 @@ export type Database = {
     Functions: {
       accept_slot_proposal: { Args: { p_proposal_id: string }; Returns: string }
       ad_track: { Args: { _id: string; _kind: string }; Returns: undefined }
+      find_replacement_candidates: {
+        Args: { p_booking_id: string }
+        Returns: {
+          avatar_url: string
+          avg_rating: number
+          full_name: string
+          hourly_rate: number
+          is_favorite: boolean
+          specialty: string
+          total_jobs: number
+          user_id: string
+        }[]
+      }
       get_my_profile: {
         Args: never
         Returns: {
@@ -3294,6 +3381,14 @@ export type Database = {
         }[]
       }
       platform_commission_pct: { Args: { p_user_id: string }; Returns: number }
+      professional_dimension_averages: {
+        Args: { p_user: string }
+        Returns: {
+          average: number
+          dimension: string
+          ratings: number
+        }[]
+      }
       publish_profile: { Args: { _validation_id?: string }; Returns: Json }
       redeem_staff_invitation: {
         Args: { _token: string }
@@ -3303,6 +3398,10 @@ export type Database = {
         }[]
       }
       release_expired_reservations: { Args: never; Returns: undefined }
+      respond_circle_invitation: {
+        Args: { p_accept: boolean; p_id: string }
+        Returns: undefined
+      }
       set_offer_reserved: {
         Args: { _offer_id: string; _professional_id: string }
         Returns: undefined
