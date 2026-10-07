@@ -49,7 +49,7 @@ export const Route = createFileRoute("/servicio/$bookingId")({
   ),
   errorComponent: ({ error }) => (
     <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-      <p>Error: {error.message}</p>
+      <p>Error: {(error as Error).message}</p>
     </div>
   ),
 });
