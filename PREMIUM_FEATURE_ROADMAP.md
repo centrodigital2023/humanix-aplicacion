@@ -9,11 +9,12 @@ Ofertas y postulaciones (`job_offers`, `applications`), propuestas de horario (`
 1. ~~Recontratación de un clic~~ (hecho: `RehireCard`).
 2. ~~Favoritos~~ (hecho: `care_favorites`); falta el círculo de cuidado con familiares.
 3. ~~Agenda sin doble reserva~~ (hecho: `guard_booking_integrity`).
-4. Contacto protegido por etapas (datos visibles solo tras aprobación).
-5. Calificación por dimensiones y bilateral.
-6. Reemplazo rápido cuando un profesional cancela.
-7. Semáforo de cobertura y vencimiento de documentos para IPS/EPS.
-8. Desglose transparente de precio (valor, comisión, total).
+4. Contacto protegido por etapas (pendiente) (datos visibles solo tras aprobación).
+5. ~~Calificación por dimensiones y bilateral~~ (hecho: `service_rating_dimensions`, formulario y promedios públicos con mínimo de 3).
+6. ~~Reemplazo cuando un profesional cancela~~ (hecho: aviso + búsqueda de candidatos libres, favoritos primero + propuesta en un clic).
+7. ~~Semáforo de cobertura~~ (hecho en `/dashboard/institucion`); falta vencimiento de documentos.
+8. ~~Desglose transparente de precio~~ (hecho en propuestas y en el servicio).
+9. ~~Círculo de cuidado con familiares~~ (hecho: invitación por correo, solo lectura de servicios).
 
 ## P2 — diferenciación
 Matching explicable, agenda predictiva, IA de resumen y filtros, check-in con código, centro de continuidad, panel ejecutivo, pool institucional.

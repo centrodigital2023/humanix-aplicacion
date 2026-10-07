@@ -33,6 +33,7 @@ import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
 import { FamilyNeedsCalendar } from "@/components/humanix/FamilyNeedsCalendar";
 import { ProposalsInbox } from "@/components/humanix/ProposalsInbox";
+import { CareCirclePanel } from "@/components/humanix/CareCirclePanel";
 import { CareFeed } from "@/components/humanix/CareFeed";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
 import { WearableConnections } from "@/components/humanix/WearableConnections";
@@ -549,6 +550,7 @@ function FamilyDashboard() {
             </div>
             <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
             <ProposalsInbox userId={user.id} role="family" />
+            <CareCirclePanel userId={user.id} userEmail={user.email} />
           </section>
         )}
 

@@ -39,3 +39,8 @@ Las reglas de `patientRisk.ts` son umbrales genéricos de signos vitales, **no u
 
 ## Riesgo abierto que requiere decisión del negocio
 `credit_booking_completion` acredita en la billetera del profesional el neto de `total_amount` al pasar a `completed`, y existe `request_payout`. Pero las reservas se crean con `payment_mode = 'pending'/'direct_to_professional'`, es decir, **el cobro ocurre fuera de la plataforma**: Humanix puede estar acreditando saldo retirable por dinero que nunca recibió. Además otras vías (`QuickBooking`, `BookNowButton`) permiten que el cliente fije el monto de la reserva. Recomendación: acreditar solo reservas con pago confirmado en Mercado Pago (`payment_mode = 'platform'`) y, para pagos directos, registrar la comisión como deuda del profesional en vez de abono.
+
+## Funciones añadidas (tercera pasada)
+Migración `20261007200000_replacement_dimensions_circle.sql`: aviso de cancelación, `find_replacement_candidates`, `service_rating_dimensions` (validada en servidor, una por parte y servicio, solo servicios completados), `professional_dimension_averages` (mínimo 3), `care_circle_members` con `respond_circle_invitation` y política de solo lectura sobre `service_bookings`. Lógica pura probada: `pricing.ts`, `coverage.ts`, `ratingDimensions.ts`.
+
+Límites conocidos: el círculo de cuidado muestra fecha, duración y estado de los servicios, no direcciones, pagos ni datos clínicos; el semáforo de cobertura usa `job_offers` y `applications` (no `slot_proposals`); los candidatos de reemplazo no filtran por ciudad ni especialidad todavía.

@@ -37,6 +37,7 @@ import { Progress } from "@/components/ui/progress";
 import { Logo } from "@/components/humanix/Logo";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
 import { EnhancedBulkOffersModule } from "@/components/humanix/EnhancedBulkOffersModule";
+import { CoverageSemaphore } from "@/components/humanix/CoverageSemaphore";
 import { EnhancedPatientsModule } from "@/components/humanix/EnhancedPatientsModule";
 import { EnhancedAgendaModule } from "@/components/humanix/EnhancedAgendaModule";
 import { EnhancedReportsWithCRMModule } from "@/components/humanix/EnhancedReportsWithCRMModule";
@@ -759,6 +760,16 @@ function InstitutionDashboard() {
               </div>
               <div className="flex gap-2">
                 <HiringCopilot />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <p className="text-sm font-semibold">Semáforo de cobertura</p>
+                <p className="text-xs text-muted-foreground">Estado de cada oferta: cubierta, con postulantes por aprobar o sin candidatos.</p>
+              </div>
+              <div className="p-4">
+                <CoverageSemaphore userId={user.id} />
               </div>
             </div>
 

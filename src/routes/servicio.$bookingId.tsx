@@ -21,6 +21,9 @@ import { PaidContactCard } from "@/components/humanix/PaidContactCard";
 import { VoiceRating } from "@/components/humanix/VoiceRating";
 import { ServiceContractCard } from "@/components/humanix/ServiceContractCard";
 import { RehireCard } from "@/components/humanix/RehireCard";
+import { PriceBreakdownCard } from "@/components/humanix/PriceBreakdownCard";
+import { ReplacementPanel } from "@/components/humanix/ReplacementPanel";
+import { DimensionRatingForm } from "@/components/humanix/DimensionRatingForm";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
 import { toast } from "sonner";
 
@@ -260,6 +263,27 @@ function ServicePage() {
             </div>
           </header>
 
+          {(isClient || isProfessional) && (
+            <div className="mt-4 max-w-sm">
+              <PriceBreakdownCard
+                hourlyRate={booking.hourly_rate}
+                hours={booking.duration_hours}
+                professionalId={booking.professional_id}
+                viewer={isProfessional ? "professional" : "payer"}
+              />
+            </div>
+          )}
+
+          {isClient && cancelled && (
+            <ReplacementPanel
+              bookingId={booking.id}
+              clientId={booking.client_id}
+              scheduledAt={booking.scheduled_at}
+              durationHours={booking.duration_hours}
+              hourlyRate={booking.hourly_rate}
+            />
+          )}
+
           {isClient && (
             <div className="mt-6 rounded-[2rem] border-2 border-primary/20 bg-card p-5 shadow-lg shadow-primary/5 sm:p-6">
               <JourneySteps status={booking.status} proName={peerName} />
@@ -379,6 +403,17 @@ function ServicePage() {
               professionalId={booking.professional_id}
               professionalName={peerName}
             />
+          )}
+
+          {completed && (isClient || isProfessional) && (
+            <div className="mt-6">
+              <DimensionRatingForm
+                bookingId={booking.id}
+                raterId={userId}
+                ratedId={isClient ? booking.professional_id : booking.client_id}
+                role={isClient ? "family" : "professional"}
+              />
+            </div>
           )}
 
           {completed && (

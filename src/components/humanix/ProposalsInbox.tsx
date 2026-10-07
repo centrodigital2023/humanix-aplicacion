@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { TrustProfileCard } from "./TrustProfileCard";
+import { PriceBreakdownCard } from "./PriceBreakdownCard";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -288,6 +289,16 @@ export function ProposalsInbox({
                   </Button>
                 ) : null}
                 </div>
+                {p.status === "pending" ? (
+                  <div className="mt-3 max-w-xs">
+                    <PriceBreakdownCard
+                      hourlyRate={p.hourly_rate}
+                      hours={Math.max(1, Math.round((new Date(p.ends_at).getTime() - new Date(p.starts_at).getTime()) / 3_600_000))}
+                      professionalId={p.professional_id}
+                      viewer={role === "professional" ? "professional" : "payer"}
+                    />
+                  </div>
+                ) : null}
                 {expanded === p.id ? (
                   <div className="mt-3">
                     <TrustProfileCard
