@@ -56,9 +56,58 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-async function aiReply(userText: string): Promise<string> {
-  if (!LOVABLE_API_KEY)
-    return "¡Hola! Hemos recibido tu mensaje. Un asesor Humanix te responderá en breve.";
+// Detecta la intención del mensaje para responder con más precisión
+function detectIntent(text: string): "pago" | "agendar" | "profesional" | "paciente" | "soporte" | "general" {
+  const t = text.toLowerCase();
+  if (/pago|cobro|mercado\s?pago|factur|tarjet|precio|plan|suscripci|crédito|cuanto|valor/i.test(t)) return "pago";
+  if (/agendar|cita|turno|visita|cuando|horario|disponibil|reservar/i.test(t)) return "agendar";
+  if (/soy\s+enfermer|soy\s+médico|soy\s+profesional|trabajo como|mi\s+perfil|publicar\s+perfil/i.test(t)) return "profesional";
+  if (/mi\s+paciente|mi\s+familiar|cuidador|enfermero|busco\s+una?|contratar|necesito\s+una?/i.test(t)) return "paciente";
+  if (/problem|error|no\s+funciona|ayuda|soporte|bug|fallo/i.test(t)) return "soporte";
+  return "general";
+}
+
+type UserContext = {
+  role?: string;
+  name?: string;
+  plan?: string;
+  linkedUserId?: string;
+};
+
+async function aiReply(userText: string, ctx?: UserContext): Promise<string> {
+  const intent = detectIntent(userText);
+
+  // Respuestas directas para intenciones claras (sin llamar a la IA)
+  if (intent === "pago") {
+    const planLink = "https://humanix.lat/planes";
+    return `💳 Puedes ver todos los planes y precios en: ${planLink}\n\nAceptamos Mercado Pago (tarjeta, débito, PSE, efectivo). ¿Tienes alguna pregunta sobre los planes?`;
+  }
+  if (intent === "agendar") {
+    return `📅 Para agendar un servicio, entra a tu panel en humanix.lat e indica disponibilidad. Si ya tienes una cita, puedes verla en el tab Agenda. ¿En qué más te ayudo?`;
+  }
+
+  if (!LOVABLE_API_KEY) {
+    return "¡Hola! Hemos recibido tu mensaje. Un asesor Humanix te responderá en breve. También puedes visitar humanix.lat";
+  }
+
+  // Construir contexto del sistema según el rol del usuario
+  let systemContext = "Eres el asistente de WhatsApp de Humanix, plataforma colombiana de talento humano en salud. Responde en español, cálido, profesional y directo. Máximo 3 frases. No uses markdown. Al final, siempre ofrece ayuda adicional.";
+
+  if (ctx?.role === "professional") {
+    systemContext += " El usuario es un profesional de salud registrado en Humanix.";
+    if (ctx.plan && ctx.plan !== "free") systemContext += ` Su plan activo es ${ctx.plan}.`;
+  } else if (ctx?.role === "family" || intent === "paciente") {
+    systemContext += " El usuario busca servicios de salud para un familiar. Sugiérele que explore perfiles verificados en humanix.lat.";
+  } else if (ctx?.role === "institution") {
+    systemContext += " El usuario representa una institución de salud. Si pregunta por planes institucionales, dirígelo a humanix.lat/planes.";
+  }
+
+  if (intent === "soporte") {
+    systemContext += " El usuario tiene un problema técnico. Sé empático, pide detalles específicos y ofrece soporte vía humanix.lat o WhatsApp con un agente humano.";
+  } else if (intent === "profesional") {
+    systemContext += " El usuario quiere publicar su perfil profesional. Explícale que puede crear su perfil en humanix.lat y que la verificación RETHUS es gratis.";
+  }
+
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -69,13 +118,11 @@ async function aiReply(userText: string): Promise<string> {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content:
-              "Eres el asistente WhatsApp de Humanix, plataforma colombiana de talento humano en salud. Responde breve, cálido, profesional, en español. Si preguntan por contratar, sugiere que entren a humanix.lat. Máximo 2 frases.",
-          },
+          { role: "system", content: systemContext },
           { role: "user", content: userText },
         ],
+        max_tokens: 180,
+        temperature: 0.6,
       }),
     });
     if (!res.ok) throw new Error(`AI ${res.status}`);
@@ -86,7 +133,7 @@ async function aiReply(userText: string): Promise<string> {
     );
   } catch (e) {
     console.warn("[wa] AI fallback:", e);
-    return "¡Hola! Recibimos tu mensaje, te respondemos pronto.";
+    return "¡Hola! Recibimos tu mensaje. Un asesor te contactará pronto. También puedes visitar humanix.lat 🚀";
   }
 }
 
@@ -170,6 +217,35 @@ Deno.serve(async (req) => {
               continue;
             }
 
+            // Buscar si este número está vinculado a un usuario registrado (para contexto IA)
+            let userCtx: UserContext | undefined;
+            try {
+              const { data: linkedContact } = await supabase
+                .from("whatsapp_contacts")
+                .select("linked_user_id")
+                .eq("phone", from)
+                .maybeSingle();
+              if (linkedContact?.linked_user_id) {
+                const { data: roleRow2 } = await supabase
+                  .from("user_roles")
+                  .select("role")
+                  .eq("user_id", linkedContact.linked_user_id)
+                  .order("created_at")
+                  .limit(1)
+                  .maybeSingle();
+                const { data: planRow } = await supabase
+                  .from("mp_subscriptions")
+                  .select("plan, status")
+                  .eq("user_id", linkedContact.linked_user_id)
+                  .maybeSingle();
+                userCtx = {
+                  role: roleRow2?.role,
+                  linkedUserId: linkedContact.linked_user_id,
+                  plan: planRow?.status === "active" ? planRow.plan : "free",
+                };
+              }
+            } catch { /* context optional — don't fail the main flow */ }
+
             // Upsert contacto
             const { data: contact } = await supabase
               .from("whatsapp_contacts")
@@ -201,8 +277,8 @@ Deno.serve(async (req) => {
               wa_message_id: msg.id ?? null,
             });
 
-            // Autorespuesta IA
-            const reply = await aiReply(text);
+            // Autorespuesta IA con contexto enriquecido
+            const reply = await aiReply(text, userCtx);
             const waId = await sendWhatsApp(from, reply);
             await supabase.from("whatsapp_messages").insert({
               contact_id: contact.id,

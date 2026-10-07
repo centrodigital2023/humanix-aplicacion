@@ -75,7 +75,25 @@ import { Route as DashboardFamiliaRouteImport } from './routes/dashboard.familia
 import { Route as DashboardEpsRouteImport } from './routes/dashboard.eps'
 import { Route as BBannerIdRouteImport } from './routes/b.$bannerId'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
+import { Route as CreditosRouteImport } from './routes/creditos'
+import { Route as PagoExitoRouteImport } from './routes/pago.exito'
+import { Route as PagoFalloRouteImport } from './routes/pago.fallo'
 
+const CreditosRoute = CreditosRouteImport.update({
+  id: '/creditos',
+  path: '/creditos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagoExitoRoute = PagoExitoRouteImport.update({
+  id: '/pago/exito',
+  path: '/pago/exito',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagoFalloRoute = PagoFalloRouteImport.update({
+  id: '/pago/fallo',
+  path: '/pago/fallo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerificarRoute = VerificarRouteImport.update({
   id: '/verificar',
   path: '/verificar',
@@ -814,6 +832,9 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/superadmin/'
     | '/dashboard/familia/onboarding'
+    | '/creditos'
+    | '/pago/exito'
+    | '/pago/fallo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -865,6 +886,9 @@ export interface RootRouteChildren {
   OfertaOfferIdRoute: typeof OfertaOfferIdRoute
   ProfesionalProIdRoute: typeof ProfesionalProIdRoute
   ServicioBookingIdRoute: typeof ServicioBookingIdRoute
+  CreditosRoute: typeof CreditosRoute
+  PagoExitoRoute: typeof PagoExitoRoute
+  PagoFalloRoute: typeof PagoFalloRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1324,6 +1348,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BBannerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creditos': {
+      id: '/creditos'
+      path: '/creditos'
+      fullPath: '/creditos'
+      preLoaderRoute: typeof CreditosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pago/exito': {
+      id: '/pago/exito'
+      path: '/pago/exito'
+      fullPath: '/pago/exito'
+      preLoaderRoute: typeof PagoExitoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pago/fallo': {
+      id: '/pago/fallo'
+      path: '/pago/fallo'
+      fullPath: '/pago/fallo'
+      preLoaderRoute: typeof PagoFalloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/familia/onboarding': {
       id: '/dashboard/familia/onboarding'
       path: '/onboarding'
@@ -1458,6 +1503,9 @@ const rootRouteChildren: RootRouteChildren = {
   OfertaOfferIdRoute: OfertaOfferIdRoute,
   ProfesionalProIdRoute: ProfesionalProIdRoute,
   ServicioBookingIdRoute: ServicioBookingIdRoute,
+  CreditosRoute: CreditosRoute,
+  PagoExitoRoute: PagoExitoRoute,
+  PagoFalloRoute: PagoFalloRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

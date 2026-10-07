@@ -7,7 +7,7 @@ const MP_BASE = "https://api.mercadopago.com";
 const PRICE_BY_PLAN: Record<string, number> = {
   essential_monthly: 9000,
   pro_monthly: 29000,
-  institution_monthly: 99000,
+  institution_monthly: 299000, // COP 299.000 base — coincide con plans.ts y INSTITUTION_BILLING
 };
 
 Deno.serve(async (req) => {
@@ -47,12 +47,14 @@ Deno.serve(async (req) => {
         ? body.return_to
         : "/dashboard/profesional";
 
-    const title =
-      plan === "essential_monthly"
-        ? "Humanix Esencial · Suscripción mensual"
-        : "Humanix Pro · Suscripción mensual profesional";
+    const PLAN_TITLES: Record<string, string> = {
+      essential_monthly: "Humanix Esencial · Suscripción mensual",
+      pro_monthly: "Humanix Pro · Suscripción mensual",
+      institution_monthly: "Humanix IPS Mejorado · Suscripción mensual",
+    };
+    const title = PLAN_TITLES[plan] ?? "Humanix · Suscripción mensual";
 
-    // Preferencia simple (no recurrente). Para recurrente se usa /preapproval, pero esto cobra mensualmente con redirección.
+    // Preferencia simple (no recurrente). Para recurrente se usa /preapproval.
     const prefBody = {
       items: [
         {
@@ -65,9 +67,9 @@ Deno.serve(async (req) => {
       ],
       payer: { email },
       back_urls: {
-        success: `${origin}${returnPath}?mp=success`,
-        failure: `${origin}${returnPath}?mp=failure`,
-        pending: `${origin}${returnPath}?mp=pending`,
+        success: `${origin}/pago/exito?tipo=plan&plan=${plan}&from=${encodeURIComponent(returnPath)}`,
+        failure: `${origin}/pago/fallo?tipo=plan&plan=${plan}&from=${encodeURIComponent(returnPath)}`,
+        pending: `${origin}/pago/exito?tipo=plan&plan=${plan}&estado=pending&from=${encodeURIComponent(returnPath)}`,
       },
       auto_return: "approved",
       external_reference: userId,

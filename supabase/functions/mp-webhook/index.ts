@@ -9,6 +9,37 @@ const corsHeaders = {
 
 const MP_BASE = "https://api.mercadopago.com";
 
+// Acredita créditos IA via Supabase RPC (service role)
+async function grantCredits(
+  supabaseUrl: string,
+  srk: string,
+  userId: string,
+  packId: string | null,
+  credits: number,
+  priceCop: number,
+  mpPaymentId: string,
+  preferenceId: string | null,
+  validityDays: number,
+): Promise<void> {
+  await fetch(`${supabaseUrl}/rest/v1/rpc/grant_ai_credits`, {
+    method: "POST",
+    headers: {
+      apikey: srk,
+      Authorization: `Bearer ${srk}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      p_user_id: userId,
+      p_pack_id: packId,
+      p_credits: credits,
+      p_price_cop: priceCop,
+      p_mp_payment_id: mpPaymentId,
+      p_mp_preference_id: preferenceId,
+      p_validity_days: validityDays,
+    }),
+  });
+}
+
 // Verifica la firma del webhook de Mercado Pago.
 // Formato de header: `x-signature: ts=TIMESTAMP,v1=HASH`
 // Manifest firmado: `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`
@@ -118,66 +149,79 @@ Deno.serve(async (req) => {
       }),
     });
 
-    // Actualizar suscripción según estado
-    if (status === "approved" && userId) {
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-      await fetch(`${SUPABASE_URL}/rest/v1/mp_subscriptions?user_id=eq.${userId}`, {
-        method: "PATCH",
-        headers: {
-          apikey: SRK,
-          Authorization: `Bearer ${SRK}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "active",
-          current_period_end: periodEnd.toISOString(),
-          next_payment_at: periodEnd.toISOString(),
-          cancel_at_period_end: false,
-        }),
-      });
+    // Determinar tipo de pago: suscripción de plan vs compra de créditos
+    const extRef = String(payment.external_reference ?? "");
+    const isCredits = extRef.startsWith("credits:");
+    const meta = payment.metadata ?? {};
 
-      // Notificación in-app
-      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-        method: "POST",
-        headers: {
-          apikey: SRK,
-          Authorization: `Bearer ${SRK}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          type: "payment_approved",
-          title: "✅ Suscripción Humanix activa",
-          body: "Tu suscripción mensual fue aprobada. ¡Ya puedes usar todas las funciones premium!",
-          link: "/dashboard",
-        }),
-      });
+    if (status === "approved" && userId) {
+      if (isCredits || meta.type === "credits") {
+        // ── Compra de créditos IA ──────────────────────────────────────
+        const packId = meta.pack_id ?? null;
+        const credits = Number(meta.credits ?? 0);
+        const validityDays = Number(meta.validity_days ?? 90);
+        const priceCop = Math.round(Number(payment.transaction_amount ?? 0));
+        const prefId = payment.preference_id ?? null;
+
+        if (credits > 0) {
+          await grantCredits(SUPABASE_URL, SRK, userId, packId, credits, priceCop, String(payment.id), prefId, validityDays);
+        }
+
+        await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+          method: "POST",
+          headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: userId,
+            type: "credits_purchased",
+            title: "✅ Créditos IA acreditados",
+            body: `Se acreditaron ${credits} créditos IA en tu cuenta. ¡Empieza a usarlos!`,
+            link: "/dashboard",
+          }),
+        });
+      } else {
+        // ── Suscripción de plan ────────────────────────────────────────
+        const periodEnd = new Date();
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        await fetch(`${SUPABASE_URL}/rest/v1/mp_subscriptions?user_id=eq.${userId}`, {
+          method: "PATCH",
+          headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "active",
+            current_period_end: periodEnd.toISOString(),
+            next_payment_at: periodEnd.toISOString(),
+            cancel_at_period_end: false,
+          }),
+        });
+        await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+          method: "POST",
+          headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: userId,
+            type: "payment_approved",
+            title: "✅ Suscripción Humanix activa",
+            body: "Tu suscripción mensual fue aprobada. ¡Ya puedes usar todas las funciones premium!",
+            link: "/dashboard",
+          }),
+        });
+      }
     } else if ((status === "rejected" || status === "cancelled") && userId) {
-      await fetch(`${SUPABASE_URL}/rest/v1/mp_subscriptions?user_id=eq.${userId}`, {
-        method: "PATCH",
-        headers: {
-          apikey: SRK,
-          Authorization: `Bearer ${SRK}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
+      if (!isCredits && meta.type !== "credits") {
+        await fetch(`${SUPABASE_URL}/rest/v1/mp_subscriptions?user_id=eq.${userId}`, {
+          method: "PATCH",
+          headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+      }
       await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: "POST",
-        headers: {
-          apikey: SRK,
-          Authorization: `Bearer ${SRK}`,
-          "Content-Type": "application/json",
-        },
+        headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: userId,
           type: `payment_${status}`,
-          title: status === "rejected" ? "❌ Pago rechazado" : "Suscripción cancelada",
-          body:
-            status === "rejected"
-              ? "No pudimos procesar tu pago con Mercado Pago. Puedes reintentar desde /planes."
-              : "Tu suscripción fue cancelada. Puedes reactivarla cuando quieras.",
+          title: status === "rejected" ? "❌ Pago rechazado" : "Pago cancelado",
+          body: status === "rejected"
+            ? "No pudimos procesar tu pago con Mercado Pago. Puedes reintentar desde /planes."
+            : "Tu pago fue cancelado.",
           link: "/planes",
         }),
       });
