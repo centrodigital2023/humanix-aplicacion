@@ -62,6 +62,7 @@ import { ReferralCard } from "@/components/humanix/ReferralCard";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { AgendaViewer } from "@/components/humanix/AgendaViewer";
+import { ProAgendaModule } from "@/components/humanix/ProAgendaModule";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -1186,60 +1187,15 @@ function ProDashboard() {
         {tab === "agenda" && (
           <div className="space-y-4">
 
-            {/* Upcoming bookings */}
-            <div className="rounded-2xl border border-border bg-card/95 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-biosensor" />
-                  <p className="text-sm font-semibold">Próximos turnos</p>
-                </div>
-                <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", bookings.length > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")}>
-                  {bookings.length} agendado{bookings.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-              {bookings.length === 0 ? (
-                <div className="text-center py-6 space-y-2">
-                  <CalendarDays className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-                  <p className="text-sm text-muted-foreground">Sin turnos confirmados próximos</p>
-                  <p className="text-xs text-muted-foreground">Aplica a ofertas o espera que una familia te contacte.</p>
-                  <Button size="sm" variant="glass" onClick={() => setTab("ofertas")}>
-                    Ver ofertas disponibles
-                  </Button>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {bookings.map((b) => {
-                    const dt = b.scheduled_at ? new Date(b.scheduled_at) : null;
-                    return (
-                      <li key={b.id} className="flex items-center gap-3 rounded-xl bg-muted/30 px-3 py-3">
-                        {b.client_avatar ? (
-                          <img src={b.client_avatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
-                        ) : (
-                          <div className="h-9 w-9 rounded-full bg-biosensor/10 flex items-center justify-center shrink-0">
-                            <User className="h-4 w-4 text-biosensor" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">{b.offer_title ?? "Servicio"}</p>
-                          <p className="text-xs text-muted-foreground truncate">{b.client_name ?? "Cliente"}{b.city ? ` · ${b.city}` : ""}</p>
-                          {dt && <p className="text-xs text-biosensor font-medium mt-0.5">{dt.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</p>}
-                        </div>
-                        <span className={cn("shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium", b.status === "confirmed" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600")}>
-                          {b.status === "confirmed" ? "Confirmado" : "Programado"}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            {/* Smart accordion agenda */}
+            {userId && <ProAgendaModule userId={userId} />}
 
-            {/* AgendaViewer — how families/institutions see your availability */}
+            {/* Vista semanal de disponibilidad pública */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <div className="mb-4">
-                  <p className="text-sm font-semibold">Vista semanal de disponibilidad</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Así ve tu horario una familia o institución al buscarte. Haz clic en un bloque para marcarlo libre o ocupado.</p>
+                  <p className="text-sm font-semibold">Vista semanal — como te ven los clientes</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Así ve tu horario una familia o institución al buscarte. Haz clic en un bloque para marcarlo libre u ocupado.</p>
                 </div>
                 <AgendaViewer
                   targetUserId={userId}
@@ -1251,12 +1207,12 @@ function ProDashboard() {
               </div>
             )}
 
-            {/* Availability calendar (slot manager) */}
+            {/* Gestor de disponibilidad */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <div className="mb-4">
-                  <p className="text-sm font-semibold">Tu agenda de disponibilidad</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Marca las horas en que estás disponible. Las familias e instituciones lo verán al buscarte.</p>
+                  <p className="text-sm font-semibold">Gestionar disponibilidad</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Crea bloques de horas disponibles para que puedan reservarte.</p>
                 </div>
                 <AvailabilityCalendar userId={userId} />
               </div>
