@@ -159,10 +159,9 @@ export function Footer() {
             </p>
             <span className="text-muted-foreground/40">·</span>
             <Link
-              to="/auth"
-              search={{ staff: "1" } as never}
+              to="/admin"
               className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 hover:text-foreground transition-colors"
-              title="Acceso staff"
+              title="Acceso administrador"
             >
               Admin
             </Link>
