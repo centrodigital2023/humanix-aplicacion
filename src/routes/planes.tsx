@@ -360,10 +360,8 @@ function PlansPage() {
       return;
     }
     if (cta.action.kind === "sales") {
-      const msg = encodeURIComponent(
-        "Hola Humanix 👋, quiero información del Plan Institución (IPS).",
-      );
-      window.open(`https://wa.me/573147444715?text=${msg}`, "_blank", "noopener,noreferrer");
+      // Institución paga en la web igual que los demás planes
+      window.location.href = user ? "/dashboard/institucion" : "/auth?redirect=/planes";
       return;
     }
     if (cta.action.kind === "login") {

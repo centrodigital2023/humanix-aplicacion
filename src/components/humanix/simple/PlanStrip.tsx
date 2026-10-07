@@ -3,7 +3,7 @@
 // Precio visible antes de pagar, sin casillas preseleccionadas.
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Check, Loader2, MessageCircle } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { pathForRole, type AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
@@ -177,28 +177,20 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
           );
         })}
       </ul>
-      {error && (() => {
-        const def = PLAN_CATALOG[error];
-        const waText = encodeURIComponent(
-          `Hola Humanix 👋, quiero activar el plan ${def.label} (${def.priceLabel}). Ayúdame a pagar.`,
-        );
-        return (
-          <div role="alert" className="mt-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="flex-1">
-              <p className="font-semibold text-amber-700 dark:text-amber-400">El pago en línea no está disponible ahora</p>
-              <p className="text-sm text-muted-foreground mt-0.5">Activa tu plan por WhatsApp — te atendemos al instante.</p>
-            </div>
-            <a
-              href={`https://wa.me/573147444715?text=${waText}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2.5 text-sm transition shrink-0"
-            >
-              <MessageCircle className="h-4 w-4" /> Activar por WhatsApp
-            </a>
+      {error && (
+        <div role="alert" className="mt-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex-1">
+            <p className="font-semibold text-rose-700 dark:text-rose-400">No se pudo procesar el pago</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Inténtalo de nuevo desde la página de planes.</p>
           </div>
-        );
-      })()}
+          <a
+            href="/planes"
+            className="inline-flex items-center gap-2 rounded-xl bg-biosensor hover:bg-biosensor/90 text-white font-semibold px-4 py-2.5 text-sm transition shrink-0"
+          >
+            Ver planes
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -42,20 +42,23 @@ export function MercadoPagoSubscription({
   }, [plan.plan]);
 
   const subscribe = async (key: PlanKey) => {
-    if (key === "institution_monthly") {
-      const msg = encodeURIComponent(
-        "Hola Humanix 👋, quiero información del Plan Institución (IPS).",
-      );
-      window.open(`https://wa.me/573147444715?text=${msg}`, "_blank", "noopener,noreferrer");
-      return;
-    }
     setBusy(key);
     try {
       const { data: sess } = await supabase.auth.getSession();
       const email = sess.session?.user.email;
       const def = PLAN_CATALOG[key];
       const { data, error } = await supabase.functions.invoke("mp-create-subscription", {
-        body: { plan: key, amount: def.amountCOP, email },
+        body: {
+          plan: key,
+          amount: def.amountCOP,
+          email,
+          return_to:
+            key === "institution_monthly"
+              ? "/dashboard/institucion"
+              : key === "essential_monthly"
+              ? "/dashboard/familia"
+              : "/dashboard/profesional",
+        },
       });
       if (error) throw error;
       const url =
@@ -64,24 +67,9 @@ export function MercadoPagoSubscription({
       if (!url) throw new Error("No se obtuvo URL de pago");
       window.location.href = url;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
-      if (msg.includes("Edge Function") || msg.includes("Failed to send")) {
-        const def = PLAN_CATALOG[key];
-        const waText = encodeURIComponent(
-          `Hola Humanix 👋, quiero activar el plan ${def.label} (${def.priceLabel}). Mi correo: ${(await supabase.auth.getSession()).data.session?.user.email ?? ""}`,
-        );
-        toast("Activa tu plan por WhatsApp", {
-          description: "El pago en línea está en mantenimiento. Te atendemos al instante.",
-          action: {
-            label: "Abrir WhatsApp",
-            onClick: () =>
-              window.open(`https://wa.me/573147444715?text=${waText}`, "_blank", "noopener"),
-          },
-          duration: 10000,
-        });
-      } else {
-        toast.error(msg || "Error con Mercado Pago");
-      }
+      toast.error(
+        e instanceof Error ? e.message : "Error al procesar el pago. Inténtalo de nuevo.",
+      );
     } finally {
       setBusy(null);
     }
@@ -219,14 +207,12 @@ export function MercadoPagoSubscription({
           ) : (
             <CreditCard className="h-4 w-4 mr-1.5" />
           )}
-          {selected === "institution_monthly"
-            ? "Hablar con ventas"
-            : plan.plan === "free"
-              ? `Activar ${PLAN_CATALOG[selected].label}`
-              : selected === plan.plan
-                ? "Renovar ahora"
-                : `Cambiar a ${PLAN_CATALOG[selected].label}`}
-          {selected !== "institution_monthly" && <ExternalLink className="h-3 w-3 ml-1.5" />}
+          {plan.plan === "free"
+            ? `Activar ${PLAN_CATALOG[selected].label}`
+            : selected === plan.plan
+              ? "Renovar ahora"
+              : `Cambiar a ${PLAN_CATALOG[selected].label}`}
+          <ExternalLink className="h-3 w-3 ml-1.5" />
         </Button>
 
         {isActive && !plan.cancelAtPeriodEnd && (

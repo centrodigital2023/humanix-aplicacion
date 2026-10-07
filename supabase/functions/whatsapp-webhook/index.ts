@@ -79,8 +79,7 @@ async function aiReply(userText: string, ctx?: UserContext): Promise<string> {
 
   // Respuestas directas para intenciones claras (sin llamar a la IA)
   if (intent === "pago") {
-    const planLink = "https://humanix.lat/planes";
-    return `💳 Puedes ver todos los planes y precios en: ${planLink}\n\nAceptamos Mercado Pago (tarjeta, débito, PSE, efectivo). ¿Tienes alguna pregunta sobre los planes?`;
+    return `Hola 👋 Para ver planes, precios y realizar tu pago entra a: https://humanix.lat/planes\n\nTodos los pagos se hacen directamente en la página de forma segura. ¿Te puedo ayudar con algo más?`;
   }
   if (intent === "agendar") {
     return `📅 Para agendar un servicio, entra a tu panel en humanix.lat e indica disponibilidad. Si ya tienes una cita, puedes verla en el tab Agenda. ¿En qué más te ayudo?`;
