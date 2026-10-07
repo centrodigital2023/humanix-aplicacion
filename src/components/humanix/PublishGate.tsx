@@ -42,6 +42,8 @@ export function PublishGate({
     setValidating(true);
     setValidation(null);
     try {
+      // Save current form state first so the validator reads fresh DB data
+      await onSaved();
       // Cargar documentos y referencias
       const client = supabase as unknown as {
         from: (t: string) => {

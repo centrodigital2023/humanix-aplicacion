@@ -481,8 +481,8 @@ function ProDashboard() {
     const { error } = await supabase.from("applications").insert({ job_offer_id: offerId, professional_id: userId });
     if (error) { toast.error(error.message); return; }
     const { error: rpcErr } = await supabase.rpc("set_offer_reserved", { _offer_id: offerId, _professional_id: userId });
-    if (rpcErr) console.warn("[reserve]", rpcErr.message);
-    toast.success("✓ Aplicación enviada · oferta reservada 15 días");
+    if (rpcErr) toast.error(`No se pudo reservar la oferta: ${rpcErr.message}`);
+    else toast.success("✓ Aplicación enviada · oferta reservada 15 días");
     const [{ data: appsData }, { data: offersData }] = await Promise.all([
       supabase.from("applications").select("id, job_offer_id, status, created_at").eq("professional_id", userId),
       supabase.from("job_offers").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(20),
@@ -784,7 +784,7 @@ function ProDashboard() {
               <QuickAction icon={<FileText className="h-5 w-5 text-fuchsia-neural" />} label="Subir documentos" sub={`${Object.keys(docSummary).length} subidos`} onClick={() => setTab("documentos")} />
               <QuickAction icon={<CalendarDays className="h-5 w-5 text-biosensor" />} label="Mi agenda" sub="Disponibilidad" onClick={() => setTab("agenda")} />
               <QuickAction icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />} label="Re-evaluar Trust" sub={`Score: ${trust}/100`} onClick={validateWithAI} loading={validating} />
-              <QuickAction icon={<HeartPulse className="h-5 w-5 text-rose-500" />} label="Monitoreo de pacientes" sub="Signos vitales y alertas en vivo" onClick={() => { const el = document.getElementById("clinical-monitor-section"); el?.scrollIntoView({ behavior: "smooth" }); }} />
+              <QuickAction icon={<HeartPulse className="h-5 w-5 text-rose-500" />} label="Monitoreo de pacientes" sub="Signos vitales y alertas en vivo" onClick={() => { setTab("inicio"); setTimeout(() => { const el = document.getElementById("clinical-monitor-section"); el?.scrollIntoView({ behavior: "smooth" }); }, 100); }} />
             </div>
 
             {/* Monitoreo Clínico propio del profesional */}

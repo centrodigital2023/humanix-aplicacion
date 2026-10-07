@@ -344,10 +344,10 @@ function ProfessionalPublicPage() {
                 <p className="text-sm text-muted-foreground">Tarifa a convenir</p>
               )}
               <div className="mt-4">
-                {pro.hourly_rate && !reserved ? (
+                {!reserved && (pro.hourly_rate || pro.shift_rate || pro.monthly_rate) ? (
                   <BookNowButton
                     professionalId={pro.user_id}
-                    hourlyRate={pro.hourly_rate}
+                    hourlyRate={pro.hourly_rate ?? pro.shift_rate ?? pro.monthly_rate ?? 0}
                     defaultLat={pro.lat ?? null}
                     defaultLng={pro.lng ?? null}
                     variant="copper"
@@ -382,9 +382,9 @@ function ProfessionalPublicPage() {
               targetRole="professional"
               currentUserId={user?.id ?? null}
               currentRole={
-                user?.roles?.includes("family")
+                user?.roles?.includes("family") || user?.primaryRole === "family"
                   ? "family"
-                  : user?.roles?.includes("professional")
+                  : user?.roles?.includes("professional") || user?.primaryRole === "professional"
                     ? "professional"
                     : null
               }
@@ -446,7 +446,10 @@ function ProfessionalPublicPage() {
                           {(w.role as string) ?? (w.title as string) ?? "Cargo"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {(w.company as string) ?? "Institución"}
+                          {(w.employer as string) ?? (w.company as string) ?? "Institución"}
+                          {w.city ? ` · ${w.city as string}` : ""}
+                          {w.start ? ` · ${w.start as string}` : ""}
+                          {w.end ? ` – ${w.end as string}` : ""}
                           {w.years
                             ? ` · ${w.years} años`
                             : w.period

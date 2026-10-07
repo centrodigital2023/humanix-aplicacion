@@ -203,6 +203,7 @@ export function AvailabilityCalendar({
       return (
         start.getDate() === day.getDate() &&
         start.getMonth() === day.getMonth() &&
+        start.getFullYear() === day.getFullYear() &&
         start.getHours() === hour
       );
     });
