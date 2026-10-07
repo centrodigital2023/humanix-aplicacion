@@ -2,6 +2,8 @@
 // GET = verificación Meta. POST = mensaje entrante + autorespuesta IA.
 // verify_jwt = false: Meta llama sin token de Supabase.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { guardOutgoing } from "../_shared/paymentGuard.ts";
+import { logExecution } from "../_shared/execLog.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -448,25 +450,27 @@ async function processMessage(
     systemPrompt += ` El usuario quiere publicar su perfil. Indícale que lo puede crear en ${SITE_URL}.`;
   }
 
-  return { reply: guardPayments(await callAI(text, systemPrompt)), newState: {} };
-}
-
-// Los pagos se hacen solo en la página web. Si la IA llegara a mencionar un medio de pago
-// fuera de la web, se reemplaza la respuesta por la redirección segura.
-const PAYMENT_LEAK =
-  /mercadopago|mpago\.la|init_point|checkout|transfiere|transferencia|consigna|n[uú]mero de cuenta|cuenta de ahorros|cuenta corriente|nequi\s*[:=]?\s*\d|daviplata\s*[:=]?\s*\d|llave\s+bre-?b|paga\s+(aqu[ií]|por\s+whatsapp)/i;
-
-function guardPayments(reply: string): string {
-  if (PAYMENT_LEAK.test(reply)) {
-    return `Los pagos se realizan únicamente en la página: ${SITE_URL}/planes. ¿En qué más te ayudo?`;
-  }
-  return reply;
+  return { reply: await callAI(text, systemPrompt), newState: {} };
 }
 
 // ─── SEND WHATSAPP ────────────────────────────────────────────────────────────
 
-async function sendWhatsApp(to: string, text: string): Promise<string | null> {
+const SAFE_PAYMENT_REPLY =
+  `Los pagos se realizan únicamente en la página: ${SITE_URL}/planes. Esta conversación es informativa y no genera ningún cobro.`;
+const ALLOWED_HOSTS = ["humanix.lat", "wa.me"];
+
+async function sendWhatsApp(to: string, rawText: string): Promise<string | null> {
   if (!ACCESS_TOKEN || !PHONE_ID) return null;
+  // Última defensa: ningún mensaje sale con instrucciones o enlaces de pago.
+  const guard = guardOutgoing(rawText, SAFE_PAYMENT_REPLY, ALLOWED_HOSTS);
+  const text = guard.text;
+  if (guard.blocked) {
+    console.warn("[wa send] mensaje bloqueado:", guard.reason);
+    await logExecution({
+      functionName: "whatsapp-webhook", triggerType: "webhook", status: "blocked",
+      startedAt: Date.now(), errorCode: guard.reason,
+    });
+  }
   try {
     const res = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
       method: "POST",

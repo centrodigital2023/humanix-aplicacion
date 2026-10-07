@@ -2,6 +2,7 @@
 // (heurísticas + IA) y crea fraud_flags si encuentra inconsistencias.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
+import { logExecution } from "../_shared/execLog.ts";
 
 const TOOL = {
   type: "function",
@@ -38,6 +39,8 @@ Deno.serve(async (req) => {
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
+  const startedAt = Date.now();
+  let executionId: string | undefined;
   try {
     const { user_id } = await req.json().catch(() => ({}));
     const target = user_id || auth.userId;
@@ -55,6 +58,23 @@ Deno.serve(async (req) => {
     const isStaff = (roles ?? []).some((r) =>
       ["superadmin", "hr_staff", "evaluator"].includes(r.role),
     );
+
+    executionId = target;
+
+    // Límite de frecuencia: un análisis por usuario cada 10 minutos.
+    const since = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { count: recent } = await admin
+      .from("function_execution_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("function_name", "fraud-detector")
+      .eq("execution_id", target)
+      .eq("status", "success")
+      .gte("created_at", since);
+    if ((recent ?? 0) > 0) {
+      return new Response(JSON.stringify({ skipped: true, reason: "recent_analysis" }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
 
     // Si el target no es el caller, exigir staff
     if (target !== auth.userId && !isStaff) {
@@ -198,10 +218,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    await admin.from("ai_credits_ledger").insert({
-      user_id: auth.userId,
-      feature: "fraud-detector",
-      credits_used: 2,
+    await logExecution({
+      functionName: "fraud-detector", triggerType: "frontend", status: "success",
+      startedAt, executionId, metadata: { flags: allFlags.length },
     });
 
     return new Response(JSON.stringify({ flags: allFlags, summary: parsed.summary }), {
@@ -209,6 +228,10 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("fraud-detector error:", e);
+    await logExecution({
+      functionName: "fraud-detector", triggerType: "frontend", status: "error",
+      startedAt, executionId, errorCode: "internal",
+    });
     return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },

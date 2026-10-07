@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { formatRate } from "@/lib/campaignMetrics";
 
 type Contact = {
   id: string;
@@ -403,13 +404,13 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
               </Card>
               <Card className="p-3 text-center bg-amber-50">
                 <p className="text-2xl font-bold text-amber-700">
-                  {stats.avg_open_rate}%
+                  {stats.avg_open_rate > 0 ? `${stats.avg_open_rate}%` : "Datos insuficientes"}
                 </p>
                 <p className="text-xs text-amber-600">Open rate</p>
               </Card>
               <Card className="p-3 text-center bg-cyan-50">
                 <p className="text-2xl font-bold text-cyan-700">
-                  {stats.avg_conversion_rate}%
+                  {stats.avg_conversion_rate > 0 ? `${stats.avg_conversion_rate}%` : "Datos insuficientes"}
                 </p>
                 <p className="text-xs text-cyan-600">Conversión</p>
               </Card>
@@ -571,19 +572,19 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                       <div>
                         <p className="text-muted-foreground">Aperturas</p>
                         <p className="font-semibold">
-                          {campaign.open_rate != null ? `${campaign.open_rate.toFixed(1)}%` : "—"}
+                          {formatRate(campaign.open_rate)}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Clics</p>
                         <p className="font-semibold">
-                          {campaign.click_rate != null ? `${campaign.click_rate.toFixed(1)}%` : "—"}
+                          {formatRate(campaign.click_rate)}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Conversión</p>
                         <p className="font-semibold">
-                          {campaign.conversion_rate != null ? `${campaign.conversion_rate.toFixed(1)}%` : "—"}
+                          {formatRate(campaign.conversion_rate)}
                         </p>
                       </div>
                     </div>

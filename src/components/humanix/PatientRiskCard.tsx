@@ -266,9 +266,9 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
           <ShieldAlert className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <p className="text-sm font-semibold">Sin score de riesgo</p>
+          <p className="text-sm font-semibold">Sin alertas calculadas</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Genera el análisis de riesgo clínico con IA usando los datos de vitales del paciente.
+            Calcula alertas con reglas sobre las mediciones de los últimos 7 días. Es una ayuda de seguimiento, no un diagnóstico.
           </p>
         </div>
         <Button size="sm" onClick={generateRiskScore} disabled={generating} className="gap-1">
@@ -277,7 +277,7 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
           ) : (
             <Sparkles className="h-3.5 w-3.5" />
           )}
-          Generar análisis IA
+          Calcular alertas
         </Button>
       </Card>
     );
@@ -295,7 +295,7 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-              Score de Riesgo Clínico
+              Alertas por signos vitales
               {patientName && ` · ${patientName}`}
             </p>
             <div className="flex items-center gap-2 mt-1">

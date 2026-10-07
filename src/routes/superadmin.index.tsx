@@ -87,6 +87,9 @@ function SuperadminPage() {
   const [noteBody, setNoteBody] = useState("");
   const [sendingNote, setSendingNote] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [fnHealth, setFnHealth] = useState<
+    Array<{ name: string; ok: number; err: number; blocked: number; last: string | null }>
+  >([]);
   const [newPw, setNewPw] = useState("");
   const [newPw2, setNewPw2] = useState("");
   const [savingPw, setSavingPw] = useState(false);
@@ -153,6 +156,25 @@ function SuperadminPage() {
     setFraudCount(fraud ?? 0);
   }, []);
 
+  const loadFnHealth = useCallback(async () => {
+    const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+    const { data } = await supabase
+      .from("function_execution_logs" as never)
+      .select("function_name,status,created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    const map = new Map<string, { name: string; ok: number; err: number; blocked: number; last: string | null }>();
+    for (const r of (data ?? []) as Array<{ function_name: string; status: string; created_at: string }>) {
+      const e = map.get(r.function_name) ?? { name: r.function_name, ok: 0, err: 0, blocked: 0, last: r.created_at };
+      if (r.status === "success") e.ok++;
+      else if (r.status === "error") e.err++;
+      else if (r.status === "blocked" || r.status === "rejected") e.blocked++;
+      map.set(r.function_name, e);
+    }
+    setFnHealth([...map.values()]);
+  }, []);
+
   const refresh = async () => {
     setRefreshing(true);
     await Promise.all([loadData(), loadUsers()]);
@@ -164,6 +186,7 @@ function SuperadminPage() {
     if (!user) return;
     void loadData();
     void loadUsers();
+    void loadFnHealth();
     const ch = supabase.channel("superadmin-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "emergency_incidents" }, () => void loadData())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "service_ratings" }, () => void loadData())
@@ -173,7 +196,7 @@ function SuperadminPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => void loadUsers())
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
-  }, [user, loadData, loadUsers]);
+  }, [user, loadData, loadUsers, loadFnHealth]);
 
   const resolveEmergency = async (id: string) => {
     await supabase.from("emergency_incidents").update({ resolved: true, resolved_at: new Date().toISOString() }).eq("id", id);
@@ -645,6 +668,28 @@ function SuperadminPage() {
                   {savingPw ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
                 </Button>
               </form>
+            </PremiumCard>
+
+            <PremiumCard title="Salud de funciones backend · 24 h" icon={Activity} subtitle="Ejecuciones registradas de mp-webhook, whatsapp-webhook, fraud-detector y generate-contract">
+              {fnHealth.length === 0 ? (
+                <EmptyState icon={Activity} text="Sin ejecuciones registradas" sub="Aparecerán cuando las funciones se ejecuten." color="violet" />
+              ) : (
+                <div className="divide-y divide-white/[0.05]">
+                  {fnHealth.map((f) => (
+                    <div key={f.name} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0 text-xs">
+                      <span className="font-mono text-white/70">{f.name}</span>
+                      <span className="flex items-center gap-3">
+                        <span className="text-emerald-400">{f.ok} ok</span>
+                        <span className={f.err ? "text-red-400" : "text-white/30"}>{f.err} error</span>
+                        <span className={f.blocked ? "text-amber-400" : "text-white/30"}>{f.blocked} bloqueados</span>
+                        <span className="text-white/30 hidden sm:inline">
+                          {f.last ? new Date(f.last).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </PremiumCard>
 
             {/* Docs y revisión de profesionales */}

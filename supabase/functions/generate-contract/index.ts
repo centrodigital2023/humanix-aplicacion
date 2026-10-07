@@ -2,6 +2,7 @@
 // El PDF se genera como HTML+texto y se almacena en Supabase Storage.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
+import { logExecution } from "../_shared/execLog.ts";
 
 const WA_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN") ?? "";
 const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "";
@@ -105,8 +106,11 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  const startedAt = Date.now();
+  let bookingRef: string | undefined;
   try {
     const { booking_id } = await req.json();
+    bookingRef = booking_id;
     if (!booking_id) {
       return new Response(JSON.stringify({ error: "booking_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -218,12 +222,20 @@ Deno.serve(async (req) => {
       ),
     ]);
 
+    await logExecution({
+      functionName: "generate-contract", triggerType: "frontend", status: "success",
+      startedAt, executionId: bookingRef,
+    });
     return new Response(
       JSON.stringify({ contract_id: contract.id, pdf_url: publicUrl, contract_generated: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("[generate-contract]", e);
+    await logExecution({
+      functionName: "generate-contract", triggerType: "frontend", status: "error",
+      startedAt, executionId: bookingRef, errorCode: "internal",
+    });
     return new Response(JSON.stringify({ error: "Error interno" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
