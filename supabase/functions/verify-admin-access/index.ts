@@ -23,8 +23,15 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const { code, user_id } = await req.json() as { code: string; user_id: string };
-    if (!code || !user_id) return json({ ok: false, error: "Faltan campos" }, 400);
+    const { code } = await req.json() as { code: string };
+    if (!code) return json({ ok: false, error: "Faltan campos" }, 400);
+
+    // La identidad sale del JWT, nunca del cuerpo de la petición.
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data: authData } = await admin.auth.getUser(token);
+    const caller = authData?.user;
+    if (!caller) return json({ ok: false, error: "Sesión no válida." }, 401);
+    const user_id = caller.id;
 
     const expected = Deno.env.get("ADMIN_ACCESS_CODE");
     if (!expected) return json({ ok: false, error: "Código no configurado en el servidor" }, 503);
@@ -54,6 +61,15 @@ Deno.serve(async (req) => {
 
     // Éxito: limpiar intentos del usuario
     await admin.from("admin_code_attempts").delete().eq("user_id", user_id);
+
+    // La cuenta propietaria recibe el rol superadmin aquí (idempotente), sin migraciones manuales.
+    const ownerEmail = (Deno.env.get("ADMIN_OWNER_EMAIL") ?? "josefabian1212@gmail.com").toLowerCase();
+    if ((caller.email ?? "").toLowerCase() === ownerEmail) {
+      await admin.from("user_roles").upsert(
+        { user_id, role: "superadmin" },
+        { onConflict: "user_id,role", ignoreDuplicates: true },
+      );
+    }
 
     // Confirmar que el usuario tiene rol superadmin en la base de datos
     const { data: roleRow } = await admin

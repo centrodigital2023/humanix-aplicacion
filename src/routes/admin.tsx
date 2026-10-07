@@ -59,18 +59,6 @@ function AdminLogin() {
         setError("Correo o contraseña incorrectos.");
         return;
       }
-      // Verificar que tenga rol superadmin antes de mostrar el campo de código.
-      const { data: roleRow } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.session.user.id)
-        .eq("role", "superadmin")
-        .maybeSingle();
-      if (!roleRow) {
-        await supabase.auth.signOut();
-        setError("Esta cuenta no tiene permisos de administrador.");
-        return;
-      }
       setUserId(data.session.user.id);
       setPhase("code");
       setTimeout(() => codeRefs.current[0]?.focus(), 120);
@@ -90,10 +78,16 @@ function AdminLogin() {
     try {
       const { data, error: fnErr } = await supabase.functions.invoke(
         "verify-admin-access",
-        { body: { code, user_id: userId } },
+        { body: { code } },
       );
       if (fnErr || !data?.ok) {
         setError(data?.error ?? "Código incorrecto.");
+        if (/permisos|Sesión/.test(data?.error ?? "")) {
+          await supabase.auth.signOut();
+          setPhase("credentials");
+          setUserId(null);
+          return;
+        }
         if (typeof data?.remaining_attempts === "number") setRemaining(data.remaining_attempts);
         setCodeDigits(["", "", "", "", "", ""]);
         setTimeout(() => codeRefs.current[0]?.focus(), 80);
