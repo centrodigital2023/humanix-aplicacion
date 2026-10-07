@@ -269,7 +269,7 @@ function ProDashboard() {
           supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", clientIds),
           offerIds.length ? supabase.from("job_offers").select("id, title, city").in("id", offerIds) : Promise.resolve({ data: [] }),
         ]);
-        const clientMap = new Map((clients.data ?? []).map((c: { user_id: string; full_name: string; avatar_url: string }) => [c.user_id, c]));
+        const clientMap = new Map((clients.data ?? []).map((c: { user_id: string; full_name: string | null; avatar_url: string | null }) => [c.user_id, c]));
         const offerMap2 = new Map((bkOffers.data ?? []).map((o: { id: string; title: string; city: string }) => [o.id, o]));
         setBookings((bks.data as { id: string; scheduled_at: string | null; status: "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled"; notes: string | null; client_id: string; job_offer_id: string | null }[]).map((b) => {
           const c = clientMap.get(b.client_id) as { full_name: string; avatar_url: string } | undefined;
