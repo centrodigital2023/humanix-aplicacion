@@ -19,6 +19,13 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: "/planes", priority: 0.85, changefreq: "weekly" },
   { path: "/calculadora", priority: 0.9, changefreq: "monthly" },
   { path: "/verificar", priority: 0.92, changefreq: "daily" },
+  // Core platform pages
+  { path: "/confianza", priority: 0.88, changefreq: "weekly" },
+  { path: "/talento-humano", priority: 0.85, changefreq: "weekly" },
+  { path: "/cosmos", priority: 0.8, changefreq: "weekly" },
+  { path: "/creditos", priority: 0.82, changefreq: "weekly" },
+  { path: "/eps-ips", priority: 0.88, changefreq: "weekly" },
+  { path: "/tecnologia", priority: 0.8, changefreq: "weekly" },
   // Specialty landings
   { path: "/enfermeria-domiciliaria", priority: 0.9, changefreq: "weekly" },
   { path: "/cuidado-adulto-mayor", priority: 0.9, changefreq: "weekly" },
@@ -27,7 +34,7 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: "/cuidado-paliativo", priority: 0.82, changefreq: "weekly" },
   { path: "/cuidador-domicilio", priority: 0.85, changefreq: "weekly" },
   { path: "/auxiliar-enfermeria", priority: 0.82, changefreq: "weekly" },
-  // City landings
+  // City landings (existing individual routes)
   { path: "/enfermeria-bogota", priority: 0.9, changefreq: "weekly" },
   { path: "/enfermeria-medellin", priority: 0.88, changefreq: "weekly" },
   { path: "/enfermeria-cali", priority: 0.86, changefreq: "weekly" },
@@ -43,8 +50,7 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: "/recursos/postoperatorio-en-casa", priority: 0.78, changefreq: "monthly" },
   { path: "/recursos/signos-alarma-paciente-cronico", priority: 0.78, changefreq: "monthly" },
   { path: "/recursos/contratar-cuidador-confianza", priority: 0.78, changefreq: "monthly" },
-  { path: "/eps-ips", priority: 0.88, changefreq: "weekly" },
-  { path: "/tecnologia", priority: 0.8, changefreq: "weekly" },
+  // Corporate / legal
   { path: "/sobre", priority: 0.8, changefreq: "weekly" },
   { path: "/carreras", priority: 0.78, changefreq: "weekly" },
   { path: "/contacto", priority: 0.8, changefreq: "weekly" },
@@ -54,6 +60,50 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: "/habeas-data", priority: 0.62, changefreq: "monthly" },
   { path: "/cumplimiento", priority: 0.62, changefreq: "monthly" },
 ];
+
+// City × specialty combinations handled by the $-catch-all route.
+// 18 cities × 8 specialties = 144 SEO landing pages.
+const SEO_CITIES = [
+  "bogota", "medellin", "cali", "barranquilla", "cartagena",
+  "bucaramanga", "pereira", "manizales", "cucuta", "ibague",
+  "villavicencio", "santa-marta", "monteria", "pasto",
+  "armenia", "valledupar", "sincelejo", "neiva",
+];
+
+const SEO_SPECIALTIES = [
+  "auxiliar-enfermeria",
+  "cuidado-adulto-mayor",
+  "cuidado-pediatrico",
+  "cuidado-paliativo",
+  "cuidado-postoperatorio",
+  "cuidador-domicilio",
+  "fisioterapia",
+  "terapia-respiratoria",
+];
+
+// Priority decreases slightly for smaller cities
+const CITY_PRIORITY: Record<string, number> = {
+  bogota: 0.88, medellin: 0.86, cali: 0.84, barranquilla: 0.82,
+  cartagena: 0.8, bucaramanga: 0.78, pereira: 0.76,
+};
+
+function getCitySpecialtyCombos(today: string): string[] {
+  const entries: string[] = [];
+  for (const city of SEO_CITIES) {
+    const basePriority = CITY_PRIORITY[city] ?? 0.72;
+    for (const specialty of SEO_SPECIALTIES) {
+      entries.push(
+        urlEntry(
+          `${SITE_URL}/${specialty}-${city}`,
+          today,
+          "weekly",
+          basePriority,
+        ),
+      );
+    }
+  }
+  return entries;
+}
 
 function escapeXml(s: string): string {
   return s
@@ -133,6 +183,9 @@ export const Route = createFileRoute("/sitemap.xml")({
         } catch (err) {
           console.error("sitemap: failed to fetch offers", err);
         }
+
+        // 4) City × specialty SEO landing pages (catch-all route)
+        urls.push(...getCitySpecialtyCombos(today));
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n        xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>`;
 

@@ -78,6 +78,13 @@ import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboa
 import { Route as CreditosRouteImport } from './routes/creditos'
 import { Route as PagoExitoRouteImport } from './routes/pago.exito'
 import { Route as PagoFalloRouteImport } from './routes/pago.fallo'
+import { Route as SplatRouteImport } from './routes/$'
+
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 const CreditosRoute = CreditosRouteImport.update({
   id: '/creditos',
@@ -835,6 +842,7 @@ export interface FileRouteTypes {
     | '/creditos'
     | '/pago/exito'
     | '/pago/fallo'
+    | '/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -889,6 +897,7 @@ export interface RootRouteChildren {
   CreditosRoute: typeof CreditosRoute
   PagoExitoRoute: typeof PagoExitoRoute
   PagoFalloRoute: typeof PagoFalloRoute
+  SplatRoute: typeof SplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1369,6 +1378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PagoFalloRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/familia/onboarding': {
       id: '/dashboard/familia/onboarding'
       path: '/onboarding'
@@ -1506,6 +1522,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreditosRoute: CreditosRoute,
   PagoExitoRoute: PagoExitoRoute,
   PagoFalloRoute: PagoFalloRoute,
+  SplatRoute: SplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
