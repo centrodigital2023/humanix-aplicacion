@@ -83,6 +83,27 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_code_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_credits_ledger: {
         Row: {
           created_at: string
