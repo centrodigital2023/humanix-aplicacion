@@ -64,6 +64,13 @@
       "when": 1791412081713,
       "tag": "0008_observability_and_payment_events",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791412126365,
+      "tag": "0009_booking_integrity_and_favorites",
+      "breakpoints": true
     }
   ]
 }

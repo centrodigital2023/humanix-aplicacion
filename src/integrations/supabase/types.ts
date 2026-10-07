@@ -395,6 +395,27 @@ export type Database = {
           },
         ]
       }
+      care_favorites: {
+        Row: {
+          client_id: string
+          created_at: string
+          note: string | null
+          professional_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          note?: string | null
+          professional_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          note?: string | null
+          professional_id?: string
+        }
+        Relationships: []
+      }
       care_logs: {
         Row: {
           alert_reason: string | null
@@ -3165,6 +3186,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_slot_proposal: { Args: { p_proposal_id: string }; Returns: string }
       ad_track: { Args: { _id: string; _kind: string }; Returns: undefined }
       get_my_profile: {
         Args: never
