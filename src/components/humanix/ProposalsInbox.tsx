@@ -33,8 +33,6 @@ type PeerProfile = {
   avatar_url: string | null;
 };
 
-const PLATFORM_FEE_PCT = 15;
-
 export function ProposalsInbox({
   userId,
   role,
@@ -113,67 +111,9 @@ export function ProposalsInbox({
   async function accept(p: Proposal) {
     setBusyId(p.id);
     try {
-      const durationMs = new Date(p.ends_at).getTime() - new Date(p.starts_at).getTime();
-      const duration_hours = Math.max(1, Math.round(durationMs / 3_600_000));
-      const total_amount = p.hourly_rate * duration_hours;
-      const platform_fee_amount = Math.round((total_amount * PLATFORM_FEE_PCT) / 100);
-      const professional_payout = total_amount - platform_fee_amount;
-
-      const { data: booking, error: berr } = await supabase
-        .from("service_bookings")
-        .insert({
-          client_id: p.family_user_id,
-          professional_id: p.professional_id,
-          status: "confirmed",
-          scheduled_at: p.starts_at,
-          duration_hours,
-          hourly_rate: p.hourly_rate,
-          total_amount,
-          platform_fee_pct: PLATFORM_FEE_PCT,
-          platform_fee_amount,
-          professional_payout,
-          payment_mode: "pending",
-        })
-        .select()
-        .single();
-      if (berr) throw berr;
-
-      const { error: perr } = await sb
-        .from("slot_proposals")
-        .update({ status: "accepted", booking_id: booking.id })
-        .eq("id", p.id);
-      if (perr) throw perr;
-
-      // Mark pro slot as busy so otras familias lo vean como ocupado
-      if (p.availability_slot_id) {
-        await sb.from("availability_slots").update({ status: "busy" }).eq("id", p.availability_slot_id);
-      } else {
-        // No slot linkeado: crear uno busy
-        await sb.from("availability_slots").insert({
-          user_id: p.professional_id,
-          starts_at: p.starts_at,
-          ends_at: p.ends_at,
-          status: "busy",
-        });
-      }
-
-      // Mark family_need as matched
-      if (p.family_need_id) {
-        await sb.from("family_needs").update({ status: "matched" }).eq("id", p.family_need_id);
-      }
-
-      // Auto-rechazar otras propuestas solapadas
-      await sb
-        .from("slot_proposals")
-        .update({ status: "cancelled", decision_note: "Horario ya cubierto" })
-        .eq("status", "pending")
-        .neq("id", p.id)
-        .eq("starts_at", p.starts_at)
-        .or(
-          p.family_need_id
-            ? `family_need_id.eq.${p.family_need_id}`
-            : `availability_slot_id.eq.${p.availability_slot_id ?? "00000000-0000-0000-0000-000000000000"}`,
-        );
+      // Precio, comisión, reserva y estados se resuelven atómicamente en el servidor.
+      const { error } = await sb.rpc("accept_slot_proposal", { p_proposal_id: p.id });
+      if (error) throw error;
 
       toast.success("¡Acuerdo cerrado! Reserva creada.");
     } catch (e) {

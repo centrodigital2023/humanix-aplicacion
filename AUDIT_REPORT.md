@@ -25,3 +25,17 @@ Base: lectura del repositorio. No se ejecutaron build, pruebas de Vitest ni nada
 
 ## Limitaciones
 Las reglas de `patientRisk.ts` son umbrales genéricos de signos vitales, **no un protocolo clínico validado**. Deben ser revisadas por un profesional de la salud antes de mostrarse a familias.
+
+## Verificación del flujo de contratación (segunda pasada)
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 12 | Un profesional no podía aceptar una propuesta de la familia: el insert en `service_bookings` exigía `client_id = auth.uid()` | Corregido con `accept_slot_proposal` (RPC atómica) |
+| 13 | El proponente podía aceptar su propia propuesta (solo lo evitaba el filtro de la interfaz) | Corregido: solo el receptor puede aceptar |
+| 14 | Sin protección contra doble reserva del mismo profesional ni auto-contratación | Corregido: trigger `guard_booking_integrity` con bloqueo por profesional |
+| 15 | Estados de la reserva sin máquina de estados (cualquier parte podía saltar a `completed`) | Corregido para no-staff |
+| 16 | La comisión mostrada era 15 % fija en la interfaz, pero el sistema acredita con 12 %/0 % según plan | Corregido: el RPC usa `platform_commission_pct` |
+| 17 | `professional_bookmarks` referencia `profiles(id)` y es inutilizable con `auth.uid()` | Reemplazada por `care_favorites` |
+
+## Riesgo abierto que requiere decisión del negocio
+`credit_booking_completion` acredita en la billetera del profesional el neto de `total_amount` al pasar a `completed`, y existe `request_payout`. Pero las reservas se crean con `payment_mode = 'pending'/'direct_to_professional'`, es decir, **el cobro ocurre fuera de la plataforma**: Humanix puede estar acreditando saldo retirable por dinero que nunca recibió. Además otras vías (`QuickBooking`, `BookNowButton`) permiten que el cliente fije el monto de la reserva. Recomendación: acreditar solo reservas con pago confirmado en Mercado Pago (`payment_mode = 'platform'`) y, para pagos directos, registrar la comisión como deuda del profesional en vez de abono.

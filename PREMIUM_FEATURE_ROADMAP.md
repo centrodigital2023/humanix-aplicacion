@@ -6,9 +6,9 @@ Prioridad: primero confiabilidad (P0, en gran parte hecho), después valor inmed
 Ofertas y postulaciones (`job_offers`, `applications`), propuestas de horario (`slot_proposals`, `ProposalsInbox`), agenda del profesional, check-in/out (`service_checkins`, `CheckInOut`), calificaciones (`service_ratings`), favoritos/referidos (`ReferralCard`), documentos con vigencia, monitoreo clínico y alertas, mapa en vivo, planes y créditos IA, panel institucional.
 
 ## P1 — valor inmediato
-1. Recontratación de un clic al finalizar el servicio.
-2. Profesionales favoritos y círculo de cuidado.
-3. Agenda sin doble reserva (restricción en base de datos).
+1. ~~Recontratación de un clic~~ (hecho: `RehireCard`).
+2. ~~Favoritos~~ (hecho: `care_favorites`); falta el círculo de cuidado con familiares.
+3. ~~Agenda sin doble reserva~~ (hecho: `guard_booking_integrity`).
 4. Contacto protegido por etapas (datos visibles solo tras aprobación).
 5. Calificación por dimensiones y bilateral.
 6. Reemplazo rápido cuando un profesional cancela.

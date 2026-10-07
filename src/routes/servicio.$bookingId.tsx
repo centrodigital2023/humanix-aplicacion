@@ -20,6 +20,7 @@ import { BookingChat } from "@/components/humanix/BookingChat";
 import { PaidContactCard } from "@/components/humanix/PaidContactCard";
 import { VoiceRating } from "@/components/humanix/VoiceRating";
 import { ServiceContractCard } from "@/components/humanix/ServiceContractCard";
+import { RehireCard } from "@/components/humanix/RehireCard";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
 import { toast } from "sonner";
 
@@ -370,6 +371,14 @@ function ServicePage() {
                 />
               </div>
             </div>
+          )}
+
+          {completed && isClient && (
+            <RehireCard
+              clientId={booking.client_id}
+              professionalId={booking.professional_id}
+              professionalName={peerName}
+            />
           )}
 
           {completed && (
