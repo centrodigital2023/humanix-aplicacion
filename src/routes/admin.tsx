@@ -24,6 +24,7 @@ function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [adminPw, setAdminPw] = useState("");
   const [codeDigits, setCodeDigits] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,12 +95,16 @@ function AdminLogin() {
   const verifyCode = async (digits: string[]) => {
     const code = digits.join("");
     if (code.length !== 6 || !userId) return;
+    if (!adminPw) {
+      setError("Escribe la contraseña de administrador.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const { data, error: fnErr } = await supabase.functions.invoke(
         "verify-admin-access",
-        { body: { code } },
+        { body: { code, adminPassword: adminPw } },
       );
       if (fnErr || !data?.ok) {
         setError(data?.error ?? "Código incorrecto.");
@@ -278,7 +283,21 @@ function AdminLogin() {
                   <Lock className="h-5 w-5 text-violet-400" aria-hidden="true" />
                 </div>
                 <p className="text-base font-bold text-white">Código de acceso</p>
-                <p className="mt-1 text-xs text-white/40">Ingresa el código de 6 dígitos para confirmar.</p>
+                <p className="mt-1 text-xs text-white/40">Ingresa la contraseña de administrador y el código de 6 dígitos.</p>
+              </div>
+
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" aria-hidden="true" />
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={adminPw}
+                  onChange={(e) => setAdminPw(e.target.value)}
+                  placeholder="Contraseña de administrador"
+                  aria-label="Contraseña de administrador"
+                  disabled={busy}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/40 transition"
+                />
               </div>
 
               <div
@@ -309,6 +328,15 @@ function AdminLogin() {
                 ))}
               </div>
 
+              <button
+                type="button"
+                onClick={() => verifyCode(codeDigits)}
+                disabled={busy || !adminPw || codeDigits.some((d) => !d)}
+                className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:opacity-90 disabled:opacity-50"
+              >
+                Verificar →
+              </button>
+
               {busy && (
                 <div className="flex justify-center">
                   <Loader2 className="h-5 w-5 animate-spin text-violet-400" aria-hidden="true" />
@@ -330,6 +358,7 @@ function AdminLogin() {
                   supabase.auth.signOut();
                   setPhase("credentials");
                   setCodeDigits(["", "", "", "", "", ""]);
+                  setAdminPw("");
                   setError(null);
                   setUserId(null);
                 }}

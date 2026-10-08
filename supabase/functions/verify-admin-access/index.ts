@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const { code } = await req.json() as { code: string };
+    const { code, adminPassword } = await req.json() as { code: string; adminPassword?: string };
     if (!code) return json({ ok: false, error: "Faltan campos" }, 400);
 
     // La identidad sale del JWT, nunca del cuerpo de la petición.
@@ -52,11 +52,20 @@ Deno.serve(async (req) => {
     await admin.from("admin_code_attempts").insert({ user_id, ip: req.headers.get("x-forwarded-for") ?? null });
 
     // Comparación en tiempo constante (evita timing attacks)
-    const valid = code.trim() === expected.trim();
+    const safeEq = (a: string, b: string) => {
+      const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b);
+      let diff = x.length ^ y.length;
+      for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+      return diff === 0;
+    };
+    // Capa extra: contraseña de administrador (secret ADMIN_ACCESS_CONTRASENA).
+    const expectedPw = Deno.env.get("ADMIN_ACCESS_CONTRASENA");
+    if (!expectedPw) return json({ ok: false, error: "Contraseña de administrador no configurada en el servidor" }, 503);
+    const valid = safeEq(code.trim(), expected.trim()) && safeEq(adminPassword ?? "", expectedPw);
 
     if (!valid) {
       const remaining = MAX_ATTEMPTS - (count ?? 0) - 1;
-      return json({ ok: false, error: "Código incorrecto.", remaining_attempts: Math.max(0, remaining) });
+      return json({ ok: false, error: "Código o contraseña de administrador incorrectos.", remaining_attempts: Math.max(0, remaining) });
     }
 
     // Éxito: limpiar intentos del usuario
