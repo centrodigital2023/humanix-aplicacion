@@ -24,4 +24,4 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - `/superadmin/*` uses only `useSuperadmin`, redirecting to `/admin` — keeps admin flow isolated.
 - Admin access code is validated server-side only (`verify-admin-access`) — never in frontend.
 - New server logic uses `createServerFn` in `src/lib/*.functions.ts` with `requireSupabaseAuth`; `src/start.ts` attaches the bearer token — project template forbids new Edge Functions.
-- ReTHUS verification runs in `verifyRethus` (`src/lib/rethus.functions.ts`); documents stored only as HMAC hashes — Ley 1581 data minimization.
+- ReTHUS: `verifyRethus` runs once per professional automatically (consent + active mp_subscriptions + stored doc), enforced server-side + partial unique index; provider errors don't consume it; only staff re-verify via `adminReverifyRethus` (rate-limited, requested_by/reverified); docs only AES-GCM/HMAC — Ley 1581 + provider cost.
