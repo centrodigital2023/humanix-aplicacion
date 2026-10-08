@@ -54,8 +54,8 @@ export function RethusAutoVerification({ initialStatus }: { initialStatus?: stri
     );
   }
 
-  const needsConsent = result && !result.ok && result.code === "consent_required";
-  const needsDoc = result && !result.ok && result.code === "document_required";
+  const needsConsent = !!result && !result.ok && result.code === "consent_required";
+  const needsDoc = !!result && !result.ok && result.code === "document_required";
 
   if (needsConsent || needsDoc) {
     const valid = /^\d{5,12}$/.test(doc.replace(/\D/g, ""));
