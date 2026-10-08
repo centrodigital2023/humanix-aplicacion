@@ -2062,6 +2062,7 @@ export type Database = {
           blocked_reason: string | null
           certifications: Json | null
           created_at: string
+          data_consent_at: string | null
           gender: string | null
           home_city: string | null
           hourly_rate: number | null
@@ -2074,6 +2075,7 @@ export type Database = {
           published: boolean
           published_at: string | null
           reserved_until: string | null
+          rethus_checked_at: string | null
           rethus_number: string | null
           rethus_verified: boolean | null
           service_cities: string[] | null
@@ -2087,6 +2089,7 @@ export type Database = {
           trust_score: number | null
           updated_at: string
           user_id: string
+          verification_status: string
           verified: boolean | null
           work_experience: Json | null
           years_experience: number | null
@@ -2108,6 +2111,7 @@ export type Database = {
           blocked_reason?: string | null
           certifications?: Json | null
           created_at?: string
+          data_consent_at?: string | null
           gender?: string | null
           home_city?: string | null
           hourly_rate?: number | null
@@ -2120,6 +2124,7 @@ export type Database = {
           published?: boolean
           published_at?: string | null
           reserved_until?: string | null
+          rethus_checked_at?: string | null
           rethus_number?: string | null
           rethus_verified?: boolean | null
           service_cities?: string[] | null
@@ -2133,6 +2138,7 @@ export type Database = {
           trust_score?: number | null
           updated_at?: string
           user_id: string
+          verification_status?: string
           verified?: boolean | null
           work_experience?: Json | null
           years_experience?: number | null
@@ -2154,6 +2160,7 @@ export type Database = {
           blocked_reason?: string | null
           certifications?: Json | null
           created_at?: string
+          data_consent_at?: string | null
           gender?: string | null
           home_city?: string | null
           hourly_rate?: number | null
@@ -2166,6 +2173,7 @@ export type Database = {
           published?: boolean
           published_at?: string | null
           reserved_until?: string | null
+          rethus_checked_at?: string | null
           rethus_number?: string | null
           rethus_verified?: boolean | null
           service_cities?: string[] | null
@@ -2179,6 +2187,7 @@ export type Database = {
           trust_score?: number | null
           updated_at?: string
           user_id?: string
+          verification_status?: string
           verified?: boolean | null
           work_experience?: Json | null
           years_experience?: number | null
@@ -2229,6 +2238,39 @@ export type Database = {
           updated_at?: string
           user_id?: string
           verified?: boolean
+        }
+        Relationships: []
+      }
+      professional_verifications: {
+        Row: {
+          check_type: string
+          created_at: string
+          document_hash: string
+          id: string
+          provider: string
+          result: Json
+          status: string
+          user_id: string
+        }
+        Insert: {
+          check_type?: string
+          created_at?: string
+          document_hash: string
+          id?: string
+          provider?: string
+          result?: Json
+          status: string
+          user_id: string
+        }
+        Update: {
+          check_type?: string
+          created_at?: string
+          document_hash?: string
+          id?: string
+          provider?: string
+          result?: Json
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
