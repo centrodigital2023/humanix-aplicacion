@@ -85,6 +85,13 @@
       "when": 1791476448950,
       "tag": "0011_rethus_verifik_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791476883767,
+      "tag": "0012_rethus_single_verification",
+      "breakpoints": true
     }
   ]
 }
