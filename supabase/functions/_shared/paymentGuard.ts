@@ -35,11 +35,21 @@ export function hasDisallowedUrl(text: string, allowedHosts: string[]): boolean 
   });
 }
 
-export type GuardResult = { text: string; blocked: boolean; reason?: "payment_instruction" | "disallowed_url" };
+export type GuardResult = {
+  text: string;
+  blocked: boolean;
+  reason?: "payment_instruction" | "disallowed_url";
+};
 
-export function guardOutgoing(text: string, safeReply: string, allowedHosts: string[]): GuardResult {
-  if (containsPaymentInstruction(text)) return { text: safeReply, blocked: true, reason: "payment_instruction" };
-  if (hasDisallowedUrl(text, allowedHosts)) return { text: safeReply, blocked: true, reason: "disallowed_url" };
+export function guardOutgoing(
+  text: string,
+  safeReply: string,
+  allowedHosts: string[],
+): GuardResult {
+  if (containsPaymentInstruction(text))
+    return { text: safeReply, blocked: true, reason: "payment_instruction" };
+  if (hasDisallowedUrl(text, allowedHosts))
+    return { text: safeReply, blocked: true, reason: "disallowed_url" };
   return { text, blocked: false };
 }
 

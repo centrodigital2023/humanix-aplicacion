@@ -11,13 +11,19 @@ const sb = supabase as unknown as SupabaseClient;
 const emailSchema = z.string().trim().email().max(254);
 
 type Member = {
-  id: string; owner_id: string; invited_email: string; relation: string | null;
-  status: "invited" | "accepted" | "declined"; member_id: string | null;
+  id: string;
+  owner_id: string;
+  invited_email: string;
+  relation: string | null;
+  status: "invited" | "accepted" | "declined";
+  member_id: string | null;
 };
 type SharedBooking = { id: string; status: string; scheduled_at: string; duration_hours: number };
 
 const STATUS_TEXT: Record<Member["status"], string> = {
-  invited: "Invitación enviada", accepted: "Activo", declined: "Rechazada",
+  invited: "Invitación enviada",
+  accepted: "Activo",
+  declined: "Rechazada",
 };
 
 export function CareCirclePanel({ userId, userEmail }: { userId: string; userEmail: string }) {
@@ -29,7 +35,10 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
   const [shared, setShared] = useState<SharedBooking[]>([]);
 
   const load = useCallback(async () => {
-    const { data } = await sb.from("care_circle_members").select("*").order("created_at", { ascending: false });
+    const { data } = await sb
+      .from("care_circle_members")
+      .select("*")
+      .order("created_at", { ascending: false });
     const all = (data ?? []) as Member[];
     setMembers(all);
     const circlesIBelongTo = all.filter((m) => m.member_id === userId && m.status === "accepted");
@@ -37,7 +46,10 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
       const { data: b } = await sb
         .from("service_bookings")
         .select("id,status,scheduled_at,duration_hours")
-        .in("client_id", circlesIBelongTo.map((m) => m.owner_id))
+        .in(
+          "client_id",
+          circlesIBelongTo.map((m) => m.owner_id),
+        )
         .order("scheduled_at", { ascending: false })
         .limit(20);
       setShared((b ?? []) as SharedBooking[]);
@@ -53,7 +65,10 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
 
   const mine = members.filter((m) => m.owner_id === userId);
   const invitationsForMe = members.filter(
-    (m) => m.owner_id !== userId && m.status === "invited" && m.invited_email.toLowerCase() === userEmail.toLowerCase(),
+    (m) =>
+      m.owner_id !== userId &&
+      m.status === "invited" &&
+      m.invited_email.toLowerCase() === userEmail.toLowerCase(),
   );
 
   const invite = async (e: React.FormEvent) => {
@@ -69,11 +84,15 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
     }
     setBusy(true);
     const { error } = await sb.from("care_circle_members").insert({
-      owner_id: userId, invited_email: parsed.data, relation: relation.trim().slice(0, 40) || null,
+      owner_id: userId,
+      invited_email: parsed.data,
+      relation: relation.trim().slice(0, 40) || null,
     });
     setBusy(false);
     if (error) {
-      toast.error(error.code === "23505" ? "Ya invitaste a esta persona" : "No se pudo enviar la invitación");
+      toast.error(
+        error.code === "23505" ? "Ya invitaste a esta persona" : "No se pudo enviar la invitación",
+      );
       return;
     }
     setEmail("");
@@ -104,24 +123,51 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
         <h2 className="font-display text-lg font-bold">Círculo de cuidado</h2>
       </div>
       <p className="text-xs text-muted-foreground">
-        Invita a familiares para que vean el estado de tus servicios. Solo pueden consultar; no pueden cambiar nada ni ver pagos.
+        Invita a familiares para que vean el estado de tus servicios. Solo pueden consultar; no
+        pueden cambiar nada ni ver pagos.
       </p>
 
       {invitationsForMe.map((m) => (
-        <div key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+        <div
+          key={m.id}
+          className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+        >
           <span>Te invitaron a un círculo de cuidado.</span>
           <span className="flex gap-2">
-            <Button size="sm" onClick={() => respond(m.id, true)}>Aceptar</Button>
-            <Button size="sm" variant="outline" onClick={() => respond(m.id, false)}>Rechazar</Button>
+            <Button size="sm" onClick={() => respond(m.id, true)}>
+              Aceptar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => respond(m.id, false)}>
+              Rechazar
+            </Button>
           </span>
         </div>
       ))}
 
       <form onSubmit={invite} className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]">
-        <Input type="email" required placeholder="correo@familiar.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Correo del familiar" />
-        <Input placeholder="Parentesco" value={relation} onChange={(e) => setRelation(e.target.value)} maxLength={40} aria-label="Parentesco" />
+        <Input
+          type="email"
+          required
+          placeholder="correo@familiar.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          aria-label="Correo del familiar"
+        />
+        <Input
+          placeholder="Parentesco"
+          value={relation}
+          onChange={(e) => setRelation(e.target.value)}
+          maxLength={40}
+          aria-label="Parentesco"
+        />
         <Button type="submit" disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus className="h-4 w-4 mr-1.5" /> Invitar</>}
+          {busy ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <UserPlus className="h-4 w-4 mr-1.5" /> Invitar
+            </>
+          )}
         </Button>
       </form>
 
@@ -139,7 +185,12 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
               </span>
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 {STATUS_TEXT[m.status]}
-                <Button size="icon" variant="ghost" onClick={() => remove(m.id)} aria-label="Quitar del círculo">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => remove(m.id)}
+                  aria-label="Quitar del círculo"
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </span>
@@ -155,7 +206,11 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
             {shared.map((b) => (
               <li key={b.id} className="flex justify-between py-1.5">
                 <span>
-                  {new Date(b.scheduled_at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {b.duration_hours} h
+                  {new Date(b.scheduled_at).toLocaleString("es-CO", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}{" "}
+                  · {b.duration_hours} h
                 </span>
                 <span className="text-muted-foreground">{b.status}</span>
               </li>

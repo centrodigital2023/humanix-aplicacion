@@ -36,7 +36,11 @@ export function RehireCard({ clientId, professionalId, professionalName }: Props
   const toggle = async () => {
     setBusy(true);
     const query = favorite
-      ? sb.from("care_favorites").delete().eq("client_id", clientId).eq("professional_id", professionalId)
+      ? sb
+          .from("care_favorites")
+          .delete()
+          .eq("client_id", clientId)
+          .eq("professional_id", professionalId)
       : sb.from("care_favorites").insert({ client_id: clientId, professional_id: professionalId });
     const { error } = await query;
     setBusy(false);
@@ -50,7 +54,9 @@ export function RehireCard({ clientId, professionalId, professionalName }: Props
 
   return (
     <div className="mt-6 rounded-2xl border border-border bg-card p-5">
-      <h3 className="font-semibold">¿Quieres volver a contar con {professionalName ?? "este profesional"}?</h3>
+      <h3 className="font-semibold">
+        ¿Quieres volver a contar con {professionalName ?? "este profesional"}?
+      </h3>
       <p className="mt-1 text-xs text-muted-foreground">
         Guárdalo en tu círculo de cuidado o solicita un nuevo servicio con un clic.
       </p>
@@ -61,7 +67,9 @@ export function RehireCard({ clientId, professionalId, professionalName }: Props
           </Link>
         </Button>
         <Button size="sm" variant="outline" onClick={toggle} disabled={busy || favorite === null}>
-          <Heart className={`h-4 w-4 mr-1.5 ${favorite ? "fill-current text-fuchsia-neural" : ""}`} />
+          <Heart
+            className={`h-4 w-4 mr-1.5 ${favorite ? "fill-current text-fuchsia-neural" : ""}`}
+          />
           {favorite ? "En favoritos" : "Guardar como favorito"}
         </Button>
       </div>

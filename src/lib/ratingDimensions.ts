@@ -20,5 +20,7 @@ export const DIMENSION_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 export function isCompleteScores(role: RaterRole, scores: Record<string, number>): boolean {
-  return RATING_DIMENSIONS[role].every((d) => Number.isInteger(scores[d.key]) && scores[d.key] >= 1 && scores[d.key] <= 5);
+  return RATING_DIMENSIONS[role].every(
+    (d) => Number.isInteger(scores[d.key]) && scores[d.key] >= 1 && scores[d.key] <= 5,
+  );
 }

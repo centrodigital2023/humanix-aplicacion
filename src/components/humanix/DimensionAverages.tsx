@@ -33,7 +33,10 @@ export function DimensionAverages({ professionalId }: { professionalId: string }
               <span className="font-semibold">{Number(r.average).toFixed(1)} / 5</span>
             </div>
             <div className="mt-1 h-1.5 rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-biosensor" style={{ width: `${(Number(r.average) / 5) * 100}%` }} />
+              <div
+                className="h-full bg-biosensor"
+                style={{ width: `${(Number(r.average) / 5) * 100}%` }}
+              />
             </div>
           </li>
         ))}

@@ -10,7 +10,11 @@ export interface PriceBreakdown {
   professionalNet: number;
 }
 
-export function buildPriceBreakdown(hourlyRate: number, hours: number, commissionPct: number): PriceBreakdown {
+export function buildPriceBreakdown(
+  hourlyRate: number,
+  hours: number,
+  commissionPct: number,
+): PriceBreakdown {
   const safeRate = Math.max(0, Math.round(hourlyRate));
   const safeHours = Math.max(0, hours);
   const pct = Math.min(100, Math.max(0, commissionPct));
@@ -27,5 +31,9 @@ export function buildPriceBreakdown(hourlyRate: number, hours: number, commissio
 }
 
 export function formatCOP(value: number): string {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(value);
 }

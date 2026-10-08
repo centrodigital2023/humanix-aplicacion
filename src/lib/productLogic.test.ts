@@ -24,7 +24,13 @@ describe("buildPriceBreakdown", () => {
 
 describe("coverageLevel", () => {
   const now = new Date("2026-01-10T12:00:00Z").getTime();
-  const base = { status: "open" as const, shiftsCount: 1, startDate: "2026-01-20T08:00:00Z", acceptedCount: 0, pendingCount: 0 };
+  const base = {
+    status: "open" as const,
+    shiftsCount: 1,
+    startDate: "2026-01-20T08:00:00Z",
+    acceptedCount: 0,
+    pendingCount: 0,
+  };
   it("is covered when accepted >= shifts or filled", () => {
     expect(coverageLevel({ ...base, acceptedCount: 1 }, now)).toBe("covered");
     expect(coverageLevel({ ...base, status: "filled" }, now)).toBe("covered");
@@ -44,8 +50,12 @@ describe("coverageLevel", () => {
 
 describe("isCompleteScores", () => {
   it("requires every dimension as integer 1-5", () => {
-    expect(isCompleteScores("family", { punctuality: 5, treatment: 4, compliance: 5, communication: 3 })).toBe(true);
+    expect(
+      isCompleteScores("family", { punctuality: 5, treatment: 4, compliance: 5, communication: 3 }),
+    ).toBe(true);
     expect(isCompleteScores("family", { punctuality: 5, treatment: 4, compliance: 5 })).toBe(false);
-    expect(isCompleteScores("family", { punctuality: 6, treatment: 4, compliance: 5, communication: 3 })).toBe(false);
+    expect(
+      isCompleteScores("family", { punctuality: 6, treatment: 4, compliance: 5, communication: 3 }),
+    ).toBe(false);
   });
 });

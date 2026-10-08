@@ -41,66 +41,101 @@ interface Rule {
 
 const RULES: Rule[] = [
   {
-    type: "heart_rate", name: "Frecuencia cardíaca", unit: "lpm",
+    type: "heart_rate",
+    name: "Frecuencia cardíaca",
+    unit: "lpm",
     evaluate: (v) =>
-      v > 130 || v < 40 ? { severity: 3, direction: v > 130 ? "increase" : "decrease" }
-      : v > 110 || v < 50 ? { severity: 2, direction: v > 110 ? "increase" : "decrease" }
-      : v > 100 || v < 60 ? { severity: 1, direction: v > 100 ? "increase" : "decrease" }
-      : { severity: 0, direction: "neutral" },
+      v > 130 || v < 40
+        ? { severity: 3, direction: v > 130 ? "increase" : "decrease" }
+        : v > 110 || v < 50
+          ? { severity: 2, direction: v > 110 ? "increase" : "decrease" }
+          : v > 100 || v < 60
+            ? { severity: 1, direction: v > 100 ? "increase" : "decrease" }
+            : { severity: 0, direction: "neutral" },
     action: "Monitorear la frecuencia cardíaca cada 4 horas",
   },
   {
-    type: "spo2", name: "Saturación de oxígeno", unit: "%",
+    type: "spo2",
+    name: "Saturación de oxígeno",
+    unit: "%",
     evaluate: (v) =>
-      v < 90 ? { severity: 3, direction: "decrease" }
-      : v < 92 ? { severity: 2, direction: "decrease" }
-      : v < 95 ? { severity: 1, direction: "decrease" }
-      : { severity: 0, direction: "neutral" },
+      v < 90
+        ? { severity: 3, direction: "decrease" }
+        : v < 92
+          ? { severity: 2, direction: "decrease" }
+          : v < 95
+            ? { severity: 1, direction: "decrease" }
+            : { severity: 0, direction: "neutral" },
     action: "Vigilar la saturación de oxígeno y avisar al médico tratante",
   },
   {
-    type: "temperature", name: "Temperatura", unit: "°C",
+    type: "temperature",
+    name: "Temperatura",
+    unit: "°C",
     evaluate: (v) =>
-      v >= 39.5 || v < 35 ? { severity: 3, direction: v >= 39.5 ? "increase" : "decrease" }
-      : v >= 38.5 ? { severity: 2, direction: "increase" }
-      : v >= 37.8 || v < 35.5 ? { severity: 1, direction: v >= 37.8 ? "increase" : "decrease" }
-      : { severity: 0, direction: "neutral" },
+      v >= 39.5 || v < 35
+        ? { severity: 3, direction: v >= 39.5 ? "increase" : "decrease" }
+        : v >= 38.5
+          ? { severity: 2, direction: "increase" }
+          : v >= 37.8 || v < 35.5
+            ? { severity: 1, direction: v >= 37.8 ? "increase" : "decrease" }
+            : { severity: 0, direction: "neutral" },
     action: "Controlar la temperatura y evaluar signos de infección",
   },
   {
-    type: "blood_pressure_sys", name: "Presión sistólica", unit: "mmHg",
+    type: "blood_pressure_sys",
+    name: "Presión sistólica",
+    unit: "mmHg",
     evaluate: (v) =>
-      v >= 180 || v < 80 ? { severity: 3, direction: v >= 180 ? "increase" : "decrease" }
-      : v >= 160 || v < 90 ? { severity: 2, direction: v >= 160 ? "increase" : "decrease" }
-      : v >= 140 ? { severity: 1, direction: "increase" }
-      : { severity: 0, direction: "neutral" },
+      v >= 180 || v < 80
+        ? { severity: 3, direction: v >= 180 ? "increase" : "decrease" }
+        : v >= 160 || v < 90
+          ? { severity: 2, direction: v >= 160 ? "increase" : "decrease" }
+          : v >= 140
+            ? { severity: 1, direction: "increase" }
+            : { severity: 0, direction: "neutral" },
     action: "Registrar la presión arterial y revisar la medicación con el médico",
   },
   {
-    type: "blood_pressure_dia", name: "Presión diastólica", unit: "mmHg",
+    type: "blood_pressure_dia",
+    name: "Presión diastólica",
+    unit: "mmHg",
     evaluate: (v) =>
-      v >= 120 ? { severity: 3, direction: "increase" }
-      : v >= 100 ? { severity: 2, direction: "increase" }
-      : v >= 90 ? { severity: 1, direction: "increase" }
-      : { severity: 0, direction: "neutral" },
+      v >= 120
+        ? { severity: 3, direction: "increase" }
+        : v >= 100
+          ? { severity: 2, direction: "increase" }
+          : v >= 90
+            ? { severity: 1, direction: "increase" }
+            : { severity: 0, direction: "neutral" },
     action: "Registrar la presión arterial y revisar la medicación con el médico",
   },
   {
-    type: "respiration_rate", name: "Frecuencia respiratoria", unit: "rpm",
+    type: "respiration_rate",
+    name: "Frecuencia respiratoria",
+    unit: "rpm",
     evaluate: (v) =>
-      v > 28 || v < 8 ? { severity: 3, direction: v > 28 ? "increase" : "decrease" }
-      : v > 24 || v < 10 ? { severity: 2, direction: v > 24 ? "increase" : "decrease" }
-      : v > 20 || v < 12 ? { severity: 1, direction: v > 20 ? "increase" : "decrease" }
-      : { severity: 0, direction: "neutral" },
+      v > 28 || v < 8
+        ? { severity: 3, direction: v > 28 ? "increase" : "decrease" }
+        : v > 24 || v < 10
+          ? { severity: 2, direction: v > 24 ? "increase" : "decrease" }
+          : v > 20 || v < 12
+            ? { severity: 1, direction: v > 20 ? "increase" : "decrease" }
+            : { severity: 0, direction: "neutral" },
     action: "Observar el patrón respiratorio y consultar si persiste",
   },
   {
-    type: "glucose", name: "Glucosa", unit: "mg/dL",
+    type: "glucose",
+    name: "Glucosa",
+    unit: "mg/dL",
     evaluate: (v) =>
-      v > 300 || v < 54 ? { severity: 3, direction: v > 300 ? "increase" : "decrease" }
-      : v > 250 || v < 70 ? { severity: 2, direction: v > 250 ? "increase" : "decrease" }
-      : v > 180 ? { severity: 1, direction: "increase" }
-      : { severity: 0, direction: "neutral" },
+      v > 300 || v < 54
+        ? { severity: 3, direction: v > 300 ? "increase" : "decrease" }
+        : v > 250 || v < 70
+          ? { severity: 2, direction: v > 250 ? "increase" : "decrease" }
+          : v > 180
+            ? { severity: 1, direction: "increase" }
+            : { severity: 0, direction: "neutral" },
     action: "Controlar la glucosa y seguir el plan indicado por el médico",
   },
 ];

@@ -31,7 +31,10 @@ export function PriceBreakdownCard({ hourlyRate, hours, professionalId, viewer =
     };
   }, [professionalId]);
 
-  const b = useMemo(() => buildPriceBreakdown(hourlyRate, hours, pct ?? DEFAULT_COMMISSION_PCT), [hourlyRate, hours, pct]);
+  const b = useMemo(
+    () => buildPriceBreakdown(hourlyRate, hours, pct ?? DEFAULT_COMMISSION_PCT),
+    [hourlyRate, hours, pct],
+  );
 
   return (
     <dl className="rounded-xl border border-border bg-muted/30 p-3 text-xs space-y-1">

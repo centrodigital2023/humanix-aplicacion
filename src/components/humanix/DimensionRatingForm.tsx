@@ -27,12 +27,20 @@ export function DimensionRatingForm({ bookingId, raterId, ratedId, role, onSubmi
       return;
     }
     setBusy(true);
-    const { error } = await sb
-      .from("service_rating_dimensions")
-      .insert({ booking_id: bookingId, rater_id: raterId, rated_id: ratedId, rater_role: role, scores });
+    const { error } = await sb.from("service_rating_dimensions").insert({
+      booking_id: bookingId,
+      rater_id: raterId,
+      rated_id: ratedId,
+      rater_role: role,
+      scores,
+    });
     setBusy(false);
     if (error) {
-      toast.error(error.code === "23505" ? "Ya calificaste este servicio" : "No se pudo guardar la calificación");
+      toast.error(
+        error.code === "23505"
+          ? "Ya calificaste este servicio"
+          : "No se pudo guardar la calificación",
+      );
       if (error.code === "23505") setDone(true);
       return;
     }
@@ -42,7 +50,11 @@ export function DimensionRatingForm({ bookingId, raterId, ratedId, role, onSubmi
   };
 
   if (done) {
-    return <p className="text-sm text-muted-foreground">Gracias, tu calificación por dimensiones quedó registrada.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        Gracias, tu calificación por dimensiones quedó registrada.
+      </p>
+    );
   }
 
   return (
@@ -61,13 +73,19 @@ export function DimensionRatingForm({ bookingId, raterId, ratedId, role, onSubmi
                 aria-label={`${n} de 5`}
                 onClick={() => setScores((s) => ({ ...s, [d.key]: n }))}
               >
-                <Star className={`h-6 w-6 ${(scores[d.key] ?? 0) >= n ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`} />
+                <Star
+                  className={`h-6 w-6 ${(scores[d.key] ?? 0) >= n ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`}
+                />
               </button>
             ))}
           </div>
         </div>
       ))}
-      <Button onClick={submit} disabled={busy || !isCompleteScores(role, scores)} className="w-full">
+      <Button
+        onClick={submit}
+        disabled={busy || !isCompleteScores(role, scores)}
+        className="w-full"
+      >
         Guardar calificación
       </Button>
     </div>

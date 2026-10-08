@@ -8,8 +8,14 @@ import { toast } from "sonner";
 const sb = supabase as unknown as SupabaseClient;
 
 type Candidate = {
-  user_id: string; full_name: string | null; avatar_url: string | null; specialty: string | null;
-  hourly_rate: number | null; avg_rating: number | null; total_jobs: number | null; is_favorite: boolean;
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  specialty: string | null;
+  hourly_rate: number | null;
+  avg_rating: number | null;
+  total_jobs: number | null;
+  is_favorite: boolean;
 };
 
 interface Props {
@@ -20,7 +26,13 @@ interface Props {
   hourlyRate: number;
 }
 
-export function ReplacementPanel({ bookingId, clientId, scheduledAt, durationHours, hourlyRate }: Props) {
+export function ReplacementPanel({
+  bookingId,
+  clientId,
+  scheduledAt,
+  durationHours,
+  hourlyRate,
+}: Props) {
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [sent, setSent] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
@@ -70,7 +82,9 @@ export function ReplacementPanel({ bookingId, clientId, scheduledAt, durationHou
           <Loader2 className="h-4 w-4 animate-spin" /> Buscando…
         </div>
       ) : candidates.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No encontramos profesionales libres en ese horario por ahora.</p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          No encontramos profesionales libres en ese horario por ahora.
+        </p>
       ) : (
         <ul className="mt-4 divide-y divide-border">
           {candidates.map((c) => (
@@ -78,15 +92,30 @@ export function ReplacementPanel({ bookingId, clientId, scheduledAt, durationHou
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
                   {c.full_name ?? "Profesional"}
-                  {c.is_favorite && <Heart className="inline h-3.5 w-3.5 ml-1 fill-current text-fuchsia-neural" aria-label="Favorito" />}
+                  {c.is_favorite && (
+                    <Heart
+                      className="inline h-3.5 w-3.5 ml-1 fill-current text-fuchsia-neural"
+                      aria-label="Favorito"
+                    />
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {c.specialty ?? "Salud"}
-                  {c.avg_rating ? <> · <Star className="inline h-3 w-3 fill-amber-400 text-amber-400" /> {Number(c.avg_rating).toFixed(1)}</> : null}
+                  {c.avg_rating ? (
+                    <>
+                      {" "}
+                      · <Star className="inline h-3 w-3 fill-amber-400 text-amber-400" />{" "}
+                      {Number(c.avg_rating).toFixed(1)}
+                    </>
+                  ) : null}
                   {c.total_jobs ? ` · ${c.total_jobs} servicios` : ""}
                 </p>
               </div>
-              <Button size="sm" disabled={busy === c.user_id || sent.has(c.user_id)} onClick={() => propose(c)}>
+              <Button
+                size="sm"
+                disabled={busy === c.user_id || sent.has(c.user_id)}
+                onClick={() => propose(c)}
+              >
                 {sent.has(c.user_id) ? "Enviada" : "Proponer"}
               </Button>
             </li>

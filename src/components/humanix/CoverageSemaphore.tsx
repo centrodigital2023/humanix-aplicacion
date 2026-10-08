@@ -29,8 +29,12 @@ export function CoverageSemaphore({ userId }: { userId: string }) {
       .order("start_date", { ascending: true, nullsFirst: false })
       .limit(100);
     const list = (offers ?? []) as Array<{
-      id: string; title: string; city: string; status: "open" | "closed" | "filled";
-      shifts_count: number | null; start_date: string | null;
+      id: string;
+      title: string;
+      city: string;
+      status: "open" | "closed" | "filled";
+      shifts_count: number | null;
+      start_date: string | null;
     }>;
     if (!list.length) {
       setRows([]);
@@ -39,7 +43,10 @@ export function CoverageSemaphore({ userId }: { userId: string }) {
     const { data: apps } = await sb
       .from("applications")
       .select("job_offer_id,status")
-      .in("job_offer_id", list.map((o) => o.id));
+      .in(
+        "job_offer_id",
+        list.map((o) => o.id),
+      );
     const counts = new Map<string, { accepted: number; pending: number }>();
     for (const a of (apps ?? []) as Array<{ job_offer_id: string; status: string }>) {
       const c = counts.get(a.job_offer_id) ?? { accepted: 0, pending: 0 };
@@ -51,11 +58,19 @@ export function CoverageSemaphore({ userId }: { userId: string }) {
       list.map((o) => {
         const c = counts.get(o.id) ?? { accepted: 0, pending: 0 };
         return {
-          id: o.id, title: o.title, city: o.city, start_date: o.start_date,
-          accepted: c.accepted, pending: c.pending, needed: Math.max(1, o.shifts_count ?? 1),
+          id: o.id,
+          title: o.title,
+          city: o.city,
+          start_date: o.start_date,
+          accepted: c.accepted,
+          pending: c.pending,
+          needed: Math.max(1, o.shifts_count ?? 1),
           level: coverageLevel({
-            status: o.status, shiftsCount: o.shifts_count, startDate: o.start_date,
-            acceptedCount: c.accepted, pendingCount: c.pending,
+            status: o.status,
+            shiftsCount: o.shifts_count,
+            startDate: o.start_date,
+            acceptedCount: c.accepted,
+            pendingCount: c.pending,
           }),
         };
       }),
@@ -66,8 +81,16 @@ export function CoverageSemaphore({ userId }: { userId: string }) {
     void load();
     const ch = sb
       .channel(`coverage-${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "job_offers" }, () => void load())
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "applications" },
+        () => void load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_offers" },
+        () => void load(),
+      )
       .subscribe();
     return () => {
       void sb.removeChannel(ch);
@@ -105,22 +128,31 @@ export function CoverageSemaphore({ userId }: { userId: string }) {
         </div>
       </div>
       {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No tienes ofertas abiertas. Publica turnos para ver la cobertura.</p>
+        <p className="text-xs text-muted-foreground">
+          No tienes ofertas abiertas. Publica turnos para ver la cobertura.
+        </p>
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border">
           {rows.map((r) => (
             <li key={r.id} className="flex items-center gap-3 p-3 text-sm">
-              <span className={`h-3 w-3 shrink-0 rounded-full ${COVERAGE_META[r.level].dot}`} aria-hidden="true" />
+              <span
+                className={`h-3 w-3 shrink-0 rounded-full ${COVERAGE_META[r.level].dot}`}
+                aria-hidden="true"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{r.title}</p>
                 <p className="text-xs text-muted-foreground">
                   {r.city}
-                  {r.start_date ? ` · ${new Date(r.start_date).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}
+                  {r.start_date
+                    ? ` · ${new Date(r.start_date).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}`
+                    : ""}
                   {` · ${r.accepted}/${r.needed} turnos aprobados`}
                   {r.pending ? ` · ${r.pending} postulante${r.pending === 1 ? "" : "s"}` : ""}
                 </p>
               </div>
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{COVERAGE_META[r.level].label}</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {COVERAGE_META[r.level].label}
+              </span>
             </li>
           ))}
         </ul>

@@ -16,7 +16,13 @@ describe("paymentGuard", () => {
   });
 
   it("blocks Mercado Pago links and payment instructions", () => {
-    expect(guardOutgoing("Paga aquí: https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=1", SAFE, HOSTS).blocked).toBe(true);
+    expect(
+      guardOutgoing(
+        "Paga aquí: https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=1",
+        SAFE,
+        HOSTS,
+      ).blocked,
+    ).toBe(true);
     expect(guardOutgoing("Tu enlace de pago es este", SAFE, HOSTS).blocked).toBe(true);
     expect(containsPaymentInstruction("Transfiere a la cuenta de ahorros 123")).toBe(true);
     expect(containsPaymentInstruction("Nequi: 3001234567")).toBe(true);

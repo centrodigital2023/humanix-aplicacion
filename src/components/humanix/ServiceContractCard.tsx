@@ -78,7 +78,8 @@ export function ServiceContractCard({ bookingId, party }: Props) {
     );
   }
 
-  const mySignedAt = party === "family" ? contract.family_signed_at : contract.professional_signed_at;
+  const mySignedAt =
+    party === "family" ? contract.family_signed_at : contract.professional_signed_at;
   const bothSigned = Boolean(contract.family_signed_at && contract.professional_signed_at);
 
   if (mySignedAt) {
@@ -93,7 +94,12 @@ export function ServiceContractCard({ bookingId, party }: Props) {
             <p className="text-muted-foreground mt-0.5">Falta la firma de la otra parte.</p>
           )}
           {contract.pdf_url && (
-            <a href={contract.pdf_url} target="_blank" rel="noopener noreferrer" className="text-biosensor hover:underline">
+            <a
+              href={contract.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-biosensor hover:underline"
+            >
               Ver contrato
             </a>
           )}
