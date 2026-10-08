@@ -2044,6 +2044,33 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_identity_documents: {
+        Row: {
+          created_at: string
+          document_enc: string
+          document_hash: string
+          document_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_enc: string
+          document_hash: string
+          document_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_enc?: string
+          document_hash?: string
+          document_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       professional_profiles: {
         Row: {
           active: boolean | null
@@ -2248,7 +2275,9 @@ export type Database = {
           document_hash: string
           id: string
           provider: string
+          requested_by: string | null
           result: Json
+          reverified: boolean
           status: string
           user_id: string
         }
@@ -2258,7 +2287,9 @@ export type Database = {
           document_hash: string
           id?: string
           provider?: string
+          requested_by?: string | null
           result?: Json
+          reverified?: boolean
           status: string
           user_id: string
         }
@@ -2268,7 +2299,9 @@ export type Database = {
           document_hash?: string
           id?: string
           provider?: string
+          requested_by?: string | null
           result?: Json
+          reverified?: boolean
           status?: string
           user_id?: string
         }
