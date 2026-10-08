@@ -94,7 +94,9 @@ async function runCheck(
   let titles: { program: string | null; type: string | null }[] = [];
   let httpStatus: number | null = null;
   try {
-    const url = `${VERIFIK_URL}?documentType=${doc.type}&documentNumber=${doc.number}`;
+    const base = process.env.VERIFIK_API_BASE?.replace(/\/$/, "");
+    const endpoint = base ? `${base}/v2/co/rethus` : VERIFIK_URL;
+    const url = `${endpoint}?documentType=${doc.type}&documentNumber=${doc.number}`;
     const r = await fetch(url, { headers: { Authorization: `JWT ${env.token}`, Accept: "application/json" } });
     httpStatus = r.status;
     if (r.status === 404) status = "not_found";
