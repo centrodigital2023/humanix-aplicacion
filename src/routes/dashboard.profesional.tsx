@@ -57,11 +57,12 @@ import { NotificationsBell } from "@/components/humanix/NotificationsBell";
 import { PublishGate } from "@/components/humanix/PublishGate";
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
-import { OpenFamilyNeedsList } from "@/components/humanix/OpenFamilyNeedsList";
+import { OpportunityHub } from "@/components/humanix/hub/OpportunityHub";
+import { OpportunityPulse } from "@/components/humanix/hub/OpportunityPulse";
+import { IncomePlannerCard } from "@/components/humanix/hub/IncomePlanner";
 import { ProposalsInbox } from "@/components/humanix/ProposalsInbox";
 import { ReferralCard } from "@/components/humanix/ReferralCard";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
-import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { AgendaViewer } from "@/components/humanix/AgendaViewer";
 import { ProAgendaModule } from "@/components/humanix/ProAgendaModule";
 import { supabase } from "@/integrations/supabase/client";
@@ -581,7 +582,7 @@ function ProDashboard() {
         {tab === "inicio" && (
           <div className="space-y-4">
 
-            <LivePulseBar role="professional" />
+            {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
 
             {/* Onboarding banner — only for new profiles (< 30%) */}
             {completionPct < 30 && (
@@ -778,6 +779,11 @@ function ProDashboard() {
                 <p className="text-sm text-muted-foreground text-center py-4">No hay ofertas activas en este momento.</p>
               )}
             </div>
+
+            {/* Planificador de ingresos: neto real por hora y si conviene un plan de pago */}
+            {userId && (
+              <IncomePlannerCard userId={userId} defaultRate={profile?.hourly_rate ?? null} />
+            )}
 
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-3">
@@ -1117,6 +1123,21 @@ function ProDashboard() {
         {tab === "ofertas" && (
           <div className="space-y-4">
 
+            {/* Agenda de familias: postularse, negociar el valor y desbloquear contacto */}
+            {userId && (
+              <div className="rounded-2xl border border-border bg-card/95 p-4">
+                <OpportunityHub userId={userId} />
+              </div>
+            )}
+
+            {/* Propuestas y negociación + calificar a la familia */}
+            {userId && (
+              <>
+                <ProposalsInbox userId={userId} role="professional" />
+                <PendingRatingsCard userId={userId} role="professional" />
+              </>
+            )}
+
             {/* My applications */}
             {apps.length > 0 && (
               <div className="rounded-2xl border border-border bg-card/95 p-4">
@@ -1168,20 +1189,6 @@ function ProDashboard() {
               )}
             </div>
 
-            {/* Proposals + family needs */}
-            {userId && (
-              <>
-                <div className="rounded-2xl border border-border bg-card/95 p-4">
-                  <ProposalsInbox userId={userId} role="professional" />
-                </div>
-                <div className="rounded-2xl border border-border bg-card/95 p-4">
-                  <OpenFamilyNeedsList professionalId={userId} />
-                </div>
-                <div className="rounded-2xl border border-border bg-card/95 p-4">
-                  <PendingRatingsCard userId={userId} role="professional" />
-                </div>
-              </>
-            )}
           </div>
         )}
 

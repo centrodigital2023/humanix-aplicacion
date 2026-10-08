@@ -1,6 +1,9 @@
 // Clasificación y borradores de respuesta de PQRS con IA (Lovable AI Gateway).
 // El texto del ticket es contenido NO confiable: se delimita y se le indica al modelo que lo trate
 // solo como datos. La salida se valida contra listas cerradas antes de guardarla.
+// Módulo agnóstico del entorno de ejecución: quien lo llama inyecta la llave y el modelo, de modo que
+// lo usan tanto la función de borde `pqrs-classifier` como las funciones de servidor de
+// `src/lib/pqrs.functions.ts`.
 import { normalizePriority, type Priority, type SafetyLevel } from "./pqrsRules.ts";
 import { containsPaymentInstruction, hasDisallowedUrl } from "./paymentGuard.ts";
 
@@ -28,11 +31,15 @@ export interface Classification {
   summary: string;
 }
 
+export interface AiConfig {
+  apiKey?: string | null;
+  model?: string | null;
+}
+
 export type AiFailure = "rate_limited" | "no_credits" | "timeout" | "not_configured" | "failed";
 export type AiOutcome<T> = { ok: true; value: T } | { ok: false; reason: AiFailure };
 
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
-const model = () => Deno.env.get("PQRS_AI_MODEL") ?? DEFAULT_MODEL;
 
 function untrusted(subject: string, description: string): string {
   const esc = (s: string) => s.replace(/<\/?ticket>/gi, "[ticket]").replace(CONTROL, "");
@@ -53,8 +60,9 @@ async function callTool<T>(
   tool: Record<string, unknown>,
   toolName: string,
   timeoutMs: number,
+  cfg: AiConfig,
 ): Promise<AiOutcome<T>> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
+  const key = cfg.apiKey;
   if (!key) return { ok: false, reason: "not_configured" };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -64,7 +72,7 @@ async function callTool<T>(
       signal: ctrl.signal,
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: model(),
+        model: cfg.model || DEFAULT_MODEL,
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
@@ -135,6 +143,7 @@ function sanitizeClassification(raw: Record<string, unknown>): Classification {
 export async function classifyWithAi(
   subject: string,
   description: string,
+  cfg: AiConfig,
   timeoutMs = 12_000,
 ): Promise<AiOutcome<Classification>> {
   const out = await callTool<Record<string, unknown>>(
@@ -143,6 +152,7 @@ export async function classifyWithAi(
     CLASSIFY_TOOL,
     "classify_pqrs",
     timeoutMs,
+    cfg,
   );
   return out.ok ? { ok: true, value: sanitizeClassification(out.value) } : out;
 }
@@ -211,6 +221,7 @@ export async function draftReplyWithAi(
     due_at: string | null;
     ai_summary: string | null;
   },
+  cfg: AiConfig,
   timeoutMs = 20_000,
 ): Promise<AiOutcome<ReplyDraft>> {
   const context = [
@@ -227,6 +238,7 @@ export async function draftReplyWithAi(
     DRAFT_TOOL,
     "draft_reply",
     timeoutMs,
+    cfg,
   );
   if (!out.ok) return out;
 

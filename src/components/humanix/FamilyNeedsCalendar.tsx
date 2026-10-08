@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { checkOutgoingMessage } from "@/lib/opportunities";
 
 // Untyped client for tables not in generated types (migration pendiente de regenerar)
 const sb = supabase as unknown as SupabaseClient;
@@ -47,6 +48,9 @@ export function FamilyNeedsCalendar({
   const [needs, setNeeds] = useState<Need[]>([]);
   const [loading, setLoading] = useState(true);
   const [hourlyRate, setHourlyRate] = useState<number>(20000);
+  // Estos dos datos se aplican a las horas que marques después: mejoran el match con profesionales.
+  const [careType, setCareType] = useState("");
+  const [note, setNote] = useState("");
 
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -117,6 +121,15 @@ export function FamilyNeedsCalendar({
       else setNeeds((n) => n.filter((x) => x.id !== existing.id));
       return;
     }
+    const noteCheck = checkOutgoingMessage(note, { maxChars: 200 });
+    if (!noteCheck.ok) {
+      toast.error(
+        noteCheck.reason === "too_long"
+          ? "La nota puede tener hasta 200 caracteres"
+          : "No incluyas teléfonos, correos, direcciones ni datos de pago en la nota: tu dirección y WhatsApp solo los ve un profesional con plan que se postula a tu solicitud.",
+      );
+      return;
+    }
     const start = new Date(day);
     start.setHours(hour, 0, 0, 0);
     const end = new Date(start);
@@ -128,6 +141,8 @@ export function FamilyNeedsCalendar({
       hourly_rate: hourlyRate,
       status: "open",
       service_address: serviceAddress ?? null,
+      care_type: careType.trim() || null,
+      notes: noteCheck.text || null,
     };
     const { data, error } = await sb.from("family_needs").insert(payload).select().single();
     if (error) toast.error(error.message);
@@ -170,6 +185,55 @@ export function FamilyNeedsCalendar({
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      <div className="grid gap-2 border-b border-border p-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor="need-care-type" className="text-[11px] text-muted-foreground">
+            Tipo de cuidado (para las horas que marques)
+          </label>
+          <Input
+            id="need-care-type"
+            list="need-care-types"
+            value={careType}
+            maxLength={60}
+            placeholder="Adulto mayor, postoperatorio, oxígeno…"
+            onChange={(e) => setCareType(e.target.value)}
+            className="h-8 text-xs"
+          />
+          <datalist id="need-care-types">
+            {[
+              "Adulto mayor",
+              "Postoperatorio",
+              "Pediatría",
+              "Oxígeno domiciliario",
+              "Curaciones",
+              "Acompañamiento",
+              "Fisioterapia",
+              "Cuidado paliativo",
+              "Salud mental",
+            ].map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
+        </div>
+        <div>
+          <label htmlFor="need-note" className="text-[11px] text-muted-foreground">
+            Nota para el profesional (opcional)
+          </label>
+          <Input
+            id="need-note"
+            value={note}
+            maxLength={200}
+            placeholder="Ej.: paciente con oxígeno, requiere movilización"
+            onChange={(e) => setNote(e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground sm:col-span-2">
+          Tu dirección y WhatsApp solo los ve un profesional con plan de pago que se postula a tu
+          solicitud, y en tu panel verás un aviso cada vez que alguien los desbloquea.
+        </p>
       </div>
 
       {loading ? (

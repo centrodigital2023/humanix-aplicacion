@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { GlobalExperience } from "@/components/humanix/GlobalExperience";
+import { AppQueryProvider } from "@/components/humanix/AppQueryProvider";
 import * as seo from "@/lib/seo";
 const {
   DEFAULT_LOCALE,
@@ -198,7 +199,7 @@ function RootComponent() {
       s.location.pathname.startsWith("/superadmin"),
   });
   return (
-    <>
+    <AppQueryProvider>
       <Outlet />
       {!hideBubble && (
         <Suspense fallback={null}>
@@ -207,6 +208,6 @@ function RootComponent() {
       )}
       <Toaster richColors position="top-right" />
       <GlobalExperience />
-    </>
+    </AppQueryProvider>
   );
 }

@@ -27,10 +27,31 @@ Tabla `function_execution_logs` y tarjeta "Salud de funciones backend" en `/supe
 
 | Función | Cómo se activa | Auth | Estado | Prueba |
 |---|---|---|---|---|
-| `pqrs-intake` | Formulario público de `/contacto` y consulta de estado | Pública (`verify_jwt=false`); validación, campo trampa, límites por hash | Conectada | Reglas probadas (`pqrsRules.test.ts`); falta prueba contra Supabase |
-| `pqrs-assistant` | Botón «Borrador con IA» del panel | JWT + rol staff; 30 borradores/h | Conectada | Barrera de pagos probada (`paymentGuard.test.ts`) |
+| `submitPqrs` / `lookupPqrsStatus` (función de servidor, antes `pqrs-intake`) | Formulario público de `/contacto` y consulta de estado | Pública; validación, campo trampa, límites por hash | Conectada | `pqrs.server.test.ts` con base simulada; falta prueba contra Supabase |
+| `draftPqrsReply` (función de servidor, antes `pqrs-assistant`) | Botón «Borrador con IA» del panel | JWT + `is_staff`; 30 borradores/h | Conectada | `pqrs.server.test.ts`, `pqrsAi.test.ts`, `paymentGuard.test.ts` |
 | `pqrs-classifier` | «Clasificar IA» y «Clasificar pendientes» | JWT + dueño del ticket o staff | Conectada (endurecida) | Piso de seguridad probado |
 
 Tablas nuevas: `pqrs_ticket_events`, `pqrs_intake_attempts`. RPCs nuevas: `marketplace_city_balance`,
 `suggest_professionals_for_offer`, `invite_matching_professionals`, `moderate_offer`.
 Secrets: `LOVABLE_API_KEY` (ya existente). Opcional: `PQRS_AI_MODEL` (por defecto `google/gemini-2.5-flash`).
+
+> Regla del proyecto: las Edge Functions existentes solo se mantienen; la lógica de servidor nueva usa `createServerFn`
+> en `src/lib/*.functions.ts`. `pqrs-intake` y `pqrs-assistant` se habían creado como Edge Functions y se trasladaron
+> a funciones de servidor (la configuración `[functions.pqrs-intake]` se retiró de `supabase/config.toml`).
+
+## Hub de oportunidades del profesional (migración `20261008200000`)
+
+| Pieza | Cómo se activa | Auth / permisos | Prueba |
+|---|---|---|---|
+| RPC `list_open_family_needs` | Pestaña Ofertas | Rol profesional o staff; sin dirección | PostgreSQL real (A1–A15) |
+| RPC `apply_to_family_need` | «Postularme» | Rol profesional; valor distinto = plan de pago | PostgreSQL real (B1–B12) |
+| RPC `counter_slot_proposal` | «Contraofertar» | Quien recibe la oferta; profesional necesita plan de pago | PostgreSQL real (D1–D14) |
+| RPC `accept_slot_proposal` (reemplazada) | «Aceptar» | Quien recibe la oferta | PostgreSQL real (D10–D14) |
+| RPC `reveal_opportunity_contact` | «Ver dirección y WhatsApp» | Plan de pago + postulación + cupo diario; auditada | PostgreSQL real (C1–C11) |
+| RPC `family_reputation`, `market_rate_stats`, `my_slot_proposals` | Tarjetas y bandeja | Autenticado (reputación: profesional/dueña/staff) | PostgreSQL real (E, M, N) |
+| Disparador `slot_proposals_guard_insert/update` | Todo INSERT/UPDATE de propuestas | Impide saltarse plan, rango y estados desde la API | PostgreSQL real (B13–B18) |
+| Disparador `notify_slot_proposal_event` | INSERT y cambio de estado | Interno | PostgreSQL real (B2, D3, D5b, D10b) |
+| Disparador `notify_opportunity_alerts` | INSERT en `family_needs` | Interno; 1 aviso por alerta y familia cada 6 h | PostgreSQL real (F) |
+| Disparador `ping_open_needs` | Cambios en `family_needs` | Canal privado `open_needs_ping`, sin datos | PostgreSQL real (G) |
+| Disparador `sanitize_rating_comment` | Calificaciones | Limpia contacto en comentarios | PostgreSQL real (E4) |
+| `expire_stale_proposals` | `pg_cron` cada 15 min (si existe) y en cada RPC | Solo service role | PostgreSQL real (D14) |

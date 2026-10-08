@@ -1,318 +1,498 @@
-import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { CheckCircle2, XCircle, Handshake, Loader2, Clock, User, Info } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import {
+  CheckCircle2,
+  Clock,
+  Handshake,
+  History,
+  Info,
+  Loader2,
+  Lock,
+  MessageSquareQuote,
+  Repeat2,
+  User,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
-import { TrustProfileCard } from "./TrustProfileCard";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { hubKeys } from "@/hooks/use-opportunity-feed";
+import { usePlan } from "@/hooks/use-plan";
+import {
+  classifyHubError,
+  estimatedTotal,
+  formatShiftRange,
+  hoursBetween,
+} from "@/lib/opportunities";
+import {
+  isExpired,
+  respondOptions,
+  roundLabel,
+  timeLeftLabel,
+  type NegotiationRole,
+  type ProposalStatus,
+} from "@/lib/negotiation";
+import { formatCOP } from "@/lib/pricing";
+import { FREE_COMMISSION_PCT } from "@/lib/proIncome";
+import { cn } from "@/lib/utils";
+import { CounterOfferDialog } from "./hub/CounterOfferDialog";
 import { PriceBreakdownCard } from "./PriceBreakdownCard";
+import { TrustProfileCard } from "./TrustProfileCard";
 
 const sb = supabase as unknown as SupabaseClient;
 
-type Proposal = {
+interface ProposalRow {
   id: string;
   family_user_id: string;
   professional_id: string;
   family_need_id: string | null;
-  availability_slot_id: string | null;
   starts_at: string;
   ends_at: string;
   hourly_rate: number;
-  proposed_by: "family" | "professional";
-  status: "pending" | "accepted" | "rejected" | "cancelled" | "expired";
+  proposed_by: NegotiationRole;
+  status: ProposalStatus;
   message: string | null;
   decision_note: string | null;
   booking_id: string | null;
   created_at: string;
+  round_no: number;
+  parent_proposal_id: string | null;
+  posted_rate: number | null;
+  expires_at: string | null;
+  peer_id: string | null;
+  peer_name: string | null;
+  peer_avatar: string | null;
+  peer_city: string | null;
+}
+
+const STATUS_LABEL: Record<ProposalStatus, string> = {
+  pending: "Pendiente",
+  accepted: "Aceptada",
+  rejected: "Rechazada",
+  cancelled: "Cancelada",
+  expired: "Vencida",
+  countered: "Con contraoferta",
 };
 
-type PeerProfile = {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
+const STATUS_STYLE: Record<ProposalStatus, string> = {
+  pending: "border-warn/40 bg-warn/10 text-warn",
+  accepted: "border-ok/40 bg-ok/10 text-ok",
+  rejected: "border-sos/40 bg-sos/10 text-sos",
+  cancelled: "border-border bg-muted text-muted-foreground",
+  expired: "border-border bg-muted text-muted-foreground",
+  countered: "border-border bg-muted text-muted-foreground",
 };
 
-export function ProposalsInbox({
-  userId,
-  role,
-}: {
-  userId: string;
-  role: "family" | "professional";
-}) {
+/** Cadena de ofertas hacia atrás: oferta inicial → … → anterior a la actual. */
+function ancestorsOf(row: ProposalRow, byId: Map<string, ProposalRow>): ProposalRow[] {
+  const chain: ProposalRow[] = [];
+  let cursor = row.parent_proposal_id ? byId.get(row.parent_proposal_id) : undefined;
+  while (cursor && chain.length < 5) {
+    chain.unshift(cursor);
+    cursor = cursor.parent_proposal_id ? byId.get(cursor.parent_proposal_id) : undefined;
+  }
+  return chain;
+}
+
+export function ProposalsInbox({ userId, role }: { userId: string; role: NegotiationRole }) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { can } = usePlan(userId);
   const [tab, setTab] = useState<"incoming" | "outgoing">("incoming");
-  const [loading, setLoading] = useState(true);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [peers, setPeers] = useState<Record<string, PeerProfile>>({});
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [history, setHistory] = useState<string | null>(null);
+  const [countering, setCountering] = useState<ProposalRow | null>(null);
+  // Para refrescar las cuentas regresivas sin pedir datos otra vez.
+  const [now, setNow] = useState(() => Date.now());
+
+  const key = hubKeys.proposals(userId);
+  const query = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      const { data, error } = await sb.rpc("my_slot_proposals", { p_limit: 80 });
+      if (error) throw error;
+      return (data ?? []) as ProposalRow[];
+    },
+  });
 
   useEffect(() => {
-    let active = true;
-
-    async function load() {
-      setLoading(true);
-      const filter = role === "family" ? `family_user_id=eq.${userId}` : `professional_id=eq.${userId}`;
-      const { data } = await sb
-        .from("slot_proposals")
-        .select(
-          "id, family_user_id, professional_id, family_need_id, availability_slot_id, starts_at, ends_at, hourly_rate, proposed_by, status, message, decision_note, booking_id, created_at",
-        )
-        .or(filter)
-        .order("created_at", { ascending: false })
-        .limit(40);
-      if (!active) return;
-      const list = (data ?? []) as Proposal[];
-      setProposals(list);
-
-      const peerIds = Array.from(
-        new Set(list.map((p) => (role === "family" ? p.professional_id : p.family_user_id))),
-      );
-      if (peerIds.length > 0) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url")
-          .in("id", peerIds);
-        if (!active) return;
-        const map: Record<string, PeerProfile> = {};
-        (profs ?? []).forEach((p) => {
-          map[p.id] = p as PeerProfile;
-        });
-        setPeers(map);
-      }
-      setLoading(false);
-    }
-    load();
-
-    const filterCol = role === "family" ? `family_user_id=eq.${userId}` : `professional_id=eq.${userId}`;
+    const filterCol =
+      role === "family" ? `family_user_id=eq.${userId}` : `professional_id=eq.${userId}`;
     const channel = sb
       .channel(`proposals_inbox_${role}_${userId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "slot_proposals", filter: filterCol },
-        () => load(),
+        () => void qc.invalidateQueries({ queryKey: key }),
       )
       .subscribe();
-
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
     return () => {
-      active = false;
-      sb.removeChannel(channel);
+      clearInterval(tick);
+      void sb.removeChannel(channel);
     };
-  }, [userId, role]);
+  }, [role, userId, qc, key]);
 
-  const incoming = proposals.filter((p) =>
-    role === "family" ? p.proposed_by === "professional" : p.proposed_by === "family",
-  );
-  const outgoing = proposals.filter((p) =>
-    role === "family" ? p.proposed_by === "family" : p.proposed_by === "professional",
-  );
+  const rows = useMemo(() => query.data ?? [], [query.data]);
+  const byId = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
+  // Las ofertas superadas («countered») son historial: solo se muestra la vigente de cada negociación.
+  const heads = useMemo(() => rows.filter((r) => r.status !== "countered"), [rows]);
+  const isIncoming = (r: ProposalRow) => r.proposed_by !== role;
+  const incoming = heads.filter(isIncoming);
+  const outgoing = heads.filter((r) => !isIncoming(r));
   const list = tab === "incoming" ? incoming : outgoing;
+  const live = (r: ProposalRow) => r.status === "pending" && !isExpired(r, now);
 
-  async function accept(p: Proposal) {
-    setBusyId(p.id);
-    try {
+  const commissionPct = role === "professional" && !can("no_commission") ? FREE_COMMISSION_PCT : 0;
+  const canNegotiate = role === "family" || can("negotiate_rate");
+
+  const refreshAll = () => {
+    void qc.invalidateQueries({ queryKey: key });
+    void qc.invalidateQueries({ queryKey: ["hub", "needs", userId] });
+  };
+
+  const accept = useMutation({
+    mutationFn: async (p: ProposalRow) => {
       // Precio, comisión, reserva y estados se resuelven atómicamente en el servidor.
       const { error } = await sb.rpc("accept_slot_proposal", { p_proposal_id: p.id });
       if (error) throw error;
-
+    },
+    onSuccess: () => {
       toast.success("¡Acuerdo cerrado! Reserva creada.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error aceptando propuesta");
-    } finally {
-      setBusyId(null);
-    }
-  }
+      refreshAll();
+    },
+    onError: (e) => toast.error(classifyHubError(e as { message?: string }).message),
+  });
 
-  async function reject(p: Proposal) {
-    setBusyId(p.id);
-    try {
+  const setStatus = useMutation({
+    mutationFn: async ({
+      p,
+      status,
+      note,
+    }: {
+      p: ProposalRow;
+      status: "rejected" | "cancelled";
+      note?: string;
+    }) => {
       const { error } = await sb
         .from("slot_proposals")
-        .update({ status: "rejected", decision_note: "Rechazada por el usuario" })
+        .update({ status, ...(note ? { decision_note: note } : {}) })
         .eq("id", p.id);
       if (error) throw error;
-      toast.success("Propuesta rechazada");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error rechazando propuesta");
-    } finally {
-      setBusyId(null);
-    }
-  }
+      return status;
+    },
+    onSuccess: (status) => {
+      toast.success(status === "rejected" ? "Propuesta rechazada" : "Propuesta retirada");
+      refreshAll();
+    },
+    onError: (e) => toast.error(classifyHubError(e as { message?: string }).message),
+  });
 
-  async function cancel(p: Proposal) {
-    setBusyId(p.id);
-    try {
-      const { error } = await sb.from("slot_proposals").update({ status: "cancelled" }).eq("id", p.id);
-      if (error) throw error;
-      toast.success("Propuesta cancelada");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error cancelando");
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const busyId =
+    (accept.isPending && accept.variables?.id) ||
+    (setStatus.isPending && setStatus.variables?.p.id) ||
+    null;
+
+  const counterTarget = countering
+    ? (() => {
+        const mine = [...ancestorsOf(countering, byId)]
+          .reverse()
+          .find((a) => a.proposed_by === role);
+        return {
+          id: countering.id,
+          hourly_rate: countering.hourly_rate,
+          posted_rate: countering.posted_rate,
+          round_no: countering.round_no,
+          my_last_offer: mine?.hourly_rate ?? null,
+          peer_city: role === "professional" ? countering.peer_city : null,
+        };
+      })()
+    : null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden">
-      <div className="p-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-4">
         <div>
-          <p className="text-sm font-semibold inline-flex items-center gap-2">
-            <Handshake className="h-4 w-4 text-fuchsia-neural" />
-            Propuestas de trabajo
+          <p className="inline-flex items-center gap-2 text-sm font-semibold">
+            <Handshake className="h-4 w-4 text-fuchsia-neural" aria-hidden />
+            Propuestas y negociación
           </p>
           <p className="text-[11px] text-muted-foreground">
-            {incoming.filter((p) => p.status === "pending").length} por decidir ·{" "}
-            {outgoing.filter((p) => p.status === "pending").length} enviadas
+            {incoming.filter(live).length} por responder · {outgoing.filter(live).length} enviadas
+            esperando
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg bg-muted p-1 text-xs">
-          <button
-            type="button"
-            onClick={() => setTab("incoming")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              tab === "incoming" ? "bg-background shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            Para ti ({incoming.filter((p) => p.status === "pending").length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("outgoing")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              tab === "outgoing" ? "bg-background shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            Enviadas
-          </button>
+        <div className="flex items-center gap-1 rounded-lg bg-muted p-1 text-xs" role="tablist">
+          {(
+            [
+              ["incoming", `Para ti (${incoming.filter(live).length})`],
+              ["outgoing", "Enviadas"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={cn(
+                "rounded-md px-3 py-1 transition-colors",
+                tab === id ? "bg-background shadow-sm" : "text-muted-foreground",
+              )}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="divide-y divide-border">
-        {loading ? (
+        {query.isLoading ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando…
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" aria-hidden /> Cargando…
+          </div>
+        ) : query.error ? (
+          <div className="p-8 text-center text-xs text-muted-foreground">
+            No pudimos cargar las propuestas.{" "}
+            <button
+              className="font-medium text-biosensor hover:underline"
+              onClick={() => void query.refetch()}
+            >
+              Reintentar
+            </button>
           </div>
         ) : list.length === 0 ? (
           <div className="p-8 text-center text-xs text-muted-foreground">
-            {tab === "incoming" ? "Sin propuestas por decidir" : "Aún no has enviado propuestas"}
+            {tab === "incoming" ? "Sin propuestas por responder" : "Aún no has enviado propuestas"}
           </div>
         ) : (
           list.map((p) => {
-            const peerId = role === "family" ? p.professional_id : p.family_user_id;
-            const peer = peers[peerId];
-            const start = new Date(p.starts_at);
-            const end = new Date(p.ends_at);
-            const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
-            const total = p.hourly_rate * hours;
-            const statusColor =
-              p.status === "pending"
-                ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
-                : p.status === "accepted"
-                  ? "bg-green-600/10 text-green-700 border-green-600/30"
-                  : p.status === "rejected"
-                    ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
-                    : "bg-muted text-muted-foreground border-border";
+            const hours = Math.max(1, hoursBetween(p.starts_at, p.ends_at));
+            const total = estimatedTotal(p.hourly_rate, hours) ?? 0;
+            const expired = p.status === "pending" && isExpired(p, now);
+            const options = respondOptions(
+              {
+                status: p.status,
+                proposed_by: p.proposed_by,
+                round: p.round_no,
+                expires_at: p.expires_at,
+              },
+              role,
+              now,
+            );
+            const chain = ancestorsOf(p, byId);
+            const delta =
+              p.posted_rate && p.posted_rate !== p.hourly_rate
+                ? Math.round(((p.hourly_rate - p.posted_rate) / p.posted_rate) * 100)
+                : null;
+            const left = live(p) ? timeLeftLabel(p.expires_at, now) : null;
+            const status: ProposalStatus = expired ? "expired" : p.status;
+            const busy = busyId === p.id;
+
             return (
-              <div key={p.id} className="p-4 border-b border-border/50 last:border-b-0">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                  {peer?.avatar_url ? (
-                    <img src={peer.avatar_url} alt={peer.full_name ?? ""} className="h-full w-full object-cover" />
-                  ) : (
-                    <User className="h-5 w-5 text-muted-foreground" />
-                  )}
+              <div key={p.id} className="space-y-3 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
+                    {p.peer_avatar ? (
+                      <img src={p.peer_avatar} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-5 w-5 text-muted-foreground" aria-hidden />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-2 truncate text-sm font-semibold">
+                      {p.peer_name ?? (role === "family" ? "Profesional" : "Familia")}
+                      {p.round_no > 1 && (
+                        <Badge variant="outline" className="gap-1 text-[10px]">
+                          <Repeat2 className="h-3 w-3" aria-hidden /> {roundLabel(p.round_no)}
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="inline-flex flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
+                      <Clock className="h-3 w-3" aria-hidden />{" "}
+                      {formatShiftRange(p.starts_at, p.ends_at)} ·{" "}
+                      <strong className="text-foreground">{formatCOP(p.hourly_rate)}/h</strong> ·{" "}
+                      {formatCOP(total)}
+                      {delta != null && (
+                        <span className={delta > 0 ? "text-warn" : "text-ok"}>
+                          ({delta > 0 ? "+" : ""}
+                          {delta}% vs publicado {formatCOP(p.posted_rate ?? 0)})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLE[status])}>
+                    {STATUS_LABEL[status]}
+                  </Badge>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">
-                    {peer?.full_name ?? (role === "family" ? "Profesional" : "Familia")}
+
+                {p.message && (
+                  <p className="flex items-start gap-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                    <MessageSquareQuote
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
+                    {p.message}
                   </p>
-                  <p className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {start.toLocaleString("es-CO", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    · {hours} h · ${total.toLocaleString("es-CO")}
-                  </p>
-                </div>
-                <Badge variant="outline" className={`text-[10px] capitalize ${statusColor}`}>
-                  {p.status === "pending"
-                    ? "Pendiente"
-                    : p.status === "accepted"
-                      ? "Aceptada"
-                      : p.status === "rejected"
-                        ? "Rechazada"
-                        : p.status === "cancelled"
-                          ? "Cancelada"
-                          : "Expirada"}
-                </Badge>
-                <Button
-                  size="sm"
-                  variant={expanded === p.id ? "secondary" : "ghost"}
-                  onClick={() => setExpanded((e) => (e === p.id ? null : p.id))}
-                  title="Ver perfil de confianza"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </Button>
-                {p.status === "pending" && tab === "incoming" ? (
-                  <div className="flex items-center gap-2">
+                )}
+                {left && <p className="text-[11px] font-medium text-warn">{left}</p>}
+                {options.reason && live(p) && (
+                  <p className="text-[11px] text-muted-foreground">{options.reason}</p>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {options.accept && (
                     <Button
                       size="sm"
-                      onClick={() => accept(p)}
-                      disabled={busyId === p.id}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-ok text-ok-foreground hover:bg-ok/90"
+                      onClick={() => accept.mutate(p)}
+                      disabled={busy}
                     >
-                      {busyId === p.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                      {busy && accept.isPending ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden />
                       ) : (
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden />
                       )}
-                      Aceptar
+                      Aceptar {formatCOP(p.hourly_rate)}/h
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => reject(p)} disabled={busyId === p.id}>
-                      <XCircle className="h-3 w-3 mr-1" /> Rechazar
+                  )}
+                  {options.counter &&
+                    (canNegotiate ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCountering(p)}
+                        disabled={busy}
+                      >
+                        <Repeat2 className="mr-1 h-3 w-3" aria-hidden /> Contraofertar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          toast.info("Negociar el valor está disponible desde el plan Esencial", {
+                            action: {
+                              label: "Ver planes",
+                              onClick: () => void navigate({ to: "/planes" }),
+                            },
+                          });
+                        }}
+                      >
+                        <Lock className="mr-1 h-3 w-3" aria-hidden /> Contraofertar (Esencial)
+                      </Button>
+                    ))}
+                  {options.reject && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setStatus.mutate({
+                          p,
+                          status: "rejected",
+                          note: "Rechazada por el usuario",
+                        })
+                      }
+                      disabled={busy}
+                    >
+                      <XCircle className="mr-1 h-3 w-3" aria-hidden /> Rechazar
                     </Button>
-                  </div>
-                ) : p.status === "pending" && tab === "outgoing" ? (
-                  <Button size="sm" variant="ghost" onClick={() => cancel(p)} disabled={busyId === p.id}>
-                    Cancelar
-                  </Button>
-                ) : p.status === "accepted" && p.booking_id ? (
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/servicio/$bookingId" params={{ bookingId: p.booking_id }}>
-                      Ver servicio
-                    </Link>
-                  </Button>
-                ) : null}
+                  )}
+                  {options.withdraw && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setStatus.mutate({ p, status: "cancelled" })}
+                      disabled={busy}
+                    >
+                      Retirar
+                    </Button>
+                  )}
+                  {p.status === "accepted" && p.booking_id && (
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/servicio/$bookingId" params={{ bookingId: p.booking_id }}>
+                        Ver servicio
+                      </Link>
+                    </Button>
+                  )}
+                  {chain.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant={history === p.id ? "secondary" : "ghost"}
+                      onClick={() => setHistory((h) => (h === p.id ? null : p.id))}
+                    >
+                      <History className="mr-1 h-3.5 w-3.5" aria-hidden /> Historial (
+                      {chain.length + 1})
+                    </Button>
+                  )}
+                  {p.peer_id && (
+                    <Button
+                      size="sm"
+                      variant={expanded === p.id ? "secondary" : "ghost"}
+                      onClick={() => setExpanded((e) => (e === p.id ? null : p.id))}
+                      aria-label="Ver perfil de confianza"
+                    >
+                      <Info className="h-3.5 w-3.5" aria-hidden />
+                    </Button>
+                  )}
                 </div>
-                {p.status === "pending" ? (
-                  <div className="mt-3 max-w-xs">
+
+                {history === p.id && (
+                  <ol className="space-y-1 rounded-lg border border-border p-3 text-xs">
+                    {[...chain, p].map((step) => (
+                      <li
+                        key={step.id}
+                        className="flex flex-wrap items-center justify-between gap-2"
+                      >
+                        <span>
+                          <strong>{roundLabel(step.round_no)}</strong> ·{" "}
+                          {step.proposed_by === role ? "tú" : (step.peer_name ?? "la otra parte")}
+                        </span>
+                        <span className="tabular-nums">{formatCOP(step.hourly_rate)}/h</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+
+                {live(p) && (
+                  <div className="max-w-xs">
                     <PriceBreakdownCard
                       hourlyRate={p.hourly_rate}
-                      hours={Math.max(1, Math.round((new Date(p.ends_at).getTime() - new Date(p.starts_at).getTime()) / 3_600_000))}
+                      hours={hours}
                       professionalId={p.professional_id}
                       viewer={role === "professional" ? "professional" : "payer"}
                     />
                   </div>
-                ) : null}
-                {expanded === p.id ? (
-                  <div className="mt-3">
-                    <TrustProfileCard
-                      userId={peerId}
-                      role={role === "family" ? "professional" : "family"}
-                      compact
-                    />
-                  </div>
-                ) : null}
+                )}
+
+                {expanded === p.id && p.peer_id && (
+                  <TrustProfileCard
+                    userId={p.peer_id}
+                    role={role === "family" ? "professional" : "family"}
+                    compact
+                  />
+                )}
               </div>
             );
           })
         )}
       </div>
+
+      {countering && counterTarget && (
+        <CounterOfferDialog
+          key={countering.id}
+          target={counterTarget}
+          role={role}
+          hours={Math.max(1, hoursBetween(countering.starts_at, countering.ends_at))}
+          commissionPct={commissionPct}
+          open
+          onOpenChange={(o) => !o && setCountering(null)}
+          onDone={refreshAll}
+        />
+      )}
     </div>
   );
 }

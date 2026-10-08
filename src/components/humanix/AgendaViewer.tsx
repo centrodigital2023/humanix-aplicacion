@@ -84,13 +84,38 @@ export function AgendaViewer({
         if (active) setSlots((data ?? []) as Slot[]);
         setNeeds([]);
       } else {
-        const { data } = await sb
-          .from("family_needs")
-          .select("id, family_user_id, starts_at, ends_at, hourly_rate, status, service_address, notes")
-          .eq("family_user_id", targetUserId)
-          .gte("starts_at", weekStart.toISOString())
-          .lt("starts_at", weekEnd.toISOString());
-        if (active) setNeeds((data ?? []) as Need[]);
+        // La tabla family_needs es privada (dirección y notas): el profesional lee la agenda de la
+        // familia por la función segura, que no devuelve dirección y limpia datos de contacto de las notas.
+        const { data } = await sb.rpc("list_open_family_needs", { p_limit: 500 });
+        const rows = (
+          (data ?? []) as Array<{
+            id: string;
+            family_user_id: string;
+            starts_at: string;
+            ends_at: string;
+            hourly_rate: number | null;
+            notes_public: string | null;
+          }>
+        )
+          .filter(
+            (r) =>
+              r.family_user_id === targetUserId &&
+              new Date(r.starts_at) >= weekStart &&
+              new Date(r.starts_at) < weekEnd,
+          )
+          .map(
+            (r): Need => ({
+              id: r.id,
+              family_user_id: r.family_user_id,
+              starts_at: r.starts_at,
+              ends_at: r.ends_at,
+              hourly_rate: r.hourly_rate ?? 0,
+              status: "open",
+              service_address: null,
+              notes: r.notes_public,
+            }),
+          );
+        if (active) setNeeds(rows);
         setSlots([]);
       }
       // Already proposed by current user on these cells

@@ -26,7 +26,3 @@ verify_jwt = false
 
 [functions.verify-validation-otp]
 verify_jwt = false
-
-# Canal público de PQRS: valida y limita por sí mismo (campo trampa, límites por hash, service role).
-[functions.pqrs-intake]
-verify_jwt = false

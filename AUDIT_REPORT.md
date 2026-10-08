@@ -49,13 +49,31 @@ Límites conocidos: el círculo de cuidado muestra fecha, duración y estado de 
 
 | # | Hallazgo | Estado |
 |---|---|---|
-| 18 | El formulario de `/contacto` solo hacía `console.log` y mostraba «enviado»: **los mensajes de los usuarios se perdían** | Corregido: radica en `pqrs-intake` y entrega radicado |
+| 18 | El formulario de `/contacto` solo hacía `console.log` y mostraba «enviado»: **los mensajes de los usuarios se perdían** | Corregido: radica con la función de servidor `submitPqrs` y entrega radicado |
 | 19 | Nada insertaba en `pqrs_tickets`, así que el panel de PQRS siempre estaba vacío | Corregido (canal público) |
 | 20 | `superadmin.marketplace` ignoraba los errores de consulta: un fallo de permisos o esquema se veía como «0 resultados» | Corregido: aviso con error y migración requerida |
-| 21 | La política `pqrs_insert_anonymous` permitía insertar tickets con estado/prioridad/resolución/asignación forjados y sin límite de frecuencia | Eliminada; solo `pqrs-intake` (service role) |
+| 21 | La política `pqrs_insert_anonymous` permitía insertar tickets con estado/prioridad/resolución/asignación forjados y sin límite de frecuencia | Eliminada; solo `submitPqrs` (service role) |
 | 22 | El flag `blocked` de las ofertas solo se respetaba en el detalle; `/buscar` seguía listándolas | Corregido en RLS de `job_offers` |
 | 23 | El clasificador guardaba el *tipo de solicitud* en `ai_category` (la tabla documenta *tema*) y no defendía contra instrucciones dentro del ticket | Corregido: tema validado y texto delimitado como no confiable |
 | 24 | El matchmaking mostraba solo un UUID truncado por profesional | Ahora nombre, razones y advertencias |
 | 25 | `pqrs_tickets` fue retirada de Realtime (datos personales) pero el panel seguía suscrito, sin refresco alternativo | Refresco por intervalo y por notificación |
 
 Detalle de reglas y límites en `docs/MARKETPLACE_PQRS_PANEL.md`.
+
+## Quinta pasada: hub de oportunidades del profesional
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 26 | **Cualquier usuario autenticado podía leer `family_needs` ajenas con dirección y notas** (política antigua nunca retirada) | Corregido: solo dueña y staff; lectura segura por RPC |
+| 27 | `OpenFamilyNeedsList` y `AgendaViewer` leían `service_address` directamente: el «plan de pago» para ver la dirección habría sido solo visual | Reescritos sobre `list_open_family_needs` (sin dirección) |
+| 28 | `slot_proposals` aceptaba por la API cualquier valor, estado (`accepted`) o edición posterior | Disparadores de integridad + funciones de negociación |
+| 29 | `ProposalsInbox` resolvía nombres con `profiles.id` en vez de `profiles.user_id`: nunca mostraba nombres | `my_slot_proposals` (profesional ve a la familia abreviada) |
+| 30 | Aceptar una propuesta solo cubría la primera hora de un turno de varias | `accept_slot_proposal` cubre todas las horas y cancela competidoras |
+| 31 | La reserva creada al aceptar no llevaba la dirección del servicio | Se copia de la necesidad (o del perfil) |
+| 32 | La barra «En vivo» del profesional contaba usuarios registrados (0/0) en vez de oportunidades reales | `OpportunityPulse` con turnos abiertos reales |
+| 33 | TanStack Query figuraba como estándar pero no había proveedor ni ningún uso | `AppQueryProvider` en la raíz |
+| 34 | `pqrs-intake` y `pqrs-assistant` eran Edge Functions nuevas (la regla del proyecto lo prohíbe) | Trasladadas a `createServerFn`; se eliminaron |
+| 35 | Las tablas `pqrs_ticket_events` y `pqrs_intake_attempts` no tenían GRANT explícito | Migración `20261008210000_pqrs_table_grants.sql` |
+| 36 | El calendario de la familia no guardaba tipo de cuidado ni notas, así que el match por tipo de cuidado no tenía datos | Campos opcionales en `FamilyNeedsCalendar` |
+
+Detalle de reglas, constantes espejo y límites en `docs/PROFESIONAL_HUB_OPORTUNIDADES.md`.

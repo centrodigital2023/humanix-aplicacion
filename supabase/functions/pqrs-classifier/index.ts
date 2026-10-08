@@ -49,7 +49,10 @@ Deno.serve(async (req) => {
     if (!isOwner && !staffRow) return json({ error: "No autorizado" }, 403);
 
     const safety = detectSafetySignals(`${ticket.subject}\n${ticket.description}`);
-    const out = await classifyWithAi(ticket.subject, ticket.description);
+    const out = await classifyWithAi(ticket.subject, ticket.description, {
+      apiKey: Deno.env.get("LOVABLE_API_KEY"),
+      model: Deno.env.get("PQRS_AI_MODEL"),
+    });
     if (!out.ok) {
       const status = out.reason === "rate_limited" ? 429 : out.reason === "no_credits" ? 402 : 502;
       const message =

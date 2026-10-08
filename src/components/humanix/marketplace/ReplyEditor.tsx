@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { functionErrorMessage } from "./errors";
+import { draftPqrsReply } from "@/lib/pqrs.functions";
 import type { TicketRow } from "./types";
 
 const sb = supabase as unknown as SupabaseClient;
@@ -29,15 +29,20 @@ export function ReplyEditor({ ticket, onChanged }: { ticket: TicketRow; onChange
 
   const generate = async () => {
     setGenerating(true);
-    const { data, error } = await supabase.functions.invoke("pqrs-assistant", {
-      body: { ticket_id: ticket.id },
-    });
-    setGenerating(false);
-    if (error || !data?.draft) {
-      toast.error(await functionErrorMessage(error, "No se pudo generar el borrador"));
+    let result: Awaited<ReturnType<typeof draftPqrsReply>>;
+    try {
+      result = await draftPqrsReply({ data: { ticket_id: ticket.id } });
+    } catch {
+      setGenerating(false);
+      toast.error("No se pudo generar el borrador");
       return;
     }
-    const d = data.draft as DraftMeta & { body: string };
+    setGenerating(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    const d = result.draft;
     setText(d.body);
     setBaseline(d.flagged ? null : d.body);
     setMeta({

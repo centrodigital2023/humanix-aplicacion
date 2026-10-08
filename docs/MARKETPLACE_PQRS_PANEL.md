@@ -7,7 +7,7 @@ Cuando la muestra es insuficiente el panel dice «Datos insuficientes»: nunca m
 ## Por qué el panel mostraba «Ofertas (0) · PQRS (0)»
 1. **No existía ningún canal de entrada de PQRS.** Nada en la aplicación insertaba en `pqrs_tickets`, y el formulario de
    `/contacto` solo hacía `console.log` y mostraba «enviado»: los mensajes se perdían. Ahora `/contacto` radica de verdad
-   (función `pqrs-intake`), entrega un radicado y permite consultar el estado.
+   (función de servidor `submitPqrs`), entrega un radicado y permite consultar el estado.
 2. **Los errores de consulta se ignoraban**, así que un fallo de permisos o de esquema se veía igual que «no hay datos».
    Ahora el panel muestra un aviso con el error y la migración que falta.
 3. Puede que simplemente no haya ofertas publicadas todavía; el panel lo explica en un mensaje aparte.
@@ -51,7 +51,7 @@ Cuando la muestra es insuficiente el panel dice «Datos insuficientes»: nunca m
 - **Clasificación IA**: tema (`facturacion`, `servicio`, `seguridad`…), prioridad, sentimiento y resumen. El texto del
   ticket se trata como dato no confiable (delimitado, con instrucción de ignorar órdenes internas) y la salida se valida
   contra listas cerradas.
-- **Borrador de respuesta con IA** (`pqrs-assistant`): una persona siempre lo revisa. Una barrera bloquea cualquier mención
+- **Borrador de respuesta con IA** (función de servidor `draftPqrsReply`): una persona siempre lo revisa. Una barrera bloquea cualquier mención
   de medios de pago o enlaces externos. Se mide cuántos borradores se envían sin editar.
 - **Relacionados / duplicados**: mismo contacto o texto similar en 14 días. Es solo una sugerencia; la fusión la decide una persona.
 - **Tendencias**: categorías con ≥3 casos y el doble que la semana anterior se marcan como pico.
@@ -59,7 +59,7 @@ Cuando la muestra es insuficiente el panel dice «Datos insuficientes»: nunca m
 - **Indicadores**: activos, vencidos, en riesgo, mediana de primera respuesta, % resueltos a tiempo, % de borradores IA sin editar.
 
 ## Canal público
-- `/contacto` → función `pqrs-intake`: validación estricta, campo trampa para bots, límites por IP y por contacto
+- `/contacto` → función de servidor `submitPqrs` (`src/lib/pqrs.functions.ts`, lógica en `pqrs.server.ts`): validación estricta, campo trampa para bots, límites por IP y por contacto
   (solo hashes), consentimiento de tratamiento de datos, radicado `PQRS-AAAA-NNNNNN` y fecha límite.
   Si el texto sugiere una emergencia se muestra el aviso de llamar al 123 y se notifica al equipo.
 - Consulta de estado por radicado + correo (comparación exacta; la respuesta solo se muestra cuando está resuelto).

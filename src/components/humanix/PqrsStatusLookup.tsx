@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { formatLongDate } from "@/lib/formatDate";
+import { lookupPqrsStatus } from "@/lib/pqrs.functions";
 
 const STATUS_LABEL: Record<string, string> = {
   open: "Recibida",
@@ -33,17 +33,19 @@ export function PqrsStatusLookup() {
     setBusy(true);
     setError(null);
     setResult(null);
-    const { data, error: fnError } = await supabase.functions.invoke("pqrs-intake", {
-      body: { action: "status", radicado: radicado.trim(), email: email.trim() },
-    });
-    setBusy(false);
-    if (fnError || !data?.ok) {
+    try {
+      const data = await lookupPqrsStatus({
+        data: { radicado: radicado.trim(), email: email.trim() },
+      });
+      if (!data.ok) throw new Error(data.error);
+      setResult(data as Result);
+    } catch {
       setError(
         "No pudimos consultar el estado. Revisa el radicado (PQRS-AAAA-000000) y tu correo, e inténtalo de nuevo.",
       );
-      return;
+    } finally {
+      setBusy(false);
     }
-    setResult(data as Result);
   };
 
   return (

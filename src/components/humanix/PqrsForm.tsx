@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { FunctionsHttpError } from "@supabase/supabase-js";
 import { CheckCircle2, Loader2, PhoneCall } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { formatLongDate } from "@/lib/formatDate";
+import { submitPqrs } from "@/lib/pqrs.functions";
 
 const TYPES = [
   { value: "peticion", label: "Petición", help: "Solicitar información o una actuación" },
@@ -57,21 +56,6 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-foreground mb-2";
 const errorClass = "mt-1 text-xs text-red-600";
 
-async function readFailure(error: unknown): Promise<{ status?: number; code?: string }> {
-  if (error instanceof FunctionsHttpError) {
-    try {
-      const body = await error.context.json();
-      return {
-        status: error.context.status,
-        code: typeof body?.error === "string" ? body.error : undefined,
-      };
-    } catch {
-      return { status: error.context.status };
-    }
-  }
-  return {};
-}
-
 export function PqrsForm() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -100,42 +84,48 @@ export function PqrsForm() {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     const topicLabel = TOPICS.find((t) => t.value === values.topic)?.label ?? values.topic;
-    const { data, error } = await supabase.functions.invoke("pqrs-intake", {
-      body: {
-        action: "create",
-        type: values.type,
-        subject: topicLabel,
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        description: values.message,
-        consent: values.consent,
-        website: values.website,
-      },
-    });
-
-    if (error) {
-      const failure = await readFailure(error);
+    let result: Awaited<ReturnType<typeof submitPqrs>>;
+    try {
+      result = await submitPqrs({
+        data: {
+          type: values.type,
+          subject: topicLabel,
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          description: values.message,
+          consent: values.consent,
+          website: values.website,
+        },
+      });
+    } catch {
       setServerError(
-        failure.status === 429
+        "No pudimos registrar tu solicitud. Inténtalo de nuevo o escríbenos por WhatsApp.",
+      );
+      return;
+    }
+
+    if (!result.ok) {
+      setServerError(
+        result.error === "rate_limited"
           ? "Has enviado varias solicitudes seguidas. Espera un rato e inténtalo de nuevo."
-          : failure.status === 422
+          : result.error === "validation" || result.error === "too_large"
             ? "Revisa los datos del formulario e inténtalo de nuevo."
             : "No pudimos registrar tu solicitud. Inténtalo de nuevo o escríbenos por WhatsApp.",
       );
       return;
     }
-    if (!data?.ok || !data?.radicado) {
-      // 202 del campo trampa: sin radicado. No se informa nada a un posible bot.
+    if (result.accepted) {
+      // Campo trampa: sin radicado. No se informa nada a un posible bot.
       setServerError(
         "No pudimos registrar tu solicitud. Inténtalo de nuevo o escríbenos por WhatsApp.",
       );
       return;
     }
     setReceipt({
-      radicado: data.radicado,
-      due_at: data.due_at ?? null,
-      emergency_notice: Boolean(data.emergency_notice),
+      radicado: result.radicado,
+      due_at: result.due_at ?? null,
+      emergency_notice: result.emergency_notice,
     });
     reset();
   };

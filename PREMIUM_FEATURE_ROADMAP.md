@@ -9,7 +9,7 @@ Ofertas y postulaciones (`job_offers`, `applications`), propuestas de horario (`
 1. ~~Recontratación de un clic~~ (hecho: `RehireCard`).
 2. ~~Favoritos~~ (hecho: `care_favorites`); falta el círculo de cuidado con familiares.
 3. ~~Agenda sin doble reserva~~ (hecho: `guard_booking_integrity`).
-4. Contacto protegido por etapas (pendiente) (datos visibles solo tras aprobación).
+4. ~~Contacto protegido por etapas~~ (hecho para el profesional: dirección y WhatsApp solo con plan de pago + postulación + cupo diario, auditado; falta el equivalente para la familia hacia el profesional).
 5. ~~Calificación por dimensiones y bilateral~~ (hecho: `service_rating_dimensions`, formulario y promedios públicos con mínimo de 3).
 6. ~~Reemplazo cuando un profesional cancela~~ (hecho: aviso + búsqueda de candidatos libres, favoritos primero + propuesta en un clic).
 7. ~~Semáforo de cobertura~~ (hecho en `/dashboard/institucion`); falta vencimiento de documentos.
@@ -37,3 +37,14 @@ proveedores, no de estudios independientes):
 
 Siguiente: acuse de recibo por correo con dominio verificado, SLA por cliente/segmento, aprendizaje de umbrales con
 histórico propio (modo sombra antes de automatizar), cobros dinámicos solo como sugerencia, y panel público de estado.
+
+## Implementado: hub de oportunidades del profesional
+Agenda de familias con turnos (horas contiguas agrupadas), compatibilidad explicada, detección de cruces, neto después de
+comisión, negociación acotada (3 rondas, vencimiento, punto medio sugerido, referencia de mercado), reputación agregada de
+la familia, desbloqueo auditado de dirección y WhatsApp, alertas en vivo, planificador de ingresos con aportes estimados y
+calificación a la familia con comentario privado. Documentación, constantes espejo y límites en
+`docs/PROFESIONAL_HUB_OPORTUNIDADES.md`.
+
+Siguiente: avisos informativos por WhatsApp Business (nunca pagos), mediación de disputas, vencimiento de documentos como
+requisito para postularse, matching semántico en el hub, tabla privada para direcciones de `job_offers` y verificación
+cruzada de turnos recurrentes (contratos semanales) con renovación en un clic.

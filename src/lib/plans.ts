@@ -14,6 +14,8 @@ export type PlanFeature =
   | "view_full_names"
   | "unlimited_applications"
   | "whatsapp_contact"
+  | "view_address"
+  | "negotiate_rate"
   | "live_geo_eta"
   | "rethus_antifraud"
   | "no_commission"
@@ -70,6 +72,8 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
     features: [
       "unlimited_applications",
       "whatsapp_contact",
+      "view_address",
+      "negotiate_rate",
       "live_geo_eta",
       "rethus_antifraud",
       "no_commission",
@@ -78,6 +82,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "Match IA en menos de 150 ms",
       "Buzón de postulaciones ilimitado",
       "Contacto directo por WhatsApp con la otra parte",
+      "Ver la dirección del servicio y negociar el valor con la familia",
       "Geolocalización en vivo y ETA",
       "Verificación RETHUS y anti-fraude IA incluida",
       "Sin comisión: el profesional cobra directo al cliente",
@@ -146,6 +151,8 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, PlanKey> = {
   view_full_names: "essential_monthly",
   unlimited_applications: "essential_monthly",
   whatsapp_contact: "essential_monthly",
+  view_address: "essential_monthly",
+  negotiate_rate: "essential_monthly",
   live_geo_eta: "essential_monthly",
   rethus_antifraud: "essential_monthly",
   no_commission: "essential_monthly",

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { RateFamilyDialog } from "./hub/RateFamilyDialog";
 
 type Props = {
   userId: string;
@@ -14,6 +15,7 @@ type Props = {
 
 type PendingRow = {
   booking_id: string;
+  peer_id: string;
   peer_name: string;
   completed_at: string | null;
   scheduled_at: string;
@@ -22,11 +24,13 @@ type PendingRow = {
 /**
  * Lista de servicios completados que aún no han sido calificados por el usuario actual.
  * - Familia califica al profesional, y viceversa.
- * - Lleva al detalle del servicio (/servicio/:id) donde vive el VoiceRating.
+ * - La familia califica en el detalle del servicio (/servicio/:id), donde vive el VoiceRating.
+ * - El profesional califica a la familia sin salir del panel (estrellas, dimensiones y comentario).
  */
 export function PendingRatingsCard({ userId, role }: Props) {
   const [pending, setPending] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rating, setRating] = useState<PendingRow | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -84,6 +88,7 @@ export function PendingRatingsCard({ userId, role }: Props) {
       setPending(
         missing.map((b) => ({
           booking_id: b.id,
+          peer_id: b[peerField],
           peer_name: nameMap.get(b[peerField]) ?? "Tu contraparte",
           completed_at: b.completed_at,
           scheduled_at: b.scheduled_at,
@@ -159,12 +164,25 @@ export function PendingRatingsCard({ userId, role }: Props) {
                   })}
                 </p>
               </div>
-              <Button size="sm" variant="hero" asChild>
-                <Link to="/servicio/$bookingId" params={{ bookingId: p.booking_id }}>
-                  Calificar
-                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                </Link>
-              </Button>
+              {role === "professional" ? (
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="hero" onClick={() => setRating(p)}>
+                    Calificar
+                  </Button>
+                  <Button size="sm" variant="ghost" asChild>
+                    <Link to="/servicio/$bookingId" params={{ bookingId: p.booking_id }}>
+                      Ver servicio
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="hero" asChild>
+                  <Link to="/servicio/$bookingId" params={{ bookingId: p.booking_id }}>
+                    Calificar
+                    <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Link>
+                </Button>
+              )}
             </div>
           );
         })}
@@ -174,6 +192,21 @@ export function PendingRatingsCard({ userId, role }: Props) {
         <p className="text-[11px] text-muted-foreground text-center">
           +{pending.length - 4} más pendientes
         </p>
+      )}
+
+      {rating && (
+        <RateFamilyDialog
+          key={rating.booking_id}
+          bookingId={rating.booking_id}
+          raterId={userId}
+          familyId={rating.peer_id}
+          familyName={rating.peer_name}
+          open
+          onOpenChange={(o) => !o && setRating(null)}
+          onDone={() =>
+            setPending((rows) => rows.filter((r) => r.booking_id !== rating.booking_id))
+          }
+        />
       )}
     </Card>
   );
