@@ -22,3 +22,15 @@ Estado verificado leyendo el código, `supabase/config.toml` y `supabase/migrati
 
 ## Observabilidad
 Tabla `function_execution_logs` y tarjeta "Salud de funciones backend" en `/superadmin` (pestaña Operaciones). Instrumentadas: `mp-webhook`, `whatsapp-webhook` (mensajes bloqueados), `fraud-detector`, `generate-contract`. Sin instrumentar: el resto.
+
+## Funciones añadidas (Marketplace + PQRS)
+
+| Función | Cómo se activa | Auth | Estado | Prueba |
+|---|---|---|---|---|
+| `pqrs-intake` | Formulario público de `/contacto` y consulta de estado | Pública (`verify_jwt=false`); validación, campo trampa, límites por hash | Conectada | Reglas probadas (`pqrsRules.test.ts`); falta prueba contra Supabase |
+| `pqrs-assistant` | Botón «Borrador con IA» del panel | JWT + rol staff; 30 borradores/h | Conectada | Barrera de pagos probada (`paymentGuard.test.ts`) |
+| `pqrs-classifier` | «Clasificar IA» y «Clasificar pendientes» | JWT + dueño del ticket o staff | Conectada (endurecida) | Piso de seguridad probado |
+
+Tablas nuevas: `pqrs_ticket_events`, `pqrs_intake_attempts`. RPCs nuevas: `marketplace_city_balance`,
+`suggest_professionals_for_offer`, `invite_matching_professionals`, `moderate_offer`.
+Secrets: `LOVABLE_API_KEY` (ya existente). Opcional: `PQRS_AI_MODEL` (por defecto `google/gemini-2.5-flash`).

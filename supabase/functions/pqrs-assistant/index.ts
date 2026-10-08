@@ -1,12 +1,12 @@
-// pqrs-classifier — clasifica un ticket PQRS con IA (tema, prioridad, sentimiento, resumen).
-// Solo el dueño del ticket o el staff. El texto del ticket se trata como dato no confiable y la
-// prioridad nunca queda por debajo de la que fija la red de seguridad determinista.
+// pqrs-assistant — borrador de respuesta asistido por IA para el equipo (solo staff).
+// La IA propone; una persona revisa, edita y envía. El borrador queda guardado en el ticket para
+// medir cuántos se aceptan tal cual y cuántos se editan.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
-import { detectSafetySignals } from "../_shared/pqrsRules.ts";
-import { applySafetyFloor, classifyWithAi } from "../_shared/pqrsAi.ts";
+import { draftReplyWithAi } from "../_shared/pqrsAi.ts";
 import { logExecution } from "../_shared/execLog.ts";
 
+const HOURLY_LIMIT = 30;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
@@ -32,83 +32,81 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } },
     );
 
-    const { data: ticket } = await admin
-      .from("pqrs_tickets")
-      .select("id, user_id, subject, description")
-      .eq("id", ticket_id)
-      .maybeSingle();
-    if (!ticket) return json({ error: "Ticket no encontrado" }, 404);
-
-    const { data: staffRow } = await admin
+    const { data: roleRow } = await admin
       .from("user_roles")
       .select("role")
       .eq("user_id", auth.userId)
       .in("role", ["superadmin", "hr_staff", "evaluator"])
       .maybeSingle();
-    const isOwner = !!ticket.user_id && ticket.user_id === auth.userId;
-    if (!isOwner && !staffRow) return json({ error: "No autorizado" }, 403);
+    if (!roleRow) return json({ error: "No autorizado" }, 403);
 
-    const safety = detectSafetySignals(`${ticket.subject}\n${ticket.description}`);
-    const out = await classifyWithAi(ticket.subject, ticket.description);
+    const since = new Date(Date.now() - 3_600_000).toISOString();
+    const { count } = await admin
+      .from("function_execution_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("function_name", "pqrs-assistant")
+      .eq("execution_id", auth.userId)
+      .eq("status", "success")
+      .gte("created_at", since);
+    if ((count ?? 0) >= HOURLY_LIMIT)
+      return json({ error: "Límite de borradores por hora alcanzado" }, 429);
+
+    const { data: ticket } = await admin
+      .from("pqrs_tickets")
+      .select("id, radicado, subject, description, type, due_at, ai_summary")
+      .eq("id", ticket_id)
+      .maybeSingle();
+    if (!ticket) return json({ error: "Ticket no encontrado" }, 404);
+
+    const out = await draftReplyWithAi(ticket);
     if (!out.ok) {
       const status = out.reason === "rate_limited" ? 429 : out.reason === "no_credits" ? 402 : 502;
       const message =
         out.reason === "rate_limited"
-          ? "Demasiadas solicitudes"
+          ? "Demasiadas solicitudes a la IA"
           : out.reason === "no_credits"
             ? "Créditos IA agotados"
             : out.reason === "not_configured"
               ? "La IA no está configurada"
               : "La IA no respondió";
       await logExecution({
-        functionName: "pqrs-classifier",
+        functionName: "pqrs-assistant",
         triggerType: "frontend",
         status: "error",
         startedAt,
+        executionId: auth.userId,
         errorCode: out.reason,
       });
       return json({ error: message, reason: out.reason }, status);
     }
 
-    const c = applySafetyFloor(out.value, safety.level);
-    await admin
-      .from("pqrs_tickets")
-      .update({
-        ai_category: c.topic,
-        ai_priority: c.priority,
-        ai_sentiment: c.sentiment,
-        ai_summary: c.summary,
-        safety_level: safety.level,
-        safety_categories: safety.categories,
-      })
-      .eq("id", ticket_id);
-
+    // Solo se guarda el borrador si pasó la barrera de seguridad.
+    if (!out.value.flagged) {
+      await admin
+        .from("pqrs_tickets")
+        .update({ ai_reply_draft: out.value.body, reply_draft_edited: null })
+        .eq("id", ticket.id);
+    }
     await admin
       .from("ai_credits_ledger")
-      .insert({ user_id: auth.userId, feature: "pqrs-classifier", credits_used: 1 });
+      .insert({ user_id: auth.userId, feature: "pqrs-assistant", credits_used: 1 });
     await logExecution({
-      functionName: "pqrs-classifier",
+      functionName: "pqrs-assistant",
       triggerType: "frontend",
-      status: "success",
+      status: out.value.flagged ? "blocked" : "success",
       startedAt,
-      metadata: { priority: c.priority, safety: safety.level },
+      executionId: auth.userId,
+      metadata: { escalate: out.value.escalate },
     });
-
-    // `category` se conserva en la respuesta por compatibilidad con clientes anteriores.
-    return json({
-      category: c.topic,
-      topic: c.topic,
-      priority: c.priority,
-      sentiment: c.sentiment,
-      summary: c.summary,
-    });
+    return json({ draft: out.value });
   } catch (e) {
-    console.error("pqrs-classifier error:", (e as Error).message);
+    console.error("[pqrs-assistant]", (e as Error).message);
     await logExecution({
-      functionName: "pqrs-classifier",
+      functionName: "pqrs-assistant",
       triggerType: "frontend",
       status: "error",
       startedAt,
+      executionId: auth.userId,
       errorCode: "internal",
     });
     return json({ error: "Error interno. Inténtalo de nuevo." }, 500);

@@ -1,54 +1,59 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Loader2,
-  ShieldAlert,
-  Users,
+  AlertTriangle,
   Briefcase,
   FileCheck,
-  Mail,
+  Inbox,
   LayoutDashboard,
-  ScrollText,
+  Loader2,
   Megaphone,
   MessageSquare,
-  Sparkles,
+  RefreshCw,
+  ScrollText,
   Search,
-  Inbox,
-  Send,
+  ShieldAlert,
+  Sparkles,
+  Users,
+  LayoutGrid,
 } from "lucide-react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useSuperadmin } from "@/hooks/use-superadmin";
-import { ShareButtons } from "@/components/humanix/ShareButtons";
+import { MarketOverview } from "@/components/humanix/marketplace/MarketOverview";
+import { OffersPanel } from "@/components/humanix/marketplace/OffersPanel";
+import { PqrsPanel } from "@/components/humanix/marketplace/PqrsPanel";
+import { buildOfferInsights, buildTicketInsights } from "@/components/humanix/marketplace/insights";
+import { relativeTime } from "@/components/humanix/marketplace/format";
+import {
+  OFFER_COLUMNS,
+  TICKET_COLUMNS,
+  type MarketTab,
+  type TicketRow,
+} from "@/components/humanix/marketplace/types";
+import {
+  buildRecommendations,
+  computeMarketKpis,
+  evaluateCityBalance,
+  type ApplicationRow,
+  type CityRowRaw,
+  type OfferRow,
+} from "@/lib/marketplaceInsights";
+import { computePqrsKpis } from "@/lib/pqrsKpis";
+import { categoryTrends } from "@/lib/pqrsRules";
 
 export const Route = createFileRoute("/superadmin/marketplace")({
   head: () => ({ meta: [{ title: "Marketplace · Superadmin" }] }),
   component: MarketplacePage,
 });
+
+const sb = supabase as unknown as SupabaseClient;
 
 const NAV: NavItem[] = [
   { label: "Overview", to: "/superadmin", icon: LayoutDashboard },
@@ -62,163 +67,262 @@ const NAV: NavItem[] = [
   { label: "Evaluador", to: "/evaluador", icon: FileCheck },
 ];
 
-type Offer = {
-  id: string;
-  title: string;
-  description: string | null;
-  city: string;
-  amount: number;
-  modality: string;
-  status: string;
-  created_at: string;
-  poster_type: string;
-  specialty_required: string | null;
-};
+const DAY = 86_400_000;
+const MIGRATION = "20261008100000_pqrs_marketplace_intelligence.sql";
+const LEGACY_TICKET_COLUMNS =
+  "id,subject,description,type,ai_category,ai_priority,ai_sentiment,ai_summary,status,created_at,contact_email,contact_phone,contact_name,user_id,assigned_to,resolution,resolved_at";
 
-type Pqrs = {
-  id: string;
-  subject: string;
-  description: string;
-  type: string;
-  ai_category: string | null;
-  ai_priority: string | null;
-  ai_sentiment: string | null;
-  ai_summary: string | null;
-  status: string;
-  created_at: string;
-  contact_email: string | null;
-  contact_name: string | null;
-};
+interface LoadIssue {
+  scope: string;
+  message: string;
+  hint?: string;
+}
+
+interface MarketData {
+  offers: OfferRow[];
+  apps: ApplicationRow[];
+  tickets: TicketRow[];
+  cities: CityRowRaw[];
+}
+
+const EMPTY: MarketData = { offers: [], apps: [], tickets: [], cities: [] };
+
+const isMissingSchema = (e: { code?: string; message?: string } | null) =>
+  !!e &&
+  (e.code === "42703" ||
+    e.code === "42883" ||
+    e.code === "42P01" ||
+    e.code === "PGRST202" ||
+    /does not exist|could not find/i.test(e.message ?? ""));
+
+function withTicketDefaults(row: Partial<TicketRow>): TicketRow {
+  return {
+    radicado: null,
+    assigned_at: null,
+    due_at: null,
+    first_response_at: null,
+    safety_level: "none",
+    safety_categories: [],
+    duplicate_of: null,
+    ai_reply_draft: null,
+    reply_draft_edited: null,
+    resolved_at: null,
+    resolution: null,
+    contact_email: null,
+    contact_phone: null,
+    contact_name: null,
+    user_id: null,
+    assigned_to: null,
+    ...row,
+  } as TicketRow;
+}
 
 function MarketplacePage() {
   const { user, loading, logout } = useSuperadmin();
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [tickets, setTickets] = useState<Pqrs[]>([]);
+  const [tab, setTab] = useState<MarketTab>("overview");
   const [search, setSearch] = useState("");
-  const [classifying, setClassifying] = useState<string | null>(null);
-  const [matching, setMatching] = useState<string | null>(null);
-  const [matchResults, setMatchResults] = useState<
-    Record<string, { user_id: string; similarity: number }[]>
-  >({});
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://humanix.lat";
+  const [data, setData] = useState<MarketData>(EMPTY);
+  const [issues, setIssues] = useState<LoadIssue[]>([]);
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
+  const [fetching, setFetching] = useState(false);
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = useCallback(async () => {
+    setFetching(true);
+    const found: LoadIssue[] = [];
+    const since = new Date(Date.now() - 90 * DAY).toISOString();
+
+    const [offersRes, ticketsRes, citiesRes] = await Promise.all([
+      sb
+        .from("job_offers")
+        .select(OFFER_COLUMNS)
+        .or(`created_at.gte.${since},status.eq.open`)
+        .order("created_at", { ascending: false })
+        .limit(600),
+      sb
+        .from("pqrs_tickets")
+        .select(TICKET_COLUMNS)
+        .order("created_at", { ascending: false })
+        .limit(500),
+      sb.rpc("marketplace_city_balance"),
+    ]);
+
+    let offers: OfferRow[] = [];
+    if (offersRes.error) {
+      found.push({
+        scope: "Ofertas",
+        message: offersRes.error.message,
+        hint: "Revisa los permisos (RLS) de job_offers para el rol superadmin.",
+      });
+    } else {
+      offers = (offersRes.data ?? []) as OfferRow[];
+    }
+
+    let tickets: TicketRow[] = [];
+    if (ticketsRes.error && isMissingSchema(ticketsRes.error)) {
+      found.push({
+        scope: "PQRS",
+        message: "La base de datos no tiene las columnas nuevas de PQRS.",
+        hint: `Aplica la migración ${MIGRATION}. Mientras tanto se muestran los datos básicos, sin plazos ni señales de seguridad.`,
+      });
+      const legacy = await sb
+        .from("pqrs_tickets")
+        .select(LEGACY_TICKET_COLUMNS)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (legacy.error) found.push({ scope: "PQRS", message: legacy.error.message });
+      else tickets = ((legacy.data ?? []) as Partial<TicketRow>[]).map(withTicketDefaults);
+    } else if (ticketsRes.error) {
+      found.push({
+        scope: "PQRS",
+        message: ticketsRes.error.message,
+        hint: "Revisa los permisos (RLS) de pqrs_tickets para el rol superadmin.",
+      });
+    } else {
+      tickets = ((ticketsRes.data ?? []) as Partial<TicketRow>[]).map(withTicketDefaults);
+    }
+
+    let cities: CityRowRaw[] = [];
+    if (citiesRes.error) {
+      found.push({
+        scope: "Oferta y demanda por ciudad",
+        message: citiesRes.error.message,
+        hint: isMissingSchema(citiesRes.error) ? `Aplica la migración ${MIGRATION}.` : undefined,
+      });
+    } else {
+      cities = (citiesRes.data ?? []) as CityRowRaw[];
+    }
+
+    // Postulaciones de las ofertas cargadas, en lotes para no exceder el límite de la URL ni de filas.
+    let apps: ApplicationRow[] = [];
+    if (offers.length) {
+      const ids = offers.map((o) => o.id);
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i + 50));
+      const results = await Promise.all(
+        chunks.map((c) =>
+          sb
+            .from("applications")
+            .select("job_offer_id,status,created_at,updated_at")
+            .in("job_offer_id", c),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) found.push({ scope: "Postulaciones", message: failed.error.message });
+      apps = results.flatMap((r) => (r.data ?? []) as ApplicationRow[]);
+    }
+
+    setData({ offers, apps, tickets, cities });
+    setIssues(found);
+    setLoadedAt(Date.now());
+    setFetching(false);
+  }, []);
+
+  const scheduleReload = useCallback(() => {
+    if (reloadTimer.current) clearTimeout(reloadTimer.current);
+    reloadTimer.current = setTimeout(() => void load(), 500);
+  }, [load]);
 
   useEffect(() => {
     if (!user) return;
     void load();
-    const ch = supabase
+    // pqrs_tickets no se publica por Realtime (contiene datos personales): se refresca por intervalo
+    // y cuando llega una notificación de PQRS prioritario.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 60_000);
+    const channel = sb
       .channel("superadmin-mkt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "job_offers" }, scheduleReload)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "job_offers" },
-        () => void load(),
+        { event: "*", schema: "public", table: "applications" },
+        scheduleReload,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "pqrs_tickets" },
-        () => void load(),
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as { type?: string; title?: string };
+          if (row.type === "pqrs_critical") {
+            toast.warning(row.title ?? "PQRS prioritario", {
+              description: "Revisa la cola de PQRS.",
+            });
+            scheduleReload();
+          }
+        },
       )
       .subscribe();
     return () => {
-      void supabase.removeChannel(ch);
+      clearInterval(interval);
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      void sb.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, load, scheduleReload]);
 
-  const load = async () => {
-    const [{ data: o }, { data: t }] = await Promise.all([
-      supabase
-        .from("job_offers")
-        .select(
-          "id,title,description,city,amount,modality,status,created_at,poster_type,specialty_required",
-        )
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("pqrs_tickets")
-        .select(
-          "id,subject,description,type,ai_category,ai_priority,ai_sentiment,ai_summary,status,created_at,contact_email,contact_name",
-        )
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
-    setOffers((o ?? []) as Offer[]);
-    setTickets((t ?? []) as Pqrs[]);
-  };
+  const now = loadedAt ?? Date.now();
+  const { offers, apps, tickets } = data;
 
-  const runMatch = async (offerId: string) => {
-    setMatching(offerId);
-    try {
-      const { data, error } = await supabase.rpc("match_professionals_for_offer", {
-        _offer_id: offerId,
-        _match_count: 5,
-        _min_similarity: 0.4,
-      });
-      if (error) throw error;
-      setMatchResults((p) => ({ ...p, [offerId]: data ?? [] }));
-      toast.success(`${(data ?? []).length} profesionales sugeridos por IA`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error matchmaking");
-    } finally {
-      setMatching(null);
-    }
-  };
+  const kpis = useMemo(() => computeMarketKpis(offers, apps, now), [offers, apps, now]);
+  const offerInsights = useMemo(() => buildOfferInsights(offers, apps, now), [offers, apps, now]);
+  const ticketInsights = useMemo(() => buildTicketInsights(tickets, now), [tickets, now]);
+  const cities = useMemo(() => evaluateCityBalance(data.cities), [data.cities]);
+  const pqrsKpis = useMemo(() => computePqrsKpis(tickets, now), [tickets, now]);
 
-  const classifyTicket = async (id: string) => {
-    setClassifying(id);
-    try {
-      const { error } = await supabase.functions.invoke("pqrs-classifier", {
-        body: { ticket_id: id },
-      });
-      if (error) throw error;
-      toast.success("Ticket clasificado por IA");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error IA");
-    } finally {
-      setClassifying(null);
-    }
-  };
+  const recommendations = useMemo(() => {
+    const live = offers.filter((o) => o.status === "open" && !o.blocked);
+    const riskyOffers = live.filter((o) => {
+      const r = offerInsights.get(o.id)?.maxRisk;
+      return r === "high" || r === "medium";
+    }).length;
+    const urgentUncovered = live.filter((o) => offerInsights.get(o.id)?.urgentUncovered).length;
+    const active = tickets.filter((t) => ticketInsights.get(t.id)?.active);
+    return buildRecommendations({
+      kpis,
+      riskyOffers,
+      urgentUncovered,
+      cities,
+      pqrs: {
+        breached: pqrsKpis.breached,
+        atRisk: pqrsKpis.atRisk,
+        criticalSafety: pqrsKpis.criticalSafety,
+        unclassified: active.filter((t) => !t.ai_summary).length,
+        unassigned: active.filter((t) => t.status === "open" && !t.assigned_to).length,
+        spikes: categoryTrends(tickets, now).filter((t) => t.spike),
+      },
+    });
+  }, [offers, tickets, offerInsights, ticketInsights, kpis, cities, pqrsKpis, now]);
 
-  const updateTicketStatus = async (id: string, status: string) => {
-    await supabase
-      .from("pqrs_tickets")
-      .update({
-        status,
-        ...(status === "resolved" ? { resolved_at: new Date().toISOString() } : {}),
-      })
-      .eq("id", id);
-    toast.success("Estado actualizado");
-    await load();
-  };
-
-  const filteredOffers = offers.filter(
-    (o) =>
-      !search ||
-      o.title.toLowerCase().includes(search.toLowerCase()) ||
-      o.city.toLowerCase().includes(search.toLowerCase()),
+  const offersNeedingAttention = useMemo(
+    () => [...offerInsights.values()].filter((i) => i.attention > 0).length,
+    [offerInsights],
   );
-  const filteredTickets = tickets.filter(
-    (t) => !search || t.subject.toLowerCase().includes(search.toLowerCase()),
-  );
+  const pqrsUrgent = pqrsKpis.breached + pqrsKpis.criticalSafety;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando…
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Cargando…
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="max-w-md w-full p-6 text-center space-y-3">
-          <h1 className="text-lg font-semibold">Necesitas iniciar sesión</h1>
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md space-y-3 p-6 text-center">
+          <h1 className="text-lg font-semibold">Acceso restringido</h1>
           <p className="text-sm text-muted-foreground">
-            Este módulo requiere permisos de superadmin o rrhh.
+            Este módulo es exclusivo para administradores.
           </p>
           <div className="pt-2">
-            <Link to="/auth" className="inline-flex">
-              <Button variant="hero">Ir a iniciar sesión</Button>
+            <Link to="/admin" className="inline-flex">
+              <Button variant="hero">Ir al acceso de administrador</Button>
             </Link>
           </div>
         </Card>
@@ -226,191 +330,137 @@ function MarketplacePage() {
     );
   }
 
+  const empty =
+    !fetching &&
+    loadedAt !== null &&
+    offers.length === 0 &&
+    tickets.length === 0 &&
+    issues.length === 0;
+
   return (
     <AppShell
       user={user}
       onLogout={logout}
       nav={NAV}
       title="Marketplace + PQRS"
-      subtitle="Ofertas en vivo con matchmaking IA y tickets PQRS clasificados por Gemini."
+      subtitle="Liquidez del mercado, matchmaking explicable y atención de PQRS con plazos y señales de seguridad."
       crumbs={[{ label: "Superadmin", to: "/superadmin" }, { label: "Marketplace" }]}
       badge={{ label: "Marketplace", tone: "bio" }}
     >
-      <div className="space-y-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar ofertas o tickets…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+      <div className="space-y-5">
+        {issues.length > 0 && (
+          <div role="alert" className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Algunos datos no se pudieron
+              cargar
+            </p>
+            <ul className="mt-2 space-y-1.5 text-xs">
+              {issues.map((i, idx) => (
+                <li key={idx}>
+                  <strong>{i.scope}:</strong> {i.message}
+                  {i.hint && <span className="block text-muted-foreground">{i.hint}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {empty && (
+          <Card className="flex gap-3 p-4 text-sm">
+            <LayoutGrid className="mt-0.5 h-5 w-5 shrink-0 text-biosensor" aria-hidden="true" />
+            <p>
+              El panel está conectado, pero todavía no hay datos: no hay ofertas publicadas ni
+              solicitudes PQRS. Las ofertas aparecen cuando familias o IPS/EPS publican, y las PQRS
+              cuando alguien radica una desde <strong>/contacto</strong>.
+            </p>
+          </Card>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[240px] flex-1">
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              placeholder="Buscar por título, ciudad, radicado o contacto…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+              aria-label="Buscar ofertas y solicitudes"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void load()}
+            disabled={fetching}
+            className="gap-1.5"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${fetching ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />{" "}
+            Actualizar
+          </Button>
+          {loadedAt && (
+            <span className="text-[11px] text-muted-foreground">
+              Actualizado {relativeTime(new Date(loadedAt).toISOString())}
+            </span>
+          )}
         </div>
 
-        <Tabs defaultValue="offers" className="space-y-4">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as MarketTab)} className="space-y-4">
           <TabsList>
+            <TabsTrigger value="overview" className="gap-2">
+              <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" /> Resumen
+            </TabsTrigger>
             <TabsTrigger value="offers" className="gap-2">
-              <Briefcase className="h-3.5 w-3.5" /> Ofertas ({offers.length})
+              <Briefcase className="h-3.5 w-3.5" aria-hidden="true" /> Ofertas ({offers.length})
+              {offersNeedingAttention > 0 && (
+                <span className="rounded-full bg-amber-500/20 px-1.5 text-[10px] text-amber-700">
+                  {offersNeedingAttention}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="pqrs" className="gap-2">
-              <Inbox className="h-3.5 w-3.5" /> PQRS (
-              {tickets.filter((t) => t.status !== "resolved").length})
+              <Inbox className="h-3.5 w-3.5" aria-hidden="true" /> PQRS ({pqrsKpis.active})
+              {pqrsUrgent > 0 && (
+                <span className="rounded-full bg-red-500/20 px-1.5 text-[10px] text-red-700">
+                  {pqrsUrgent}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="offers" className="space-y-3">
-            {filteredOffers.length === 0 ? (
-              <Card className="p-8 text-center text-sm text-muted-foreground">Sin ofertas.</Card>
-            ) : (
-              filteredOffers.map((o) => (
-                <Card key={o.id} className="p-5">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold font-display">{o.title}</h3>
-                        <Badge
-                          variant={o.status === "open" ? "default" : "secondary"}
-                          className="text-[10px]"
-                        >
-                          {o.status}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px]">
-                          {o.poster_type}
-                        </Badge>
-                        {o.specialty_required && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {o.specialty_required}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {o.city} · {o.modality} · ${o.amount.toLocaleString("es-CO")}
-                      </p>
-                      {o.description && (
-                        <p className="text-xs text-foreground/80 mt-2 line-clamp-2">
-                          {o.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => runMatch(o.id)}
-                        disabled={matching === o.id}
-                        className="gap-1.5"
-                      >
-                        {matching === o.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-3 w-3 text-biosensor" />
-                        )}
-                        Matchmaking IA
-                      </Button>
-                      <ShareButtons
-                        url={`${origin}/buscar?offer=${o.id}`}
-                        title={`${o.title} · ${o.city}`}
-                        description={o.description ?? ""}
-                      />
-                    </div>
-                  </div>
-                  {matchResults[o.id]?.length ? (
-                    <div className="mt-3 pt-3 border-t border-border space-y-1">
-                      <p className="text-[11px] uppercase tracking-wider text-biosensor font-semibold">
-                        Top profesionales sugeridos
-                      </p>
-                      {matchResults[o.id].map((m) => (
-                        <Link
-                          key={m.user_id}
-                          to="/profesional/$proId"
-                          params={{ proId: m.user_id }}
-                          className="flex items-center justify-between text-xs py-1 hover:underline"
-                        >
-                          <span className="font-mono truncate">{m.user_id.slice(0, 8)}…</span>
-                          <Badge variant="outline" className="text-[10px]">
-                            {(m.similarity * 100).toFixed(0)}% match
-                          </Badge>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                </Card>
-              ))
-            )}
+          <TabsContent value="overview">
+            <MarketOverview
+              kpis={kpis}
+              cities={cities}
+              recommendations={recommendations}
+              onGoTab={setTab}
+            />
           </TabsContent>
 
-          <TabsContent value="pqrs" className="space-y-3">
-            {filteredTickets.length === 0 ? (
-              <Card className="p-8 text-center text-sm text-muted-foreground">
-                Sin tickets PQRS.
-              </Card>
-            ) : (
-              filteredTickets.map((t) => (
-                <Card key={t.id} className="p-5">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold">{t.subject}</h3>
-                        <Badge variant="outline" className="text-[10px]">
-                          {t.type}
-                        </Badge>
-                        {t.ai_priority && (
-                          <Badge
-                            className={`text-[10px] ${
-                              t.ai_priority === "urgent"
-                                ? "bg-fuchsia-neural text-fuchsia-neural-foreground"
-                                : t.ai_priority === "high"
-                                  ? "bg-copper text-copper-foreground"
-                                  : "bg-secondary text-secondary-foreground"
-                            }`}
-                          >
-                            {t.ai_priority}
-                          </Badge>
-                        )}
-                        {t.ai_sentiment && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {t.ai_sentiment}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t.contact_name || t.contact_email || "Anónimo"} ·{" "}
-                        {new Date(t.created_at).toLocaleDateString("es-CO")}
-                      </p>
-                      <p className="text-xs text-foreground/80 mt-2 line-clamp-3">
-                        {t.ai_summary || t.description}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => classifyTicket(t.id)}
-                        disabled={classifying === t.id}
-                        className="gap-1.5"
-                      >
-                        {classifying === t.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-3 w-3 text-biosensor" />
-                        )}
-                        Clasificar IA
-                      </Button>
-                      <Select value={t.status} onValueChange={(v) => updateTicketStatus(t.id, v)}>
-                        <SelectTrigger className="h-8 w-32 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="open">Abierto</SelectItem>
-                          <SelectItem value="in_progress">En curso</SelectItem>
-                          <SelectItem value="resolved">Resuelto</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </Card>
-              ))
-            )}
+          <TabsContent value="offers">
+            <OffersPanel
+              offers={offers}
+              insights={offerInsights}
+              search={search}
+              now={now}
+              onChanged={() => void load()}
+            />
+          </TabsContent>
+
+          <TabsContent value="pqrs">
+            <PqrsPanel
+              tickets={tickets}
+              insights={ticketInsights}
+              userId={user.id}
+              search={search}
+              now={now}
+              onChanged={() => void load()}
+            />
           </TabsContent>
         </Tabs>
       </div>

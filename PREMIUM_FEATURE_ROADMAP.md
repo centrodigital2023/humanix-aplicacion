@@ -24,3 +24,16 @@ Predicción de cancelación/demanda, wearables, voz, API institucional, expansi�
 
 ## Reglas
 La IA sugiere, prepara y resume; no diagnostica, no cobra, no cambia contratos ni precios sin confirmación humana.
+
+## Implementado: centro de mando de Marketplace + PQRS
+Inspirado en prácticas observadas en plataformas de personal sanitario y mesas de ayuda (la evidencia es mayormente de
+proveedores, no de estudios independientes):
+- Cobertura por cohorte y tiempos a primera postulación y a cubrir; desequilibrio oferta/demanda por ciudad con umbrales mínimos de muestra.
+- Matchmaking explicable con invitación; precio frente al mercado como sugerencia (sin cambiarlo automáticamente).
+- Credenciales y riesgo de oferta antes de publicar a profesionales (desintermediación, cobros por adelantado).
+- Mesa de ayuda con plazos legales en días hábiles reales, riesgo de incumplimiento explicable, detección de duplicados
+  como sugerencia, borradores de respuesta con revisión humana y medición de aceptación, tendencias con detección de picos.
+- Señales de seguridad deterministas por encima de la IA.
+
+Siguiente: acuse de recibo por correo con dominio verificado, SLA por cliente/segmento, aprendizaje de umbrales con
+histórico propio (modo sombra antes de automatizar), cobros dinámicos solo como sugerencia, y panel público de estado.

@@ -2,10 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
-import { useState } from "react";
 import { buildSeo } from "@/lib/seo";
 import { CONTACT } from "@/lib/social";
 import { SocialIcons } from "@/components/humanix/SocialIcons";
+import { PqrsForm } from "@/components/humanix/PqrsForm";
+import { PqrsStatusLookup } from "@/components/humanix/PqrsStatusLookup";
 
 export const Route = createFileRoute("/contacto")({
   head: () =>
@@ -19,32 +20,6 @@ export const Route = createFileRoute("/contacto")({
 });
 
 function ContactoPage() {
-  const [formData, setFormData] = useState({
-    nombre: "",
-    email: "",
-    asunto: "",
-    mensaje: "",
-  });
-  const [enviado, setEnviado] = useState(false);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Aquí iría la lógica de envío del formulario
-    console.log("Formulario enviado:", formData);
-    setEnviado(true);
-    setTimeout(() => {
-      setFormData({ nombre: "", email: "", asunto: "", mensaje: "" });
-      setEnviado(false);
-    }, 3000);
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
@@ -85,10 +60,7 @@ function ContactoPage() {
                 <div>
                   <h3 className="font-bold text-foreground mb-1">Email</h3>
                   <p className="text-muted-foreground text-sm">
-                    <a
-                      href={CONTACT.emailUrl}
-                      className="hover:text-biosensor transition-colors"
-                    >
+                    <a href={CONTACT.emailUrl} className="hover:text-biosensor transition-colors">
                       {CONTACT.email}
                     </a>
                   </p>
@@ -188,109 +160,13 @@ function ContactoPage() {
             <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-[var(--shadow-card)]">
               <h2 className="text-2xl font-bold text-foreground mb-6">Envíanos un mensaje</h2>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="nombre"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Nombre completo
-                  </label>
-                  <input
-                    type="text"
-                    id="nombre"
-                    name="nombre"
-                    value={formData.nombre}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-biosensor"
-                    placeholder="Tu nombre"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-biosensor"
-                    placeholder="tu@email.com"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="asunto"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Asunto
-                  </label>
-                  <select
-                    id="asunto"
-                    name="asunto"
-                    value={formData.asunto}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-biosensor"
-                  >
-                    <option value="">Selecciona un asunto</option>
-                    <option value="soporte">Soporte técnico</option>
-                    <option value="facturacion">Facturación</option>
-                    <option value="general">Consulta general</option>
-                    <option value="sugerencia">Sugerencia o feedback</option>
-                    <option value="asociacion">Oportunidad de asociación</option>
-                    <option value="otro">Otro</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="mensaje"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Mensaje
-                  </label>
-                  <textarea
-                    id="mensaje"
-                    name="mensaje"
-                    value={formData.mensaje}
-                    onChange={handleChange}
-                    required
-                    rows={5}
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-biosensor resize-none"
-                    placeholder="Cuéntanos cómo podemos ayudarte..."
-                  />
-                </div>
-
-                {enviado && (
-                  <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">
-                    ✓ Mensaje enviado exitosamente. Pronto nos pondremos en contacto.
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full px-6 py-3 bg-biosensor text-white rounded-lg font-medium hover:bg-biosensor/90 transition-colors focus:outline-none focus:ring-2 focus:ring-biosensor focus:ring-offset-2"
-                >
-                  Enviar Mensaje
-                </button>
-
-                <p className="text-xs text-muted-foreground text-center">
-                  Protegemos tu privacidad. Lee nuestra{" "}
-                  <a href="/privacidad" className="text-biosensor hover:underline">
-                    Política de Privacidad
-                  </a>
-                  .
-                </p>
-              </form>
+              <PqrsForm />
             </div>
           </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-4 sm:px-6 mt-12">
+          <PqrsStatusLookup />
         </section>
 
         <section className="mx-auto max-w-5xl px-4 sm:px-6 mt-16">

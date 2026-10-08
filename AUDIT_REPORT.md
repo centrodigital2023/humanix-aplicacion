@@ -44,3 +44,18 @@ Las reglas de `patientRisk.ts` son umbrales genéricos de signos vitales, **no u
 Migración `20261007200000_replacement_dimensions_circle.sql`: aviso de cancelación, `find_replacement_candidates`, `service_rating_dimensions` (validada en servidor, una por parte y servicio, solo servicios completados), `professional_dimension_averages` (mínimo 3), `care_circle_members` con `respond_circle_invitation` y política de solo lectura sobre `service_bookings`. Lógica pura probada: `pricing.ts`, `coverage.ts`, `ratingDimensions.ts`.
 
 Límites conocidos: el círculo de cuidado muestra fecha, duración y estado de los servicios, no direcciones, pagos ni datos clínicos; el semáforo de cobertura usa `job_offers` y `applications` (no `slot_proposals`); los candidatos de reemplazo no filtran por ciudad ni especialidad todavía.
+
+## Cuarta pasada: Marketplace + PQRS (superadmin)
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 18 | El formulario de `/contacto` solo hacía `console.log` y mostraba «enviado»: **los mensajes de los usuarios se perdían** | Corregido: radica en `pqrs-intake` y entrega radicado |
+| 19 | Nada insertaba en `pqrs_tickets`, así que el panel de PQRS siempre estaba vacío | Corregido (canal público) |
+| 20 | `superadmin.marketplace` ignoraba los errores de consulta: un fallo de permisos o esquema se veía como «0 resultados» | Corregido: aviso con error y migración requerida |
+| 21 | La política `pqrs_insert_anonymous` permitía insertar tickets con estado/prioridad/resolución/asignación forjados y sin límite de frecuencia | Eliminada; solo `pqrs-intake` (service role) |
+| 22 | El flag `blocked` de las ofertas solo se respetaba en el detalle; `/buscar` seguía listándolas | Corregido en RLS de `job_offers` |
+| 23 | El clasificador guardaba el *tipo de solicitud* en `ai_category` (la tabla documenta *tema*) y no defendía contra instrucciones dentro del ticket | Corregido: tema validado y texto delimitado como no confiable |
+| 24 | El matchmaking mostraba solo un UUID truncado por profesional | Ahora nombre, razones y advertencias |
+| 25 | `pqrs_tickets` fue retirada de Realtime (datos personales) pero el panel seguía suscrito, sin refresco alternativo | Refresco por intervalo y por notificación |
+
+Detalle de reglas y límites en `docs/MARKETPLACE_PQRS_PANEL.md`.

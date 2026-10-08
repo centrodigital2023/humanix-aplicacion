@@ -18,3 +18,13 @@
 - Revisar RLS con pruebas automatizadas (familias no ven datos de otras familias; profesionales no ven pacientes no asignados; IPS solo sus sedes).
 - Pruebas de `mp-webhook` con sandbox.
 - Rate limiting en `humanix-assistant`.
+
+## PQRS y Marketplace
+- Eliminadas las políticas de INSERT directo en `pqrs_tickets` (anónima y autenticada): el único camino es `pqrs-intake`.
+- Límites de frecuencia por IP (5 radicaciones/h, 20 consultas/h) y por contacto (3/h) almacenando solo hashes SHA-256 con sal secreta.
+- Consulta de estado con comparación exacta de correo en código (nunca `ILIKE` con datos del usuario: `%` sería un comodín).
+- Texto de tickets tratado como no confiable en los prompts; salidas de IA validadas contra listas cerradas; borradores sin medios de pago ni enlaces externos.
+- Exportación CSV con neutralización de fórmulas (`=`, `+`, `-`, `@`).
+- Ofertas bloqueadas ocultas por RLS; bloqueo con motivo, aviso al autor y auditoría.
+- Invitaciones a profesionales: sin repetir por oferta y con tope diario por persona.
+- Pendiente: acuse de recibo por correo (omitido a propósito para evitar abuso del formulario público); política de retención de `pqrs_tickets` y `pqrs_intake_attempts`.
