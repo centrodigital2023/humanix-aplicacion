@@ -448,3 +448,5 @@ Always validate document expiry in professional profiles.
 ---
 
 **Happy coding! 🚀**
+
+- ReTHUS verification runs in the `verifyRethus` server function (src/lib/rethus.functions.ts), not an Edge Function; only service-role code writes verification fields, which a trigger protects from clients.
