@@ -23,6 +23,7 @@ import { buildSeo, jsonLdString, faqLd, breadcrumbLd, SITE_URL } from "@/lib/seo
 import { toast } from "sonner";
 import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
 import { usePlan } from "@/hooks/use-plan";
+import { PromoCodeRedeemCard } from "@/components/humanix/PromoCodeRedeemCard";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
 import type { Audience } from "@/lib/audience";
@@ -342,7 +343,12 @@ const COMPARE_KEY = {
 
 function PlansPage() {
   const { user, loading: userLoading } = useAppUser({ requireAuth: false });
-  const { plan: currentPlan, cancelAtPeriodEnd, loading: planLoading } = usePlan(user?.id ?? null);
+  const {
+    plan: currentPlan,
+    cancelAtPeriodEnd,
+    loading: planLoading,
+    refresh: refreshPlan,
+  } = usePlan(user?.id ?? null);
   const loading = userLoading || planLoading;
   // Cada perfil ve solo sus planes.
   const { audience } = useAudience();
@@ -464,6 +470,11 @@ function PlansPage() {
             </span>
           </div>
         </header>
+
+        {/* CANJE DEL BENEFICIO (formulario /validacion) ----------------- */}
+        <div className="mx-auto mt-8 max-w-2xl">
+          <PromoCodeRedeemCard signedIn={Boolean(user)} onRedeemed={() => void refreshPlan()} />
+        </div>
 
         {/* PRICING CARDS ----------------------------------------------- */}
         <section

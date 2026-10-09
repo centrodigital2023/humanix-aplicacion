@@ -7,10 +7,10 @@ import { ValidationSurvey } from "@/components/humanix/ValidationSurvey";
 export const Route = createFileRoute("/validacion")({
   head: () =>
     buildSeo({
-      title: `Valida tu idea en 5 minutos — ${SITE_NAME}`,
+      title: `Registro de usuario y beneficio premium — ${SITE_NAME}`,
       path: "/validacion",
       description:
-        "Usa el mismo worksheet que los inversionistas para validar tu propuesta de valor. Complétalo gratis y obtén 1 mes Premium.",
+        "Cuéntanos qué necesitas o qué ofreces en salud en casa (4 minutos) y gana 1 mes del plan Esencial. Familias, IPS/EPS y profesionales.",
     }),
   component: ValidacionPage,
 });

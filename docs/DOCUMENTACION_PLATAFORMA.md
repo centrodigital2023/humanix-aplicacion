@@ -86,7 +86,7 @@ Catálogo canónico en `src/lib/plans.ts`: **Free** (COP 0), **Esencial** (COP 9
 Asistente conversacional con streaming (`humanix-assistant`, `HumanixAssistant`), SDK tipado (`src/lib/humanixAi.ts`), embeddings 768-d deterministas (`embed-text`, `embed-profile`, `embed-offer`), generación de imágenes promocionales (`promo-image-gen`), clasificación PQRS, segmentación CRM, recomendador de anuncios, detector de fraude, proxy NASA (`nasa-proxy`).
 
 ### 4.7 Comunicación
-WhatsApp: webhook entrante con respuesta IA (`whatsapp-webhook`), envío manual desde CRM (`whatsapp-send`), alertas de bitácora (`care-alerts`) y clínicas. Email con Resend (`send-campaign`). OTP de validación por WhatsApp/email (`send-validation-otp`, `verify-validation-otp`). Notificaciones in-app (`NotificationsBell`, tabla `notifications`).
+WhatsApp: webhook entrante con respuesta IA (`whatsapp-webhook`), envío manual desde CRM (`whatsapp-send`), alertas de bitácora (`care-alerts`) y clínicas. Email con Resend (`send-campaign`). OTP del formulario de validación de mercado por WhatsApp o correo (`sendValidationOtp` / `verifyValidationOtp`, funciones de servidor en `src/lib/marketValidation.functions.ts`; las Edge Functions `send-validation-otp` y `verify-validation-otp` se retiraron, ver `docs/VALIDACION_MERCADO.md`). Notificaciones in-app (`NotificationsBell`, tabla `notifications`).
 
 ### 4.8 Cumplimiento (FUID / Colombia)
 Vigencias: antecedentes 5 años, exámenes médicos 3, referencias laborales 2, certificaciones 5. Re-verificación semanal RETHUS (`rethus-weekly-check`, pensada para cron). Habeas Data (`HabeasDataConsent`). Contratos con firma OTP (`generate-contract`, `ContractSignature`).
@@ -133,7 +133,6 @@ Subrutas: `fraude`, `auditoria`, `publicidad`, `marketing`, `crm`, `marketplace`
 | `apply-referral-reward` | Recompensa por referido | Interna (webhook) |
 | `send-campaign`, `crm-segment-ai`, `ad-recommender`, `pqrs-classifier`, `promo-image-gen` | CRM, marketing, publicidad | Superadmin |
 | `whatsapp-webhook`, `whatsapp-send`, `care-alerts`, `clinical-alert-notify` | WhatsApp y alertas | Webhooks / CRM |
-| `send-validation-otp`, `verify-validation-otp` | OTP de validación | Encuesta de validación |
 | `generate-contract` | Contrato y OTP de firma | Interna |
 | `fraud-detector`, `rethus-weekly-check` | Antifraude y RETHUS | Internas / cron |
 | `wearable-ingest`, `nasa-proxy` | Wearables y datos NASA | App móvil / sitio |

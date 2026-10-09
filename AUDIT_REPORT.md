@@ -121,3 +121,24 @@ Detalle de reglas, verificación y límites en `docs/LAZO_DE_CUIDADO.md`. Verifi
 comprobaciones sobre la réplica de producción, más 37 de deriva), 534 pruebas unitarias, render en servidor y Chromium (102 + 14
 pasos); en producción, simulacro, aplicación y prueba de humo de 60 comprobaciones revertida. No se pudo probar: Realtime real,
 PostgREST con JWT reales, correos y navegadores móviles reales.
+
+## Octava pasada: formulario inteligente de validación de mercado (`/validacion`)
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 64 | **`validation_responses` aceptaba INSERT de cualquier visitante con cualquier columna** (política `public_insert`): se podían enviar filas con `premium_activated = true` y un `promo_code` a gusto | Política eliminada; el navegador no tiene privilegios sobre la tabla; solo el servidor (service role, `createServerFn`) escribe |
+| 65 | **El panel de superadmin nunca veía una fila**: la única política de lectura era «auth.role() = service_role» y el panel consulta con la sesión del usuario | Política de lectura por rol (`has_role(..., 'superadmin')`) y la tabla entra en Realtime (RLS aplica): el panel se tabula solo |
+| 66 | El código `MLP-…` se asignaba a TODA fila al insertar (verificada o no) y ninguna pantalla lo canjeaba: el «beneficio» no hacía nada | El código nace al verificar el contacto, uno por contacto y uno por cuenta (índices únicos parciales), vigencia de 60 días; `redeem_validation_benefit` activa 1 mes del plan Esencial en `mp_subscriptions` |
+| 67 | **`validation_otps` guardaba el código en claro y las Edge Functions `send-validation-otp` / `verify-validation-otp` eran públicas, sin límites ni tope de intentos**: fuerza bruta del código de 6 dígitos y envío masivo de WhatsApp/correo a costa de Humanix | Reemplazadas por funciones de servidor: *hash*, vigencia 15 min, 5 intentos con contador atómico, límites por respuesta, contacto e IP. Las funciones antiguas se quitaron del repositorio; **deben retirarse también del despliegue de Lovable Cloud** |
+| 68 | Las dos tablas nacían con `ALL` para `anon` y `authenticated` (privilegios por defecto de Supabase) | `REVOKE` + `GRANT` mínimo en la misma migración (`validation_otps` solo para el service role) |
+| 69 | La pantalla no preguntaba 3.1 (¿paga hoy?) ni 3.3 (dónde busca; la columna existía sin campo), las alternativas eran un solo texto y la persona se calificaba sola en 6 factores de 0 a 5 | Formulario de 4 secciones con todas las preguntas; «señal de demanda» automática de 0 a 100 |
+| 70 | Zod 4 omite las reglas cruzadas (`superRefine`) mientras otro campo del objeto tenga un error de tipo: en un formulario por secciones esas reglas no se aplicaban hasta el envío | `crossFieldIssues` exportada y aplicada por sección |
+| 71 | Hallado en el navegador: el error de una regla cruzada («si hoy pagas, menciona una alternativa») no se quitaba al corregirlo; en 390 px el botón «Enviar» se salía de la tarjeta (scroll horizontal); el deslizador no tenía nombre accesible; el detalle del panel mostraba claves internas (`job_boards`) | Corregidos y cubiertos por la prueba de navegador |
+| 72 | Hallado en el navegador: quien volvía a un borrador y enviaba rápido era tomado por robot por el filtro de rapidez (8 s) y **perdía sus respuestas** | El borrador guarda el instante de apertura original; escenario de regresión con control |
+
+Detalle de reglas, operación y límites en `docs/VALIDACION_MERCADO.md`. Verificado con 91 pruebas unitarias nuevas (625 en
+total), PostgreSQL 16 sobre la réplica de producción (57 comprobaciones de mercado; regresión completa 264 + 252 + 37 + 57),
+render en servidor y Chromium (41 pasos). **La migración `20261011100000_market_validation_v2.sql` está pendiente de aplicar
+en producción (requiere aprobación).** No se pudo probar: Realtime real, PostgREST con JWT reales, envío real por
+WhatsApp/Resend y navegadores móviles reales. Operación pendiente: secretos `WHATSAPP_OTP_TEMPLATE` (plantilla de
+autenticación aprobada en Meta; sin ella el mensaje solo llega dentro de la ventana de 24 h) y `RESEND_API_KEY`.

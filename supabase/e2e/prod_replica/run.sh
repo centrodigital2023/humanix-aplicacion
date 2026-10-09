@@ -5,11 +5,12 @@
 # (2026-10-09). Detecta deriva entre el repositorio y producción: políticas con otro nombre, objetos ausentes,
 # privilegios heredados.
 #
-# ⚠️  SOLO para un PostgreSQL DESECHABLE. Crea y BORRA las bases hx_replica_base, hx_replica_care y hx_replica_hub.
+# ⚠️  SOLO para un PostgreSQL DESECHABLE. Crea y BORRA las bases hx_replica_base, hx_replica_care, hx_replica_hub,
+#     hx_replica_audit y hx_replica_market.
 #     NUNCA lo apuntes a Supabase / Lovable Cloud ni a una base con datos reales.
 #
 #   HX_TEST_CONFIRM=desechable PGHOST=localhost PGPORT=5432 PGUSER=postgres supabase/e2e/prod_replica/run.sh
-#   HX_SCENARIO=care|hub|audit|both (por defecto both = los tres) · HX_ONLY_LOAD=1 solo carga la réplica y las migraciones.
+#   HX_SCENARIO=care|hub|audit|market|both (por defecto both = los cuatro) · HX_ONLY_LOAD=1 solo carga la réplica y las migraciones.
 set -euo pipefail
 
 if [ "${HX_TEST_CONFIRM:-}" != "desechable" ]; then
@@ -34,6 +35,7 @@ CHAIN=(
   20261010100000_care_loop.sql
   20261010110000_realtime_core_tables.sql
   20261010120000_new_tables_least_privilege.sql
+  20261011100000_market_validation_v2.sql
 )
 
 ERRF=$(mktemp)
@@ -67,4 +69,5 @@ run_scenario() {
 [ "$SCEN" = "care" ] || [ "$SCEN" = "both" ] && run_scenario "lazo de cuidado" hx_replica_care "$E2E/care_loop/scenario.sql" "$E2E/care_loop"
 [ "$SCEN" = "hub" ] || [ "$SCEN" = "both" ] && run_scenario "hub de instituciones" hx_replica_hub "$E2E/institution_hub/scenario.sql" "$E2E/institution_hub"
 [ "$SCEN" = "audit" ] || [ "$SCEN" = "both" ] && run_scenario "deriva, chat y mínimo privilegio" hx_replica_audit "$HERE/scenario.sql" "$HERE"
+[ "$SCEN" = "market" ] || [ "$SCEN" = "both" ] && run_scenario "validación de mercado y beneficio" hx_replica_market "$E2E/market_validation/scenario.sql" "$E2E/market_validation"
 true

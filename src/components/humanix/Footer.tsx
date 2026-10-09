@@ -54,6 +54,7 @@ const cols: { title: string; links: FooterLink[]; only?: Audience[] }[] = [
       },
       { label: "Buscar cuidado", to: "/buscar", only: ["familias"] },
       { label: "Planes", to: "/planes" },
+      { label: "Gana 1 mes gratis", to: "/validacion" },
       { label: "Calculadora de costos", to: "/calculadora", only: ["familias", "profesionales"] },
       { label: "Tecnología IA", to: "/tecnologia" },
       { label: "Recursos", to: "/recursos" },

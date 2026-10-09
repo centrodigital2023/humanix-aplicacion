@@ -29,6 +29,8 @@ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
 $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS
 $$ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
+CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS
+$$ SELECT coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role') $$;
 
 CREATE TABLE public._realtime_log (id bigserial PRIMARY KEY, payload jsonb, event text, topic text, private boolean);
 CREATE FUNCTION realtime.send(payload jsonb, event text, topic text, private boolean DEFAULT true)

@@ -121,3 +121,23 @@ DO $$ DECLARE t text; BEGIN
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
   END LOOP;
 END $$;
+
+-- ── Formulario de validación de mercado: estructura de producción ANTES de 20261011100000 (0 filas) ──
+CREATE TABLE public.validation_responses (id uuid NOT NULL DEFAULT gen_random_uuid(), created_at timestamp with time zone NOT NULL DEFAULT now(), profile_type text NOT NULL DEFAULT 'familia'::text, full_name text, whatsapp text, email text, service_offer text, pain_point text, target_customer text, key_benefit text, current_solutions text, competitors text, retention_channels text, willingness_pct integer DEFAULT 50, comments text, score_clear_problem integer DEFAULT 0, score_demand integer DEFAULT 0, score_reach integer DEFAULT 0, score_benefit integer DEFAULT 0, score_competitive_adv integer DEFAULT 0, score_passion integer DEFAULT 0, total_score integer GENERATED ALWAYS AS ((((((COALESCE(score_clear_problem, 0) + COALESCE(score_demand, 0)) + COALESCE(score_reach, 0)) + COALESCE(score_benefit, 0)) + COALESCE(score_competitive_adv, 0)) + COALESCE(score_passion, 0))) STORED, promo_code text DEFAULT ('MLP-'::text || upper(substr(replace((gen_random_uuid())::text, '-'::text, ''::text), 1, 8))), premium_activated boolean DEFAULT false);
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_pkey PRIMARY KEY (id);
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_promo_code_key UNIQUE (promo_code);
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_score_benefit_check CHECK (((score_benefit >= 0) AND (score_benefit <= 5)));
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_score_clear_problem_check CHECK (((score_clear_problem >= 0) AND (score_clear_problem <= 5)));
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_score_competitive_adv_check CHECK (((score_competitive_adv >= 0) AND (score_competitive_adv <= 5)));
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_score_demand_check CHECK (((score_demand >= 0) AND (score_demand <= 5)));
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_score_passion_check CHECK (((score_passion >= 0) AND (score_passion <= 5)));
+ALTER TABLE public.validation_responses ADD CONSTRAINT validation_responses_score_reach_check CHECK (((score_reach >= 0) AND (score_reach <= 5)));
+ALTER TABLE public.validation_responses ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.validation_otps (id uuid NOT NULL DEFAULT gen_random_uuid(), created_at timestamp with time zone NOT NULL DEFAULT now(), response_id uuid, contact text NOT NULL, channel text NOT NULL, code text NOT NULL, expires_at timestamp with time zone NOT NULL DEFAULT (now() + '00:15:00'::interval), verified_at timestamp with time zone, attempts smallint NOT NULL DEFAULT 0);
+ALTER TABLE public.validation_otps ADD CONSTRAINT validation_otps_pkey PRIMARY KEY (id);
+ALTER TABLE public.validation_otps ADD CONSTRAINT validation_otps_channel_check CHECK ((channel = ANY (ARRAY['whatsapp'::text, 'email'::text])));
+ALTER TABLE public.validation_otps ADD CONSTRAINT validation_otps_response_id_fkey FOREIGN KEY (response_id) REFERENCES validation_responses(id) ON DELETE CASCADE;
+CREATE INDEX validation_otps_response_id_idx ON public.validation_otps USING btree (response_id);
+CREATE INDEX validation_otps_contact_created_at_idx ON public.validation_otps USING btree (contact, created_at);
+ALTER TABLE public.validation_otps ENABLE ROW LEVEL SECURITY;

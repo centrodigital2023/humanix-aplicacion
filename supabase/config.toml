@@ -21,8 +21,3 @@ verify_jwt = false
 [functions.wearable-ingest]
 verify_jwt = false
 
-[functions.send-validation-otp]
-verify_jwt = false
-
-[functions.verify-validation-otp]
-verify_jwt = false

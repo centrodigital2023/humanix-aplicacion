@@ -111,3 +111,7 @@ CREATE POLICY user_roles_insert_superadmin_only ON public.user_roles AS RESTRICT
 CREATE POLICY user_roles_select_own ON public.user_roles AS PERMISSIVE FOR SELECT TO public USING (((auth.uid() = user_id) OR is_staff(auth.uid())));
 CREATE POLICY user_roles_superadmin_all ON public.user_roles AS PERMISSIVE FOR ALL TO public USING (has_role(auth.uid(), 'superadmin'::app_role));
 CREATE POLICY user_roles_update_superadmin_only ON public.user_roles AS RESTRICTIVE FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'superadmin'::app_role)) WITH CHECK (has_role(auth.uid(), 'superadmin'::app_role));
+
+CREATE POLICY public_insert ON public.validation_responses AS PERMISSIVE FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY service_full ON public.validation_responses AS PERMISSIVE FOR ALL TO public USING ((auth.role() = 'service_role'::text));
+CREATE POLICY service_full ON public.validation_otps AS PERMISSIVE FOR ALL TO public USING ((auth.role() = 'service_role'::text));

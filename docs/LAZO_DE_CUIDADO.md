@@ -158,6 +158,10 @@ Qué descubrió la base real (y no se veía desde el repositorio):
 - Muchas migraciones antiguas nunca se aplicaron en producción (referidos, billetera y pagos a profesionales, SGSST, sedes de
   instituciones…). **No se tocaron**: son una decisión aparte (ver «Límites»).
 
+**Novena migración, pendiente:** `20261011100000_market_validation_v2.sql` (formulario inteligente de validación de mercado,
+ver `docs/VALIDACION_MERCADO.md`). Está en el repositorio y comprobada sobre la réplica (57/57), pero **no se ha aplicado en
+producción**: requiere aprobación y, al cerrar la tabla al navegador, conviene publicar la nueva interfaz justo después.
+
 Comprobaciones posteriores (SQL):
 
 ```sql
