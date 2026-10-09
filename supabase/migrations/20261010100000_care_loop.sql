@@ -92,6 +92,25 @@ REVOKE ALL ON public.care_logs FROM anon, authenticated;
 GRANT SELECT, INSERT ON public.care_logs TO authenticated;
 GRANT ALL ON public.care_logs TO service_role;
 
+-- Lectura del parte: el profesional del servicio, quien contrató y el superadmin (el círculo, abajo). El parte es un
+-- dato de salud: HR y evaluadores NO lo leen. En producción existía «care_logs_read» con is_staff() (los leía todo el
+-- personal) y el repositorio original tenía otras tres políticas de lectura con distinto nombre; se retiran todas para
+-- que el resultado sea el mismo en cualquier entorno (las políticas permisivas se suman: basta una laxa para filtrar).
+DROP POLICY IF EXISTS "care_logs_read" ON public.care_logs;
+DROP POLICY IF EXISTS "care_logs_professional_read" ON public.care_logs;
+DROP POLICY IF EXISTS "care_logs_client_read" ON public.care_logs;
+DROP POLICY IF EXISTS "care_logs_superadmin_read" ON public.care_logs;
+CREATE POLICY "care_logs_read" ON public.care_logs
+  FOR SELECT TO authenticated
+  USING (
+    professional_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.service_bookings b
+       WHERE b.id = care_logs.booking_id AND b.client_id = auth.uid()
+    )
+    OR public.has_role(auth.uid(), 'superadmin'::public.app_role)
+  );
+
 -- Escribe el profesional del servicio, solo mientras está en curso. La llegada y la salida las genera el
 -- sistema (disparador de abajo), no el cliente: una hora de llegada falsificada invalida todo el parte.
 DROP POLICY IF EXISTS "care_logs_professional_insert" ON public.care_logs;

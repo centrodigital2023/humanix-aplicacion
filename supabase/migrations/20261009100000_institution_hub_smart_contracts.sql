@@ -2928,9 +2928,11 @@ CREATE POLICY offer_team_invites_select ON public.offer_team_invites
   USING (invited_by = auth.uid() OR professional_id = auth.uid() OR public.is_staff(auth.uid()));
 
 -- Las invitaciones solo las escribe invite_team_to_offer(): sin INSERT/UPDATE/DELETE desde el cliente.
+-- En producción las tablas nuevas heredan ALL para anon y authenticated (privilegios por defecto de Supabase):
+-- se retira todo antes de conceder lo mínimo.
+REVOKE ALL ON public.offer_team_invites FROM anon, authenticated;
 GRANT SELECT ON public.offer_team_invites TO authenticated;
 GRANT ALL ON public.offer_team_invites TO service_role;
-REVOKE ALL ON public.offer_team_invites FROM anon;
 
 CREATE OR REPLACE FUNCTION public.invite_team_to_offer(p_offer_id uuid)
 RETURNS integer

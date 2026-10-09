@@ -35,6 +35,7 @@ load_schema() {
   (cd "$HUB" && $P -d "$db" -f bootstrap_inst.sql >/dev/null)
   # Estado de producción previo: la bitácora original de la que parte «lazo de cuidado».
   $P -d "$db" -f "$MIG/20260606000003_care_logs.sql" >/dev/null
+  $P -d "$db" -f "$MIG/20261009050000_contact_and_chat_prereqs.sql" >/dev/null
   $P -d "$db" -f "$MIG/20261009100000_institution_hub_smart_contracts.sql" >/dev/null 2>&1
   if [ "${2:-}" = "prodlike" ]; then
     # Supabase concede ALL a anon/authenticated sobre las tablas existentes: la migración debe cerrar lo que no corresponde.
@@ -43,6 +44,7 @@ load_schema() {
   fi
   $P -d "$db" -f "$MIG/20261010100000_care_loop.sql" >/dev/null
   $P -d "$db" -f "$MIG/20261010110000_realtime_core_tables.sql" >/dev/null 2>&1
+  $P -d "$db" -f "$MIG/20261010120000_new_tables_least_privilege.sql" >/dev/null
   # Segunda pasada: la migración de Realtime debe ser idempotente.
   $P -d "$db" -f "$MIG/20261010110000_realtime_core_tables.sql" >/dev/null 2>&1
 }

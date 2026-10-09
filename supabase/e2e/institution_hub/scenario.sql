@@ -137,7 +137,9 @@ SELECT public.t_eq('1.9 start/end derivados de los turnos', public.q1(format('SE
 
 -- Un profesional (cualquier autenticado) no ve la dirección ni el teléfono por la API.
 SELECT public.t_eq('1.10 profesional lee address = NULL', public.t_val(:'pfree', format('SELECT address FROM public.job_offers WHERE id = %L', :'offer1')), 'NULL');
-SELECT public.t_err('1.11 profesional no puede leer contact_phone (privilegio de columna)', public.t_val(:'pfree', format('SELECT contact_phone FROM public.job_offers WHERE id = %L', :'offer1')), 'permission denied');
+-- Con privilegios por columna (repositorio) la lectura falla; con privilegio de tabla completa (producción) la columna
+-- existe pero el disparador la deja siempre en NULL: en ambos casos el profesional no obtiene el teléfono.
+SELECT public.t_true('1.11 profesional no obtiene contact_phone (privilegio de columna o dato siempre nulo)', (SELECT r = 'NULL' OR r ILIKE 'ERR%permission denied%' FROM (SELECT public.t_val(:'pfree', format('SELECT contact_phone FROM public.job_offers WHERE id = %L', :'offer1')) AS r) x));
 SELECT public.t_eq('1.12 profesional no ve job_offer_private', public.t_val(:'pfree', 'SELECT count(*) FROM public.job_offer_private'), '0');
 SELECT public.t_eq('1.13 la institución dueña sí ve job_offer_private', public.t_val(:'inst1', 'SELECT count(*) FROM public.job_offer_private'), '1');
 SELECT public.t_eq('1.14 otra institución no ve job_offer_private ajeno', public.t_val(:'inst2', 'SELECT count(*) FROM public.job_offer_private'), '0');
@@ -222,7 +224,7 @@ SELECT public.t_eq('4.2 la reserva quedó con la dirección', public.q1(format('
 SELECT public.t_eq('4.3 coordenadas exactas en la reserva', public.q1(format('SELECT DISTINCT service_lat::text FROM public.service_bookings WHERE application_id = %L', :'app1')), '4.6830123');
 SELECT public.t_eq('4.4 valor acordado por turno', public.q1(format('SELECT DISTINCT total_amount::text FROM public.service_bookings WHERE application_id = %L', :'app1')), '200000');
 SELECT public.t_eq('4.5 cliente y profesional correctos', public.q1(format('SELECT DISTINCT (client_id = %L AND professional_id = %L)::text FROM public.service_bookings WHERE application_id = %L', :'inst1', :'pfree', :'app1')), 'true');
-SELECT public.t_eq('4.6 sin comisión para plan Esencial', public.q1(format('SELECT DISTINCT platform_fee_pct::text || ''/'' || platform_fee_amount FROM public.service_bookings WHERE application_id = %L', :'app1')), '0/0');
+SELECT public.t_eq('4.6 sin comisión para plan Esencial', public.q1(format('SELECT DISTINCT trim_scale(platform_fee_pct)::text || ''/'' || platform_fee_amount FROM public.service_bookings WHERE application_id = %L', :'app1')), '0/0');
 SELECT public.t_eq('4.7 postulación aceptada con valor acordado', public.q1(format('SELECT status::text || ''/'' || agreed_amount FROM public.applications WHERE id = %L', :'app1')), 'accepted/200000');
 SELECT public.t_eq('4.8 cupos ocupados', public.q1(format('SELECT string_agg(filled || status, '','' ORDER BY starts_at) FROM public.job_offer_shifts WHERE job_offer_id = %L', :'offer1')), '1filled,1filled');
 SELECT public.t_eq('4.9 oferta cubierta', public.q1(format('SELECT status::text FROM public.job_offers WHERE id = %L', :'offer1')), 'filled');
@@ -257,7 +259,7 @@ SELECT public.t_uuid(:'pfree2', format('SELECT public.apply_to_offer(%L, NULL, N
 SELECT public.t_val(:'inst1', format('SELECT public.accept_application(%L, NULL)::text', :'app3')) AS accept3 \gset
 SELECT public.t_true('6.0 aceptación de pfree2', :'accept3' NOT LIKE 'ERR%');
 SELECT public.t_eq('6.1 Free ve la dirección en su reserva', public.t_val(:'pfree2', format('SELECT service_address FROM public.service_bookings WHERE application_id = %L', :'app3')), 'Av. 68 # 22-10');
-SELECT public.t_eq('6.2 comisión 12 % para Free', public.q1(format('SELECT platform_fee_pct::text || ''/'' || platform_fee_amount || ''/'' || professional_payout FROM public.service_bookings WHERE application_id = %L', :'app3')), '12/18000/132000');
+SELECT public.t_eq('6.2 comisión 12 % para Free', public.q1(format('SELECT trim_scale(platform_fee_pct)::text || ''/'' || platform_fee_amount || ''/'' || professional_payout FROM public.service_bookings WHERE application_id = %L', :'app3')), '12/18000/132000');
 SELECT public.t_err('6.3 Free NO obtiene el teléfono de la reserva', public.t_val(:'pfree2', format('SELECT phone FROM public.get_booking_contact((SELECT id FROM public.service_bookings WHERE application_id = %L))', :'app3')), 'plan_required');
 SELECT public.t_err('6.4 Free NO desbloquea el contacto', public.t_val(:'pfree2', format('SELECT phone FROM public.reveal_offer_contact(%L)', :'app3')), 'plan_required');
 SELECT public.t_eq('6.5 la institución sí obtiene el contacto del profesional', public.t_val(:'inst1', format('SELECT phone FROM public.get_booking_contact((SELECT id FROM public.service_bookings WHERE application_id = %L))', :'app3')), '3001112222');
@@ -331,7 +333,12 @@ SELECT public.t_eq('8.25 el profesional fue avisado del cambio', public.q1(forma
 -- Firma: solo service_role y con todas las garantías.
 SELECT format($f$SELECT public.record_contract_signature(%%L, %%L, %%L, %%L, ARRAY['contract','credentials','confidentiality','esign'], jsonb_build_object('method','email_otp','authenticated_at', now()), 'iphash', 'ua')$f$) AS sigfmt \gset
 SELECT public.t_err('8.26 firma sin identidad verificada', public.t_svc(format(:'sigfmt', :'contract1', :'pfree', :'hash_v2', repeat('a', 64))), 'identity_not_verified');
+-- En producción un disparador (guard_professional_trust_fields) revierte los campos de verificación salvo que la llamada
+-- venga del service role: aquí se simula esa llamada de servidor.
+BEGIN;
+SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true) AS _c \gset
 UPDATE public.professional_profiles SET rethus_verified = true, rethus_number = '12345-RTH' WHERE user_id = :'pfree';
+COMMIT;
 SELECT public.t_err('8.27 firma con hash de otra versión', public.t_svc(format(:'sigfmt', :'contract1', :'pfree', :'hash_v1', repeat('a', 64))), 'terms_changed');
 SELECT public.t_err('8.28 firma sin aceptar todas las declaraciones', public.t_svc(format($f$SELECT public.record_contract_signature(%L, %L, %L, %L, ARRAY['contract'], jsonb_build_object('method','email_otp','authenticated_at', now()), 'iphash', 'ua')$f$, :'contract1', :'pfree', :'hash_v2', repeat('a', 64))), 'clauses_required');
 SELECT public.t_err('8.29 firma con segundo factor vencido', public.t_svc(format($f$SELECT public.record_contract_signature(%L, %L, %L, %L, ARRAY['contract','credentials','confidentiality','esign'], jsonb_build_object('method','email_otp','authenticated_at', now() - interval '1 hour'), 'iphash', 'ua')$f$, :'contract1', :'pfree', :'hash_v2', repeat('a', 64))), 'step_up_required');
@@ -375,7 +382,8 @@ SELECT public.t_err('8.52 los términos no se tocan sin las acciones del contrat
 
 -- ═══ 9) Flujo de contratos anterior cerrado ═══════════════════════════════════
 SELECT public.t_err('9.1 sign_contract está deshabilitado', public.t_val(:'pfree', $q$SELECT public.sign_contract('00000000-0000-0000-0000-000000000000', '123456', 'professional')$q$), 'contrato inteligente');
-SELECT public.t_err('9.2 el cliente no puede insertar service_contracts', public.t_as(:'pfree', format('INSERT INTO public.service_contracts(family_id, professional_id, service_description, start_date) VALUES (%L, %L, ''x'', current_date)', :'pfree', :'pfree')), 'row-level security');
+-- Si la tabla heredada existe, RLS lo impide; en producción la tabla no existe: tampoco hay forma de escribir.
+SELECT public.t_true('9.2 el cliente no puede insertar service_contracts', (SELECT r LIKE 'ERR%' AND (r ILIKE '%row-level security%' OR r ILIKE '%does not exist%') FROM (SELECT public.t_as(:'pfree', format('INSERT INTO public.service_contracts(family_id, professional_id, service_description, start_date) VALUES (%L, %L, ''x'', current_date)', :'pfree', :'pfree')) AS r) x));
 
 -- ═══ 10) Familia: oferta propia sin agenda → horario al aceptar; la familia ve el aviso ═══
 INSERT INTO public.job_offers(id, posted_by, poster_type, title, modality, amount, city, address, contact_phone)
