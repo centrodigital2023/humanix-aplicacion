@@ -11,40 +11,56 @@ import {
   Preview,
   Text,
 } from '@react-email/components'
+import { TokenCode } from './token-code'
 
 interface InviteEmailProps {
   siteName: string
   siteUrl: string
   confirmationUrl: string
+  token?: string
 }
 
 export const InviteEmail = ({
   siteName,
   siteUrl,
   confirmationUrl,
+  token,
 }: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="es" dir="ltr">
     <Head>
       <style>{darkModeCss}</style>
     </Head>
-    <Preview>You've been invited to join {siteName}</Preview>
+    <Preview>Te invitaron a unirte a {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>You've been invited</Heading>
+        <Heading style={h1}>Te invitaron a unirte</Heading>
         <Text style={text}>
-          You've been invited to join{' '}
+          Te invitaron a unirte a{' '}
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
-          . Click the button below to accept the invitation and create your
-          account.
+          .
         </Text>
+        {token ? (
+          <>
+            <Text style={text}>
+              Tu código de verificación de 6 dígitos es:
+            </Text>
+            <TokenCode token={token} />
+            <Text style={text}>
+              O acepta la invitación y crea tu cuenta con el botón:
+            </Text>
+          </>
+        ) : (
+          <Text style={text}>
+            Acepta la invitación y crea tu cuenta con el botón:
+          </Text>
+        )}
         <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Accept Invitation
+          Aceptar invitación
         </Button>
         <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
+          Si no esperabas esta invitación, puedes ignorar este correo.
         </Text>
       </Container>
     </Body>
@@ -69,10 +85,10 @@ const text = {
 }
 const link = { color: 'inherit', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#0F766E',
   color: '#ffffff',
   fontSize: '14px',
-  border: '1px solid #000000',
+  border: '1px solid #0F766E',
   borderRadius: '8px',
   padding: '12px 20px',
   textDecoration: 'none',

@@ -11,12 +11,14 @@ import {
   Preview,
   Text,
 } from '@react-email/components'
+import { TokenCode } from './token-code'
 
 interface SignupEmailProps {
   siteName: string
   siteUrl: string
   recipient: string
   confirmationUrl: string
+  token?: string
 }
 
 export const SignupEmail = ({
@@ -24,34 +26,51 @@ export const SignupEmail = ({
   siteUrl,
   recipient,
   confirmationUrl,
+  token,
 }: SignupEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="es" dir="ltr">
     <Head>
       <style>{darkModeCss}</style>
     </Head>
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>Tu código de verificación de {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Heading style={h1}>Confirma tu correo</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
+          Gracias por registrarte en{' '}
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
-          !
+          .
         </Text>
-        <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) by clicking the button below:
-        </Text>
+        {token ? (
+          <>
+            <Text style={text}>
+              Tu código de verificación de 6 dígitos es:
+            </Text>
+            <TokenCode token={token} />
+            <Text style={text}>
+              También puedes confirmar tu correo (
+              <Link href={`mailto:${recipient}`} style={link}>
+                {recipient}
+              </Link>
+              ) con el botón:
+            </Text>
+          </>
+        ) : (
+          <Text style={text}>
+            Confirma tu correo (
+            <Link href={`mailto:${recipient}`} style={link}>
+              {recipient}
+            </Link>
+            ) con el botón:
+          </Text>
+        )}
         <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Verify Email
+          Verificar correo
         </Button>
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          Si no creaste esta cuenta, puedes ignorar este correo.
         </Text>
       </Container>
     </Body>
@@ -76,10 +95,10 @@ const text = {
 }
 const link = { color: 'inherit', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#0F766E',
   color: '#ffffff',
   fontSize: '14px',
-  border: '1px solid #000000',
+  border: '1px solid #0F766E',
   borderRadius: '8px',
   padding: '12px 20px',
   textDecoration: 'none',

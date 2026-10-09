@@ -10,33 +10,45 @@ import {
   Preview,
   Text,
 } from '@react-email/components'
+import { TokenCode } from './token-code'
 
 interface MagicLinkEmailProps {
   siteName: string
   confirmationUrl: string
+  token?: string
 }
 
 export const MagicLinkEmail = ({
   siteName,
   confirmationUrl,
+  token,
 }: MagicLinkEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="es" dir="ltr">
     <Head>
       <style>{darkModeCss}</style>
     </Head>
-    <Preview>Your login link for {siteName}</Preview>
+    <Preview>Tu código de acceso a {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Your login link</Heading>
-        <Text style={text}>
-          Click the button below to log in to {siteName}. This link will expire
-          shortly.
-        </Text>
+        <Heading style={h1}>Tu acceso a {siteName}</Heading>
+        {token ? (
+          <>
+            <Text style={text}>
+              Tu código de verificación de 6 dígitos es:
+            </Text>
+            <TokenCode token={token} />
+            <Text style={text}>O entra directamente con el botón:</Text>
+          </>
+        ) : (
+          <Text style={text}>
+            Pulsa el botón para entrar a {siteName}. El enlace vence pronto.
+          </Text>
+        )}
         <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Log In
+          Entrar
         </Button>
         <Text style={footer}>
-          If you didn't request this link, you can safely ignore this email.
+          Si no solicitaste este acceso, puedes ignorar este correo.
         </Text>
       </Container>
     </Body>
@@ -60,10 +72,10 @@ const text = {
   margin: '0 0 25px',
 }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#0F766E',
   color: '#ffffff',
   fontSize: '14px',
-  border: '1px solid #000000',
+  border: '1px solid #0F766E',
   borderRadius: '8px',
   padding: '12px 20px',
   textDecoration: 'none',
