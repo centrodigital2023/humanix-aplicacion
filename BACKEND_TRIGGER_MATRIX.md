@@ -84,7 +84,10 @@ Secrets: `LOVABLE_API_KEY` (ya existente). Opcional: `PQRS_AI_MODEL` (por defect
 Secrets: `SUPABASE_SERVICE_ROLE_KEY` (función de servidor). Correo de Supabase Auth con `{{ .Token }}` para el código de firma.
 La Edge Function `generate-contract` queda desplegada pero sin uso desde la interfaz.
 
-## Lazo de cuidado (migraciones `20261010100000` y `20261010110000`)
+## Lazo de cuidado (migraciones `20261009050000`, `20261010100000`, `20261010110000` y `20261010120000`)
+
+Aplicadas en la base de producción el 2026-10-09 (simulacro previo, huellas md5 idénticas a la réplica y prueba de humo de 60
+comprobaciones revertida). «PostgreSQL real (n)» remite al grupo `n` del escenario de `supabase/e2e/care_loop/`.
 
 | Pieza | Cómo se activa | Auth / permisos | Prueba |
 |---|---|---|---|
@@ -94,7 +97,9 @@ La Edge Function `generate-contract` queda desplegada pero sin uso desde la inte
 | Disparador `trg_plan_b_after_cancel` | Reserva cancelada | Interno: si cancela el profesional y la reserva viene de una oferta, invita a los favoritos del autor | PostgreSQL real (7b, 8) |
 | `notify_booking_cancelled` (reemplazada) | Cancelación | Interno: aviso que dice cuántos del equipo de confianza están libres | PostgreSQL real (7) |
 | Política `care_logs_professional_insert` / `care_logs_circle_read` | INSERT / SELECT en `care_logs` | Solo el profesional de la reserva escribe; leen cliente, profesional, círculo aceptado y superadmin | PostgreSQL real (2, 3) |
-| RPC `get_care_summary` (endurecida), `care_report` | Pantalla del servicio | Autenticado + `care_can_view` (antes: cualquiera con el id) | PostgreSQL real (3) |
+| Política `care_logs_read` (reemplaza la de producción basada en `is_staff()`) | SELECT en `care_logs` | Cliente de la reserva, profesional autor y superadmin; HR y evaluadores no | PostgreSQL real sobre la réplica de producción (3.10b) |
+| RPC `get_care_summary` (nueva en producción, ya endurecida), `care_report` | Pantalla del servicio | Autenticado + `care_can_view` (en el repositorio antiguo: cualquiera con el id) | PostgreSQL real (3) |
+| RPC `get_or_create_booking_conversation`, `get_booking_contact`; tabla `booking_contact_reveals` | Chat y «Contactar» de una reserva pagada | Solo las partes; sin sesión no abre el chat; cada consulta de contacto queda auditada; los usuarios solo leen su auditoría | Réplica de producción (1.1–1.15) |
 | RPC `my_active_services` | Tablero de cada rol | Cliente, profesional o círculo; solo lo propio | PostgreSQL real (3b) |
 | RPC `send_kudos`, `my_received_kudos`, `kudos_allowed_kinds` | «Gracias» | Participante de un servicio completado; lista cerrada por rol; uno por servicio | PostgreSQL real (5) |
 | RPC `professional_kudos_summary`, `professional_public_stats` | Perfil público | Público (anon) pero solo agregados, sin identidades | PostgreSQL real (5, 6) |

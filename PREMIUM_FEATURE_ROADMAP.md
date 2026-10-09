@@ -75,6 +75,11 @@ cerrada (separados de las calificaciones) y bucles virales sin datos de salud, n
 a Excel (Esencial). Se corrigió además la bitácora original (inserciones falsificables, resumen abierto a cualquiera,
 compositor sin montar). Documentación en `docs/LAZO_DE_CUIDADO.md`; suite en `supabase/e2e/care_loop/`.
 
+Aplicado en la base de producción el 2026-10-09 (8 migraciones, con simulacro previo y prueba de humo revertida). Al contrastar
+con la estructura real se corrigieron además tres fallos que ya afectaban a los usuarios: el **chat no enviaba mensajes**, la
+tarjeta **«Contactar» fallaba** y **HR/evaluadores podían leer los partes de salud**. La nueva interfaz llega a los usuarios al
+**publicar** el sitio en Lovable (acción aparte).
+
 Siguiente (por valor y esfuerzo): avisos informativos por WhatsApp Business (nunca pagos), fotos del parte con consentimiento
 explícito (Ley 1581), umbrales de signos vitales por paciente, resumen semanal para la familia y el círculo, informe mensual
 para la EPS/IPS (cumplimiento + alertas), calificación de la experiencia del círculo y reemplazo asistido con un clic desde

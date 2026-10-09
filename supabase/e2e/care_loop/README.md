@@ -29,9 +29,10 @@ políticas y funciones copiadas de migraciones anteriores) y le añade el estado
 (`20260606000003_care_logs.sql`). La base principal se prepara en modo **«prodlike»**: se concede `ALL` a `anon`,
 `authenticated` y `service_role` sobre `care_logs`, `care_favorites` y `care_circle_members`, y se crea una publicación
 `supabase_realtime` vacía, igual que se encontró en Lovable Cloud. Así la suite comprueba que la migración **cierra** lo que no
-corresponde (REVOKE explícitos) y que la publicación queda completa. Si producción difiere de esta aproximación, la suite puede
-dar falsos positivos o negativos: antes de aplicar en producción conviene la corrida en seco descrita en
-`docs/LAZO_DE_CUIDADO.md`.
+corresponde (REVOKE explícitos) y que la publicación queda completa. Como el esquema es una **aproximación**, la suite puede
+dar falsos positivos o negativos: la prueba contra la **estructura real** de producción vive en `supabase/e2e/prod_replica/`
+(donde `run.sh` aplica además los prerrequisitos de chat y contacto `20261009050000` y el mínimo privilegio `20261010120000`), y
+antes de aplicar en producción conviene el simulacro descrito en `docs/LAZO_DE_CUIDADO.md`.
 
 ## Grupos del escenario (`scenario.sql`)
 

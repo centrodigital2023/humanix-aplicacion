@@ -63,11 +63,13 @@
   `{{ .Token }}`, y revisión jurídica de la plantilla del contrato.
 
 ## Lazo de cuidado
-- **`care_logs` blindada:** antes cualquier usuario autenticado podía insertar partes en una reserva ajena (la política solo
-  comprobaba `professional_id = auth.uid()`). Ahora solo el profesional de la reserva, con el servicio en curso, tope de 200 por
-  turno; solo-agregar (sin UPDATE/DELETE); `anon` sin acceso; llegada y salida las genera el sistema.
+- **`care_logs` blindada:** la migración original del repositorio permitía insertar partes en una reserva ajena (la política solo
+  comprobaba `professional_id = auth.uid()`); la de producción ya exigía ser el profesional de la reserva, pero sin servicio en
+  curso ni tope. Ahora solo el profesional de la reserva, con el servicio en curso, tope de 200 por turno; solo-agregar (sin
+  UPDATE/DELETE); `anon` sin acceso; llegada y salida las genera el sistema.
 - **Datos de salud, mínimo privilegio:** el parte lo leen el cliente, el profesional, los miembros **aceptados** del círculo y
-  `superadmin`. HR y evaluadores **no**. `get_care_summary` ya no responde a cualquiera con un id de reserva.
+  `superadmin`. HR y evaluadores **no** (en producción la política `care_logs_read` usaba `is_staff()` y los dejaba leer; la
+  cadena la reemplaza). `get_care_summary` no existía en producción y se crea ya con comprobación de quién llama.
 - **Texto limpio sin bloquear emergencias:** sin teléfonos, correos, enlaces ni instrucciones de pago; las alertas nunca se
   rechazan por contenido. Fotos de pacientes descartadas hasta tener un flujo de consentimiento (Ley 1581).
 - **Gracias y trayectoria sin autodeclarar:** solo `send_kudos()` escribe (`care_kudos` sin INSERT/UPDATE/DELETE para
@@ -75,10 +77,16 @@
 - **Pagos solo en la web:** los textos de gracias, invitaciones y de compartir no contienen datos de pago; la historia exportable
   excluye importes, teléfonos y direcciones y neutraliza fórmulas de Excel.
 - **Plan de pago desde `mp_subscriptions`** (`care_history_report`); el cliente no puede declararlo.
-- **Permisos por defecto de Supabase:** las tablas heredan `ALL` para `anon` y `authenticated`. `care_logs` y `care_kudos`
-  hacen REVOKE explícito y GRANT mínimo en la misma migración; la suite de PostgreSQL lo comprueba simulando esos permisos.
-- **Realtime:** la publicación `supabase_realtime` estaba vacía en Lovable Cloud; la migración `20261010110000` publica las 14
-  tablas que escuchan las pantallas (respeta RLS). Pendiente de decisión: `realtime.messages` tiene RLS sin políticas, así que
-  los canales privados (`open_needs_ping`) no pueden funcionar hasta definir políticas.
-- Pendiente: el círculo puede leer el importe de la reserva por API (la política es por filas; la interfaz lo oculta); revisar
-  tabla por tabla las que conservan `ALL` para `anon`/`authenticated`; probar con dos cuentas reales tras aplicar la migración.
+- **Permisos por defecto de Supabase:** toda tabla, secuencia o función nueva hereda `ALL` para `anon` y `authenticated`. Las 16
+  tablas nuevas hacen REVOKE explícito y GRANT mínimo (`20261010120000_new_tables_least_privilege.sql` y las propias migraciones);
+  el simulacro y la prueba de humo en producción comprobaron que `anon` no tiene ningún privilegio sobre ellas.
+- **Realtime:** la publicación `supabase_realtime` estaba vacía en Lovable Cloud; la migración `20261010110000` publicó las 14
+  tablas que escuchan las pantallas (respeta RLS; aplicada el 2026-10-09). Pendiente de decisión: `realtime.messages` tiene RLS
+  sin políticas, así que los canales privados (`open_needs_ping`) no pueden funcionar hasta definir políticas.
+- **Chat y contacto:** `conversations.updated_at` faltaba en producción (ningún mensaje se enviaba); se restablecen
+  `get_or_create_booking_conversation` (sin sesión no abre el chat; solo las partes) y `booking_contact_reveals` (auditoría; los
+  usuarios solo leen lo propio).
+- Pendiente: el círculo puede leer el importe de la reserva por API (la política es por filas; la interfaz lo oculta); las tablas
+  que ya existían conservan `ALL` para `anon`/`authenticated` (revisar una a una); la política `pro_select_published_public`
+  expone a `anon` todas las columnas de los profesionales publicados; migraciones antiguas sin aplicar en producción; probar con
+  dos cuentas reales (Realtime, JWT, correos).

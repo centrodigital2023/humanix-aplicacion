@@ -29,6 +29,11 @@ producción** que ninguna prueba anterior podía ver:
 | Privilegios por defecto: toda tabla nueva nace con `ALL` para `anon` y `authenticated` | Varias tablas nuevas (`offer_team_invites`, `opportunity_*`, `pqrs_*`…) quedaban con más privilegios que los previstos (solo RLS las protegía) | `20261010120000_new_tables_least_privilege.sql` fija el mínimo por tabla |
 | `job_offers` tiene privilegio de lectura de tabla completa (no por columna) | La defensa por columna no aplica; la dirección y el teléfono siguen protegidos porque la columna queda siempre en `NULL` | Escenario ajustado; la protección real es el disparador |
 | `service_contracts` no existe en producción | El flujo antiguo de contratos nunca funcionó allí; el contrato inteligente lo reemplaza | Sin cambios |
+| `get_care_summary` no existe en producción | La política de INSERT de `care_logs` de producción ya exigía ser el profesional de la reserva; la débil era la del repositorio | Se crea ya endurecida |
+
+**Aplicado en producción el 2026-10-09**: la misma cadena se ejecutó en la base real (simulacro que se deshace solo → aplicación
+→ prueba de humo de 60 comprobaciones revertida). Las huellas md5 de funciones, columnas, políticas, disparadores, índices y
+restricciones de la base real coinciden con las de esta réplica.
 
 ## Archivos
 

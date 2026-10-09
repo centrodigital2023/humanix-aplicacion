@@ -113,28 +113,50 @@ profesional y círculo (solo lectura).
 |---|---|
 | PostgreSQL 16 real, roles reales, permisos simulados como en producción (`supabase/e2e/care_loop/run.sh`) | **264** comprobaciones: falsificación de registros, estados, círculo, alertas, gracias, trayectoria, equipo, plan B (institución y familia), historia con plan, permisos y idempotencia |
 | Regresión: escenario del hub de instituciones sobre la misma migración | **252** comprobaciones |
+| **Réplica de la estructura real de producción** (`supabase/e2e/prod_replica/run.sh`): la cadena de 8 migraciones sobre las tablas, políticas, disparadores, funciones y privilegios por defecto extraídos de la base real | **264 + 252 + 37** comprobaciones |
+| **Producción (Lovable Cloud), 2026-10-09**: simulacro que se deshace solo → aplicación → huellas md5 de funciones, columnas, políticas, disparadores, índices y restricciones idénticas a la réplica → prueba de humo con datos sintéticos revertidos (chat, contacto, parte, cierre, gracias, trayectoria, plan de pago, permisos) | **60** comprobaciones |
 | Pruebas unitarias (`src/lib`, 32 archivos) | **534** |
 | Chromium real (Playwright): componentes, página del servicio por rol, paneles de familia/profesional/institución, 390 px, consola limpia | **102 + 14** pasos |
 | Render en servidor de los componentes y de la página | 9 |
 | `tsc`, `eslint` (reglas de código), anidamiento HTML | sin errores nuevos |
 
-**Qué NO se pudo verificar aquí** (para hacerlo con dos cuentas reales tras aplicar la migración): canal Realtime real de Lovable
-Cloud (WebSocket), RLS vía PostgREST con JWT reales, envío de correos, navegadores móviles reales, impresión a PDF del pasaporte.
+**Qué NO se pudo verificar** (para hacerlo con dos cuentas reales): canal Realtime real de Lovable Cloud (WebSocket), RLS vía
+PostgREST con JWT reales (la prueba de humo simuló al usuario con `auth.uid()` y el rol de base de datos), envío de correos,
+navegadores móviles reales, impresión a PDF del pasaporte.
 
-## Estado de la base de Lovable Cloud y cómo aplicar
+## Estado de la base de Lovable Cloud
 
 La sincronización del **código** con Lovable es automática al empujar a `main`. La **base de datos** no: Lovable no aplica los
-archivos de `supabase/migrations/`. Hallazgos al consultar la base real (solo lectura):
+archivos de `supabase/migrations/`, y publicar el sitio es otra acción (botón *Publish* de Lovable). El **2026-10-09** se aplicó
+a la base de producción, con autorización expresa, la cadena pendiente de **8 migraciones**, en este orden:
 
-- La publicación `supabase_realtime` estaba **vacía** (ningún `postgres_changes` llegaba en vivo) y `realtime.messages` tiene RLS
-  **sin políticas** (los canales privados quedan denegados). Las migraciones antiguas ya pedían estas altas pero no se aplicaron.
-- Las tablas heredan `ALL` para `anon` y `authenticated`; la seguridad depende de RLS y de los REVOKE explícitos.
-- Faltan por aplicar las migraciones del hub (`20261008100000`, `20261008200000`, `20261008210000`, `20261009100000`) de las que
-  depende esta (`hx_notify`, `short_display_name`, `message_has_forbidden_content`, `plan_key_for`, `offer_team_invites`).
+`20261008100000` → `20261008200000` → `20261008210000` → `20261009050000` → `20261009100000` → `20261010100000` →
+`20261010110000` → `20261010120000`
 
-Orden de aplicación: `20261008100000` → `20261008200000` → `20261008210000` → `20261009100000` → `20261010100000` →
-`20261010110000`. Todas son idempotentes. Antes de aplicar, hacer una **corrida en seco** en una sola transacción terminada en
-`RAISE EXCEPTION` (garantiza el rollback y devuelve diagnósticos).
+Método: (1) la estructura real se extrajo a una réplica local (`supabase/e2e/prod_replica/`) donde la cadena se probó entera;
+(2) **simulacro** en producción: todo el SQL en una sola transacción terminada en `RAISE EXCEPTION` (se deshace sola), con un
+bloque de aserciones que compara huellas md5 del cuerpo de cada función, de las columnas, políticas, disparadores, índices y
+restricciones con las de la réplica y revisa los privilegios; (3) **aplicación** del mismo SQL, verificado byte a byte;
+(4) comprobaciones posteriores y una **prueba de humo** con datos sintéticos dentro de una transacción que se revierte.
+
+Resultado: funciones 36 → 132, tablas 66 → 81, políticas 175 → 195, disparadores 66 → 93, índices 158 → 204; la publicación
+`supabase_realtime` pasó de vacía a **14 tablas**; `anon` no tiene ningún privilegio sobre las 16 tablas nuevas; todas las
+tablas tienen RLS; `care_logs` tiene exactamente `care_logs_read`, `care_logs_professional_insert` y `care_logs_circle_read`.
+La prueba de humo pasó **60/60** y no dejó datos.
+
+Qué descubrió la base real (y no se veía desde el repositorio):
+
+- **El chat no funcionaba**: cada mensaje dispara un `UPDATE` de `conversations.updated_at`, columna que no existía, así que
+  ningún mensaje se podía enviar. Tampoco existían `booking_contact_reveals` ni `get_or_create_booking_conversation`, de modo que
+  «Contactar» fallaba. Lo restablece `20261009050000_contact_and_chat_prereqs.sql`.
+- **HR y evaluadores podían leer los partes** (datos de salud): `care_logs_read` usaba `is_staff()`. La cadena la reemplaza por
+  una política que solo admite al cliente, al profesional y al superadmin (más el círculo aceptado, con su propia política).
+- Toda tabla, secuencia o función nueva nace con `ALL` para `anon` y `authenticated` (privilegios por defecto de Supabase): las
+  16 tablas nuevas quedan con el mínimo en `20261010120000_new_tables_least_privilege.sql`.
+- `get_care_summary` no existía en producción (se crea ya endurecida), y la política de INSERT de `care_logs` de producción ya
+  exigía ser el profesional de la reserva; la débil era la del repositorio.
+- Muchas migraciones antiguas nunca se aplicaron en producción (referidos, billetera y pagos a profesionales, SGSST, sedes de
+  instituciones…). **No se tocaron**: son una decisión aparte (ver «Límites»).
 
 Comprobaciones posteriores (SQL):
 
@@ -144,10 +166,11 @@ select tablename from pg_publication_tables where pubname = 'supabase_realtime' 
 select has_table_privilege('authenticated','public.care_logs','UPDATE'), has_table_privilege('anon','public.care_logs','SELECT');                                                    -- false, false
 ```
 
-Mientras la migración no esté aplicada la interfaz **degrada con calma**: las tarjetas de servicios en curso, trayectoria y equipo
-de confianza se ocultan sin mostrar errores, la historia exportable muestra un mensaje amable al abrirla, el parte carga con
-`select *` y el compositor sigue funcionando (el ánimo solo se envía si se elige, y requiere la migración). Lo que **no** existe
-hasta aplicarla: llegada/salida automáticas, alertas con aviso, círculo en el parte, gracias y plan B.
+En un entorno donde la migración aún no esté aplicada (un clon, por ejemplo) la interfaz **degrada con calma**: las tarjetas de
+servicios en curso, trayectoria y equipo de confianza se ocultan sin mostrar errores, la historia exportable muestra un mensaje
+amable al abrirla, el parte carga con `select *` y el compositor sigue funcionando (el ánimo solo se envía si se elige, y
+requiere la migración). Lo que **no** existe hasta aplicarla: llegada/salida automáticas, alertas con aviso, círculo en el parte,
+gracias y plan B.
 
 ## Límites y decisiones abiertas
 
@@ -158,3 +181,10 @@ hasta aplicarla: llegada/salida automáticas, alertas con aviso, círculo en el 
 - **Fotos del parte**: descartadas por diseño hasta tener consentimiento explícito.
 - **Avisos por WhatsApp Business** (informativos, nunca pagos) quedan como siguiente paso; hoy los avisos son internos y en vivo.
 - La carga masiva de `my_active_services` está limitada a 50 filas; el historial exportable, a 1.000.
+- **Producción: pendientes que no se tocaron** (necesitan una decisión y, en varios casos, endurecimiento previo): las tablas que
+  ya existían conservan `ALL` para `anon` y `authenticated` (solo las protege RLS); la política `pro_select_published_public`
+  expone a `anon` todas las columnas de los profesionales publicados; las migraciones antiguas sin aplicar (referidos,
+  billetera y pagos, SGSST, sedes); y las políticas de `realtime.messages` (los canales privados siguen sin política).
+- **Sin probar con cuentas reales**: Realtime (WebSocket), PostgREST con JWT reales, correos y dispositivos móviles.
+- La base de producción está casi vacía (sin reservas, perfiles de familia ni suscripciones): el primer uso real es el mejor
+  momento para una prueba con dos cuentas.
