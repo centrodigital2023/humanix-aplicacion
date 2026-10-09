@@ -448,6 +448,76 @@ $$;
 REVOKE ALL ON FUNCTION public.care_report(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.care_report(uuid) TO authenticated, service_role;
 
+-- Servicios en curso o por empezar de la persona, con lo esencial del parte, en UNA llamada:
+--   · como cliente (familia o institución) → el profesional y el estado del turno,
+--   · como profesional → quién la contrató (nombre corto o razón social),
+--   · como miembro aceptado de un círculo de cuidado → el servicio de su familiar.
+-- Sin depender de la lectura de perfiles ajenos: los nombres salen del servidor ya abreviados.
+CREATE OR REPLACE FUNCTION public.my_active_services(p_limit integer DEFAULT 12)
+RETURNS TABLE (
+  booking_id uuid, side text, status text, scheduled_at timestamptz, duration_hours numeric,
+  counterpart_id uuid, counterpart_name text, owner_name text, started_at timestamptz,
+  events integer, alerts integer, last_mood text, last_vitals jsonb
+)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+#variable_conflict use_column
+DECLARE
+  v_uid uuid := auth.uid();
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'No autenticado' USING ERRCODE = '28000';
+  END IF;
+  RETURN QUERY
+  SELECT b.id,
+         CASE WHEN b.client_id = v_uid THEN 'client'
+              WHEN b.professional_id = v_uid THEN 'professional'
+              ELSE 'circle' END,
+         b.status,
+         b.scheduled_at,
+         b.duration_hours,
+         CASE WHEN b.professional_id = v_uid THEN b.client_id ELSE b.professional_id END,
+         public.party_display_name(CASE WHEN b.professional_id = v_uid THEN b.client_id ELSE b.professional_id END),
+         CASE WHEN b.client_id = v_uid OR b.professional_id = v_uid THEN NULL
+              ELSE public.party_display_name(b.client_id) END,
+         a.started,
+         COALESCE(a.events, 0)::integer,
+         COALESCE(a.alerts, 0)::integer,
+         (SELECT l.mood FROM public.care_logs l WHERE l.booking_id = b.id AND l.mood IS NOT NULL
+           ORDER BY l.created_at DESC LIMIT 1),
+         (SELECT jsonb_build_object('at', l.created_at, 'systolic', l.vital_systolic, 'diastolic', l.vital_diastolic,
+                                    'heart_rate', l.vital_heart_rate, 'temperature', l.vital_temperature,
+                                    'oxygen', l.vital_oxygen)
+            FROM public.care_logs l
+           WHERE l.booking_id = b.id
+             AND (l.vital_systolic IS NOT NULL OR l.vital_diastolic IS NOT NULL OR l.vital_heart_rate IS NOT NULL
+                  OR l.vital_temperature IS NOT NULL OR l.vital_oxygen IS NOT NULL)
+           ORDER BY l.created_at DESC LIMIT 1)
+    FROM public.service_bookings b
+    LEFT JOIN LATERAL (
+      SELECT min(l.created_at) FILTER (WHERE l.event_type = 'arrival')      AS started,
+             count(*) FILTER (WHERE NOT l.system_generated)                  AS events,
+             count(*) FILTER (WHERE l.is_alert AND NOT l.system_generated)   AS alerts
+        FROM public.care_logs l WHERE l.booking_id = b.id
+    ) a ON true
+   WHERE b.status IN ('confirmed', 'in_route', 'in_progress')
+     AND (b.status = 'in_progress' OR b.scheduled_at > now() - interval '36 hours')
+     AND (
+       b.client_id = v_uid
+       OR b.professional_id = v_uid
+       OR EXISTS (
+         SELECT 1 FROM public.care_circle_members m
+          WHERE m.owner_id = b.client_id AND m.member_id = v_uid
+            AND m.status = 'accepted' AND m.can_view_services
+       )
+     )
+   ORDER BY (b.status = 'in_progress') DESC, b.scheduled_at ASC
+   LIMIT LEAST(GREATEST(COALESCE(p_limit, 12), 1), 50);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.my_active_services(integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.my_active_services(integer) TO authenticated, service_role;
+
 -- ─── 2) «Gracias» (care_kudos) ──────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.care_kudos (

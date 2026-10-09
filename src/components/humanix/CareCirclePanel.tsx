@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Loader2, Trash2, UserPlus, Users } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { circleInviteText } from "@/lib/careLoop";
+import { ShareTextButtons } from "@/components/humanix/care/ShareTextButtons";
 import { toast } from "sonner";
 
 const sb = supabase as unknown as SupabaseClient;
@@ -33,6 +36,7 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
   const [relation, setRelation] = useState("");
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState<SharedBooking[]>([]);
+  const [lastInvited, setLastInvited] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await sb
@@ -95,6 +99,7 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
       );
       return;
     }
+    setLastInvited(parsed.data);
     setEmail("");
     setRelation("");
     toast.success("Invitación creada");
@@ -123,8 +128,8 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
         <h2 className="font-display text-lg font-bold">Círculo de cuidado</h2>
       </div>
       <p className="text-xs text-muted-foreground">
-        Invita a familiares para que vean el estado de tus servicios. Solo pueden consultar; no
-        pueden cambiar nada ni ver pagos.
+        Invita a familiares para que sigan en vivo el parte del turno y el estado de tus servicios.
+        Solo pueden consultar; no pueden cambiar nada.
       </p>
 
       {invitationsForMe.map((m) => (
@@ -171,6 +176,20 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
         </Button>
       </form>
 
+      {lastInvited && (
+        <div className="rounded-xl border border-dashed border-biosensor/40 bg-biosensor/5 p-3">
+          <p className="text-sm font-semibold">Invitación creada para {lastInvited}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Avísale para que la vea más rápido: tiene que entrar con ese mismo correo.
+          </p>
+          <ShareTextButtons
+            text={circleInviteText(lastInvited)}
+            whatsappLabel="Avisar por WhatsApp"
+            className="mt-2 flex flex-wrap gap-2"
+          />
+        </div>
+      )}
+
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : mine.length === 0 ? (
@@ -212,7 +231,16 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
                   })}{" "}
                   · {b.duration_hours} h
                 </span>
-                <span className="text-muted-foreground">{b.status}</span>
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  {b.status}
+                  <Link
+                    to="/servicio/$bookingId"
+                    params={{ bookingId: b.id }}
+                    className="font-semibold text-biosensor hover:underline"
+                  >
+                    Ver parte
+                  </Link>
+                </span>
               </li>
             ))}
           </ul>

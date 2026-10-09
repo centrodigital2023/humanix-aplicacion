@@ -1,5 +1,6 @@
 // Página de seguimiento activo de un servicio contratado.
-// Mapa + ETA + emergencia + chat + valoración por voz al finalizar.
+// Mapa + ETA + emergencia + chat + parte del turno en vivo + gracias y valoración al finalizar.
+// La comparten el cliente (familia o institución), el profesional y, en solo lectura, el círculo de cuidado.
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -11,6 +12,7 @@ import {
   PlayCircle,
   Flag,
   XCircle,
+  Eye,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/humanix/Navbar";
@@ -26,6 +28,15 @@ import { PriceBreakdownCard } from "@/components/humanix/PriceBreakdownCard";
 import { ReplacementPanel } from "@/components/humanix/ReplacementPanel";
 import { DimensionRatingForm } from "@/components/humanix/DimensionRatingForm";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
+import { CareFeed } from "@/components/humanix/CareFeed";
+import { CareLogComposer } from "@/components/humanix/care/CareLogComposer";
+import { CancelServiceDialog } from "@/components/humanix/care/CancelServiceDialog";
+import {
+  ConfirmFinishDialog,
+  FinishServiceDialog,
+} from "@/components/humanix/care/FinishServiceDialog";
+import { KudosCard } from "@/components/humanix/care/KudosCard";
+import { useCareReport } from "@/hooks/use-care-loop";
 import { toast } from "sonner";
 
 const PAID_STATUSES = new Set(["confirmed", "in_route", "in_progress", "completed"]);
@@ -37,7 +48,7 @@ export const Route = createFileRoute("/servicio/$bookingId")({
       {
         name: "description",
         content:
-          "Sigue en vivo a tu profesional de salud, conversa por chat y valora el servicio cuando termine.",
+          "Sigue en vivo a tu profesional de salud, lee el parte del turno, conversa por chat y valora el servicio cuando termine.",
       },
       { name: "robots", content: "noindex,nofollow" },
     ],
@@ -78,6 +89,14 @@ type Booking = {
   arrived_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+  /** Presente cuando el servicio nació de una oferta/turno publicado (activa el plan B si el profesional cancela). */
+  job_offer_id?: string | null;
+};
+
+type StatusPatch = Partial<
+  Pick<Booking, "status" | "started_at" | "arrived_at" | "completed_at" | "cancelled_at">
+> & {
+  cancel_reason?: string | null;
 };
 
 const COP = (n: number) =>
@@ -105,6 +124,8 @@ function ServicePage() {
   const [peerName, setPeerName] = useState<string>("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [hasRating, setHasRating] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,14 +152,14 @@ function ServicePage() {
       }
       setBooking(data as Booking);
 
-      // Cargar nombre del peer
-      const peerId = uid === data.client_id ? data.professional_id : data.client_id;
+      // Nombre de la contraparte: el profesional ve a quien contrata; el cliente y el círculo ven al profesional.
+      const peerId = uid === data.professional_id ? data.client_id : data.professional_id;
       const { data: prof } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("user_id", peerId)
         .maybeSingle();
-      if (!cancelled) setPeerName(prof?.full_name ?? "Tu contraparte");
+      if (!cancelled) setPeerName(prof?.full_name ?? "");
 
       // Conversación: buscar la primera relacionada al profesional+cliente
       const { data: conv } = await supabase
@@ -188,15 +209,28 @@ function ServicePage() {
     };
   }, [bookingId]);
 
-  const updateStatus = async (
-    patch: Partial<
-      Pick<Booking, "status" | "started_at" | "arrived_at" | "completed_at" | "cancelled_at">
-    > & {
-      cancel_reason?: string | null;
-    },
-  ) => {
+  const isProfessional = !!booking && userId === booking.professional_id;
+  const isClient = !!booking && userId === booking.client_id;
+  /** Círculo de cuidado (o personal): solo lectura. */
+  const isViewer = !!booking && !!userId && !isProfessional && !isClient;
+
+  // Quien solo mira (círculo) puede no poder leer el perfil del profesional: el servidor da el nombre corto.
+  const viewerReport = useCareReport(bookingId, isViewer);
+  const displayPeer =
+    peerName ||
+    viewerReport.data?.professional ||
+    (isProfessional ? "tu cliente" : "tu profesional");
+
+  /** Cambia el estado de la reserva. Devuelve true si se guardó (las reglas de transición las impone la base de datos). */
+  const updateStatus = async (patch: StatusPatch): Promise<boolean> => {
     const { error } = await supabase.from("service_bookings").update(patch).eq("id", bookingId);
-    if (error) toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    // Si el canal en vivo no está disponible, la pantalla igual refleja el cambio.
+    setBooking((prev) => (prev ? ({ ...prev, ...patch } as Booking) : prev));
+    return true;
   };
 
   if (loading || !booking || !userId) {
@@ -207,11 +241,11 @@ function ServicePage() {
     );
   }
 
-  const isProfessional = userId === booking.professional_id;
-  const isClient = userId === booking.client_id;
   const status = STATUS_LABEL[booking.status] ?? STATUS_LABEL.pending;
   const completed = booking.status === "completed";
   const cancelled = booking.status === "cancelled";
+  const canAct = (isProfessional || isClient) && !completed && !cancelled;
+  const firstName = displayPeer.split(" ")[0];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -225,6 +259,19 @@ function ServicePage() {
             <ArrowLeft className="h-3.5 w-3.5" /> Volver al panel
           </Link>
 
+          {isViewer && (
+            <div
+              role="note"
+              className="mt-3 flex items-start gap-2.5 rounded-xl border border-biosensor/30 bg-biosensor/5 px-4 py-3 text-sm"
+            >
+              <Eye className="mt-0.5 h-4 w-4 shrink-0 text-biosensor" aria-hidden="true" />
+              <p>
+                Estás viendo este servicio desde un <strong>círculo de cuidado</strong>. Puedes
+                consultar el estado y el parte del turno en vivo; no puedes cambiar nada.
+              </p>
+            </div>
+          )}
+
           <header className="mt-3 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <span
@@ -233,7 +280,7 @@ function ServicePage() {
                 {status.label}
               </span>
               <h1 className="mt-2 font-display text-3xl sm:text-4xl font-bold">
-                Servicio con {peerName}
+                Servicio con {displayPeer}
               </h1>
               <p className="mt-1.5 text-sm text-muted-foreground inline-flex items-center gap-1.5">
                 <CalendarClock className="h-3.5 w-3.5" />
@@ -244,24 +291,26 @@ function ServicePage() {
                 · {booking.duration_hours} h
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Total acordado
-              </p>
-              <p className="font-display text-3xl font-bold text-biosensor inline-flex items-center gap-1">
-                <CircleDollarSign className="h-6 w-6" />
-                {COP(booking.total_amount)}
-              </p>
-              {isClient ? (
-                <p className="text-sm font-semibold text-foreground">
-                  💵 Pagas directo a {peerName.split(" ")[0]} al terminar
+            {!isViewer && (
+              <div className="text-right">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Total acordado
                 </p>
-              ) : (
-                <p className="text-[10px] text-muted-foreground">
-                  Retención según tipo de contratante (Ley 1819/2016)
+                <p className="font-display text-3xl font-bold text-biosensor inline-flex items-center gap-1">
+                  <CircleDollarSign className="h-6 w-6" />
+                  {COP(booking.total_amount)}
                 </p>
-              )}
-            </div>
+                {isClient ? (
+                  <p className="text-sm font-semibold text-foreground">
+                    💵 Pagas directo a {firstName} al terminar
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">
+                    Retención según tipo de contratante (Ley 1819/2016)
+                  </p>
+                )}
+              </div>
+            )}
           </header>
 
           {(isClient || isProfessional) && (
@@ -287,128 +336,145 @@ function ServicePage() {
 
           {isClient && (
             <div className="mt-6 rounded-[2rem] border-2 border-primary/20 bg-card p-5 shadow-lg shadow-primary/5 sm:p-6">
-              <JourneySteps status={booking.status} proName={peerName} />
+              <JourneySteps status={booking.status} proName={displayPeer} />
             </div>
           )}
 
           {!cancelled && !completed && (
-            <div className="mt-6 grid lg:grid-cols-[1fr_360px] gap-4">
+            <div className={`mt-6 grid gap-4 ${isViewer ? "" : "lg:grid-cols-[1fr_360px]"}`}>
               <div className="space-y-4">
-                <LiveTracking booking={booking} isProfessional={isProfessional} />
+                {!isViewer && <LiveTracking booking={booking} isProfessional={isProfessional} />}
 
-                <div className="rounded-2xl border border-border bg-card p-5">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Acciones del servicio
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {isProfessional && booking.status === "pending" && (
-                      <ActionButton
-                        icon={<CheckCircle2 className="h-4 w-4" />}
-                        label="Aceptar servicio"
-                        onClick={() => updateStatus({ status: "confirmed" })}
-                        tone="bio"
-                      />
-                    )}
-                    {isProfessional && booking.status === "confirmed" && (
-                      <ActionButton
-                        icon={<PlayCircle className="h-4 w-4" />}
-                        label="Iniciar trayecto"
-                        onClick={() =>
-                          updateStatus({ status: "in_route", started_at: new Date().toISOString() })
-                        }
-                        tone="copper"
-                      />
-                    )}
-                    {isProfessional && booking.status === "in_route" && (
-                      <ActionButton
-                        icon={<Flag className="h-4 w-4" />}
-                        label="Llegué al sitio"
-                        onClick={() =>
-                          updateStatus({
-                            status: "in_progress",
-                            arrived_at: new Date().toISOString(),
-                          })
-                        }
-                        tone="bio"
-                      />
-                    )}
-                    {(isProfessional || isClient) && booking.status === "in_progress" && (
-                      <ActionButton
-                        icon={<CheckCircle2 className="h-4 w-4" />}
-                        label="Finalizar servicio"
-                        onClick={() =>
-                          updateStatus({
-                            status: "completed",
-                            completed_at: new Date().toISOString(),
-                          })
-                        }
-                        tone="bio"
-                      />
-                    )}
-                    {!completed && !cancelled && (
+                {canAct && (
+                  <div className="rounded-2xl border border-border bg-card p-5">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Acciones del servicio
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {isProfessional && booking.status === "pending" && (
+                        <ActionButton
+                          icon={<CheckCircle2 className="h-4 w-4" />}
+                          label="Aceptar servicio"
+                          onClick={() => void updateStatus({ status: "confirmed" })}
+                          tone="bio"
+                        />
+                      )}
+                      {isProfessional && booking.status === "confirmed" && (
+                        <ActionButton
+                          icon={<PlayCircle className="h-4 w-4" />}
+                          label="Iniciar trayecto"
+                          onClick={() =>
+                            void updateStatus({
+                              status: "in_route",
+                              started_at: new Date().toISOString(),
+                            })
+                          }
+                          tone="copper"
+                        />
+                      )}
+                      {isProfessional && booking.status === "in_route" && (
+                        <ActionButton
+                          icon={<Flag className="h-4 w-4" />}
+                          label="Llegué al sitio"
+                          onClick={() =>
+                            void updateStatus({
+                              status: "in_progress",
+                              arrived_at: new Date().toISOString(),
+                            })
+                          }
+                          tone="bio"
+                        />
+                      )}
+                      {booking.status === "in_progress" && (
+                        <ActionButton
+                          icon={<CheckCircle2 className="h-4 w-4" />}
+                          label="Finalizar servicio"
+                          onClick={() => setFinishOpen(true)}
+                          tone="bio"
+                        />
+                      )}
                       <ActionButton
                         icon={<XCircle className="h-4 w-4" />}
                         label="Cancelar"
-                        onClick={() => {
-                          const reason = window.prompt("Motivo de la cancelación:");
-                          if (!reason) return;
-                          updateStatus({
-                            status: "cancelled",
-                            cancelled_at: new Date().toISOString(),
-                            cancel_reason: reason,
-                          });
-                        }}
+                        onClick={() => setCancelOpen(true)}
                         tone="fuchsia"
                       />
+                    </div>
+                    {booking.service_address && (
+                      <p className="mt-4 text-xs text-muted-foreground">
+                        <strong className="text-foreground">Dirección:</strong>{" "}
+                        {booking.service_address}
+                      </p>
+                    )}
+                    {booking.notes && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        <strong className="text-foreground">Notas:</strong> {booking.notes}
+                      </p>
                     )}
                   </div>
-                  {booking.service_address && (
-                    <p className="mt-4 text-xs text-muted-foreground">
-                      <strong className="text-foreground">Dirección:</strong>{" "}
-                      {booking.service_address}
-                    </p>
-                  )}
-                  {booking.notes && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      <strong className="text-foreground">Notas:</strong> {booking.notes}
-                    </p>
-                  )}
-                </div>
-              </div>
+                )}
 
-              <div className="space-y-4">
-                <PaidContactCard
-                  bookingId={booking.id}
-                  peerName={peerName}
-                  isPaid={PAID_STATUSES.has(booking.status)}
-                  amountCOP={booking.total_amount}
-                />
-                {booking.status !== "pending" && (isClient || isProfessional) && (
-                  <SmartContractCard
+                {isProfessional && (
+                  <CareLogComposer
                     bookingId={booking.id}
-                    userId={userId}
-                    fallback={
-                      <ServiceContractCard
-                        bookingId={booking.id}
-                        party={isClient ? "family" : "professional"}
-                      />
-                    }
+                    professionalId={booking.professional_id}
+                    status={booking.status}
                   />
                 )}
-                <BookingChat
-                  conversationId={conversationId}
-                  currentUserId={userId}
-                  peerName={peerName}
-                />
+
+                <CareFeed bookingId={booking.id} status={booking.status} />
               </div>
+
+              {!isViewer && (
+                <div className="space-y-4">
+                  <PaidContactCard
+                    bookingId={booking.id}
+                    peerName={displayPeer}
+                    isPaid={PAID_STATUSES.has(booking.status)}
+                    amountCOP={booking.total_amount}
+                  />
+                  {booking.status !== "pending" && (isClient || isProfessional) && (
+                    <SmartContractCard
+                      bookingId={booking.id}
+                      userId={userId}
+                      fallback={
+                        <ServiceContractCard
+                          bookingId={booking.id}
+                          party={isClient ? "family" : "professional"}
+                        />
+                      }
+                    />
+                  )}
+                  <BookingChat
+                    conversationId={conversationId}
+                    currentUserId={userId}
+                    peerName={displayPeer}
+                  />
+                </div>
+              )}
             </div>
+          )}
+
+          {completed && (
+            <div className="mt-6">
+              <CareFeed bookingId={booking.id} status={booking.status} />
+            </div>
+          )}
+
+          {completed && (isClient || isProfessional) && (
+            <KudosCard
+              bookingId={booking.id}
+              userId={userId}
+              role={isClient ? "client" : "professional"}
+              peerName={displayPeer}
+            />
           )}
 
           {completed && isClient && (
             <RehireCard
               clientId={booking.client_id}
               professionalId={booking.professional_id}
-              professionalName={peerName}
+              professionalName={displayPeer}
             />
           )}
 
@@ -423,7 +489,7 @@ function ServicePage() {
             </div>
           )}
 
-          {completed && (
+          {completed && (isClient || isProfessional) && (
             <section className="mt-8">
               {hasRating ? (
                 <div className="rounded-2xl border border-biosensor/30 bg-biosensor/5 p-8 text-center">
@@ -465,13 +531,48 @@ function ServicePage() {
             <div className="mt-8 rounded-2xl border border-fuchsia-neural/30 bg-fuchsia-neural/5 p-8 text-center">
               <XCircle className="h-10 w-10 text-fuchsia-neural mx-auto" />
               <h2 className="mt-3 font-display text-xl font-bold">Servicio cancelado</h2>
-              <Link to="/buscar" className="mt-4 inline-flex text-biosensor font-semibold text-sm">
-                Buscar otro profesional →
-              </Link>
+              {isClient && (
+                <Link
+                  to="/buscar"
+                  className="mt-4 inline-flex text-biosensor font-semibold text-sm"
+                >
+                  Buscar otro profesional →
+                </Link>
+              )}
             </div>
           )}
         </div>
       </main>
+
+      {canAct && (
+        <CancelServiceDialog
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+          party={isProfessional ? "professional" : "client"}
+          mode={booking.job_offer_id ? "offer" : "direct"}
+          onConfirm={(patch) => updateStatus(patch)}
+        />
+      )}
+      {isProfessional && !completed && !cancelled && (
+        <FinishServiceDialog
+          open={finishOpen}
+          onOpenChange={setFinishOpen}
+          bookingId={booking.id}
+          professionalId={booking.professional_id}
+          onFinish={() =>
+            updateStatus({ status: "completed", completed_at: new Date().toISOString() })
+          }
+        />
+      )}
+      {isClient && !completed && !cancelled && (
+        <ConfirmFinishDialog
+          open={finishOpen}
+          onOpenChange={setFinishOpen}
+          onFinish={() =>
+            updateStatus({ status: "completed", completed_at: new Date().toISOString() })
+          }
+        />
+      )}
       <HabeasDataConsent />
     </div>
   );

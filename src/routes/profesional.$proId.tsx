@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { BookNowButton } from "@/components/humanix/BookNowButton";
 import { AgendaViewer } from "@/components/humanix/AgendaViewer";
 import { DimensionAverages } from "@/components/humanix/DimensionAverages";
+import { PublicRecognition } from "@/components/humanix/care/PublicRecognition";
 import { useAppUser } from "@/hooks/use-app-user";
 import { buildSeo, jsonLdString, SITE_URL, SOCIAL_IMAGE_URL } from "@/lib/seo";
 
@@ -372,6 +373,9 @@ function ProfessionalPublicPage() {
 
           {/* Agenda pública: familia puede contratar slots verdes */}
           <DimensionAverages professionalId={pro.user_id} />
+          <div className="mt-6">
+            <PublicRecognition proId={pro.user_id} />
+          </div>
           <section id="agenda" className="mt-6 scroll-mt-24">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold">Agenda y disponibilidad</h2>

@@ -56,6 +56,9 @@ import { CoverageCenter } from "@/components/humanix/hub/CoverageCenter";
 import { ApplicantsInbox } from "@/components/humanix/hub/ApplicantsInbox";
 import { PublishShiftsDialog } from "@/components/humanix/hub/PublishShiftsDialog";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
+import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
+import { CareHistoryCard } from "@/components/humanix/care/CareHistoryCard";
+import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
 import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { toast } from "sonner";
@@ -616,6 +619,9 @@ function InstitutionDashboard() {
               onGoToTalent={() => setTab("talento")}
             />
 
+            {/* Turnos en vivo: estado, alertas, ánimo y últimos signos vitales de cada turno en curso */}
+            <ActiveServicesCard userId={user.id} title="Turnos en vivo" sides={["client"]} />
+
             {/* KPI row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <KpiCard
@@ -673,6 +679,10 @@ function InstitutionDashboard() {
 
             {/* Contratos inteligentes pendientes de firma o vigentes */}
             <ContractsPanel userId={user.id} title="Contratos inteligentes" />
+
+            {/* Equipo de confianza (plan B automático) e historia de turnos exportable */}
+            <TrustedTeamCard userId={user.id} role="institution" />
+            <CareHistoryCard userId={user.id} kind="institution" />
 
             {/* Calificar a los profesionales de servicios ya cumplidos (estrellas y comentario) */}
             <PendingRatingsCard userId={user.id} role="family" />

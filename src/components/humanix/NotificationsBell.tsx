@@ -3,6 +3,7 @@ import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@tanstack/react-router";
+import { notificationTone } from "@/lib/careLoop";
 
 type Notification = {
   id: string;
@@ -143,8 +144,20 @@ export function NotificationsBell({ userId }: { userId: string }) {
                     </p>
                   </>
                 );
+                const tone = notificationTone(n.type);
+                const toneClass =
+                  tone === "alert"
+                    ? "border-l-2 border-sos bg-sos/5"
+                    : tone === "warm"
+                      ? "border-l-2 border-copper"
+                      : tone === "info"
+                        ? "border-l-2 border-biosensor"
+                        : "";
                 return (
-                  <li key={n.id} className={`px-3 py-2 ${!n.read_at ? "bg-biosensor/5" : ""}`}>
+                  <li
+                    key={n.id}
+                    className={`px-3 py-2 ${!n.read_at ? "bg-biosensor/5" : ""} ${toneClass}`}
+                  >
                     {n.link ? (
                       <Link to={n.link} className="block hover:bg-muted/30 -mx-3 -my-2 px-3 py-2">
                         {inner}

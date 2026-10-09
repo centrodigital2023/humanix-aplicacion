@@ -61,6 +61,8 @@ import { OpportunityHub } from "@/components/humanix/hub/OpportunityHub";
 import { InstitutionAgenda } from "@/components/humanix/hub/InstitutionAgenda";
 import { OfferApplicationsPanel } from "@/components/humanix/hub/OfferApplicationsPanel";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
+import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
+import { CareerCard } from "@/components/humanix/care/CareerCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { applyToPublishedOffer } from "@/hooks/use-institution-hub";
 import { classifyHubError, type ServerError } from "@/lib/opportunities";
@@ -598,6 +600,15 @@ function ProDashboard() {
 
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
 
+            {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
+            {userId && (
+              <ActiveServicesCard
+                userId={userId}
+                title="Mis servicios de hoy"
+                sides={["professional"]}
+              />
+            )}
+
             {/* Onboarding banner — only for new profiles (< 30%) */}
             {completionPct < 30 && (
               <div className="rounded-2xl bg-gradient-to-br from-biosensor/15 to-fuchsia-neural/10 border border-biosensor/30 p-5">
@@ -797,6 +808,16 @@ function ProDashboard() {
             {/* Planificador de ingresos: neto real por hora y si conviene un plan de pago */}
             {userId && (
               <IncomePlannerCard userId={userId} defaultRate={profile?.hourly_rate ?? null} />
+            )}
+
+            {/* Trayectoria: nivel, sellos, gracias recibidos y cómo compartirla */}
+            {userId && (
+              <CareerCard
+                userId={userId}
+                fullName={fullName || greetingName}
+                specialty={specialty || null}
+                verified={!!profile?.verified}
+              />
             )}
 
             {/* Quick actions */}

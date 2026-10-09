@@ -28,7 +28,9 @@ export type PlanFeature =
   | "pipeline_scoring"
   | "cv_rethus_consistency"
   | "priority_support"
-  | "branch_billing";
+  | "branch_billing"
+  | "care_history_export"
+  | "career_passport";
 
 export type PlanDef = {
   key: PlanKey;
@@ -77,6 +79,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "live_geo_eta",
       "rethus_antifraud",
       "no_commission",
+      "care_history_export",
     ],
     featuresLabel: [
       "Match IA en menos de 150 ms",
@@ -86,6 +89,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "Geolocalización en vivo y ETA",
       "Verificación RETHUS y anti-fraude IA incluida",
       "Sin comisión: el profesional cobra directo al cliente",
+      "Historia de cuidado exportable (Excel/CSV) con el parte de cada servicio",
     ],
   },
   pro_monthly: {
@@ -96,13 +100,20 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
     priceLabel: "COP 29.000",
     priceNote: "/mes",
     audience: "Profesionales que quieren visibilidad máxima.",
-    features: ["visibility_boost", "career_coach", "ai_message_suggestions", "priority_antifraud"],
+    features: [
+      "visibility_boost",
+      "career_coach",
+      "ai_message_suggestions",
+      "priority_antifraud",
+      "career_passport",
+    ],
     featuresLabel: [
       "Todo lo del Esencial",
       "Boost de visibilidad en búsquedas",
       "Coach de carrera 24/7 (mejorar perfil y Trust Score)",
       "Sugerencias IA en cada mensaje",
       "Validación anti-fraude IA prioritaria",
+      "Pasaporte profesional verificable con código QR (imprimible)",
     ],
   },
   institution_monthly: {
@@ -156,11 +167,13 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, PlanKey> = {
   live_geo_eta: "essential_monthly",
   rethus_antifraud: "essential_monthly",
   no_commission: "essential_monthly",
+  care_history_export: "essential_monthly",
   // Pro+
   visibility_boost: "pro_monthly",
   career_coach: "pro_monthly",
   ai_message_suggestions: "pro_monthly",
   priority_antifraud: "pro_monthly",
+  career_passport: "pro_monthly",
   // Institution
   ai_credits: "institution_monthly",
   multi_user_roles: "institution_monthly",

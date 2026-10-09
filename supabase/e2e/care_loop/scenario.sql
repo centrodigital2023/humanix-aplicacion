@@ -224,6 +224,22 @@ SELECT public.t_eq('3.25 reporte visible para el círculo', public.t_val(:'rel1'
 SELECT public.t_err('3.26 reporte niega a un extraño', public.t_val(:'out1', format('SELECT public.care_report(%L)::text', :'bk1')), 'No autorizado');
 SELECT public.t_err('3.27 reporte niega a un anónimo', public.t_anon(format('SELECT public.care_report(%L)::text', :'bk1')), 'permission denied');
 
+-- ═══ 3b) Servicios en curso (un solo llamado para el tablero de cada rol) ═══════
+SELECT public.t_eq('3b.1 profesional: ve su servicio con el nombre corto de la familia', public.t_val(:'pro1', 'SELECT side || ''|'' || status || ''|'' || counterpart_name || ''|'' || COALESCE(owner_name, ''-'') FROM public.my_active_services()'), 'professional|in_progress|Marta D.|-');
+SELECT public.t_eq('3b.2 familia: ve su servicio con el profesional', public.t_val(:'fam1', 'SELECT side || ''|'' || counterpart_name FROM public.my_active_services() WHERE status = ''in_progress'''), 'client|Laura P.');
+SELECT public.t_eq('3b.3 familia: cifras del parte (registros, alertas, ánimo)', public.t_val(:'fam1', 'SELECT events || ''|'' || alerts || ''|'' || COALESCE(last_mood, ''-'') FROM public.my_active_services() WHERE status = ''in_progress'''), (:'nlogs'::int - 1)::text || '|2|happy');
+SELECT public.t_eq('3b.4 último signo vital del tablero', public.t_val(:'fam1', 'SELECT (last_vitals ->> ''oxygen'') FROM public.my_active_services() WHERE status = ''in_progress'''), '89');
+SELECT public.t_eq('3b.5 llegada registrada', public.t_val(:'fam1', 'SELECT (started_at IS NOT NULL)::text FROM public.my_active_services() WHERE status = ''in_progress'''), 'true');
+SELECT public.t_eq('3b.6 círculo: ve el servicio de su familiar con el nombre del titular', public.t_val(:'rel1', 'SELECT side || ''|'' || owner_name || ''|'' || counterpart_name FROM public.my_active_services() WHERE status = ''in_progress'''), 'circle|Marta D.|Laura P.');
+SELECT public.t_eq('3b.7 sin permiso de ver servicios no ve nada', public.t_val(:'rel2', 'SELECT count(*)::text FROM public.my_active_services()'), '0');
+SELECT public.t_eq('3b.8 invitado sin aceptar no ve nada', public.t_val(:'rel3', 'SELECT count(*)::text FROM public.my_active_services()'), '0');
+SELECT public.t_eq('3b.9 otra familia no ve nada', public.t_val(:'out1', 'SELECT count(*)::text FROM public.my_active_services()'), '0');
+SELECT public.t_eq('3b.10 otro profesional no ve el servicio ajeno', public.t_val(:'pro3', 'SELECT count(*)::text FROM public.my_active_services() WHERE status = ''in_progress'''), '0');
+SELECT public.t_eq('3b.11 los servicios terminados no aparecen', public.t_val(:'fam2', 'SELECT count(*)::text FROM public.my_active_services() WHERE status = ''completed'''), '0');
+SELECT public.t_eq('3b.12 el servicio en curso va primero', public.t_val(:'fam1', 'SELECT status FROM public.my_active_services() LIMIT 1'), 'in_progress');
+SELECT public.t_err('3b.13 no se ofrece a anónimos', public.t_anon('SELECT count(*)::text FROM public.my_active_services()'), 'permission denied');
+SELECT public.t_eq('3b.14 el límite se respeta', public.t_val(:'fam1', 'SELECT count(*)::text FROM public.my_active_services(1)'), '1');
+
 -- ═══ 4) Cierre del turno ═══════════════════════════════════════════════════════
 SELECT public.t_ok('4.1 el profesional finaliza el servicio', public.t_as(:'pro1', format($q$UPDATE public.service_bookings SET status = 'completed', completed_at = now() WHERE id = %L$q$, :'bk1')));
 SELECT public.t_eq('4.2 la salida se registra sola', public.q1(format($q$SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L AND event_type = 'departure' AND system_generated$q$, :'bk1')), '1');
@@ -457,14 +473,15 @@ SELECT public.t_true('10.10 solo los resúmenes públicos se ofrecen a anónimos
   AND NOT has_function_privilege('anon', 'public.care_report(uuid)', 'EXECUTE')
   AND NOT has_function_privilege('anon', 'public.get_care_summary(uuid)', 'EXECUTE')
   AND NOT has_function_privilege('anon', 'public.care_history_report(date, date)', 'EXECUTE')
-  AND NOT has_function_privilege('anon', 'public.invite_team_to_offer(uuid)', 'EXECUTE'));
+  AND NOT has_function_privilege('anon', 'public.invite_team_to_offer(uuid)', 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.my_active_services(integer)', 'EXECUTE'));
 SELECT public.t_true('10.11 las funciones de usuario fijan search_path',
   NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                WHERE n.nspname = 'public' AND p.prosecdef
                  AND p.proname IN ('care_logs_guard','care_logs_after_insert','booking_care_events','care_can_view','get_care_summary','care_report',
                                    'send_kudos','my_received_kudos','professional_kudos_summary','career_stats_core','my_career_stats','professional_public_stats',
                                    'my_trusted_team','trusted_team_free_count','invite_team_core','invite_team_to_offer','plan_b_after_cancel','notify_booking_cancelled',
-                                   'care_history_report','party_display_name','care_watchers')
+                                   'care_history_report','party_display_name','care_watchers','my_active_services')
                  AND (p.proconfig IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=%'))));
 SELECT public.t_eq('10.12 el reconocimiento de los permitidos coincide con TypeScript (familia)', public.q1($$SELECT array_to_string(public.kudos_allowed_kinds('client'), ',')$$), 'punctual,caring,patient,peace_of_mind,communicative,professional');
 SELECT public.t_eq('10.13 el reconocimiento de los permitidos coincide con TypeScript (profesional)', public.q1($$SELECT array_to_string(public.kudos_allowed_kinds('professional'), ',')$$), 'respectful,clear_instructions,welcoming,well_prepared');

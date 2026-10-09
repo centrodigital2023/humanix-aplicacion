@@ -35,6 +35,10 @@ import { FamilyNeedsCalendar } from "@/components/humanix/FamilyNeedsCalendar";
 import { ProposalsInbox } from "@/components/humanix/ProposalsInbox";
 import { CareCirclePanel } from "@/components/humanix/CareCirclePanel";
 import { CareFeed } from "@/components/humanix/CareFeed";
+import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
+import { CareHistoryCard } from "@/components/humanix/care/CareHistoryCard";
+import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
+import { useActiveServices } from "@/hooks/use-care-loop";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
 import { WearableConnections } from "@/components/humanix/WearableConnections";
 import { distanceKm, formatKm } from "@/lib/geo";
@@ -527,7 +531,16 @@ function FamilyDashboard() {
         {/* Mis servicios activos */}
         {user && <MyBookings userId={user.id} />}
 
-        {/* Bitácora turno activo */}
+        {/* Servicios de familiares que me invitaron a su círculo de cuidado (solo lectura) */}
+        {user && (
+          <ActiveServicesCard
+            userId={user.id}
+            title="Servicios de tu círculo de cuidado"
+            sides={["circle"]}
+          />
+        )}
+
+        {/* Parte del turno en vivo */}
         {user?.id && <ActiveCareFeedSection clientId={user.id} />}
 
         {/* Valoraciones pendientes */}
@@ -551,6 +564,14 @@ function FamilyDashboard() {
             <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
             <ProposalsInbox userId={user.id} role="family" />
             <CareCirclePanel userId={user.id} userEmail={user.email} />
+          </section>
+        )}
+
+        {/* ── EQUIPO DE CONFIANZA + HISTORIA DE CUIDADO ───── */}
+        {user?.id && (
+          <section className="space-y-4" aria-label="Equipo de confianza e historia de cuidado">
+            <TrustedTeamCard userId={user.id} role="family" />
+            <CareHistoryCard userId={user.id} kind="family" />
           </section>
         )}
 
@@ -912,38 +933,21 @@ function Kpi({
   );
 }
 
-// Muestra la bitácora en tiempo real del turno activo más reciente de la familia.
+// Parte del turno en vivo del servicio que está ocurriendo ahora (propio o de un familiar del círculo de cuidado).
 function ActiveCareFeedSection({ clientId }: { clientId: string }) {
-  const [activeBookingId, setActiveBookingId] = useState<string | null>(null);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    supabase
-      .from("service_bookings")
-      .select("id")
-      .eq("client_id", clientId)
-      .eq("status", "confirmed")
-      .order("scheduled_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (mounted) {
-          setActiveBookingId(data?.id ?? null);
-          setChecking(false);
-        }
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [clientId]);
-
-  if (checking || !activeBookingId) return null;
+  const active = useActiveServices(clientId);
+  const live = (active.data ?? []).find(
+    (s) => s.status === "in_progress" && (s.side === "client" || s.side === "circle"),
+  );
+  if (!live) return null;
 
   return (
-    <section className="space-y-3">
-      <h2 className="font-display text-lg font-semibold">Bitácora del turno activo</h2>
-      <CareFeed bookingId={activeBookingId} />
+    <section className="space-y-3" aria-label="Parte del turno en vivo">
+      <h2 className="font-display text-lg font-semibold">
+        Parte del turno en vivo
+        {live.side === "circle" && live.owner_name ? ` · ${live.owner_name}` : ""}
+      </h2>
+      <CareFeed bookingId={live.booking_id} status="in_progress" />
     </section>
   );
 }
