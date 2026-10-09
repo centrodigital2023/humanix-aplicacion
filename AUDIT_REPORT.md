@@ -96,3 +96,21 @@ Detalle de reglas, constantes espejo y límites en `docs/PROFESIONAL_HUB_OPORTUN
 | 48 | Al leer el texto completo del contrato mientras se firmaba se perdían el código y las aceptaciones (hallado en la prueba de navegador) | La pestaña de firma permanece montada |
 
 Detalle de reglas, constantes espejo, operación y límites en `docs/INSTITUCION_HUB_CONTRATO_INTELIGENTE.md`.
+
+## Séptima pasada: lazo de cuidado (parte del turno, gracias, trayectoria, equipo de confianza)
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 49 | **`care_logs` aceptaba INSERT de cualquier usuario autenticado sobre cualquier reserva** (la política solo comprobaba `professional_id = auth.uid()`): se podían falsificar partes ajenos y disparar avisos | Política + guardia `care_logs_guard`: solo el profesional de la reserva, con el servicio en curso, tope de 200 |
+| 50 | **`get_care_summary` era `SECURITY DEFINER` sin comprobar quién llama** y con EXECUTE por defecto: el resumen de salud de cualquier reserva era consultable con solo su id | Reescrita con `care_can_view` (parte, círculo aceptado o superadmin); sin acceso para `anon` |
+| 51 | El compositor de la bitácora (`CareLogEntry`) no estaba montado en ninguna pantalla: el profesional no tenía cómo registrar el parte desde la interfaz | Compositor en la página del servicio (solo profesional, solo en curso) con atajos, ánimo y signos vitales con rangos |
+| 52 | El panel de la familia buscaba solo reservas `confirmed`: el parte aparecía vacío antes del servicio y **desaparecía justo cuando el profesional empezaba a registrar** (`in_route` / `in_progress`) | `my_active_services` + Realtime sobre reservas y partes |
+| 53 | «Cancelar» se mostraba a cualquiera que abriera la página (círculo, personal), pedía el motivo con `window.prompt` y no explicaba consecuencias | `CancelServiceDialog` solo para las partes, con motivo y consecuencia; el plan B y el aviso al equipo salen del servidor |
+| 54 | **La publicación `supabase_realtime` de producción está vacía**: ningún `postgres_changes` llega en vivo (bitácora, chat, avisos). Además `realtime.messages` tiene RLS sin políticas (los canales privados quedan denegados) | `20261010110000_realtime_core_tables.sql` (idempotente); políticas de `realtime.messages`: decisión abierta |
+| 55 | Las tablas de producción heredan `ALL` para `anon` y `authenticated` (valores por defecto de Supabase): la seguridad descansa solo en RLS | `care_logs` y `care_kudos` con REVOKE + GRANT mínimo; revisar el resto tabla por tabla (pendiente) |
+| 56 | El círculo de cuidado puede leer el importe de la reserva por API (la política es por filas) | La interfaz no lo muestra; ocultarlo en la API exigiría una vista o RPC propia (decisión abierta) |
+| 57 | Faltan por aplicar en la base de Lovable Cloud las migraciones `20261008100000`, `20261008200000`, `20261008210000` y `20261009100000`, de las que depende esta | Orden y comprobaciones en `docs/LAZO_DE_CUIDADO.md`; requiere aprobación (producción) |
+
+Detalle de reglas, verificación y límites en `docs/LAZO_DE_CUIDADO.md`. Verificado con PostgreSQL 16 real (264 + 252
+comprobaciones), 534 pruebas unitarias, render en servidor y Chromium (102 + 14 pasos). No se pudo probar aquí: Realtime real,
+PostgREST con JWT reales, correos y navegadores móviles reales.

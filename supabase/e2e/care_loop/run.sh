@@ -38,7 +38,7 @@ load_schema() {
   $P -d "$db" -f "$MIG/20261009100000_institution_hub_smart_contracts.sql" >/dev/null 2>&1
   if [ "${2:-}" = "prodlike" ]; then
     # Supabase concede ALL a anon/authenticated sobre las tablas existentes: la migración debe cerrar lo que no corresponde.
-    $P -d "$db" -c "GRANT ALL ON public.care_logs TO anon, authenticated, service_role" >/dev/null
+    $P -d "$db" -c "GRANT ALL ON public.care_logs, public.care_favorites, public.care_circle_members TO anon, authenticated, service_role" >/dev/null
     $P -d "$db" -c "CREATE PUBLICATION supabase_realtime" >/dev/null
   fi
   $P -d "$db" -f "$MIG/20261010100000_care_loop.sql" >/dev/null

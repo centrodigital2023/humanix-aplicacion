@@ -63,3 +63,19 @@ cumplidos, tarjeta verificada compartible con enlace de referido, reemplazo auto
 (sugerir a favoritos disponibles), recibo/factura electrónica por turno cumplido, firma digital certificada como opción,
 poderes de firma por sede, avisos informativos por WhatsApp Business (nunca pagos) y renovación de contratos recurrentes
 en un clic.
+
+## Implementado: lazo de cuidado (familia ↔ profesional ↔ institución)
+Producto mínimo **amable**: el parte del turno en vivo une a los tres actores. La familia ve cómo va su ser querido «en palabras»
+(resumen, semáforo, ánimo, signos vitales con su rango, alertas), recibe aviso al comenzar y al terminar y puede invitar a un
+**círculo de cuidado** en solo lectura. El profesional registra en un toque (atajos, ánimo, signos vitales), cierra el turno con
+una nota cálida y construye una **trayectoria** verificable (nivel, sellos, racha, familias que vuelven) con pasaporte
+imprimible (Pro). La institución ve los turnos en vivo con alertas primero, un parte auditable y un **plan B automático** que
+invita a su equipo de confianza cuando el profesional cancela. «Gracias» en ambos sentidos con reconocimientos de una lista
+cerrada (separados de las calificaciones) y bucles virales sin datos de salud, nombres ni pagos. Historia de cuidado exportable
+a Excel (Esencial). Se corrigió además la bitácora original (inserciones falsificables, resumen abierto a cualquiera,
+compositor sin montar). Documentación en `docs/LAZO_DE_CUIDADO.md`; suite en `supabase/e2e/care_loop/`.
+
+Siguiente (por valor y esfuerzo): avisos informativos por WhatsApp Business (nunca pagos), fotos del parte con consentimiento
+explícito (Ley 1581), umbrales de signos vitales por paciente, resumen semanal para la familia y el círculo, informe mensual
+para la EPS/IPS (cumplimiento + alertas), calificación de la experiencia del círculo y reemplazo asistido con un clic desde
+el equipo de confianza.

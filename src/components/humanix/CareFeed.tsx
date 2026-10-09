@@ -100,7 +100,15 @@ export function CareFeed({ bookingId, status, className }: Props) {
       ) : (
         <>
           {/* Si el servidor aún no ofrece el resumen, el parte se muestra igual. */}
-          {report.data && <ShiftSummary report={report.data} inProgress={inProgress} />}
+          {report.data && (
+            <ShiftSummary
+              report={report.data}
+              inProgress={inProgress}
+              alertReasons={rows
+                .filter((r) => r.is_alert && !r.system_generated)
+                .map((r) => r.alert_reason || r.description)}
+            />
+          )}
           <div aria-live="polite">
             <CareTimeline logs={rows} todayDay={bogotaDay(new Date().toISOString())} />
           </div>

@@ -202,6 +202,12 @@ SELECT public.t_eq('3.6 otra familia no ve el parte', public.t_val(:'out1', form
 SELECT public.t_eq('3.7 otro profesional no ve el parte', public.t_val(:'pro3', format('SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L', :'bk1')), '0');
 SELECT public.t_eq('3.8 una institución ajena no ve el parte', public.t_val(:'inst2', format('SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L', :'bk1')), '0');
 SELECT public.t_eq('3.9 un anónimo no ve el parte', public.t_anon(format('SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L', :'bk1')), 'ERR[42501] permission denied for table care_logs');
+INSERT INTO auth.users(id, email) VALUES ('00000000-0000-0000-0000-0000000000b1', 'hr1@t.co');
+INSERT INTO public.user_roles(user_id, role) VALUES ('00000000-0000-0000-0000-0000000000b1', 'hr_staff');
+\set hr1 '00000000-0000-0000-0000-0000000000b1'
+SELECT public.t_eq('3.10b el personal que no es superadmin tampoco ve el parte (datos de salud)', public.t_val(:'hr1', format('SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L', :'bk1')), '0');
+SELECT public.t_err('3.10c ni por el resumen', public.t_val(:'hr1', format('SELECT event_count::text FROM public.get_care_summary(%L)', :'bk1')), 'No autorizado');
+SELECT public.t_err('3.10d ni por el parte final', public.t_val(:'hr1', format('SELECT public.care_report(%L)::text', :'bk1')), 'No autorizado');
 SELECT public.t_eq('3.10 el superadmin ve el parte', public.t_val(:'staff', format('SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L', :'bk1')), :'nlogs');
 
 SELECT public.t_eq('3.11 get_care_summary para la familia', public.t_val(:'fam1', format('SELECT event_count::text || ''|'' || has_vitals::text || ''|'' || has_incident::text FROM public.get_care_summary(%L)', :'bk1')), :'nlogs' || '|true|true');
@@ -220,6 +226,7 @@ SELECT public.t_eq('3.21 reporte: una lectura de ánimo', jsonb_array_length(:'r
 SELECT public.t_eq('3.22 reporte: nombre corto del profesional', (:'report1'::jsonb ->> 'professional'), 'Laura P.');
 SELECT public.t_eq('3.23 reporte: por tipo', (:'report1'::jsonb -> 'by_type' ->> 'medication'), '2');
 SELECT public.t_true('3.24 reporte: hora de llegada', (:'report1'::jsonb ->> 'started_at') IS NOT NULL);
+SELECT public.t_eq('3.24b el superadmin ve el parte final', public.t_val(:'staff', format('SELECT (public.care_report(%L) ->> ''status'')', :'bk1')), 'in_progress');
 SELECT public.t_eq('3.25 reporte visible para el círculo', public.t_val(:'rel1', format('SELECT (public.care_report(%L) ->> ''status'')', :'bk1')), 'in_progress');
 SELECT public.t_err('3.26 reporte niega a un extraño', public.t_val(:'out1', format('SELECT public.care_report(%L)::text', :'bk1')), 'No autorizado');
 SELECT public.t_err('3.27 reporte niega a un anónimo', public.t_anon(format('SELECT public.care_report(%L)::text', :'bk1')), 'permission denied');
@@ -362,6 +369,18 @@ SELECT public.t_eq('7.13 el profesional recibe el aviso de siempre', public.q1(f
   'El servicio programado fue cancelado.');
 SELECT public.t_eq('7.14 una cancelación de familia no activa el plan B', public.n_of(:'out1', 'plan_b_started'), '0');
 
+-- ═══ 7b) Coherencia: el aviso del plan B y los candidatos de reemplazo cuentan lo mismo ═══════
+SELECT public.t_eq('7b.1 el favorito libre va primero entre los candidatos (y el ocupado no aparece)',
+  public.t_val(:'fam1', format($q$SELECT string_agg(user_id::text || ':' || is_favorite::text, ',' ORDER BY rn) FROM (SELECT user_id, is_favorite, row_number() OVER () AS rn FROM public.find_replacement_candidates(%L)) x$q$, :'bkc')),
+  :'pro2' || ':true,' || :'pro4' || ':false');
+-- La familia pide el reemplazo al favorito libre y este acepta: flujo real de propuestas.
+SELECT public.t_val(:'fam1', format($q$WITH i AS (INSERT INTO public.slot_proposals(family_user_id, professional_id, starts_at, ends_at, hourly_rate, proposed_by, message) VALUES (%L, %L, now() + interval '200 hours', now() + interval '204 hours', 25000, 'family', 'Hola, ¿puedes cubrir este horario?') RETURNING id) SELECT id::text FROM i$q$, :'fam1', :'pro2')) AS prop_repl \gset
+SELECT public.t_true('7b.2 la familia crea la propuesta de reemplazo', :'prop_repl' NOT LIKE 'ERR%');
+SELECT public.t_val(:'pro2', format('SELECT public.accept_slot_proposal(%L)::text', :'prop_repl')) AS bk_repl \gset
+SELECT public.t_true('7b.3 el profesional acepta y nace la reserva', :'bk_repl' NOT LIKE 'ERR%');
+SELECT public.t_eq('7b.4 la reserva de reemplazo queda confirmada con el mismo cliente', public.q1(format('SELECT status || ''|'' || (client_id = %L)::text || ''|'' || (professional_id = %L)::text FROM public.service_bookings WHERE id = %L', :'fam1', :'pro2', :'bk_repl')), 'confirmed|true|true');
+SELECT public.t_eq('7b.5 ahora ese favorito ya no figura libre en la franja (sin contar a quien canceló)', public.q1(format($q$SELECT public.trusted_team_free_count(%L, now() + interval '200 hours', now() + interval '204 hours', %L)::text$q$, :'fam1', :'pro1')), '0');
+
 -- ═══ 8) Institución: parte del turno, plan B y gracias ═══════════════════════
 SELECT jsonb_build_object('title','Auxiliar de enfermería hospitalización','modality','shift','amount',150000,'city','Bogotá',
   'specialty_required','Auxiliar de enfermería','service_area','Hospitalización',
@@ -486,6 +505,28 @@ SELECT public.t_true('10.11 las funciones de usuario fijan search_path',
 SELECT public.t_eq('10.12 el reconocimiento de los permitidos coincide con TypeScript (familia)', public.q1($$SELECT array_to_string(public.kudos_allowed_kinds('client'), ',')$$), 'punctual,caring,patient,peace_of_mind,communicative,professional');
 SELECT public.t_eq('10.13 el reconocimiento de los permitidos coincide con TypeScript (profesional)', public.q1($$SELECT array_to_string(public.kudos_allowed_kinds('professional'), ',')$$), 'respectful,clear_instructions,welcoming,well_prepared');
 SELECT public.t_eq('10.14 hx_duration_label', public.q1($$SELECT public.hx_duration_label(0) || '|' || public.hx_duration_label(45) || '|' || public.hx_duration_label(60) || '|' || public.hx_duration_label(135) || '|' || COALESCE(public.hx_duration_label(-1), 'NULL')$$), '0 min|45 min|1 h|2 h 15 min|NULL');
+
+-- ═══ 12) El camino completo de una familia con una propuesta de horario (flujo real, de la propuesta al parte final) ═══
+SELECT public.t_val(:'fam2', format($q$WITH i AS (INSERT INTO public.slot_proposals(family_user_id, professional_id, starts_at, ends_at, hourly_rate, proposed_by, message) VALUES (%L, %L, now() + interval '800 hours', now() + interval '806 hours', 22000, 'family', 'Necesito acompañamiento para mi papá en la tarde') RETURNING id) SELECT id::text FROM i$q$, :'fam2', :'pro4')) AS prop12 \gset
+SELECT public.t_true('12.1 la familia propone un horario', :'prop12' NOT LIKE 'ERR%');
+SELECT public.t_err('12.2 quien propone no puede aceptar su propia propuesta', public.t_val(:'fam2', format('SELECT public.accept_slot_proposal(%L)::text', :'prop12')), 'Solo quien recibe');
+SELECT public.t_val(:'pro4', format('SELECT public.accept_slot_proposal(%L)::text', :'prop12')) AS bk12 \gset
+SELECT public.t_true('12.3 el profesional acepta y se crea la reserva', :'bk12' NOT LIKE 'ERR%');
+SELECT public.t_eq('12.4 todavía no hay parte (el servicio no empezó)', public.q1(format('SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L', :'bk12')), '0');
+SELECT public.t_ok('12.5 el profesional inicia el servicio', public.t_as(:'pro4', format($q$UPDATE public.service_bookings SET status = 'in_progress', arrived_at = now() WHERE id = %L$q$, :'bk12')));
+SELECT public.t_eq('12.6 la familia recibe «ya está con el paciente»', public.n_of(:'fam2', 'care_started'), '1');
+SELECT public.t_ok('12.7 el profesional registra una comida', public.t_as(:'pro4', format($q$INSERT INTO public.care_logs(booking_id, professional_id, event_type, description, mood) VALUES (%L, %L, 'meal', 'Merendó con apetito y tomó su té', 'happy')$q$, :'bk12', :'pro4')));
+SELECT public.t_eq('12.8 la familia lo ve de inmediato', public.t_val(:'fam2', format($q$SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L AND event_type = 'meal'$q$, :'bk12')), '1');
+SELECT public.t_eq('12.9 el tablero de la familia muestra el turno con su ánimo', public.t_val(:'fam2', format('SELECT counterpart_name || ''|'' || events || ''|'' || last_mood FROM public.my_active_services() WHERE booking_id = %L', :'bk12')), 'Andrés L.|1|happy');
+SELECT public.t_ok('12.10 el profesional finaliza', public.t_as(:'pro4', format($q$UPDATE public.service_bookings SET status = 'completed', completed_at = now() WHERE id = %L$q$, :'bk12')));
+SELECT public.t_eq('12.11 parte final: llegada, comida y salida', public.q1(format($q$SELECT string_agg(event_type, ',' ORDER BY created_at, event_type) FROM public.care_logs WHERE booking_id = %L$q$, :'bk12')), 'arrival,meal,departure');
+SELECT public.t_eq('12.12 la familia recibe el aviso de cierre', public.n_of(:'fam2', 'care_finished'), '1');
+SELECT public.t_uuid(:'fam2', format($q$SELECT public.send_kudos(%L, ARRAY['peace_of_mind','communicative'], 'Pude descansar sabiendo que mi papá estaba bien')::text$q$, :'bk12')) AS kud12 \gset
+SELECT public.t_eq('12.13 el profesional recibe las gracias', public.n_of(:'pro4', 'kudos_received'), '1');
+SELECT public.t_eq('12.14 su trayectoria cuenta el servicio y el parte escrito', public.t_val(:'pro4', 'SELECT (public.my_career_stats() ->> ''completed_services'') || ''|'' || (public.my_career_stats() ->> ''logged_services'') || ''|'' || (public.my_career_stats() ->> ''kudos_total'')'), '1|1|1');
+SELECT public.t_eq('12.15 su perfil público muestra las gracias por tipo', public.t_anon(format($q$SELECT string_agg(kind || ':' || givers, ',' ORDER BY kind) FROM public.professional_kudos_summary(%L)$q$, :'pro4')), 'communicative:1,peace_of_mind:1');
+SELECT public.t_eq('12.16 la familia lo guarda en su equipo y aparece con el servicio juntos', public.t_val(:'fam2', format($q$WITH i AS (INSERT INTO public.care_favorites(client_id, professional_id) VALUES (%L, %L) RETURNING 1) SELECT 'ok' FROM i$q$, :'fam2', :'pro4')), 'ok');
+SELECT public.t_eq('12.17 mi equipo: servicios juntos = 1', public.t_val(:'fam2', 'SELECT services_together::text FROM public.my_trusted_team()'), '1');
 
 -- ═══ 11) Realtime: las tablas del lazo de cuidado quedan publicadas ═════════════
 SELECT public.t_true('11.1 care_logs publicada para el parte en vivo', EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'care_logs'));

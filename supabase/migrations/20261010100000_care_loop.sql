@@ -314,8 +314,9 @@ CREATE TRIGGER trg_booking_care_events
   WHEN (NEW.status IN ('in_progress', 'completed') AND OLD.status IS DISTINCT FROM NEW.status)
   EXECUTE FUNCTION public.booking_care_events();
 
--- Resumen del turno. Antes lo podía consultar cualquiera con un id de reserva; ahora exige ser parte,
--- miembro del círculo o personal autorizado.
+-- Resumen del turno. Antes lo podía consultar cualquiera con un id de reserva; ahora exige ser parte, miembro
+-- aceptado del círculo o superadmin (el parte contiene datos de salud: mínimo privilegio, igual que la política
+-- de lectura de care_logs; el resto del personal no lo ve).
 CREATE OR REPLACE FUNCTION public.care_can_view(p_booking_id uuid, p_user uuid)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
@@ -325,7 +326,7 @@ AS $$
      WHERE b.id = p_booking_id
        AND (
          p_user IN (b.client_id, b.professional_id)
-         OR public.is_staff(p_user)
+         OR public.has_role(p_user, 'superadmin'::public.app_role)
          OR EXISTS (
            SELECT 1 FROM public.care_circle_members m
             WHERE m.owner_id = b.client_id AND m.member_id = p_user

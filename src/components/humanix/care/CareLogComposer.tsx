@@ -119,6 +119,14 @@ export function CareLogComposer({
     if (eventType === "incident") setValue("isAlert", true);
   }, [eventType, setValue]);
 
+  // Los signos vitales solo viajan en un registro de «Signos vitales»: al cambiar de tipo se limpian los campos
+  // (si no, un valor olvidado e invisible bloquearía el envío).
+  useEffect(() => {
+    if (eventType === "vital_signs") return;
+    for (const k of ["systolic", "diastolic", "heartRate", "temperature", "oxygen"] as const)
+      setValue(k, "");
+  }, [eventType, setValue]);
+
   if (status !== "in_progress") {
     return (
       <Card className="flex items-start gap-3 p-4 text-sm text-muted-foreground">

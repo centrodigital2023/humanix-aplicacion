@@ -18,6 +18,7 @@ import {
   lastMood,
   mergeLog,
   moodHeadline,
+  narrateShift,
   parseLooseVitals,
   parseCareReport,
   reportLastMood,
@@ -467,5 +468,79 @@ describe("parte final", () => {
     expect(text).toContain("Pasó un buen turno");
     expect(text).toContain("Alertas: 2");
     expect(text).not.toMatch(/\d{7,}/);
+  });
+});
+
+describe("el parte en palabras", () => {
+  const base = parseCareReport({
+    booking_id: "b1",
+    status: "in_progress",
+    scheduled_at: "2026-10-09T13:00:00Z",
+    professional: "Laura P.",
+    duration_minutes: 135,
+    events: 6,
+    by_type: { medication: 2, meal: 1, activity: 1, note: 1, vital_signs: 1 },
+    vitals_count: 1,
+    last_vitals: {
+      at: "t",
+      systolic: 120,
+      diastolic: 80,
+      heart_rate: 72,
+      temperature: 36.5,
+      oxygen: 97,
+    },
+    alerts: 0,
+    incidents: 0,
+    moods: [{ at: "t", mood: "happy" }],
+  })!;
+  it("cuenta lo ocurrido con calidez y sin alertas", () => {
+    const text = narrateShift(base).join(" ");
+    expect(text).toContain("Laura P. lleva acompañando a tu familiar desde hace 2 h 15 min.");
+    expect(text).toContain(
+      "2 registros de medicamentos, 1 registro de alimentación o líquidos, 1 actividad (caminata, aseo, descanso), 1 nota",
+    );
+    expect(text).toContain(
+      "Se tomaron signos vitales una vez; el último: PA 120/80 · FC 72 · T 36.5 °C · SpO₂ 97 %.",
+    );
+    expect(text).toContain("Pasó un buen turno: estuvo contento/a.");
+    expect(text).toContain("No hubo alertas.");
+    expect(text).toContain("El turno sigue en curso.");
+  });
+  it("con alertas las nombra, sin diagnosticar", () => {
+    const text = narrateShift({ ...base, alerts: 2, incidents: 1 }, [
+      "Caída leve",
+      "SpO2 89%",
+      "tercera",
+    ]).join(" ");
+    expect(text).toContain(
+      "Atención: hubo 2 alertas (Caída leve; SpO2 89%). El profesional ya te avisó.",
+    );
+    expect(text).not.toContain("No hubo alertas.");
+  });
+  it("al terminar invita a agradecer y a comentar las alertas con el médico", () => {
+    const done = { ...base, status: "completed", alerts: 1 };
+    const text = narrateShift(done).join(" ");
+    expect(text).toContain("acompañó a tu familiar durante 2 h 15 min");
+    expect(text).toContain("Conviene comentarlo con el médico tratante.");
+    expect(text).toContain("puedes darle las gracias a tu profesional y calificar el servicio");
+  });
+  it("sin registros no hay narración; sin duración usa una frase neutra; no dice «no hubo alertas» con vitales fuera de rango", () => {
+    expect(narrateShift({ ...base, events: 0, by_type: {}, alerts: 0 })).toEqual([]);
+    expect(narrateShift({ ...base, duration_minutes: null })[0]).toBe(
+      "Laura P. está atendiendo a tu familiar.",
+    );
+    const low = narrateShift({ ...base, last_vitals: { at: "t", oxygen: 88 } }).join(" ");
+    expect(low).not.toContain("No hubo alertas.");
+  });
+  it("singulares", () => {
+    const one = narrateShift({
+      ...base,
+      by_type: { medication: 1 },
+      events: 1,
+      vitals_count: 0,
+      moods: [],
+    }).join(" ");
+    expect(one).toContain("1 registro de medicamentos");
+    expect(one).not.toContain("signos vitales");
   });
 });

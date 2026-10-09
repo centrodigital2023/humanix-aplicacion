@@ -684,6 +684,82 @@ export function reportTone(report: CareReport): ReportTone {
   return "ok";
 }
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * El parte «en palabras»: frases cálidas armadas con las cifras del servidor (nunca con IA ni con el texto libre,
+ * así no se envían datos de salud a terceros ni se inventa nada). Se muestra a la familia al abrir el parte.
+ */
+export function narrateShift(report: CareReport, alertReasons: string[] = []): string[] {
+  if (report.events === 0 && report.alerts === 0) return [];
+  const who = report.professional ?? "El profesional";
+  const out: string[] = [];
+  const dur = durationLabel(report.duration_minutes);
+  const done = report.status === "completed";
+  out.push(
+    dur
+      ? `${who} ${done ? "acompañó" : "lleva acompañando"} a tu familiar ${done ? "durante" : "desde hace"} ${dur}.`
+      : `${who} está atendiendo a tu familiar.`,
+  );
+
+  const bits: string[] = [];
+  const n = (t: string) => report.by_type[t] ?? 0;
+  if (n("medication") > 0)
+    bits.push(plural(n("medication"), "registro de medicamentos", "registros de medicamentos"));
+  if (n("meal") > 0)
+    bits.push(
+      plural(
+        n("meal"),
+        "registro de alimentación o líquidos",
+        "registros de alimentación o líquidos",
+      ),
+    );
+  if (n("activity") > 0)
+    bits.push(
+      plural(
+        n("activity"),
+        "actividad (caminata, aseo, descanso)",
+        "actividades (caminata, aseo, descanso)",
+      ),
+    );
+  if (n("note") > 0) bits.push(plural(n("note"), "nota", "notas"));
+  if (bits.length) out.push(`Hasta ahora quedó: ${bits.join(", ")}.`);
+
+  if (report.vitals_count > 0) {
+    const v = report.last_vitals ? formatVitals(report.last_vitals) : "";
+    out.push(
+      `Se tomaron signos vitales ${report.vitals_count === 1 ? "una vez" : `${report.vitals_count} veces`}${v ? `; el último: ${v}` : ""}.`,
+    );
+  }
+
+  const headline = moodHeadline(reportLastMood(report));
+  if (headline) out.push(headline);
+
+  if (report.alerts > 0) {
+    const reasons = alertReasons
+      .map((r) => r.trim())
+      .filter(Boolean)
+      .slice(0, 2);
+    out.push(
+      `Atención: hubo ${plural(report.alerts, "alerta", "alertas")}${reasons.length ? ` (${reasons.join("; ")})` : ""}. ${
+        done ? "Conviene comentarlo con el médico tratante." : "El profesional ya te avisó."
+      }`,
+    );
+  } else if (
+    report.events > 0 &&
+    !(report.last_vitals && vitalFlags(report.last_vitals).length > 0)
+  ) {
+    out.push("No hubo alertas.");
+  }
+
+  out.push(
+    done
+      ? "El turno terminó: puedes darle las gracias a tu profesional y calificar el servicio."
+      : "El turno sigue en curso.",
+  );
+  return out;
+}
+
 function dayText(iso: string): string {
   const d = new Date(new Date(iso).getTime() + BOGOTA_OFFSET_MS);
   return d.toISOString().slice(0, 10);

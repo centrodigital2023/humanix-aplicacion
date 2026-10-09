@@ -61,3 +61,24 @@
 - Tablas nuevas con GRANT + RLS en la misma migración; `anon` sin acceso. Auditoría automática en la suite de PostgreSQL (14.x).
 - Pendiente: probar el flujo con dos cuentas reales en Supabase, configurar SMTP propio y la plantilla del correo con
   `{{ .Token }}`, y revisión jurídica de la plantilla del contrato.
+
+## Lazo de cuidado
+- **`care_logs` blindada:** antes cualquier usuario autenticado podía insertar partes en una reserva ajena (la política solo
+  comprobaba `professional_id = auth.uid()`). Ahora solo el profesional de la reserva, con el servicio en curso, tope de 200 por
+  turno; solo-agregar (sin UPDATE/DELETE); `anon` sin acceso; llegada y salida las genera el sistema.
+- **Datos de salud, mínimo privilegio:** el parte lo leen el cliente, el profesional, los miembros **aceptados** del círculo y
+  `superadmin`. HR y evaluadores **no**. `get_care_summary` ya no responde a cualquiera con un id de reserva.
+- **Texto limpio sin bloquear emergencias:** sin teléfonos, correos, enlaces ni instrucciones de pago; las alertas nunca se
+  rechazan por contenido. Fotos de pacientes descartadas hasta tener un flujo de consentimiento (Ley 1581).
+- **Gracias y trayectoria sin autodeclarar:** solo `send_kudos()` escribe (`care_kudos` sin INSERT/UPDATE/DELETE para
+  `authenticated`); las cifras salen de servicios completados; lo público es agregado y sin identidades.
+- **Pagos solo en la web:** los textos de gracias, invitaciones y de compartir no contienen datos de pago; la historia exportable
+  excluye importes, teléfonos y direcciones y neutraliza fórmulas de Excel.
+- **Plan de pago desde `mp_subscriptions`** (`care_history_report`); el cliente no puede declararlo.
+- **Permisos por defecto de Supabase:** las tablas heredan `ALL` para `anon` y `authenticated`. `care_logs` y `care_kudos`
+  hacen REVOKE explícito y GRANT mínimo en la misma migración; la suite de PostgreSQL lo comprueba simulando esos permisos.
+- **Realtime:** la publicación `supabase_realtime` estaba vacía en Lovable Cloud; la migración `20261010110000` publica las 14
+  tablas que escuchan las pantallas (respeta RLS). Pendiente de decisión: `realtime.messages` tiene RLS sin políticas, así que
+  los canales privados (`open_needs_ping`) no pueden funcionar hasta definir políticas.
+- Pendiente: el círculo puede leer el importe de la reserva por API (la política es por filas; la interfaz lo oculta); revisar
+  tabla por tabla las que conservan `ALL` para `anon`/`authenticated`; probar con dos cuentas reales tras aplicar la migración.

@@ -7,7 +7,7 @@ import {
   VITALS_DISCLAIMER,
   durationLabel,
   formatVitals,
-  moodHeadline,
+  narrateShift,
   reportLastMood,
   reportToText,
   reportTone,
@@ -31,10 +31,13 @@ const TONE_LABEL = {
 export function ShiftSummary({
   report,
   inProgress,
+  alertReasons = [],
   canCopy = true,
 }: {
   report: CareReport;
   inProgress: boolean;
+  /** Motivos de las alertas (para nombrarlas en el parte en palabras). */
+  alertReasons?: string[];
   /** Copiar el resumen lo decide la familia o la institución; el profesional también puede. */
   canCopy?: boolean;
 }) {
@@ -42,7 +45,7 @@ export function ShiftSummary({
   const duration = durationLabel(report.duration_minutes);
   const mood = reportLastMood(report);
   const lastMood = mood ? MOOD_META[mood] : null;
-  const headline = moodHeadline(mood);
+  const story = narrateShift(report, alertReasons);
   const vitals = report.last_vitals ? formatVitals(report.last_vitals) : "";
   const flags = report.last_vitals ? vitalFlags(report.last_vitals) : [];
 
@@ -83,6 +86,15 @@ export function ShiftSummary({
           </Button>
         )}
       </div>
+
+      {story.length > 0 && (
+        <p
+          className="mt-3 text-sm leading-relaxed text-foreground/90"
+          aria-label="El turno en palabras"
+        >
+          {story.join(" ")}
+        </p>
+      )}
 
       <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
@@ -132,7 +144,6 @@ export function ShiftSummary({
       {flags.length > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">{VITALS_DISCLAIMER}</p>
       )}
-      {headline && <p className="mt-2 text-sm text-foreground/90">{headline}</p>}
     </div>
   );
 }
