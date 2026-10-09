@@ -4,8 +4,8 @@
 > (`/superadmin/validacion`), donde se tabula en vivo. Al confirmar su contacto, la persona gana **1 mes del plan
 > Esencial** (el plan básico de pago).
 >
-> Estado en la base de Lovable Cloud: la migración `20261011100000_market_validation_v2.sql` **está en el repositorio
-> y comprobada sobre la réplica de producción; su aplicación en producción requiere aprobación** (ver §9).
+> Estado en la base de Lovable Cloud: la migración `20261011100000_market_validation_v2.sql` **se aplicó en producción el
+> 2026-10-09** con autorización expresa (ver §9). Falta publicar la interfaz nueva (Publish → Update en Lovable).
 
 ## 1. Qué había y qué se hizo
 
@@ -155,9 +155,18 @@ respuestas quedan guardadas (sin verificar) y no se emite beneficio.
 4. `redeem_validation_benefit(p_user uuid, p_code text) RETURNS jsonb`.
 5. `validation_responses` entra en la publicación `supabase_realtime`.
 
-Orden recomendado: aplicar la migración → **Publish → Update** en Lovable (la versión antigua publicada insertaba desde
-el navegador y deja de poder hacerlo cuando se cierra la tabla) → configurar secretos/plantilla → retirar las Edge
-Functions antiguas.
+**Aplicada en producción el 2026-10-09**, con este método: (1) la estructura real se replicó en local y la migración se
+probó entera; (2) **simulacro** en producción: la migración (con una guarda que compara el md5 del texto con el del
+archivo del repositorio) + una prueba de humo de 28 comprobaciones con el superadmin real + huellas md5 de la estructura,
+todo en una sola transacción que termina en `RAISE EXCEPTION` (se deshace sola; se comprobó que no dejó rastro);
+(3) **aplicación** del mismo texto; (4) comprobación posterior: las **11 huellas** (columnas, políticas, restricciones,
+índices, privilegios de tablas y de la función, Realtime, RLS, disparadores) son idénticas a las de la réplica, la
+publicación `supabase_realtime` pasó de 14 a **15 tablas**, y una prueba de humo posterior (28/28) se revirtió sin dejar
+datos (0 filas, 0 suscripciones, 0 notificaciones de prueba).
+
+Pendiente de tu lado: **Publish → Update** en Lovable (la versión antigua publicada insertaba desde el navegador y ya no
+puede, porque la tabla se cerró; el formulario nuevo sí) → configurar secretos/plantilla → retirar las Edge Functions
+antiguas.
 
 ## 10. Verificación
 
@@ -166,6 +175,7 @@ Functions antiguas.
 | Pruebas unitarias nuevas (`marketValidation.test.ts` 55 + `marketValidation.server.test.ts` 36) | 91 nuevas; **625 / 625** en total |
 | PostgreSQL 16 sobre la réplica de producción (`HX_SCENARIO=market`, `supabase/e2e/market_validation/scenario.sql`) | **57 / 57** (privilegios, RLS, restricciones, canje, Realtime, segunda ejecución idempotente) |
 | Regresión de la réplica (`HX_SCENARIO=both`) | lazo de cuidado 264 · hubs 252 · deriva 37 · mercado 57, todas sin fallos |
+| Producción (2026-10-09) | simulacro 28/28 → aplicación → 11/11 huellas iguales a la réplica → prueba de humo posterior 28/28 revertida |
 | Chromium (formulario, OTP, resultado, canje en Planes, panel, 390 px) | **41 / 41** pasos, sin errores de consola inesperados |
 | Renderizado en servidor sin `window` | 6 / 6 |
 | ESLint en archivos nuevos y tocados | limpio (queda 1 error previo de Prettier en `planes.tsx`) |

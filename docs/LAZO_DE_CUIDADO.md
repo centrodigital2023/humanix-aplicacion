@@ -158,9 +158,10 @@ Qué descubrió la base real (y no se veía desde el repositorio):
 - Muchas migraciones antiguas nunca se aplicaron en producción (referidos, billetera y pagos a profesionales, SGSST, sedes de
   instituciones…). **No se tocaron**: son una decisión aparte (ver «Límites»).
 
-**Novena migración, pendiente:** `20261011100000_market_validation_v2.sql` (formulario inteligente de validación de mercado,
-ver `docs/VALIDACION_MERCADO.md`). Está en el repositorio y comprobada sobre la réplica (57/57), pero **no se ha aplicado en
-producción**: requiere aprobación y, al cerrar la tabla al navegador, conviene publicar la nueva interfaz justo después.
+**Novena migración, aplicada el 2026-10-09:** `20261011100000_market_validation_v2.sql` (formulario inteligente de validación
+de mercado, ver `docs/VALIDACION_MERCADO.md`), con el mismo método (réplica 57/57, simulacro que se deshace solo, aplicación,
+huellas iguales y prueba de humo revertida). La publicación `supabase_realtime` pasó a **15 tablas**. Al cerrar la tabla al
+navegador, la versión antigua publicada del formulario ya no puede guardar: conviene publicar la nueva interfaz (Publish → Update).
 
 Comprobaciones posteriores (SQL):
 

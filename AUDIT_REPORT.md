@@ -138,7 +138,8 @@ PostgREST con JWT reales, correos y navegadores móviles reales.
 
 Detalle de reglas, operación y límites en `docs/VALIDACION_MERCADO.md`. Verificado con 91 pruebas unitarias nuevas (625 en
 total), PostgreSQL 16 sobre la réplica de producción (57 comprobaciones de mercado; regresión completa 264 + 252 + 37 + 57),
-render en servidor y Chromium (41 pasos). **La migración `20261011100000_market_validation_v2.sql` está pendiente de aplicar
-en producción (requiere aprobación).** No se pudo probar: Realtime real, PostgREST con JWT reales, envío real por
+render en servidor y Chromium (41 pasos). **La migración `20261011100000_market_validation_v2.sql` se aplicó en producción el 2026-10-09**
+con autorización expresa (simulacro que se deshace solo con 28 comprobaciones, aplicación con guarda md5, 11 huellas de
+estructura idénticas a la réplica y prueba de humo posterior 28/28 revertida; Realtime 14 → 15 tablas). No se pudo probar: Realtime real, PostgREST con JWT reales, envío real por
 WhatsApp/Resend y navegadores móviles reales. Operación pendiente: secretos `WHATSAPP_OTP_TEMPLATE` (plantilla de
 autenticación aprobada en Meta; sin ella el mensaje solo llega dentro de la ventana de 24 h) y `RESEND_API_KEY`.
