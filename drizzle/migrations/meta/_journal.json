@@ -92,6 +92,13 @@
       "when": 1791476883767,
       "tag": "0012_rethus_single_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791559843381,
+      "tag": "0013_enable_pg_cron",
+      "breakpoints": true
     }
   ]
 }
