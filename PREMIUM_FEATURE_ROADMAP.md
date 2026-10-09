@@ -48,3 +48,18 @@ calificación a la familia con comentario privado. Documentación, constantes es
 Siguiente: avisos informativos por WhatsApp Business (nunca pagos), mediación de disputas, vencimiento de documentos como
 requisito para postularse, matching semántico en el hub, tabla privada para direcciones de `job_offers` y verificación
 cruzada de turnos recurrentes (contratos semanales) con renovación en un clic.
+
+## Implementado: hub de instituciones, negociación y contrato inteligente
+Agenda de turnos de EPS, IPS, clínicas, hospitales y geriátricos para el profesional (sin dirección; compatibilidad
+explicada; reputación de la institución), postulación y negociación acotada (también la institución contraoferta),
+desbloqueo auditado de dirección y WhatsApp con plan de pago, **centro de cobertura** para la institución (riesgo por turno,
+siguiente mejor acción con su motivo, SLA de respuesta), publicación de turnos con repetición por días y turnos de noche,
+**invitar al equipo de confianza**, calificación y comentario en ambos sentidos y **contrato inteligente** con identidad
+validada de las dos partes (RETHUS / NIT + representante legal), código al correo, aceptación explícita, huella del texto y
+cadena de evidencia verificable. Documentación en `docs/INSTITUCION_HUB_CONTRATO_INTELIGENTE.md`.
+
+Siguiente (por valor y esfuerzo): agradecimientos y reconocimientos tras un turno cumplido, metas y rachas de turnos
+cumplidos, tarjeta verificada compartible con enlace de referido, reemplazo automático cuando un profesional cancela
+(sugerir a favoritos disponibles), recibo/factura electrónica por turno cumplido, firma digital certificada como opción,
+poderes de firma por sede, avisos informativos por WhatsApp Business (nunca pagos) y renovación de contratos recurrentes
+en un clic.

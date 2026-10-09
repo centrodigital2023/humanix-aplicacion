@@ -31,27 +31,41 @@ export const hubKeys = {
 };
 
 // El aviso «hay cambios» llega por UN canal privado con tema fijo (la política de Realtime autoriza ese
-// tema exacto). Varios componentes lo usan a la vez (barra «En vivo» y agenda), así que se comparte una
-// sola suscripción con conteo de usuarios en lugar de abrir dos canales con el mismo nombre.
-const pingListeners = new Set<() => void>();
+// tema exacto). Varios componentes lo usan a la vez (barra «En vivo», agenda de familias y de
+// instituciones), así que se comparte una sola suscripción con conteo de usuarios en lugar de abrir
+// varios canales con el mismo nombre. El servidor emite dos eventos sin datos: `changed` (necesidades
+// de familias) y `offers_changed` (ofertas y turnos de instituciones).
+type PingEvent = "changed" | "offers_changed";
+const pingListeners: Record<PingEvent, Set<() => void>> = {
+  changed: new Set(),
+  offers_changed: new Set(),
+};
 let pingChannel: ReturnType<typeof sb.channel> | null = null;
 
-function subscribeOpenNeedsPing(listener: () => void): () => void {
-  pingListeners.add(listener);
+function subscribeOpenPing(event: PingEvent, listener: () => void): () => void {
+  pingListeners[event].add(listener);
   if (!pingChannel) {
     pingChannel = sb
       .channel("open_needs_ping", { config: { private: true } })
-      .on("broadcast", { event: "changed" }, () => pingListeners.forEach((l) => l()))
+      .on("broadcast", { event: "changed" }, () => pingListeners.changed.forEach((l) => l()))
+      .on("broadcast", { event: "offers_changed" }, () =>
+        pingListeners.offers_changed.forEach((l) => l()),
+      )
       .subscribe();
   }
   return () => {
-    pingListeners.delete(listener);
-    if (pingListeners.size === 0 && pingChannel) {
+    pingListeners[event].delete(listener);
+    if (pingListeners.changed.size + pingListeners.offers_changed.size === 0 && pingChannel) {
       void sb.removeChannel(pingChannel);
       pingChannel = null;
     }
   };
 }
+
+const subscribeOpenNeedsPing = (listener: () => void) => subscribeOpenPing("changed", listener);
+/** Aviso en vivo de ofertas y turnos de instituciones (sin datos; se recarga por el RPC seguro). */
+export const subscribeOpenOffersPing = (listener: () => void) =>
+  subscribeOpenPing("offers_changed", listener);
 
 /** Necesidades abiertas (sin dirección) + avisos en vivo del servidor. */
 export function useOpenNeeds(userId: string | null | undefined) {

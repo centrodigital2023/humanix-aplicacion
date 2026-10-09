@@ -23,9 +23,9 @@ type PendingRow = {
 
 /**
  * Lista de servicios completados que aún no han sido calificados por el usuario actual.
- * - Familia califica al profesional, y viceversa.
- * - La familia califica en el detalle del servicio (/servicio/:id), donde vive el VoiceRating.
- * - El profesional califica a la familia sin salir del panel (estrellas, dimensiones y comentario).
+ * - Quien contrata (familia o institución) califica al profesional, y viceversa.
+ * - Quien contrata califica en el detalle del servicio (/servicio/:id), donde vive el VoiceRating.
+ * - El profesional califica a quien lo contrató sin salir del panel (estrellas, dimensiones y comentario).
  */
 export function PendingRatingsCard({ userId, role }: Props) {
   const [pending, setPending] = useState<PendingRow[]>([]);
@@ -121,11 +121,11 @@ export function PendingRatingsCard({ userId, role }: Props) {
   if (loading || pending.length === 0) return null;
 
   const title =
-    role === "family" ? "Califica a tu profesional" : "Califica a la familia";
+    role === "family" ? "Califica a tu profesional" : "Califica a quien te contrató";
   const hint =
     role === "family"
       ? "Cuéntanos cómo te fue con el profesional. Tu valoración mejora la confianza de toda la red."
-      : "Tu valoración ayuda a otras familias a saber si son confiables y respetuosas.";
+      : "Tu valoración ayuda a otros profesionales a saber si quien contrata es confiable y respetuoso.";
 
   return (
     <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-5 space-y-3">

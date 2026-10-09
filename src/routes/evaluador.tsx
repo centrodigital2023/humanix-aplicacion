@@ -31,6 +31,7 @@ import {
   Newspaper,
   AlertTriangle,
 } from "lucide-react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -2296,11 +2297,24 @@ function OffersTab({ reviewerId }: { reviewerId: string }) {
     const { data: rows } = await supabase
       .from("job_offers")
       .select(
-        "id, title, description, city, amount, modality, status, blocked, blocked_reason, posted_by, poster_type, contact_phone, start_date, end_date, requirements, created_at",
+        "id, title, description, city, amount, modality, status, blocked, blocked_reason, posted_by, poster_type, start_date, end_date, requirements, created_at",
       )
       .eq("poster_type", "family")
       .order("created_at", { ascending: false })
       .limit(500);
+
+    // El teléfono de contacto vive en `job_offer_private` (lo lee el equipo y quien publicó), no en la oferta.
+    const phones = new Map<string, string | null>();
+    const offerIds = (rows ?? []).map((r) => r.id);
+    for (let i = 0; i < offerIds.length; i += 100) {
+      const { data: priv } = await (supabase as unknown as SupabaseClient)
+        .from("job_offer_private")
+        .select("job_offer_id, contact_phone")
+        .in("job_offer_id", offerIds.slice(i, i + 100));
+      for (const row of (priv ?? []) as Array<{ job_offer_id: string; contact_phone: string | null }>) {
+        phones.set(row.job_offer_id, row.contact_phone);
+      }
+    }
 
     const posterIds = Array.from(new Set((rows ?? []).map((r) => r.posted_by)));
     let posters: Array<{ user_id: string; full_name: string | null; email: string | null }> = [];
@@ -2312,7 +2326,11 @@ function OffersTab({ reviewerId }: { reviewerId: string }) {
       posters = ps ?? [];
     }
     const byId = new Map(posters.map((p) => [p.user_id, p]));
-    const merged = (rows ?? []).map((r) => ({ ...r, poster: byId.get(r.posted_by) })) as Offer[];
+    const merged = (rows ?? []).map((r) => ({
+      ...r,
+      contact_phone: phones.get(r.id) ?? null,
+      poster: byId.get(r.posted_by),
+    })) as Offer[];
     merged.sort((a, b) =>
       (a.poster?.full_name || "").localeCompare(b.poster?.full_name || "", "es", {
         sensitivity: "base",

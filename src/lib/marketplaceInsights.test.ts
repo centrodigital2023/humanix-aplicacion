@@ -164,6 +164,16 @@ describe("offerQuality", () => {
   });
 });
 
+describe("offerQuality · ubicación", () => {
+  it("la dirección exacta es privada: basta el área del servicio o el punto del mapa", () => {
+    expect(offerQuality(offer({ address: null, service_area: "UCI adultos" })).score).toBe(100);
+    expect(offerQuality(offer({ address: null, lat: 4.65, lng: -74.06 })).score).toBe(100);
+    const none = offerQuality(offer({ address: null }));
+    expect(none.score).toBe(90);
+    expect(none.missing).toEqual(["Zona del servicio (área o ubicación en el mapa)"]);
+  });
+});
+
 describe("offerRiskSignals", () => {
   const peers = [20000, 22000, 21000, 23000].map((amount, i) =>
     offer({ amount, posted_by: `peer-${i}` }),

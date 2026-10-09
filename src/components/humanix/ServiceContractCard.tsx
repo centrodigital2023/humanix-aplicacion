@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Loader2, ShieldCheck } from "lucide-react";
+import { FileText, ShieldCheck } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ContractSignature } from "@/components/humanix/ContractSignature";
-import { toast } from "sonner";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -22,10 +19,14 @@ interface Props {
   party: "family" | "professional";
 }
 
+/**
+ * Contratos del flujo anterior (solo consulta). Los servicios con instituciones se formalizan con el
+ * contrato inteligente (`SmartContractCard`): identidad validada, código de un solo uso y evidencia verificable.
+ * Este flujo ya no genera ni recibe firmas; se conservan los contratos que ya existían.
+ */
 export function ServiceContractCard({ bookingId, party }: Props) {
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await sb
@@ -43,40 +44,7 @@ export function ServiceContractCard({ bookingId, party }: Props) {
     void load();
   }, [load]);
 
-  const generate = async () => {
-    setGenerating(true);
-    try {
-      const { error } = await supabase.functions.invoke("generate-contract", {
-        body: { booking_id: bookingId },
-      });
-      if (error) throw error;
-      toast.success("Contrato generado. Revisa tu WhatsApp para firmar.");
-      await load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo generar el contrato");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  if (loading) return null;
-
-  if (!contract) {
-    return (
-      <Card className="p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-copper" />
-          <h3 className="font-semibold text-sm">Contrato de servicio</h3>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Genera el contrato de prestación de servicios. Cada parte lo firma con un código OTP.
-        </p>
-        <Button size="sm" onClick={generate} disabled={generating} className="w-full">
-          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Generar contrato"}
-        </Button>
-      </Card>
-    );
-  }
+  if (loading || !contract) return null;
 
   const mySignedAt =
     party === "family" ? contract.family_signed_at : contract.professional_signed_at;
@@ -109,11 +77,25 @@ export function ServiceContractCard({ bookingId, party }: Props) {
   }
 
   return (
-    <ContractSignature
-      contractId={contract.id}
-      party={party}
-      pdfUrl={contract.pdf_url}
-      onFullySigned={() => void load()}
-    />
+    <Card className="p-5 space-y-2">
+      <div className="flex items-center gap-2">
+        <FileText className="h-4 w-4 text-copper" />
+        <h3 className="font-semibold text-sm">Contrato de servicio</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Este contrato se creó con el sistema anterior y ya no admite firmas. Los servicios con
+        instituciones se formalizan con el contrato inteligente.
+      </p>
+      {contract.pdf_url && (
+        <a
+          href={contract.pdf_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-biosensor hover:underline"
+        >
+          Ver contrato
+        </a>
+      )}
+    </Card>
   );
 }

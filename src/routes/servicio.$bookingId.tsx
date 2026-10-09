@@ -20,6 +20,7 @@ import { BookingChat } from "@/components/humanix/BookingChat";
 import { PaidContactCard } from "@/components/humanix/PaidContactCard";
 import { VoiceRating } from "@/components/humanix/VoiceRating";
 import { ServiceContractCard } from "@/components/humanix/ServiceContractCard";
+import { SmartContractCard } from "@/components/humanix/contracts/SmartContractCard";
 import { RehireCard } from "@/components/humanix/RehireCard";
 import { PriceBreakdownCard } from "@/components/humanix/PriceBreakdownCard";
 import { ReplacementPanel } from "@/components/humanix/ReplacementPanel";
@@ -383,9 +384,15 @@ function ServicePage() {
                   amountCOP={booking.total_amount}
                 />
                 {booking.status !== "pending" && (isClient || isProfessional) && (
-                  <ServiceContractCard
+                  <SmartContractCard
                     bookingId={booking.id}
-                    party={isClient ? "family" : "professional"}
+                    userId={userId}
+                    fallback={
+                      <ServiceContractCard
+                        bookingId={booking.id}
+                        party={isClient ? "family" : "professional"}
+                      />
+                    }
                   />
                 )}
                 <BookingChat

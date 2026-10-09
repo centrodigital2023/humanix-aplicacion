@@ -77,3 +77,22 @@ Detalle de reglas y límites en `docs/MARKETPLACE_PQRS_PANEL.md`.
 | 36 | El calendario de la familia no guardaba tipo de cuidado ni notas, así que el match por tipo de cuidado no tenía datos | Campos opcionales en `FamilyNeedsCalendar` |
 
 Detalle de reglas, constantes espejo y límites en `docs/PROFESIONAL_HUB_OPORTUNIDADES.md`.
+
+## Sexta pasada: hub de instituciones y contrato inteligente
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 37 | **`job_offers.address` era legible por cualquier usuario autenticado y las coordenadas eran exactas** (la dirección de una IPS o de una familia, publicada en la API) | Dirección, teléfono y coordenadas exactas pasan a `job_offer_private` (solo autor y staff); la oferta queda con coordenadas a 2 decimales |
+| 38 | `applications` aceptaba por la API cualquier valor, estado (`accepted`) o edición posterior: un profesional podía aceptarse a sí mismo | Disparadores `applications_guard_insert/update` + funciones de postulación, contraoferta, aceptación y rechazo |
+| 39 | `get_booking_contact` entregaba el teléfono del cliente al profesional sin mirar el plan ni dejar rastro | Plan, cupo diario y auditoría (igual que `reveal_offer_contact`) |
+| 40 | El flujo de contratos anterior estaba roto e inseguro: `sign_contract` comparaba MD5 contra un SHA-256 con sal que no se guardaba (nadie podía firmar) y las políticas permitían editar cualquier columna, incluidas las firmas | Escritura cerrada; reemplazado por el contrato inteligente (identidad, código reciente, aceptación explícita, huella y cadena de eventos) |
+| 41 | La institución «aceptaba» con un `UPDATE` de estado: sin reserva, sin turnos, sin dirección, sin contrato | `accept_application` crea reservas por turno (con dirección), bloquea la agenda, cierra competidoras y genera el contrato |
+| 42 | `apply()` del profesional llamaba a `set_offer_reserved` desde el cliente: el privilegio estaba revocado (siempre fallaba) y, de funcionar, lo dejaría no disponible 15 días solo por postularse | Eliminado; `apply_to_offer` |
+| 43 | La pestaña de ofertas del evaluador pedía `contact_phone` (columna sin permiso): la consulta fallaba | El teléfono se lee de `job_offer_private` (staff) |
+| 44 | La barra «En vivo» de la institución contaba usuarios (0/0) y no había forma de saber qué turnos estaban en riesgo | Centro de cobertura con turnos reales, riesgo explicado y siguiente mejor acción |
+| 45 | Las postulaciones nunca vencían: quedaban «pendientes» para siempre | Vencimiento (72 h / 24 h), cron cada 15 min y SLA visible |
+| 46 | Las calificaciones decían «familia» aunque el profesional califique a una institución | Texto neutro; la institución recibe recordatorios para calificar al profesional |
+| 47 | `offerQuality` penalizaba a toda oferta por «falta de dirección» una vez privada | La zona se mide con el área del servicio o el punto del mapa |
+| 48 | Al leer el texto completo del contrato mientras se firmaba se perdían el código y las aceptaciones (hallado en la prueba de navegador) | La pestaña de firma permanece montada |
+
+Detalle de reglas, constantes espejo, operación y límites en `docs/INSTITUCION_HUB_CONTRATO_INTELIGENTE.md`.

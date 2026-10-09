@@ -94,9 +94,10 @@ interface Props {
 }
 
 /**
- * El profesional califica a la familia sin salir del panel: estrellas, cuatro dimensiones (claridad de la
- * solicitud, trato, cumplimiento del pago y entorno) y un comentario. Los otros profesionales solo ven
- * promedios (mínimo 3); el comentario lo ven únicamente la familia y el equipo de Humanix.
+ * El profesional califica a quien lo contrató (familia o institución) sin salir del panel: estrellas, cuatro
+ * dimensiones (claridad de la solicitud, trato, cumplimiento del pago y entorno) y un comentario. Los otros
+ * profesionales solo ven promedios (mínimo 3); el comentario lo ven únicamente la otra parte y el equipo de
+ * Humanix.
  */
 export function RateFamilyDialog({
   bookingId,
@@ -169,7 +170,7 @@ export function RateFamilyDialog({
         <DialogHeader>
           <DialogTitle>Califica a {familyName}</DialogTitle>
           <DialogDescription>
-            Tu opinión ayuda a otros profesionales a saber si una familia es clara, respetuosa y
+            Tu opinión ayuda a otros profesionales a saber si quien contrata es clara, respetuosa y
             cumplida.
           </DialogDescription>
         </DialogHeader>
@@ -210,7 +211,7 @@ export function RateFamilyDialog({
               <p className="shrink-0 text-xs text-muted-foreground">{comment.length}/500</p>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              El comentario lo ven solo la familia y el equipo de Humanix; no se publica. No
+              El comentario lo ven solo la otra parte y el equipo de Humanix; no se publica. No
               incluyas teléfonos, correos ni direcciones.
             </p>
           </div>

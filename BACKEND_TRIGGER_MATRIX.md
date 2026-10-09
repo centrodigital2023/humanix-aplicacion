@@ -55,3 +55,31 @@ Secrets: `LOVABLE_API_KEY` (ya existente). Opcional: `PQRS_AI_MODEL` (por defect
 | Disparador `ping_open_needs` | Cambios en `family_needs` | Canal privado `open_needs_ping`, sin datos | PostgreSQL real (G) |
 | Disparador `sanitize_rating_comment` | Calificaciones | Limpia contacto en comentarios | PostgreSQL real (E4) |
 | `expire_stale_proposals` | `pg_cron` cada 15 min (si existe) y en cada RPC | Solo service role | PostgreSQL real (D14) |
+
+## Hub de instituciones y contrato inteligente (migración `20261009100000`)
+
+| Pieza | Cómo se activa | Auth / permisos | Prueba |
+|---|---|---|---|
+| RPC `publish_institution_offer` | «Publicar turnos» | Rol institución o staff; valida valor, turnos (1–60, ≤ 24 h), contenido | PostgreSQL real (1) |
+| RPC `list_open_institution_offers` | Agenda «EPS, IPS y clínicas» | Profesional o staff; sin dirección ni teléfono | PostgreSQL real (1, 2) |
+| RPC `apply_to_offer` | «Enviar postulación» | Profesional; otro valor = plan de pago | PostgreSQL real (2, 3, 10b) |
+| RPC `counter_application` | «Contraofertar» / cambiar propuesta | Quien debe responder; profesional necesita plan | PostgreSQL real (3, 7) |
+| RPC `accept_application` | «Aceptar» (ambas partes) | Quien debe responder; crea reservas, contrato y avisos | PostgreSQL real (4, 10, 10b) |
+| RPC `decline_application` | «Rechazar» / «Retirar» | Las dos partes | PostgreSQL real (10b) |
+| RPC `reveal_offer_contact` | «Desbloquear contacto» | Plan de pago + postulación + cupo diario; auditada | PostgreSQL real (5, 6) |
+| RPC `get_booking_contact` (reemplazada) | «WhatsApp» en la reserva | Partes de la reserva; profesional con plan y cupo | PostgreSQL real (6, 10b) |
+| RPC `my_offer_applications`, `institution_application_inbox`, `market_supply_snapshot`, `institution_reputation` | Paneles | Cada parte ve lo suyo; muestras mínimas (5 / 3) | PostgreSQL real (12, 13) |
+| RPC `update_contract_conditions`, `decline_contract`, `contract_signer_readiness`, `verify_contract_integrity`, `my_smart_contracts` | Contrato | Solo las partes | PostgreSQL real (8) |
+| RPC `invite_team_to_offer` | «Invitar a mi equipo» | Autor de la oferta; solo favoritos, una vez por turno | PostgreSQL real (15) |
+| `signSmartContract` (función de servidor) | «Firmar contrato» | JWT (`requireSupabaseAuth`) + identidad + código ≤ 10 min + huella | `contracts.server.test.ts` (base simulada) |
+| `record_contract_signature` | Solo desde `signSmartContract` | Solo service role | PostgreSQL real (8, 14) |
+| Disparador `job_offers_capture_private` | INSERT/UPDATE de dirección, teléfono o coordenadas | Interno | PostgreSQL real (1) |
+| Disparadores `applications_guard_insert/update` | Todo INSERT/UPDATE de postulaciones | Impiden forjar valor, estado y ronda | PostgreSQL real (2, 7, 10b) |
+| Disparadores `trg_applications_after_insert/after_status` | Cambios de postulación | Historial (`application_events`) y avisos | PostgreSQL real (2–4) |
+| Disparador `bookings_sync_offer_and_contract` | Cambio de estado de la reserva | Reabre cupo, avisa y completa el contrato | PostgreSQL real (11) |
+| Disparadores del contrato (`guard`, cadena de eventos, inmutabilidad) | Todo cambio en contrato, firmas y eventos | Interno | PostgreSQL real (8, 14) |
+| `ping_open_offers` (turnos y ofertas) | Cambios en `job_offers` / `job_offer_shifts` | Canal privado `open_needs_ping`, sin datos | PostgreSQL real |
+| `expire_stale_applications`, `expire_stale_contracts` | `pg_cron` cada 15 / 30 min (si existe) y en cada RPC | Solo service role | PostgreSQL real (7, 8) |
+
+Secrets: `SUPABASE_SERVICE_ROLE_KEY` (función de servidor). Correo de Supabase Auth con `{{ .Token }}` para el código de firma.
+La Edge Function `generate-contract` queda desplegada pero sin uso desde la interfaz.

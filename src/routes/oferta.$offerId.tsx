@@ -20,7 +20,6 @@ type Offer = {
   modality: "hour" | "shift" | "month" | "package";
   amount: number;
   city: string;
-  address: string | null;
   specialty_required: string | null;
   requirements: string[] | null;
   poster_type: "family" | "institution";
@@ -63,7 +62,7 @@ export const Route = createFileRoute("/oferta/$offerId")({
     const { data } = await supabase
       .from("job_offers")
       .select(
-        "id, title, description, modality, amount, city, address, specialty_required, requirements, poster_type, status, reserved_until, start_date, end_date, shifts_count, lat, lng, created_at, updated_at, blocked",
+        "id, title, description, modality, amount, city, specialty_required, requirements, poster_type, status, reserved_until, start_date, end_date, shifts_count, lat, lng, created_at, updated_at, blocked",
       )
       .eq("id", params.offerId)
       .maybeSingle();
@@ -158,7 +157,7 @@ function jobPostingLd(offer: Offer): Record<string, unknown> {
         addressLocality: offer.city,
         addressRegion: offer.city,
         addressCountry: "CO",
-        streetAddress: offer.address ?? undefined,
+        // Sin streetAddress: la dirección exacta es privada y solo llega a quien acepta el servicio.
       },
       ...(offer.lat != null && offer.lng != null
         ? {

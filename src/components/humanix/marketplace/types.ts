@@ -31,6 +31,6 @@ export const TICKET_COLUMNS =
   "id,radicado,subject,description,type,ai_category,ai_priority,ai_sentiment,ai_summary,status,created_at,contact_email,contact_phone,contact_name,user_id,assigned_to,assigned_at,due_at,first_response_at,resolved_at,resolution,safety_level,safety_categories,duplicate_of,ai_reply_draft,reply_draft_edited";
 
 export const OFFER_COLUMNS =
-  "id,title,description,city,amount,modality,status,created_at,updated_at,poster_type,specialty_required,start_date,end_date,shifts_count,blocked,blocked_reason,posted_by,requirements,address";
+  "id,title,description,city,amount,modality,status,created_at,updated_at,poster_type,specialty_required,start_date,end_date,shifts_count,blocked,blocked_reason,posted_by,requirements,address,service_area,lat,lng";
 
 export type MarketTab = "overview" | "offers" | "pqrs";

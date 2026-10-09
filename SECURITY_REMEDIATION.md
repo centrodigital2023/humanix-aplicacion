@@ -41,5 +41,23 @@
 - **Mensajes y comentarios** sin teléfonos, correos, enlaces, direcciones ni instrucciones de pago (los pagos solo en la
   web). Comentarios de calificaciones visibles solo para la persona calificada y el staff.
 - **Sin Edge Functions nuevas:** `pqrs-intake`/`pqrs-assistant` pasaron a `createServerFn`.
-- Pendiente: `job_offers.address`/`contact_phone` siguen legibles por la API para usuarios autenticados (requiere tabla
-  privada); revisar con pruebas automatizadas que ninguna otra tabla con direcciones tenga políticas permisivas antiguas.
+- ~~Pendiente: `job_offers.address`/`contact_phone` legibles por la API~~ → cerrado en la migración `20261009100000`
+  (ver abajo). Sigue pendiente revisar que ninguna otra tabla con direcciones conserve políticas permisivas antiguas.
+
+## Hub de instituciones y contrato inteligente
+- **Dirección y teléfono fuera de la oferta:** `job_offer_private` (RLS: autor y staff). Un disparador traslada lo que escriban
+  los formularios actuales; la oferta queda con dirección vacía y coordenadas a 2 decimales. La dirección llega al profesional
+  al ser aceptado (reserva) o, con plan de pago, tras postularse (`reveal_offer_contact`).
+- **Postulaciones con integridad en el servidor:** `applications_guard_insert/update` impiden forjar valor, estado o ronda;
+  `accepted` y las contraofertas solo salen de `accept_application` / `counter_application`.
+- **`get_booking_contact` con plan, cupo y auditoría** (antes entregaba el teléfono a cualquier profesional de la reserva).
+- **Contratos:** flujo anterior cerrado (`sign_contract` retirado; políticas de escritura eliminadas). El contrato inteligente
+  solo registra firmas con `record_contract_signature` (service role) tras: identidad verificada (RETHUS / NIT +
+  representante legal), código de correo ≤ 10 min (`amr` del token, verificado en el servidor), aceptación explícita y huella
+  del texto. Tablas del contrato sin INSERT/UPDATE/DELETE para `authenticated`; eventos y firmas inmutables con cadena de hashes.
+  La IP se guarda solo como huella con sal secreta.
+- **Mensajes** de postulación/contraoferta/publicación sin teléfonos, correos, enlaces, direcciones ni instrucciones de pago.
+- **Realtime:** canal privado `open_needs_ping` sin datos; `smart_contracts` y `job_offer_shifts` con RLS.
+- Tablas nuevas con GRANT + RLS en la misma migración; `anon` sin acceso. Auditoría automática en la suite de PostgreSQL (14.x).
+- Pendiente: probar el flujo con dos cuentas reales en Supabase, configurar SMTP propio y la plantilla del correo con
+  `{{ .Token }}`, y revisión jurídica de la plantilla del contrato.

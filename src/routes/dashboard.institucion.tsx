@@ -2,20 +2,16 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  Loader2,
   Building2,
   Briefcase,
   Users,
   CheckCircle2,
   Inbox,
-  Phone,
-  Star,
   LayoutDashboard,
   CalendarDays,
   BarChart3,
   UserCircle,
   LogOut,
-  X,
   ChevronRight,
   BadgeCheck,
   MapPin,
@@ -31,6 +27,7 @@ import {
   Heart,
   ShieldCheck,
 } from "lucide-react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -55,7 +52,12 @@ import { InstitutionClinicalMonitoring } from "@/components/humanix/InstitutionC
 
 import { useAppUser } from "@/hooks/use-app-user";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
-import { LivePulseBar } from "@/components/humanix/LivePulseBar";
+import { CoverageCenter } from "@/components/humanix/hub/CoverageCenter";
+import { ApplicantsInbox } from "@/components/humanix/hub/ApplicantsInbox";
+import { PublishShiftsDialog } from "@/components/humanix/hub/PublishShiftsDialog";
+import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
+import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
+import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +127,9 @@ type InstitutionProfile = {
   onboarding_complete?: boolean;
 };
 
+// Las funciones nuevas aún no están en los tipos generados (se regeneran tras aplicar la migración).
+const sb = supabase as unknown as SupabaseClient;
+
 const COP = (n: number | null | undefined) =>
   typeof n === "number"
     ? new Intl.NumberFormat("es-CO", {
@@ -133,15 +138,6 @@ const COP = (n: number | null | undefined) =>
         maximumFractionDigits: 0,
       }).format(n)
     : "—";
-
-function waLink(phone: string | null | undefined, name: string, offerTitle: string) {
-  if (!phone) return null;
-  const clean = phone.replace(/[^0-9]/g, "");
-  const normalized = clean.startsWith("57") ? clean : `57${clean}`;
-  return `https://wa.me/${normalized}?text=${encodeURIComponent(
-    `Hola ${name}, te escribo desde Humanix por tu postulación a "${offerTitle}". ¿Cuándo podemos hablar?`,
-  )}`;
-}
 
 // Supabase returns a nested `job_offers` object when using the join select.
 // We strip it so downstream code only sees plain ApplicationRow.
@@ -217,6 +213,8 @@ function InstitutionDashboard() {
   const [proMap, setProMap] = useState<Record<string, ProSummary>>({});
   const [instProfile, setInstProfile] = useState<InstitutionProfile | null>(null);
   const [updatingApp, setUpdatingApp] = useState<string | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const inboxRef = useRef<HTMLDivElement>(null);
 
   // Abort guard — mutable ref shared across async callbacks
   const signal = useRef({ cancelled: false });
@@ -395,21 +393,34 @@ function InstitutionDashboard() {
   const updateAppStatus = async (appId: string, newStatus: AppStatus) => {
     setUpdatingApp(appId);
     try {
-      const { error } = await supabase
-        .from("applications")
-        .update({ status: newStatus })
-        .eq("id", appId);
-      if (error) throw error;
+      if (newStatus === "accepted") {
+        // Aceptar reserva los turnos con la dirección y genera el contrato inteligente en una sola operación.
+        const { error } = await sb.rpc("accept_application", { p_application_id: appId });
+        if (error) throw error;
+      } else if (newStatus === "rejected") {
+        const { error } = await sb.rpc("decline_application", { p_application_id: appId, p_note: null });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("applications").update({ status: newStatus }).eq("id", appId);
+        if (error) throw error;
+      }
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? { ...a, status: newStatus } : a)),
       );
       toast.success(
         newStatus === "accepted"
-          ? "✅ Profesional aceptado. Se le notificará."
+          ? "✅ Profesional aceptado: reserva y contrato listos para firmar."
           : "Postulación rechazada.",
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error actualizando estado");
+      const failure = classifyHubError(e as ServerError);
+      if (failure.kind === "shifts_required") {
+        toast.error(failure.message, {
+          description: "Acepta desde Inicio → Postulaciones para indicar los turnos de esta oferta.",
+        });
+      } else {
+        toast.error(failure.message);
+      }
     } finally {
       setUpdatingApp(null);
     }
@@ -588,7 +599,22 @@ function InstitutionDashboard() {
         {tab === "inicio" && (
           <div className="space-y-5">
 
-            <LivePulseBar role="institution" />
+            <CoverageCenter
+              userId={user.id}
+              profile={
+                instProfile
+                  ? {
+                      institution_name: instProfile.institution_name,
+                      city: instProfile.city,
+                      verified: instProfile.verified,
+                      nit: instProfile.nit,
+                    }
+                  : null
+              }
+              onPublish={() => setPublishOpen(true)}
+              onGoToInbox={() => inboxRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              onGoToTalent={() => setTab("talento")}
+            />
 
             {/* KPI row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -640,62 +666,16 @@ function InstitutionDashboard() {
               </div>
             )}
 
-            {/* Pending applications inbox */}
-            {dataLoading ? (
-              <div className="rounded-2xl border border-border bg-card/95 p-8 text-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" />
-                <p className="text-sm text-muted-foreground mt-2">Cargando postulaciones…</p>
-              </div>
-            ) : pendingApps.length === 0 && applications.length === 0 ? (
-              <div className="rounded-2xl border border-border bg-card/95 p-10 text-center">
-                <Inbox className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-                <p className="font-semibold">Sin postulaciones aún</p>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Publica una oferta o busca talento directamente en el marketplace.
-                </p>
-                <div className="mt-4 flex justify-center">
-                  <HiringCopilot />
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <Inbox className="h-4 w-4 text-fuchsia-neural" />
-                    <p className="text-sm font-semibold">Buzón de postulaciones</p>
-                    {pendingApps.length > 0 && (
-                      <span className="h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center">
-                        {pendingApps.length} nuevas
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{applications.length} en total</p>
-                </div>
-                <div className="divide-y divide-border">
-                  {applications.slice(0, 15).map((a) => (
-                    <ApplicationCard
-                      key={a.id}
-                      app={a}
-                      pro={proMap[a.professional_id]}
-                      offer={offers.find((o) => o.id === a.job_offer_id)}
-                      updating={updatingApp === a.id}
-                      onAccept={() => updateAppStatus(a.id, "accepted")}
-                      onReject={() => updateAppStatus(a.id, "rejected")}
-                    />
-                  ))}
-                  {applications.length > 15 && (
-                    <div className="p-3 text-center">
-                      <button
-                        onClick={() => setTab("ofertas")}
-                        className="text-xs text-fuchsia-neural hover:underline"
-                      >
-                        Ver todas ({applications.length}) →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Postulaciones: responder, negociar el valor y aceptar (reserva + contrato) */}
+            <div ref={inboxRef} className="scroll-mt-24">
+              <ApplicantsInbox userId={user.id} compact onSeeAll={() => setTab("ofertas")} />
+            </div>
+
+            {/* Contratos inteligentes pendientes de firma o vigentes */}
+            <ContractsPanel userId={user.id} title="Contratos inteligentes" />
+
+            {/* Calificar a los profesionales de servicios ya cumplidos (estrellas y comentario) */}
+            <PendingRatingsCard userId={user.id} role="family" />
 
             {/* Recent offers strip */}
             <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
@@ -758,7 +738,10 @@ function InstitutionDashboard() {
                 <p className="text-sm font-semibold">Publicar nueva oferta</p>
                 <p className="text-xs text-muted-foreground">La IA escribe la descripción y encuentra los mejores candidatos.</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="hero" size="sm" onClick={() => setPublishOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1.5" /> Publicar turnos
+                </Button>
                 <HiringCopilot />
               </div>
             </div>
@@ -918,27 +901,8 @@ function InstitutionDashboard() {
               </div>
             )}
 
-            {/* Full applications table */}
-            {applications.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
-                <div className="p-4 border-b border-border">
-                  <p className="text-sm font-semibold">Todas las postulaciones ({applications.length})</p>
-                </div>
-                <div className="divide-y divide-border">
-                  {applications.map((a) => (
-                    <ApplicationCard
-                      key={a.id}
-                      app={a}
-                      pro={proMap[a.professional_id]}
-                      offer={offers.find((o) => o.id === a.job_offer_id)}
-                      updating={updatingApp === a.id}
-                      onAccept={() => updateAppStatus(a.id, "accepted")}
-                      onReject={() => updateAppStatus(a.id, "rejected")}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Todas las postulaciones, con negociación y contrato */}
+            <ApplicantsInbox userId={user.id} />
           </div>
         )}
 
@@ -1100,6 +1064,13 @@ function InstitutionDashboard() {
         </div>
       </nav>
 
+      <PublishShiftsDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        defaultCity={instProfile?.city ?? undefined}
+        onPublished={() => user.id && void loadAll(user.id)}
+      />
+
       <HumanixAssistant
         persona="institution"
         greeting={`Hola, soy el copiloto de ${instName}. Puedo ayudarte a redactar ofertas, analizar candidatos, o gestionar tus casos clínicos.`}
@@ -1109,128 +1080,6 @@ function InstitutionDashboard() {
 }
 
 // ── Sub-components ──
-
-function ApplicationCard({
-  app: a,
-  pro,
-  offer,
-  updating,
-  onAccept,
-  onReject,
-}: {
-  app: ApplicationRow;
-  pro: ProSummary | undefined;
-  offer: Offer | undefined;
-  updating: boolean;
-  onAccept: () => void;
-  onReject: () => void;
-}) {
-  const wa = waLink(pro?.phone, pro?.full_name ?? "", offer?.title ?? "nuestra oferta");
-  const stars = pro?.avg_rating ?? 0;
-  const isPending = a.status === "pending";
-
-  return (
-    <div
-      className={cn(
-        "p-4 transition-colors",
-        isPending && "bg-amber-500/3 hover:bg-amber-500/5",
-      )}
-    >
-      <div className="flex items-start gap-3">
-        {/* Avatar */}
-        {pro?.avatar_url ? (
-          <img
-            src={pro.avatar_url}
-            alt={pro.full_name ?? ""}
-            className="h-10 w-10 rounded-full object-cover border border-border shrink-0"
-          />
-        ) : (
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0">
-            {(pro?.full_name ?? "?").charAt(0).toUpperCase()}
-          </div>
-        )}
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold">{pro?.full_name ?? "Profesional"}</p>
-            {pro?.verified && <BadgeCheck className="h-3.5 w-3.5 text-biosensor shrink-0" />}
-            {stars > 0 && (
-              <span className="inline-flex items-center gap-0.5 text-[11px] text-amber-500">
-                <Star className="h-3 w-3 fill-amber-500" />
-                {Number(stars).toFixed(1)}
-              </span>
-            )}
-            {pro?.trust_score != null && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-biosensor/10 text-biosensor font-medium">
-                Trust {pro.trust_score}
-              </span>
-            )}
-            <AppStatusBadge status={a.status} />
-          </div>
-
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {pro?.specialty ?? "Profesional de la salud"}
-            {pro?.city && ` · ${pro.city}`}
-            {pro?.shift_rate && ` · ${COP(pro.shift_rate)}/turno`}
-          </p>
-
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Para:{" "}
-            <span className="font-medium text-foreground">{offer?.title ?? "Oferta"}</span>
-            {a.proposed_amount && ` · Propone ${COP(a.proposed_amount)}`}
-          </p>
-
-          {a.message && (
-            <p className="text-xs text-muted-foreground mt-1.5 italic line-clamp-2">
-              "{a.message}"
-            </p>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-          <Button size="sm" variant="glass" asChild>
-            <Link to="/profesional/$proId" params={{ proId: a.professional_id }}>
-              Ver perfil
-            </Link>
-          </Button>
-          {wa && (
-            <Button size="sm" variant="outline" asChild className="border-biosensor/30 text-biosensor hover:bg-biosensor/5">
-              <a href={wa} target="_blank" rel="noopener noreferrer">
-                <Phone className="h-3.5 w-3.5 mr-1" /> WA
-              </a>
-            </Button>
-          )}
-          {isPending && (
-            <>
-              <Button
-                size="sm"
-                variant="hero"
-                onClick={onAccept}
-                disabled={updating}
-                className="bg-biosensor hover:bg-biosensor/90"
-              >
-                {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                Aceptar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onReject}
-                disabled={updating}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <X className="h-3.5 w-3.5 mr-1" /> Rechazar
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 
 function KpiCard({
   icon,

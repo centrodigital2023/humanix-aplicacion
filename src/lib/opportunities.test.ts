@@ -612,6 +612,14 @@ describe("classifyHubError", () => {
     expect(classifyHubError({ hint: "application_required" }).kind).toBe("application_required");
     expect(classifyHubError({ hint: "quota_exceeded" }).kind).toBe("quota");
   });
+  it("reconoce las pistas del centro institucional", () => {
+    expect(classifyHubError({ hint: "rate_out_of_band" }).kind).toBe("rate_out_of_band");
+    expect(classifyHubError({ hint: "final_round" }).kind).toBe("final_round");
+    expect(classifyHubError({ hint: "shift_full" }).kind).toBe("shift_full");
+    expect(classifyHubError({ hint: "shifts_required" }).kind).toBe("shifts_required");
+    expect(classifyHubError({ hint: "contract_locked" }).kind).toBe("contract_locked");
+    expect(classifyHubError({ hint: "forbidden_content", message: "x" }).kind).toBe("forbidden_content");
+  });
   it("y por código o texto cuando no hay pista", () => {
     expect(classifyHubError({ code: "23505" }).kind).toBe("duplicate");
     expect(classifyHubError({ code: "23P01" }).kind).toBe("conflict");

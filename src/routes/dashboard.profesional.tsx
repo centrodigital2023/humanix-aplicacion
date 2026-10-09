@@ -58,6 +58,12 @@ import { PublishGate } from "@/components/humanix/PublishGate";
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
 import { OpportunityHub } from "@/components/humanix/hub/OpportunityHub";
+import { InstitutionAgenda } from "@/components/humanix/hub/InstitutionAgenda";
+import { OfferApplicationsPanel } from "@/components/humanix/hub/OfferApplicationsPanel";
+import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { applyToPublishedOffer } from "@/hooks/use-institution-hub";
+import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { OpportunityPulse } from "@/components/humanix/hub/OpportunityPulse";
 import { IncomePlannerCard } from "@/components/humanix/hub/IncomePlanner";
 import { ProposalsInbox } from "@/components/humanix/ProposalsInbox";
@@ -132,6 +138,10 @@ type Offer = {
   created_at: string;
   posted_by: string;
 };
+
+// Las ofertas de EPS, IPS y clínicas viven en su propia agenda (turnos, negociación y contrato).
+const FAMILY_OFFER_COLUMNS =
+  "id, title, description, modality, amount, city, specialty_required, shifts_count, status, created_at, posted_by";
 
 type AppRow = {
   id: string;
@@ -235,7 +245,8 @@ function ProDashboard() {
         supabase.from("profiles").select("full_name").eq("user_id", uid).maybeSingle(),
         supabase
           .from("job_offers")
-          .select("*")
+          .select(FAMILY_OFFER_COLUMNS)
+          .eq("poster_type", "family")
           .eq("status", "open")
           .order("created_at", { ascending: false })
           .limit(20),
@@ -260,7 +271,7 @@ function ProDashboard() {
       ]);
 
       if (pr.data?.full_name) setFullName(pr.data.full_name);
-      if (off.data) setOffers(off.data as Offer[]);
+      if (off.data) setOffers(off.data as unknown as Offer[]);
       if (ap.data) setApps(ap.data as AppRow[]);
 
       // Enrich bookings with client names and offer titles
@@ -480,17 +491,20 @@ function ProDashboard() {
 
   const apply = async (offerId: string) => {
     if (!userId) return;
-    const { error } = await supabase.from("applications").insert({ job_offer_id: offerId, professional_id: userId });
-    if (error) { toast.error(error.message); return; }
-    const { error: rpcErr } = await supabase.rpc("set_offer_reserved", { _offer_id: offerId, _professional_id: userId });
-    if (rpcErr) toast.error(`No se pudo reservar la oferta: ${rpcErr.message}`);
-    else toast.success("✓ Aplicación enviada · oferta reservada 15 días");
+    try {
+      // La validación (rol, cruces de agenda, cupo, plan) vive en el servidor.
+      await applyToPublishedOffer(offerId);
+      toast.success("✓ Postulación enviada · te avisamos cuando respondan");
+    } catch (e) {
+      toast.error(classifyHubError(e as ServerError).message);
+      return;
+    }
     const [{ data: appsData }, { data: offersData }] = await Promise.all([
       supabase.from("applications").select("id, job_offer_id, status, created_at").eq("professional_id", userId),
-      supabase.from("job_offers").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(20),
+      supabase.from("job_offers").select(FAMILY_OFFER_COLUMNS).eq("poster_type", "family").eq("status", "open").order("created_at", { ascending: false }).limit(20),
     ]);
     if (appsData) setApps(appsData as AppRow[]);
-    if (offersData) setOffers(offersData as Offer[]);
+    if (offersData) setOffers(offersData as unknown as Offer[]);
   };
 
   const logout = async () => { await appLogout(); };
@@ -1123,11 +1137,30 @@ function ProDashboard() {
         {tab === "ofertas" && (
           <div className="space-y-4">
 
-            {/* Agenda de familias: postularse, negociar el valor y desbloquear contacto */}
+            {/* Agenda: familias y EPS/IPS/clínicas. Postularse, negociar el valor y desbloquear contacto */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-4">
-                <OpportunityHub userId={userId} />
+                <Tabs defaultValue="familias" className="space-y-4">
+                  <TabsList>
+                    <TabsTrigger value="familias">Familias</TabsTrigger>
+                    <TabsTrigger value="instituciones">EPS, IPS y clínicas</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="familias">
+                    <OpportunityHub userId={userId} />
+                  </TabsContent>
+                  <TabsContent value="instituciones">
+                    <InstitutionAgenda userId={userId} />
+                  </TabsContent>
+                </Tabs>
               </div>
+            )}
+
+            {/* Postulaciones a instituciones (responder, negociar, firmar) y contratos inteligentes */}
+            {userId && (
+              <>
+                <OfferApplicationsPanel userId={userId} proName={fullName || null} onChanged={() => void loadAll(userId)} />
+                <ContractsPanel userId={userId} title="Mis contratos inteligentes" />
+              </>
             )}
 
             {/* Propuestas y negociación + calificar a la familia */}
@@ -1173,7 +1206,7 @@ function ProDashboard() {
             {/* All offers */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold">Todas las ofertas activas ({offers.length})</p>
+                <p className="text-sm font-semibold">Ofertas de familias activas ({offers.length})</p>
                 <Link to="/buscar" search={{ tab: "ofertas" }} className="text-xs text-biosensor hover:underline">
                   Marketplace →
                 </Link>

@@ -284,6 +284,19 @@ function bogotaParts(iso: string) {
   };
 }
 
+/** Día calendario en Colombia (YYYY-MM-DD) de un instante. */
+export function bogotaDayKey(iso: string): string {
+  const t = ms(iso);
+  return Number.isFinite(t) ? new Date(t + BOGOTA_OFFSET).toISOString().slice(0, 10) : "";
+}
+
+/** «lun 12 oct», en hora de Colombia. */
+export function bogotaDayLabel(iso: string): string {
+  if (!Number.isFinite(ms(iso))) return "";
+  const p = bogotaParts(iso);
+  return `${p.weekday} ${p.day} ${p.month}`;
+}
+
 /** «lun 12 oct · 18:00–06:00 (12 h)», siempre en hora de Colombia y sin depender del ICU del equipo. */
 export function formatShiftRange(startsAt: string, endsAt: string): string {
   if (!Number.isFinite(ms(startsAt)) || !Number.isFinite(ms(endsAt))) return "Horario por definir";
@@ -333,14 +346,19 @@ const SPECIALTY_SYNONYMS: Array<[RegExp, RegExp]> = [
 ];
 const GENERIC_CARE = /domicili|cuidador|acompan|cuidado en casa|general|sin especificar/;
 
-function careFit(
-  shift: Shift,
+/**
+ * Coincidencia entre un texto de cuidado (tipo de servicio, especialidad pedida, área) y el perfil del
+ * profesional. La usan las solicitudes de familias y los turnos de instituciones.
+ */
+export function careFitText(
+  text: string,
   pro: ProContext,
+  emptyReason = "No especificó el tipo de cuidado",
 ): { points: number; reason?: string; warning?: string } {
-  const haystack = normalizeText(`${shift.care_type ?? ""} ${shift.notes.join(" ")}`);
+  const haystack = normalizeText(text);
   const proText = normalizeText([pro.specialty ?? "", ...pro.subSpecialties].join(" "));
   if (!haystack.trim()) {
-    return { points: 18, reason: "La familia no especificó el tipo de cuidado" };
+    return { points: 18, reason: emptyReason };
   }
   if (proText.trim()) {
     for (const [proRe, careRe] of SPECIALTY_SYNONYMS) {
@@ -362,7 +380,18 @@ function careFit(
   return { points: 8, warning: "El tipo de cuidado no coincide claramente con tu especialidad" };
 }
 
-const overlaps = (aStart: number, aEnd: number, bStart: number, bEnd: number) =>
+function careFit(
+  shift: Shift,
+  pro: ProContext,
+): { points: number; reason?: string; warning?: string } {
+  return careFitText(
+    `${shift.care_type ?? ""} ${shift.notes.join(" ")}`,
+    pro,
+    "La familia no especificó el tipo de cuidado",
+  );
+}
+
+export const overlaps = (aStart: number, aEnd: number, bStart: number, bEnd: number) =>
   aStart < bEnd && bStart < aEnd;
 
 export function scoreShift(
@@ -773,6 +802,11 @@ export type HubErrorKind =
   | "conflict"
   | "unavailable"
   | "forbidden_content"
+  | "rate_out_of_band"
+  | "final_round"
+  | "shift_full"
+  | "shifts_required"
+  | "contract_locked"
   | "other";
 
 export interface ServerError {
@@ -793,6 +827,12 @@ export function classifyHubError(err: ServerError | null | undefined): {
   if (hint === "negotiate_rate_requires_plan") return { kind: "negotiate_plan", message };
   if (hint === "application_required") return { kind: "application_required", message };
   if (hint === "quota_exceeded") return { kind: "quota", message };
+  if (hint === "rate_out_of_band") return { kind: "rate_out_of_band", message };
+  if (hint === "final_round") return { kind: "final_round", message };
+  if (hint === "shift_full") return { kind: "shift_full", message };
+  if (hint === "shifts_required") return { kind: "shifts_required", message };
+  if (hint === "contract_locked") return { kind: "contract_locked", message };
+  if (hint === "forbidden_content") return { kind: "forbidden_content", message };
   if (err?.code === "23505") return { kind: "duplicate", message };
   if (err?.code === "23P01") return { kind: "conflict", message };
   if (lower.includes("ya no está disponible") || lower.includes("venció")) {

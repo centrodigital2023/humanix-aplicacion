@@ -31,7 +31,11 @@ export interface OfferRow {
   blocked_reason?: string | null;
   posted_by?: string | null;
   requirements?: string[] | null;
+  /** Ya no se publica en la oferta (vive en `job_offer_private`); solo quedan filas antiguas. */
   address?: string | null;
+  service_area?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface ApplicationRow {
@@ -285,7 +289,16 @@ export function offerQuality(offer: OfferRow): { score: number; missing: string[
     { ok: !!offer.specialty_required, weight: 15, missing: "Especialidad requerida" },
     { ok: !!offer.start_date, weight: 15, missing: "Fecha de inicio" },
     { ok: (offer.requirements?.length ?? 0) > 0, weight: 10, missing: "Requisitos del cargo" },
-    { ok: !!offer.address?.trim(), weight: 10, missing: "Dirección o zona del servicio" },
+    {
+      // La dirección exacta es privada: la ubicación pública es el área del servicio o el punto aproximado del mapa.
+      ok: !!(
+        offer.address?.trim() ||
+        offer.service_area?.trim() ||
+        (offer.lat != null && offer.lng != null)
+      ),
+      weight: 10,
+      missing: "Zona del servicio (área o ubicación en el mapa)",
+    },
     { ok: offer.title.trim().length >= 12, weight: 10, missing: "Título descriptivo" },
     { ok: offer.amount > 0, weight: 15, missing: "Valor ofrecido" },
   ];

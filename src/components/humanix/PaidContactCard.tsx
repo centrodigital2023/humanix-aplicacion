@@ -7,6 +7,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { MessageSquare, Phone, Loader2, ShieldCheck, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { toast } from "sonner";
 
 type Props = {
@@ -97,7 +98,15 @@ export function PaidContactCard({ bookingId, peerName, isPaid, amountCOP }: Prop
       );
       window.open(`https://wa.me/${wa}?text=${greeting}`, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo obtener el contacto");
+      // Ver el WhatsApp de la contraparte es una función del plan Esencial o superior para el profesional.
+      const failure = classifyHubError(e as ServerError);
+      if (failure.kind === "plan_required") {
+        toast.error(failure.message, {
+          action: { label: "Ver planes", onClick: () => navigate({ to: "/planes" }) },
+        });
+      } else {
+        toast.error(failure.message);
+      }
     } finally {
       setRevealing(false);
     }
