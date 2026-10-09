@@ -268,34 +268,105 @@ export type Database = {
         }
         Relationships: []
       }
+      application_events: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          amount: number | null
+          application_id: string
+          created_at: string
+          event: string
+          id: number
+          message: string | null
+          round_no: number
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          amount?: number | null
+          application_id: string
+          created_at?: string
+          event: string
+          id?: number
+          message?: string | null
+          round_no?: number
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          amount?: number | null
+          application_id?: string
+          created_at?: string
+          event?: string
+          id?: number
+          message?: string | null
+          round_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
+          accepted_at: string | null
+          agreed_amount: number | null
+          awaiting: string
+          closed_reason: string | null
           created_at: string
+          decision_note: string | null
+          expires_at: string | null
           id: string
           job_offer_id: string
           message: string | null
+          posted_amount: number | null
           professional_id: string
           proposed_amount: number | null
+          round_no: number
+          shift_ids: string[]
           status: Database["public"]["Enums"]["application_status"]
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
+          agreed_amount?: number | null
+          awaiting?: string
+          closed_reason?: string | null
           created_at?: string
+          decision_note?: string | null
+          expires_at?: string | null
           id?: string
           job_offer_id: string
           message?: string | null
+          posted_amount?: number | null
           professional_id: string
           proposed_amount?: number | null
+          round_no?: number
+          shift_ids?: string[]
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
+          agreed_amount?: number | null
+          awaiting?: string
+          closed_reason?: string | null
           created_at?: string
+          decision_note?: string | null
+          expires_at?: string | null
           id?: string
           job_offer_id?: string
           message?: string | null
+          posted_amount?: number | null
           professional_id?: string
           proposed_amount?: number | null
+          round_no?: number
+          shift_ids?: string[]
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
         }
@@ -395,6 +466,38 @@ export type Database = {
           },
         ]
       }
+      booking_contact_reveals: {
+        Row: {
+          booking_id: string
+          channel: string
+          created_at: string
+          id: string
+          revealer_id: string
+        }
+        Insert: {
+          booking_id: string
+          channel?: string
+          created_at?: string
+          id?: string
+          revealer_id: string
+        }
+        Update: {
+          booking_id?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          revealer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_contact_reveals_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       care_circle_members: {
         Row: {
           accepted_at: string | null
@@ -452,6 +555,47 @@ export type Database = {
         }
         Relationships: []
       }
+      care_kudos: {
+        Row: {
+          booking_id: string
+          created_at: string
+          from_role: string
+          from_user: string
+          id: string
+          kinds: string[]
+          message: string | null
+          to_user: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          from_role: string
+          from_user: string
+          id?: string
+          kinds: string[]
+          message?: string | null
+          to_user: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          from_role?: string
+          from_user?: string
+          id?: string
+          kinds?: string[]
+          message?: string | null
+          to_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_kudos_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       care_logs: {
         Row: {
           alert_reason: string | null
@@ -461,10 +605,12 @@ export type Database = {
           event_type: string
           id: string
           is_alert: boolean
+          mood: string | null
           notified_at: string | null
           patient_name: string | null
           photo_url: string | null
           professional_id: string
+          system_generated: boolean
           vital_diastolic: number | null
           vital_heart_rate: number | null
           vital_oxygen: number | null
@@ -479,10 +625,12 @@ export type Database = {
           event_type: string
           id?: string
           is_alert?: boolean
+          mood?: string | null
           notified_at?: string | null
           patient_name?: string | null
           photo_url?: string | null
           professional_id: string
+          system_generated?: boolean
           vital_diastolic?: number | null
           vital_heart_rate?: number | null
           vital_oxygen?: number | null
@@ -497,10 +645,12 @@ export type Database = {
           event_type?: string
           id?: string
           is_alert?: boolean
+          mood?: string | null
           notified_at?: string | null
           patient_name?: string | null
           photo_url?: string | null
           professional_id?: string
+          system_generated?: boolean
           vital_diastolic?: number | null
           vital_heart_rate?: number | null
           vital_oxygen?: number | null
@@ -653,28 +803,34 @@ export type Database = {
       }
       conversations: {
         Row: {
-          application_id: string
+          application_id: string | null
+          booking_id: string | null
           created_at: string
           id: string
           last_message_at: string
           poster_id: string
           professional_id: string
+          updated_at: string
         }
         Insert: {
-          application_id: string
+          application_id?: string | null
+          booking_id?: string | null
           created_at?: string
           id?: string
           last_message_at?: string
           poster_id: string
           professional_id: string
+          updated_at?: string
         }
         Update: {
-          application_id?: string
+          application_id?: string | null
+          booking_id?: string | null
           created_at?: string
           id?: string
           last_message_at?: string
           poster_id?: string
           professional_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -682,6 +838,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -1493,6 +1656,44 @@ export type Database = {
         }
         Relationships: []
       }
+      job_offer_private: {
+        Row: {
+          access_notes: string | null
+          address: string | null
+          contact_phone: string | null
+          exact_lat: number | null
+          exact_lng: number | null
+          job_offer_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_notes?: string | null
+          address?: string | null
+          contact_phone?: string | null
+          exact_lat?: number | null
+          exact_lng?: number | null
+          job_offer_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_notes?: string | null
+          address?: string | null
+          contact_phone?: string | null
+          exact_lat?: number | null
+          exact_lng?: number | null
+          job_offer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_offer_private_job_offer_id_fkey"
+            columns: ["job_offer_id"]
+            isOneToOne: true
+            referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_offer_requirements: {
         Row: {
           created_at: string
@@ -1531,6 +1732,47 @@ export type Database = {
           },
         ]
       }
+      job_offer_shifts: {
+        Row: {
+          created_at: string
+          ends_at: string
+          filled: number
+          id: string
+          job_offer_id: string
+          positions: number
+          starts_at: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          filled?: number
+          id?: string
+          job_offer_id: string
+          positions?: number
+          starts_at: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          filled?: number
+          id?: string
+          job_offer_id?: string
+          positions?: number
+          starts_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_offer_shifts_job_offer_id_fkey"
+            columns: ["job_offer_id"]
+            isOneToOne: false
+            referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_offers: {
         Row: {
           address: string | null
@@ -1545,6 +1787,7 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          is_urgent: boolean
           lat: number | null
           lng: number | null
           modality: Database["public"]["Enums"]["offer_modality"]
@@ -1552,6 +1795,7 @@ export type Database = {
           poster_type: Database["public"]["Enums"]["poster_type"]
           requirements: string[] | null
           reserved_until: string | null
+          service_area: string | null
           shifts_count: number | null
           specialty_required: string | null
           start_date: string | null
@@ -1572,6 +1816,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          is_urgent?: boolean
           lat?: number | null
           lng?: number | null
           modality: Database["public"]["Enums"]["offer_modality"]
@@ -1579,6 +1824,7 @@ export type Database = {
           poster_type: Database["public"]["Enums"]["poster_type"]
           requirements?: string[] | null
           reserved_until?: string | null
+          service_area?: string | null
           shifts_count?: number | null
           specialty_required?: string | null
           start_date?: string | null
@@ -1599,6 +1845,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          is_urgent?: boolean
           lat?: number | null
           lng?: number | null
           modality?: Database["public"]["Enums"]["offer_modality"]
@@ -1606,6 +1853,7 @@ export type Database = {
           poster_type?: Database["public"]["Enums"]["poster_type"]
           requirements?: string[] | null
           reserved_until?: string | null
+          service_area?: string | null
           shifts_count?: number | null
           specialty_required?: string | null
           start_date?: string | null
@@ -1852,6 +2100,148 @@ export type Database = {
           },
         ]
       }
+      offer_team_invites: {
+        Row: {
+          created_at: string
+          invited_by: string
+          job_offer_id: string
+          professional_id: string
+        }
+        Insert: {
+          created_at?: string
+          invited_by: string
+          job_offer_id: string
+          professional_id: string
+        }
+        Update: {
+          created_at?: string
+          invited_by?: string
+          job_offer_id?: string
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_team_invites_job_offer_id_fkey"
+            columns: ["job_offer_id"]
+            isOneToOne: false
+            referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_alert_log: {
+        Row: {
+          alert_id: string
+          family_user_id: string
+          notified_at: string
+        }
+        Insert: {
+          alert_id: string
+          family_user_id: string
+          notified_at?: string
+        }
+        Update: {
+          alert_id?: string
+          family_user_id?: string
+          notified_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_alert_log_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "opportunity_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_alerts: {
+        Row: {
+          active: boolean
+          care_types: string[]
+          cities: string[]
+          created_at: string
+          id: string
+          min_rate: number | null
+          name: string
+          professional_id: string
+          urgent_only: boolean
+        }
+        Insert: {
+          active?: boolean
+          care_types?: string[]
+          cities?: string[]
+          created_at?: string
+          id?: string
+          min_rate?: number | null
+          name?: string
+          professional_id: string
+          urgent_only?: boolean
+        }
+        Update: {
+          active?: boolean
+          care_types?: string[]
+          cities?: string[]
+          created_at?: string
+          id?: string
+          min_rate?: number | null
+          name?: string
+          professional_id?: string
+          urgent_only?: boolean
+        }
+        Relationships: []
+      }
+      opportunity_contact_reveals: {
+        Row: {
+          counterpart_kind: string
+          created_at: string
+          family_need_id: string | null
+          family_user_id: string
+          id: string
+          job_offer_id: string | null
+          plan: string
+          professional_id: string
+          revealed_on: string
+        }
+        Insert: {
+          counterpart_kind?: string
+          created_at?: string
+          family_need_id?: string | null
+          family_user_id: string
+          id?: string
+          job_offer_id?: string | null
+          plan: string
+          professional_id: string
+          revealed_on?: string
+        }
+        Update: {
+          counterpart_kind?: string
+          created_at?: string
+          family_need_id?: string | null
+          family_user_id?: string
+          id?: string
+          job_offer_id?: string | null
+          plan?: string
+          professional_id?: string
+          revealed_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_contact_reveals_family_need_id_fkey"
+            columns: ["family_need_id"]
+            isOneToOne: false
+            referencedRelation: "family_needs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_contact_reveals_job_offer_id_fkey"
+            columns: ["job_offer_id"]
+            isOneToOne: false
+            referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_webhook_events: {
         Row: {
           error_code: string | null
@@ -1891,21 +2281,97 @@ export type Database = {
         }
         Relationships: []
       }
+      pqrs_intake_attempts: {
+        Row: {
+          action: string
+          contact_hash: string | null
+          created_at: string
+          id: number
+          ip_hash: string
+        }
+        Insert: {
+          action?: string
+          contact_hash?: string | null
+          created_at?: string
+          id?: number
+          ip_hash: string
+        }
+        Update: {
+          action?: string
+          contact_hash?: string | null
+          created_at?: string
+          id?: number
+          ip_hash?: string
+        }
+        Relationships: []
+      }
+      pqrs_ticket_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          from_value: string | null
+          id: string
+          meta: Json
+          ticket_id: string
+          to_value: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          from_value?: string | null
+          id?: string
+          meta?: Json
+          ticket_id: string
+          to_value?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          from_value?: string | null
+          id?: string
+          meta?: Json
+          ticket_id?: string
+          to_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pqrs_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "pqrs_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pqrs_tickets: {
         Row: {
           ai_category: string | null
           ai_priority: string | null
+          ai_reply_draft: string | null
           ai_sentiment: string | null
           ai_summary: string | null
+          assigned_at: string | null
           assigned_to: string | null
+          channel: string
+          consent_data_processing: boolean
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
           created_at: string
           description: string
+          due_at: string | null
+          duplicate_of: string | null
+          first_response_at: string | null
           id: string
+          radicado: string | null
+          reply_draft_edited: boolean | null
           resolution: string | null
           resolved_at: string | null
+          safety_categories: string[]
+          safety_level: string
           status: string
           subject: string
           type: string
@@ -1915,17 +2381,28 @@ export type Database = {
         Insert: {
           ai_category?: string | null
           ai_priority?: string | null
+          ai_reply_draft?: string | null
           ai_sentiment?: string | null
           ai_summary?: string | null
+          assigned_at?: string | null
           assigned_to?: string | null
+          channel?: string
+          consent_data_processing?: boolean
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
           description: string
+          due_at?: string | null
+          duplicate_of?: string | null
+          first_response_at?: string | null
           id?: string
+          radicado?: string | null
+          reply_draft_edited?: boolean | null
           resolution?: string | null
           resolved_at?: string | null
+          safety_categories?: string[]
+          safety_level?: string
           status?: string
           subject: string
           type?: string
@@ -1935,24 +2412,43 @@ export type Database = {
         Update: {
           ai_category?: string | null
           ai_priority?: string | null
+          ai_reply_draft?: string | null
           ai_sentiment?: string | null
           ai_summary?: string | null
+          assigned_at?: string | null
           assigned_to?: string | null
+          channel?: string
+          consent_data_processing?: boolean
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
           description?: string
+          due_at?: string | null
+          duplicate_of?: string | null
+          first_response_at?: string | null
           id?: string
+          radicado?: string | null
+          reply_draft_edited?: boolean | null
           resolution?: string | null
           resolved_at?: string | null
+          safety_categories?: string[]
+          safety_level?: string
           status?: string
           subject?: string
           type?: string
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pqrs_tickets_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "pqrs_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       professional_deletion_log: {
         Row: {
@@ -2455,6 +2951,7 @@ export type Database = {
           hourly_rate: number
           id: string
           job_offer_id: string | null
+          job_offer_shift_id: string | null
           notes: string | null
           payment_mode: string
           platform_fee_amount: number
@@ -2483,6 +2980,7 @@ export type Database = {
           hourly_rate: number
           id?: string
           job_offer_id?: string | null
+          job_offer_shift_id?: string | null
           notes?: string | null
           payment_mode?: string
           platform_fee_amount?: number
@@ -2511,6 +3009,7 @@ export type Database = {
           hourly_rate?: number
           id?: string
           job_offer_id?: string | null
+          job_offer_shift_id?: string | null
           notes?: string | null
           payment_mode?: string
           platform_fee_amount?: number
@@ -2629,13 +3128,17 @@ export type Database = {
           created_at: string
           decision_note: string | null
           ends_at: string
+          expires_at: string | null
           family_need_id: string | null
           family_user_id: string
           hourly_rate: number
           id: string
           message: string | null
+          parent_proposal_id: string | null
+          posted_rate: number | null
           professional_id: string
           proposed_by: Database["public"]["Enums"]["slot_proposal_proposed_by"]
+          round_no: number
           starts_at: string
           status: Database["public"]["Enums"]["slot_proposal_status"]
           updated_at: string
@@ -2646,13 +3149,17 @@ export type Database = {
           created_at?: string
           decision_note?: string | null
           ends_at: string
+          expires_at?: string | null
           family_need_id?: string | null
           family_user_id: string
           hourly_rate?: number
           id?: string
           message?: string | null
+          parent_proposal_id?: string | null
+          posted_rate?: number | null
           professional_id: string
           proposed_by: Database["public"]["Enums"]["slot_proposal_proposed_by"]
+          round_no?: number
           starts_at: string
           status?: Database["public"]["Enums"]["slot_proposal_status"]
           updated_at?: string
@@ -2663,13 +3170,17 @@ export type Database = {
           created_at?: string
           decision_note?: string | null
           ends_at?: string
+          expires_at?: string | null
           family_need_id?: string | null
           family_user_id?: string
           hourly_rate?: number
           id?: string
           message?: string | null
+          parent_proposal_id?: string | null
+          posted_rate?: number | null
           professional_id?: string
           proposed_by?: Database["public"]["Enums"]["slot_proposal_proposed_by"]
+          round_no?: number
           starts_at?: string
           status?: Database["public"]["Enums"]["slot_proposal_status"]
           updated_at?: string
@@ -2687,6 +3198,254 @@ export type Database = {
             columns: ["family_need_id"]
             isOneToOne: false
             referencedRelation: "family_needs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slot_proposals_parent_proposal_id_fkey"
+            columns: ["parent_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "slot_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_contract_events: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          contract_id: string
+          created_at: string
+          data: Json
+          event: string
+          hash: string
+          id: number
+          prev_hash: string
+          seq: number
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          contract_id: string
+          created_at?: string
+          data?: Json
+          event: string
+          hash: string
+          id?: number
+          prev_hash: string
+          seq: number
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          contract_id?: string
+          created_at?: string
+          data?: Json
+          event?: string
+          hash?: string
+          id?: number
+          prev_hash?: string
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "smart_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_contract_shifts: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          contract_id: string
+          ends_at: string
+          hours: number
+          id: string
+          job_offer_shift_id: string | null
+          shift_no: number
+          starts_at: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          contract_id: string
+          ends_at: string
+          hours: number
+          id?: string
+          job_offer_shift_id?: string | null
+          shift_no: number
+          starts_at: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          contract_id?: string
+          ends_at?: string
+          hours?: number
+          id?: string
+          job_offer_shift_id?: string | null
+          shift_no?: number
+          starts_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_contract_shifts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "smart_contract_shifts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "smart_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_contract_signatures: {
+        Row: {
+          accepted_clauses: string[]
+          body_hash: string
+          contract_id: string
+          id: string
+          identity_evidence: Json
+          identity_method: string
+          ip_hash: string | null
+          party: string
+          signature_hash: string
+          signed_at: string
+          signer_id: string
+          signer_identity: string
+          signer_name: string
+          step_up: Json
+          terms_hash: string
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_clauses: string[]
+          body_hash: string
+          contract_id: string
+          id?: string
+          identity_evidence?: Json
+          identity_method: string
+          ip_hash?: string | null
+          party: string
+          signature_hash: string
+          signed_at?: string
+          signer_id: string
+          signer_identity: string
+          signer_name: string
+          step_up: Json
+          terms_hash: string
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_clauses?: string[]
+          body_hash?: string
+          contract_id?: string
+          id?: string
+          identity_evidence?: Json
+          identity_method?: string
+          ip_hash?: string | null
+          party?: string
+          signature_hash?: string
+          signed_at?: string
+          signer_id?: string
+          signer_identity?: string
+          signer_name?: string
+          step_up?: Json
+          terms_hash?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_contract_signatures_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "smart_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_contracts: {
+        Row: {
+          activated_at: string | null
+          application_id: string | null
+          closed_at: string | null
+          contract_no: string
+          created_at: string
+          id: string
+          institution_user_id: string
+          job_offer_id: string | null
+          professional_id: string
+          signature_deadline: string
+          status: string
+          template_version: string
+          terms: Json
+          terms_hash: string
+          total_amount: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          activated_at?: string | null
+          application_id?: string | null
+          closed_at?: string | null
+          contract_no: string
+          created_at?: string
+          id?: string
+          institution_user_id: string
+          job_offer_id?: string | null
+          professional_id: string
+          signature_deadline: string
+          status?: string
+          template_version: string
+          terms: Json
+          terms_hash: string
+          total_amount: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          activated_at?: string | null
+          application_id?: string | null
+          closed_at?: string | null
+          contract_no?: string
+          created_at?: string
+          id?: string
+          institution_user_id?: string
+          job_offer_id?: string | null
+          professional_id?: string
+          signature_deadline?: string
+          status?: string
+          template_version?: string
+          terms?: Json
+          terms_hash?: string
+          total_amount?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_contracts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "smart_contracts_job_offer_id_fkey"
+            columns: ["job_offer_id"]
+            isOneToOne: false
+            referencedRelation: "job_offers"
             referencedColumns: ["id"]
           },
         ]
@@ -3335,8 +4094,134 @@ export type Database = {
       }
     }
     Functions: {
+      accept_application: {
+        Args: { p_application_id: string; p_shifts?: Json }
+        Returns: Json
+      }
       accept_slot_proposal: { Args: { p_proposal_id: string }; Returns: string }
       ad_track: { Args: { _id: string; _kind: string }; Returns: undefined }
+      append_contract_event: {
+        Args: {
+          p_actor: string
+          p_contract: string
+          p_data?: Json
+          p_event: string
+          p_role: string
+        }
+        Returns: undefined
+      }
+      apply_to_family_need: {
+        Args: { p_message?: string; p_need_ids: string[]; p_rate?: number }
+        Returns: string
+      }
+      apply_to_offer: {
+        Args: {
+          p_amount?: number
+          p_message?: string
+          p_offer_id: string
+          p_shift_ids?: string[]
+        }
+        Returns: string
+      }
+      care_can_view: {
+        Args: { p_booking_id: string; p_user: string }
+        Returns: boolean
+      }
+      care_history_report: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          alerts: number
+          booking_id: string
+          ended_at: string
+          events: number
+          incidents: number
+          kudos_sent: boolean
+          last_mood: string
+          offer_title: string
+          planned_hours: number
+          professional: string
+          scheduled_at: string
+          specialty: string
+          started_at: string
+          status: string
+          vitals: number
+        }[]
+      }
+      care_report: { Args: { p_booking_id: string }; Returns: Json }
+      care_watchers: {
+        Args: { p_client: string }
+        Returns: {
+          is_owner: boolean
+          watcher_id: string
+        }[]
+      }
+      career_stats_core: { Args: { p_user: string }; Returns: Json }
+      city_key: { Args: { p_city: string }; Returns: string }
+      consume_reveal_quota: {
+        Args: { p_counterpart: string; p_offer: string; p_pro: string }
+        Returns: number
+      }
+      contract_event_hash: {
+        Args: {
+          p_actor: string
+          p_at: string
+          p_data: Json
+          p_event: string
+          p_prev: string
+          p_role: string
+          p_seq: number
+        }
+        Returns: string
+      }
+      contract_signature_hash: {
+        Args: {
+          p_at: string
+          p_body_hash: string
+          p_contract: string
+          p_party: string
+          p_signer: string
+          p_step_up: Json
+          p_terms_hash: string
+        }
+        Returns: string
+      }
+      contract_signer_readiness: {
+        Args: { p_contract_id: string; p_user: string }
+        Returns: Json
+      }
+      counter_application: {
+        Args: { p_amount: number; p_application_id: string; p_message?: string }
+        Returns: number
+      }
+      counter_slot_proposal: {
+        Args: { p_message?: string; p_proposal_id: string; p_rate: number }
+        Returns: string
+      }
+      create_contract_for_application: {
+        Args: { p_application_id: string; p_pairs: Json }
+        Returns: string
+      }
+      decline_application: {
+        Args: { p_application_id: string; p_note?: string }
+        Returns: undefined
+      }
+      decline_contract: {
+        Args: { p_contract_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      default_contract_conditions: { Args: never; Returns: Json }
+      expire_stale_applications: { Args: never; Returns: number }
+      expire_stale_contracts: { Args: never; Returns: number }
+      expire_stale_proposals: { Args: never; Returns: number }
+      family_reputation: {
+        Args: { p_family: string }
+        Returns: {
+          completed_services: number
+          dimensions: Json
+          ratings_count: number
+          stars_avg: number
+        }[]
+      }
       find_replacement_candidates: {
         Args: { p_booking_id: string }
         Returns: {
@@ -3348,6 +4233,27 @@ export type Database = {
           specialty: string
           total_jobs: number
           user_id: string
+        }[]
+      }
+      get_booking_contact: {
+        Args: { _booking_id: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          is_professional: boolean
+          peer_id: string
+          phone: string
+        }[]
+      }
+      get_care_summary: {
+        Args: { p_booking_id: string }
+        Returns: {
+          arrival_at: string
+          departure_at: string
+          event_count: number
+          has_incident: boolean
+          has_vitals: boolean
+          last_event_at: string
         }[]
       }
       get_my_profile: {
@@ -3370,6 +4276,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_or_create_booking_conversation: {
+        Args: { _booking_id: string }
+        Returns: string
       }
       get_platform_counts: {
         Args: never
@@ -3422,7 +4332,131 @@ export type Database = {
         }
         Returns: boolean
       }
+      hx_cop: { Args: { p_amount: number }; Returns: string }
+      hx_duration_label: { Args: { p_minutes: number }; Returns: string }
+      hx_notify: {
+        Args: {
+          p_body: string
+          p_link: string
+          p_title: string
+          p_type: string
+          p_user: string
+        }
+        Returns: undefined
+      }
+      hx_sha256: { Args: { p_text: string }; Returns: string }
+      institution_application_inbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          accepted_at: string
+          agreed_amount: number
+          application_id: string
+          avg_rating: number
+          awaiting: string
+          closed_reason: string
+          contract_id: string
+          contract_status: string
+          created_at: string
+          expires_at: string
+          job_offer_id: string
+          jobs_with_me: number
+          message: string
+          modality: string
+          offer_title: string
+          posted_amount: number
+          professional_avatar: string
+          professional_city: string
+          professional_id: string
+          professional_name: string
+          profile_verified: boolean
+          proposed_amount: number
+          rethus_verified: boolean
+          round_no: number
+          shifts: Json
+          specialty: string
+          status: string
+          total_jobs: number
+          years_experience: number
+        }[]
+      }
+      institution_reputation: {
+        Args: { p_institution: string }
+        Returns: {
+          completed_services: number
+          dimensions: Json
+          ratings_count: number
+          stars_avg: number
+        }[]
+      }
+      invite_matching_professionals: {
+        Args: { p_offer_id: string; p_user_ids: string[] }
+        Returns: number
+      }
+      invite_team_core: {
+        Args: {
+          p_auto?: boolean
+          p_exclude?: string
+          p_inviter: string
+          p_offer: string
+        }
+        Returns: number
+      }
+      invite_team_to_offer: { Args: { p_offer_id: string }; Returns: number }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      kudos_allowed_kinds: { Args: { p_from_role: string }; Returns: string[] }
+      list_open_family_needs: {
+        Args: { p_limit?: number }
+        Returns: {
+          already_applied: boolean
+          care_type: string
+          city: string
+          created_at: string
+          display_name: string
+          ends_at: string
+          family_completed: number
+          family_ratings: number
+          family_stars: number
+          family_user_id: string
+          hourly_rate: number
+          id: string
+          notes_public: string
+          starts_at: string
+        }[]
+      }
+      list_open_institution_offers: {
+        Args: { p_limit?: number }
+        Returns: {
+          amount: number
+          city: string
+          completed_services: number
+          created_at: string
+          description: string
+          end_date: string
+          institution_name: string
+          institution_type: string
+          institution_user_id: string
+          institution_verified: boolean
+          is_urgent: boolean
+          lat: number
+          lng: number
+          modality: string
+          my_amount: number
+          my_application_id: string
+          my_awaiting: string
+          my_status: string
+          offer_id: string
+          positions_filled: number
+          positions_total: number
+          rating_avg: number
+          rating_count: number
+          requirements: string[]
+          service_area: string
+          shifts: Json
+          specialty_required: string
+          start_date: string
+          title: string
+        }[]
+      }
       log_audit: {
         Args: {
           _action: string
@@ -3432,6 +4466,33 @@ export type Database = {
           _severity?: string
         }
         Returns: string
+      }
+      market_rate_stats: {
+        Args: { p_city?: string }
+        Returns: {
+          median: number
+          n: number
+          p25: number
+          p75: number
+        }[]
+      }
+      market_supply_snapshot: {
+        Args: { p_city?: string; p_specialty?: string }
+        Returns: {
+          professionals: number
+          rethus_verified: number
+        }[]
+      }
+      marketplace_city_balance: {
+        Args: never
+        Returns: {
+          city_key: string
+          city_label: string
+          offers_30d: number
+          open_offers: number
+          professionals_available: number
+          professionals_published: number
+        }[]
       }
       match_offers_for_professional: {
         Args: {
@@ -3455,6 +4516,144 @@ export type Database = {
           user_id: string
         }[]
       }
+      message_has_forbidden_content: {
+        Args: { p_text: string }
+        Returns: boolean
+      }
+      moderate_offer: {
+        Args: { p_action: string; p_offer_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      my_active_services: {
+        Args: { p_limit?: number }
+        Returns: {
+          alerts: number
+          booking_id: string
+          counterpart_id: string
+          counterpart_name: string
+          duration_hours: number
+          events: number
+          last_mood: string
+          last_vitals: Json
+          owner_name: string
+          scheduled_at: string
+          side: string
+          started_at: string
+          status: string
+        }[]
+      }
+      my_career_stats: { Args: never; Returns: Json }
+      my_offer_applications: {
+        Args: { p_limit?: number }
+        Returns: {
+          accepted_at: string
+          agreed_amount: number
+          application_id: string
+          awaiting: string
+          booking_ids: string[]
+          city: string
+          closed_reason: string
+          contract_id: string
+          contract_status: string
+          created_at: string
+          expires_at: string
+          i_signed: boolean
+          institution_id: string
+          institution_name: string
+          job_offer_id: string
+          modality: string
+          offer_title: string
+          other_signed: boolean
+          posted_amount: number
+          proposed_amount: number
+          round_no: number
+          shifts: Json
+          status: string
+        }[]
+      }
+      my_received_kudos: {
+        Args: { p_limit?: number }
+        Returns: {
+          booking_id: string
+          created_at: string
+          from_name: string
+          from_role: string
+          id: string
+          kinds: string[]
+          message: string
+        }[]
+      }
+      my_slot_proposals: {
+        Args: { p_limit?: number }
+        Returns: {
+          booking_id: string
+          created_at: string
+          decision_note: string
+          ends_at: string
+          expires_at: string
+          family_need_id: string
+          family_user_id: string
+          hourly_rate: number
+          id: string
+          message: string
+          parent_proposal_id: string
+          peer_avatar: string
+          peer_city: string
+          peer_id: string
+          peer_name: string
+          posted_rate: number
+          professional_id: string
+          proposed_by: string
+          round_no: number
+          starts_at: string
+          status: string
+        }[]
+      }
+      my_smart_contracts: {
+        Args: { p_limit?: number }
+        Returns: {
+          contract_id: string
+          contract_no: string
+          counterpart_name: string
+          created_at: string
+          first_booking_id: string
+          first_shift: string
+          i_signed: boolean
+          my_party: string
+          offer_title: string
+          other_signed: boolean
+          shifts: number
+          signature_deadline: string
+          status: string
+          total_amount: number
+          version: number
+        }[]
+      }
+      my_trusted_team: {
+        Args: never
+        Returns: {
+          available: boolean
+          avatar_url: string
+          avg_rating: number
+          display_name: string
+          favorite_since: string
+          last_service_at: string
+          professional_id: string
+          services_together: number
+          specialty: string
+        }[]
+      }
+      notify_offer_alerts: { Args: { p_offer: string }; Returns: number }
+      offer_band_max: {
+        Args: { p_modality: string; p_posted: number }
+        Returns: number
+      }
+      offer_band_min: {
+        Args: { p_modality: string; p_posted: number }
+        Returns: number
+      }
+      party_display_name: { Args: { p_user: string }; Returns: string }
+      plan_key_for: { Args: { p_user: string }; Returns: string }
       platform_commission_pct: { Args: { p_user_id: string }; Returns: number }
       professional_dimension_averages: {
         Args: { p_user: string }
@@ -3464,7 +4663,32 @@ export type Database = {
           ratings: number
         }[]
       }
+      professional_kudos_summary: {
+        Args: { p_user: string }
+        Returns: {
+          givers: number
+          kind: string
+        }[]
+      }
+      professional_public_stats: { Args: { p_user: string }; Returns: Json }
+      publish_institution_offer: { Args: { p_offer: Json }; Returns: string }
       publish_profile: { Args: { _validation_id?: string }; Returns: Json }
+      rate_band_max: { Args: { p_posted: number }; Returns: number }
+      rate_band_min: { Args: { p_posted: number }; Returns: number }
+      record_contract_signature: {
+        Args: {
+          p_accepted_clauses: string[]
+          p_body_hash: string
+          p_contract_id: string
+          p_ip_hash: string
+          p_signer_id: string
+          p_step_up: Json
+          p_terms_hash: string
+          p_user_agent: string
+        }
+        Returns: Json
+      }
+      redact_contact_info: { Args: { p_text: string }; Returns: string }
       redeem_staff_invitation: {
         Args: { _token: string }
         Returns: {
@@ -3477,9 +4701,44 @@ export type Database = {
         Args: { p_accept: boolean; p_id: string }
         Returns: undefined
       }
+      reveal_daily_quota: { Args: { p_plan: string }; Returns: number }
+      reveal_offer_contact: {
+        Args: { p_application_id: string }
+        Returns: {
+          access_notes: string
+          address: string
+          city: string
+          counterpart_name: string
+          phone: string
+          revealed_at: string
+          reveals_left: number
+          whatsapp: string
+        }[]
+      }
+      reveal_opportunity_contact: {
+        Args: { p_need_id: string }
+        Returns: {
+          address: string
+          city: string
+          full_name: string
+          phone: string
+          revealed_at: string
+          reveals_left: number
+          whatsapp: string
+        }[]
+      }
+      send_kudos: {
+        Args: { p_booking_id: string; p_kinds: string[]; p_message?: string }
+        Returns: string
+      }
       set_offer_reserved: {
         Args: { _offer_id: string; _professional_id: string }
         Returns: undefined
+      }
+      short_display_name: { Args: { p_full_name: string }; Returns: string }
+      sign_contract: {
+        Args: { p_contract_id: string; p_otp: string; p_party: string }
+        Returns: boolean
       }
       staff_get_profile: {
         Args: { _user_id: string }
@@ -3501,6 +4760,44 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      suggest_professionals_for_offer: {
+        Args: { p_limit?: number; p_offer_id: string }
+        Returns: {
+          available: boolean
+          avatar_url: string
+          avg_rating: number
+          final_score: number
+          full_name: string
+          home_city: string
+          hourly_rate: number
+          matches_specialty: boolean
+          rethus_verified: boolean
+          rule_score: number
+          serves_city: boolean
+          similarity: number
+          source: string
+          specialty: string
+          total_jobs: number
+          user_id: string
+        }[]
+      }
+      trusted_team_free_count: {
+        Args: {
+          p_client: string
+          p_end: string
+          p_exclude?: string
+          p_start: string
+        }
+        Returns: number
+      }
+      update_contract_conditions: {
+        Args: { p_conditions: Json; p_contract_id: string }
+        Returns: string
+      }
+      verify_contract_integrity: {
+        Args: { p_contract_id: string }
+        Returns: Json
       }
       wearable_ingest_by_pairing_code: {
         Args: {
@@ -3579,6 +4876,7 @@ export type Database = {
         | "rejected"
         | "cancelled"
         | "expired"
+        | "countered"
       subscription_plan: "free" | "pro" | "family" | "institution"
       subscription_status: "active" | "cancelled" | "past_due" | "trialing"
       testimonial_role: "professional" | "family" | "institution"
@@ -3773,6 +5071,7 @@ export const Constants = {
         "rejected",
         "cancelled",
         "expired",
+        "countered",
       ],
       subscription_plan: ["free", "pro", "family", "institution"],
       subscription_status: ["active", "cancelled", "past_due", "trialing"],
