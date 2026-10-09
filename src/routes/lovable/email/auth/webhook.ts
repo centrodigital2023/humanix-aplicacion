@@ -9,7 +9,7 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 // Configuration
-const SITE_NAME = "Humanix Aplicacion"
+const SITE_NAME = "Humanix"
 const SENDER_DOMAIN = "notify.humanix.lat"
 const ROOT_DOMAIN = "humanix.lat"
 const FROM_DOMAIN = "notify.humanix.lat"
@@ -28,42 +28,46 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
           sendUrl: process.env['LOVABLE_SEND_URL'],
           emails: {
             signup: {
-              subject: 'Confirm your email',
+              subject: 'Tu código de verificación de Humanix',
               render: (data) =>
                 React.createElement(SignupEmail, {
                   siteName: SITE_NAME,
                   siteUrl: SITE_URL,
                   recipient: data.email,
                   confirmationUrl: data.url,
+                  token: data.token ?? undefined,
                 }),
             },
             invite: {
-              subject: "You've been invited",
+              subject: 'Te invitaron a Humanix',
               render: (data) =>
                 React.createElement(InviteEmail, {
                   siteName: SITE_NAME,
                   siteUrl: SITE_URL,
                   confirmationUrl: data.url,
+                  token: data.token ?? undefined,
                 }),
             },
             magiclink: {
-              subject: 'Your login link',
+              subject: 'Tu código de acceso a Humanix',
               render: (data) =>
                 React.createElement(MagicLinkEmail, {
                   siteName: SITE_NAME,
                   confirmationUrl: data.url,
+                  token: data.token ?? undefined,
                 }),
             },
             recovery: {
-              subject: 'Reset your password',
+              subject: 'Restablece tu contraseña de Humanix',
               render: (data) =>
                 React.createElement(RecoveryEmail, {
                   siteName: SITE_NAME,
                   confirmationUrl: data.url,
+                  token: data.token ?? undefined,
                 }),
             },
             email_change: {
-              subject: 'Confirm your new email',
+              subject: 'Confirma tu nuevo correo en Humanix',
               render: (data) =>
                 React.createElement(EmailChangeEmail, {
                   siteName: SITE_NAME,
@@ -71,10 +75,11 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
                   email: data.email,
                   newEmail: data.new_email ?? '',
                   confirmationUrl: data.url,
+                  token: data.token ?? undefined,
                 }),
             },
             reauthentication: {
-              subject: 'Your verification code',
+              subject: 'Tu código de verificación de Humanix',
               render: (data) =>
                 React.createElement(ReauthenticationEmail, { token: data.token ?? '' }),
             },
