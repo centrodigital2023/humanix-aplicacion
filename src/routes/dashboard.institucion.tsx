@@ -60,6 +60,7 @@ import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard
 import { CareHistoryCard } from "@/components/humanix/care/CareHistoryCard";
 import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
+import { CareCompassCard } from "@/components/humanix/CareCompassCard";
 import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -618,6 +619,8 @@ function InstitutionDashboard() {
               onGoToInbox={() => inboxRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
               onGoToTalent={() => setTab("talento")}
             />
+
+            <CareCompassCard role="institution" userId={user.id} />
 
             {/* Turnos en vivo: estado, alertas, ánimo y últimos signos vitales de cada turno en curso */}
             <ActiveServicesCard userId={user.id} title="Turnos en vivo" sides={["client"]} />

@@ -39,6 +39,7 @@ import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard
 import { CareHistoryCard } from "@/components/humanix/care/CareHistoryCard";
 import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
 import { useActiveServices } from "@/hooks/use-care-loop";
+import { CareCompassCard } from "@/components/humanix/CareCompassCard";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
 import { WearableConnections } from "@/components/humanix/WearableConnections";
 import { distanceKm, formatKm } from "@/lib/geo";
@@ -527,6 +528,8 @@ function FamilyDashboard() {
 
         {/* Acciones rápidas */}
         <FamilyQuickActions />
+
+        {user && <CareCompassCard role="family" userId={user.id} />}
 
         {/* Mis servicios activos */}
         {user && <MyBookings userId={user.id} />}
