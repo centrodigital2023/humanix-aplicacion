@@ -160,7 +160,8 @@ export function buildBriefing(s: CompassSignals): CompassBriefing {
     Math.min(s.pendingProposals + s.pendingApplications, 6) * 5 +
     Math.min(s.openOffers ?? 0, 6) * 4;
   const calm = Math.max(0, Math.min(100, 100 - penalty));
-  const tone: CompassTone = alerts > 0 ? "urgent" : calm < 80 ? "attention" : "calm";
+  const tone: CompassTone =
+    alerts > 0 ? "urgent" : actions.some((a) => a.tone === "attention") ? "attention" : "calm";
 
   const headlines: Record<CompassRole, Record<CompassTone, string>> = {
     family: {
