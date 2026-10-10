@@ -1,6 +1,6 @@
 // Resultado tras verificar el contacto: beneficio activo, código para canjear, o el motivo por el que no hay.
 import { useEffect, useState } from "react";
-import { Check, Copy, Gift, PartyPopper, Share2 } from "lucide-react";
+import { Check, Copy, Gift, PartyPopper, PenLine, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BENEFIT, REDEEM_ERRORS, type Profile } from "@/lib/marketValidation";
 import type { VerifiedResult } from "./ValidationOtpStep";
@@ -30,10 +30,13 @@ export function ValidationResult({
   result,
   profile,
   loggedIn,
+  onRewrite,
 }: {
   result: VerifiedResult;
   profile: Profile | undefined;
   loggedIn: boolean;
+  /** Volver a las respuestas abiertas para reescribirlas (cuando se parecen demasiado a las de otra persona). */
+  onRewrite?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const redeemed = result.redeemed?.ok ? result.redeemed : null;
@@ -141,6 +144,26 @@ export function ValidationResult({
               </a>
             </Button>
           </div>
+        </div>
+      ) : result.benefit === "review" ? (
+        <div className="space-y-3 rounded-2xl border-2 border-warn/40 bg-card p-6" role="status">
+          <PenLine className="mx-auto h-8 w-8 text-warn" aria-hidden="true" />
+          <p className="text-lg font-bold">
+            Tus respuestas se parecen mucho a otras que recibimos hoy
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Para ganar tu {BENEFIT.label} necesitamos tus propias palabras. Tus respuestas igual
+            quedaron registradas; si quieres el beneficio, reescríbelas con tu experiencia.
+          </p>
+          {onRewrite && (
+            <Button
+              type="button"
+              onClick={onRewrite}
+              className="min-h-12 rounded-2xl px-6 text-base"
+            >
+              Reescribir con mis palabras
+            </Button>
+          )}
         </div>
       ) : result.benefit === "already_redeemed" ? (
         <div className="rounded-2xl bg-muted/60 p-5" role="status">

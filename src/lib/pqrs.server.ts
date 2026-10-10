@@ -3,6 +3,7 @@
 // Vitest inyectando el cliente de base de datos, los encabezados y la configuración de IA.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { clientIp } from "./clientIp";
 import {
   detectSafetySignals,
   isValidRadicado,
@@ -45,14 +46,6 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(d))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-}
-
-function clientIp(header: PqrsDeps["header"]): string {
-  return (
-    (header("x-forwarded-for") ?? "").split(",")[0].trim() ||
-    header("cf-connecting-ip") ||
-    "unknown"
-  );
 }
 
 /** Registro de ejecución para observabilidad. Nunca rompe la acción principal. */

@@ -28,6 +28,9 @@ import {
   wtpSentence,
   type MarketValidationInput,
   type ResponseRow,
+  isDisposableEmail,
+  isNearDuplicate,
+  QUALITY_FLAG_LABEL,
 } from "./marketValidation";
 
 const valid = (over: Partial<MarketValidationInput> = {}): MarketValidationInput => ({
@@ -403,6 +406,19 @@ describe("señal de demanda", () => {
     expect(signalOf({ signal_score: null, total_score: 15 })).toBe(50);
     expect(signalOf({ signal_score: null, total_score: 0 })).toBeNull();
   });
+
+  it("la señal siempre queda entre 0 y 100 y ignora lo que no es número", () => {
+    expect(signalOf({ signal_score: 140, total_score: null })).toBe(100);
+    expect(signalOf({ signal_score: -3, total_score: null })).toBe(0);
+    expect(signalOf({ signal_score: null, total_score: 45 })).toBe(100); // 45/30 se limita a 100
+    expect(signalOf({ signal_score: Number.NaN, total_score: null })).toBeNull();
+    expect(
+      signalOf({
+        signal_score: undefined as unknown as null,
+        total_score: undefined as unknown as null,
+      }),
+    ).toBeNull();
+  });
 });
 
 // ── Tabulación ────────────────────────────────────────────────────────────────────
@@ -557,6 +573,44 @@ describe("tabulate", () => {
     expect(t.daily.reduce((s, d) => s + d.count, 0)).toBe(3); // la del 1 de septiembre queda fuera
   });
 
+  it("la serie diaria usa el día de Colombia aunque en UTC ya sea mañana", () => {
+    // 2026-10-10 02:00 UTC = 2026-10-09 21:00 en Bogotá: «hoy» allá sigue siendo el 9
+    const late = Date.parse("2026-10-10T02:00:00Z");
+    const d = tabulate(
+      [
+        row({ created_at: "2026-10-10T01:30:00Z" }), // 20:30 del 9 en Bogotá
+        row({ created_at: "2026-10-10T05:10:00Z" }), // 00:10 del 10 en Bogotá: aún no «existe» en la serie
+        row({ created_at: "2026-10-09T04:59:00Z" }), // 23:59 del 8 en Bogotá
+      ],
+      late,
+    ).daily;
+    expect(d).toHaveLength(14);
+    expect(d[13]).toEqual({ day: "2026-10-09", count: 1 });
+    expect(d[12]).toEqual({ day: "2026-10-08", count: 1 });
+    expect(d[0].day).toBe("2026-09-26");
+    // los 14 días son consecutivos
+    for (let i = 1; i < d.length; i++) {
+      expect(Date.parse(d[i].day) - Date.parse(d[i - 1].day)).toBe(86_400_000);
+    }
+  });
+
+  it("una fecha dañada no tumba la tabulación", () => {
+    expect(() => tabulate([row({ created_at: "no-es-fecha" })], NOW)).not.toThrow();
+    expect(
+      tabulate([row({ created_at: "no-es-fecha" })], NOW).daily.every((x) => x.count === 0),
+    ).toBe(true);
+  });
+
+  it("una disposición a pagar fuera de 0–100 (fila antigua dañada) no cuenta", () => {
+    const x = tabulate(
+      [row({ willingness_pct: 150 }), row({ willingness_pct: -4 }), row({ willingness_pct: 50 })],
+      NOW,
+    );
+    expect(x.avgWtp).toBe(50);
+    expect(x.medianWtp).toBe(50);
+    expect(x.wtpBuckets.reduce((s2, b) => s2 + b.count, 0)).toBe(1);
+  });
+
   it("clasifica las señales en niveles", () => {
     expect(t.tiers).toEqual({ strong: 3, medium: 0, weak: 1 });
   });
@@ -694,5 +748,117 @@ describe("apoyos de la interfaz", () => {
     expect(BENEFIT.plan).toBe("essential_monthly");
     expect(BENEFIT.months).toBe(1);
     expect(CHANNEL_VALUES.length).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe("correos temporales", () => {
+  it("reconoce los dominios de correo desechable y sus subdominios, sin importar mayúsculas", () => {
+    expect(isDisposableEmail("x@mailinator.com")).toBe(true);
+    expect(isDisposableEmail("x@MAILINATOR.COM")).toBe(true);
+    expect(isDisposableEmail("x@inbox.mailinator.com")).toBe(true);
+    expect(isDisposableEmail("x@10minutemail.net")).toBe(true);
+    expect(isDisposableEmail("x@yopmail.com")).toBe(true);
+  });
+
+  it("no confunde correos normales ni dominios que solo se le parecen", () => {
+    expect(isDisposableEmail("x@gmail.com")).toBe(false);
+    expect(isDisposableEmail("x@empresa.co")).toBe(false);
+    expect(isDisposableEmail("x@notmailinator.com")).toBe(false);
+    expect(isDisposableEmail("x@mailinator.com.co")).toBe(false);
+    expect(isDisposableEmail("sin-arroba")).toBe(false);
+    expect(isDisposableEmail("x@")).toBe(false);
+  });
+
+  it("el formulario no acepta un correo temporal y lo explica", () => {
+    const r = marketValidationSchema.safeParse(valid({ contact: "persona@mailinator.com" }));
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const msg = r.error.issues.find((i) => i.path[0] === "contact")?.message ?? "";
+      expect(msg).toContain("correo personal");
+    }
+    expect(marketValidationSchema.safeParse(valid({ contact: "persona@gmail.com" })).success).toBe(
+      true,
+    );
+    // un celular nunca es «temporal»
+    expect(marketValidationSchema.safeParse(valid({ contact: "300 123 4567" })).success).toBe(true);
+  });
+});
+
+describe("respuestas copiadas entre personas", () => {
+  const base = {
+    serviceOffer: "Busco una auxiliar de enfermería para cuidar a mi mamá de noche",
+    painPoint:
+      "No encuentro a nadie de confianza y las agencias cobran mucho y no responden rápido",
+    targetAudience: "Hijos de cuarenta años que trabajan todo el día en una ciudad distinta",
+    dailyChange: "Podría trabajar tranquila sabiendo que alguien verificado la acompaña y me avisa",
+  };
+
+  it("el mismo texto es copia", () => {
+    expect(isNearDuplicate(base, { ...base })).toBe(true);
+  });
+
+  it("cambiar una palabra de cada respuesta larga sigue siendo copia (umbral 0,8)", () => {
+    expect(
+      isNearDuplicate(base, {
+        serviceOffer: "Busco una auxiliar de enfermería para cuidar a mi madre de noche",
+        painPoint:
+          "No encuentro a nadie de confianza y las agencias cobran mucho y no responden pronto",
+        targetAudience: "Hijos de cuarenta años que trabajan todo el día en una ciudad diferente",
+        dailyChange:
+          "Podría trabajar tranquila sabiendo que alguien verificado la acompaña y me escribe",
+      }),
+    ).toBe(true);
+  });
+
+  it("textos propios no son copia aunque hablen del mismo tema", () => {
+    expect(
+      isNearDuplicate(base, {
+        serviceOffer: "Necesito cuidado domiciliario para mi papá después de su cirugía",
+        painPoint:
+          "Las enfermeras que he contratado llegan tarde y casi nunca reportan cómo estuvo el día",
+        targetAudience: "Familias con adultos mayores que viven solos en Medellín",
+        dailyChange: "Sabría a qué hora llegó la enfermera y qué hizo durante el turno",
+      }),
+    ).toBe(false);
+  });
+
+  it("exige que se parezcan al menos 3 de las 4 respuestas", () => {
+    const two = {
+      ...base,
+      targetAudience: "Enfermeras jóvenes que buscan turnos extra cerca de su barrio",
+      dailyChange: "Cobraría el mismo día y tendría un historial que respalde mi experiencia",
+    };
+    expect(isNearDuplicate(base, two)).toBe(false); // solo 2 de 4 coinciden
+  });
+
+  it("las frases cortas no cuentan (coinciden por casualidad)", () => {
+    const short = {
+      serviceOffer: "Busco enfermera",
+      painPoint: "Confianza",
+      targetAudience: "Familias",
+      dailyChange: "Tranquilidad",
+    };
+    expect(isNearDuplicate(short, { ...short })).toBe(false);
+  });
+
+  it("tolera textos vacíos o nulos", () => {
+    expect(
+      isNearDuplicate(
+        { serviceOffer: null, painPoint: undefined, targetAudience: "", dailyChange: "  " },
+        { serviceOffer: null, painPoint: null, targetAudience: null, dailyChange: null },
+      ),
+    ).toBe(false);
+  });
+
+  it("cada aviso de calidad tiene un nombre claro para el panel", () => {
+    for (const f of [
+      "gibberish",
+      "repeated_text",
+      "low_effort",
+      "example_copy",
+      "duplicate_text",
+    ]) {
+      expect(QUALITY_FLAG_LABEL[f]).toBeTruthy();
+    }
   });
 });

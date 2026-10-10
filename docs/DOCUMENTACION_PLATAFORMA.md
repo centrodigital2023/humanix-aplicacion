@@ -112,6 +112,8 @@ Puntaje de salud de la plataforma, 8 KPIs animados, pestañas **Overview / Usuar
 
 Subrutas: `fraude`, `auditoria`, `publicidad`, `marketing`, `crm`, `marketplace`, `resenas`, `testimonios`, `validacion`, `activar`.
 
+`/superadmin/validacion` tabula en vivo el formulario de validación de mercado y su pestaña inicial **Hallazgos** entrega, de forma automática, el veredicto (con criterios visibles y margen de error), los temas de dolor, los contactos a priorizar con mensaje sugerido (nunca habla de pagos), los segmentos y un resumen para compartir; además avisa por notificación de cada contacto fuerte recién verificado. Reglas y límites en `docs/VALIDACION_MERCADO.md` (§7.1).
+
 ## 6. Base de datos
 ~82 tablas definidas por migraciones. Las más usadas por el frontend: `professional_profiles`, `job_offers`, `profiles`, `service_bookings`, `professional_documents`, `applications`, `family_profiles`, `institution_profiles`, `availability_slots`, `ad_banners`, `user_roles`, `slot_proposals`, `wearable_connections`, `vital_signs_readings`, `crm_contacts`, `service_ratings`, `service_checkins`, `family_needs`, `crm_campaigns`, `messages`, además de vistas públicas seguras (`public_professionals_safe`, `public_institutions_safe`, `public_family_map_safe`). Las políticas RLS están en las migraciones; hay funciones auxiliares como `has_role`.
 

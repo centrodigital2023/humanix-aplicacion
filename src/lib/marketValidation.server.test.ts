@@ -258,7 +258,7 @@ const goodForm = (over: Record<string, unknown> = {}) => ({
   comments: "Necesito ver antecedentes judiciales",
   consent: true,
   website: "",
-  startedAt: NOW - 120_000,
+  fillMs: 120_000,
   ...over,
 });
 
@@ -345,12 +345,43 @@ describe("handleSubmit", () => {
   });
 
   it("un envío imposiblemente rápido simula éxito sin guardar", async () => {
-    const r = await handleSubmit(goodForm({ startedAt: NOW - 2_000 }), deps());
+    const r = await handleSubmit(goodForm({ fillMs: 2_000 }), deps());
     expect(r.ok).toBe(true);
     expect(responses()).toHaveLength(0);
-    const ok = await handleSubmit(goodForm({ startedAt: NOW - 9_000 }), deps());
+    const ok = await handleSubmit(goodForm({ fillMs: 9_000 }), deps());
     expect(ok.ok).toBe(true);
     expect(responses()).toHaveLength(1);
+  });
+
+  it("el filtro de rapidez no depende de la hora del dispositivo", async () => {
+    // Un celular con el reloj adelantado o atrasado ya no convierte a nadie en robot: solo cuenta la duración.
+    for (const [i, skewMs] of [-3_600_000, 0, 3_600_000, 55_000].entries()) {
+      const r = await handleSubmit(
+        goodForm({
+          contact: `reloj${i}@correo.com`,
+          serviceOffer: `Busco una auxiliar de enfermería número ${i} para mi mamá`,
+          fillMs: 60_000,
+          startedAt: NOW + skewMs, // un cliente viejo o malicioso puede mandar otras horas: se ignoran
+        }),
+        deps(),
+      );
+      expect(r.ok).toBe(true);
+    }
+    expect(responses()).toHaveLength(4);
+  });
+
+  it("quien llama sin informar la duración (un script) cae en la trampa", async () => {
+    const f = goodForm() as Record<string, unknown>;
+    delete f.fillMs;
+    expect((await handleSubmit(f, deps())).ok).toBe(true); // «éxito» falso
+    expect(responses()).toHaveLength(0);
+  });
+
+  it("una duración negativa o que no es número se trata como robot", async () => {
+    expect((await handleSubmit(goodForm({ fillMs: -5 }), deps())).ok).toBe(true);
+    expect(responses()).toHaveLength(0); // negativa: falso «éxito», sin guardar
+    expect((await handleSubmit(goodForm({ fillMs: "rápido" }), deps())).ok).toBe(true);
+    expect(responses()).toHaveLength(0); // no es un número: tampoco se guarda
   });
 
   it("no premia respuestas sin sentido", async () => {
@@ -367,16 +398,19 @@ describe("handleSubmit", () => {
     expect(responses()).toHaveLength(0);
   });
 
-  it("limita por IP (5 por hora) y por contacto (3 por hora)", async () => {
-    for (let i = 0; i < 5; i++) {
-      const r = await handleSubmit(
-        goodForm({
-          contact: `p${i}@correo.com`,
-          serviceOffer: `Busco una auxiliar de enfermería número ${i}`,
-        }),
-        deps(),
-      );
-      expect(r.ok).toBe(true);
+  it("limita por IP los intentos sin verificar y por contacto (3 por hora)", async () => {
+    const first = await handleSubmit(goodForm({ contact: "p0@correo.com" }), deps());
+    expect(first.ok).toBe(true);
+    const ipHash = String(responses()[0].ip_hash);
+    // 19 intentos más sin verificar desde la misma IP completan el cupo
+    for (let i = 1; i < LIMITS_SERVER.submitPerIpHour; i++) {
+      responses().push({
+        id: `r${i}`,
+        created_at: new Date(NOW - 1000).toISOString(),
+        ip_hash: ipHash,
+        contact_key: `p${i}@correo.com`,
+        contact_verified_at: null,
+      });
     }
     const blockedIp = await handleSubmit(
       goodForm({
@@ -411,13 +445,60 @@ describe("handleSubmit", () => {
     expect(blockedContact).toEqual({ ok: false, error: "rate_limited" });
   });
 
+  it("quien verifica su contacto no gasta el cupo de la IP (hospitales y datos móviles comparten IP)", async () => {
+    await handleSubmit(goodForm({ contact: "q0@correo.com" }), deps());
+    const ipHash = String(responses()[0].ip_hash);
+    // 60 personas distintas detrás de la misma IP, todas ya verificadas: no cuentan
+    for (let i = 1; i <= 60; i++) {
+      responses().push({
+        id: `v${i}`,
+        created_at: new Date(NOW - 1000).toISOString(),
+        ip_hash: ipHash,
+        contact_key: `v${i}@correo.com`,
+        contact_verified_at: new Date(NOW - 500).toISOString(),
+      });
+    }
+    const r = await handleSubmit(
+      goodForm({
+        contact: "otra@correo.com",
+        serviceOffer: "Busco una auxiliar de enfermería para mi abuela",
+      }),
+      deps(),
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  it("no se puede esquivar el límite por IP escribiendo x-forwarded-for", async () => {
+    // Detrás de Cloudflare la IP real viene en cf-connecting-ip; lo que mande el cliente no la cambia.
+    headers = { "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "1.1.1.1" };
+    await handleSubmit(goodForm({ contact: "a1@correo.com" }), deps());
+    headers = { "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "2.2.2.2, 3.3.3.3" };
+    await handleSubmit(
+      goodForm({
+        contact: "a2@correo.com",
+        serviceOffer: "Busco una auxiliar de enfermería de día",
+      }),
+      deps(),
+    );
+    expect(responses()[0].ip_hash).toBe(responses()[1].ip_hash);
+    headers = { "cf-connecting-ip": "203.0.113.8" };
+    await handleSubmit(
+      goodForm({
+        contact: "a3@correo.com",
+        serviceOffer: "Busco una auxiliar de enfermería de tarde",
+      }),
+      deps(),
+    );
+    expect(responses()[2].ip_hash).not.toBe(responses()[0].ip_hash);
+  });
+
   it("reenviar lo mismo reutiliza la respuesta de las últimas 24 horas", async () => {
     const a = await handleSubmit(goodForm(), deps());
     const b = await handleSubmit(goodForm(), deps());
     expect(a.ok && b.ok && a.responseId === b.responseId).toBe(true);
     expect(responses()).toHaveLength(1);
     clock = NOW + 25 * 3_600_000;
-    const c = await handleSubmit(goodForm({ startedAt: clock - 120_000 }), deps());
+    const c = await handleSubmit(goodForm({ fillMs: 120_000 }), deps());
     expect(c.ok && a.ok && c.responseId !== a.responseId).toBe(true);
     expect(responses()).toHaveLength(2);
   });
@@ -538,6 +619,27 @@ describe("handleSendOtp", () => {
     expect(otps()).toHaveLength(0);
   });
 
+  it("si el proveedor no responde (error de red o tiempo agotado) es un envío fallido, no un error del servidor", async () => {
+    const id = await submitOk();
+    const boom = (async () => {
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    }) as unknown as typeof fetch;
+    expect(await handleSendOtp({ responseId: id }, deps({ fetch: boom }))).toEqual({
+      ok: false,
+      error: "send_failed",
+    });
+    expect(otps()).toHaveLength(0);
+    // y el envío lleva un tope de espera
+    let signal: AbortSignal | null | undefined;
+    const spy = (async (_u: string, init?: RequestInit) => {
+      signal = init?.signal;
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+    clock += 31_000;
+    expect((await handleSendOtp({ responseId: id }, deps({ fetch: spy }))).ok).toBe(true);
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("valida la entrada y el estado de la respuesta", async () => {
     expect(await handleSendOtp({ responseId: "no-es-uuid" }, deps())).toEqual({
       ok: false,
@@ -579,13 +681,14 @@ describe("handleSendOtp", () => {
     }); // tope por respuesta
   });
 
-  it("limita por IP aunque cambien de respuesta", async () => {
+  it("limita por IP los códigos sin verificar aunque cambien de respuesta", async () => {
     for (let i = 0; i < LIMITS_SERVER.otpPerIpHour; i++) {
       db.tables.validation_otps.push({
         id: `o${i}`,
         response_id: crypto.randomUUID(),
         contact: `x${i}@t.co`,
         ip_hash: null,
+        verified_at: null,
         created_at: new Date(NOW - 1000).toISOString(),
       });
     }
@@ -596,6 +699,54 @@ describe("handleSendOtp", () => {
       ok: false,
       error: "rate_limited",
     });
+    // si esas personas SÍ verificaron, no cuentan: la IP compartida no se bloquea
+    db.tables.validation_otps.forEach((o) => (o.verified_at = new Date(NOW - 500).toISOString()));
+    expect((await handleSendOtp({ responseId: id }, deps())).ok).toBe(true);
+  });
+
+  it("el freno global de WhatsApp corta el envío masivo, pero el correo sigue funcionando", async () => {
+    for (let i = 0; i < LIMITS_SERVER.otpGlobalWhatsappHour; i++) {
+      db.tables.validation_otps.push({
+        id: `g${i}`,
+        response_id: crypto.randomUUID(),
+        contact: `57300${String(i).padStart(7, "0")}`,
+        channel: "whatsapp",
+        ip_hash: `ip-${i}`,
+        verified_at: null,
+        created_at: new Date(NOW - 1000).toISOString(),
+      });
+    }
+    const wa = await submitOk({ contact: "300 123 4567" });
+    expect(await handleSendOtp({ responseId: wa }, deps())).toEqual({
+      ok: false,
+      error: "channel_unavailable",
+    });
+    expect(fetchCalls).toHaveLength(0);
+    // quien usa correo no se entera: el abuso de WhatsApp no apaga el formulario
+    const mail = await submitOk({
+      contact: "persona@correo.com",
+      serviceOffer: "Busco una auxiliar de enfermería de día para mi abuela",
+    });
+    expect((await handleSendOtp({ responseId: mail }, deps())).ok).toBe(true);
+    // pasada la hora, WhatsApp vuelve
+    clock = NOW + 61 * 60_000;
+    expect((await handleSendOtp({ responseId: wa }, deps())).ok).toBe(true);
+  });
+
+  it("los códigos de WhatsApp que sí se verificaron no cuentan para el freno global", async () => {
+    for (let i = 0; i < LIMITS_SERVER.otpGlobalWhatsappHour; i++) {
+      db.tables.validation_otps.push({
+        id: `v${i}`,
+        response_id: crypto.randomUUID(),
+        contact: `57300${String(i).padStart(7, "0")}`,
+        channel: "whatsapp",
+        ip_hash: `ip-${i}`,
+        verified_at: new Date(NOW - 500).toISOString(),
+        created_at: new Date(NOW - 1000).toISOString(),
+      });
+    }
+    const wa = await submitOk({ contact: "300 123 4567" });
+    expect((await handleSendOtp({ responseId: wa }, deps())).ok).toBe(true);
   });
 
   it("permite corregir el contacto y envía al nuevo", async () => {
@@ -709,7 +860,7 @@ describe("handleVerifyOtp", () => {
     clock += 2 * 3_600_000;
     const id2 = await submitOk({
       serviceOffer: "Busco una auxiliar de enfermería para mi suegra de día",
-      startedAt: clock - 120_000,
+      fillMs: 120_000,
     });
     const c2 = await sendAndGetCode(id2);
     const v2 = await handleVerifyOtp({ responseId: id2, code: c2 }, deps());
@@ -729,7 +880,7 @@ describe("handleVerifyOtp", () => {
     first.redeemed_by = "user-9";
     const id2 = await submitOk({
       serviceOffer: "Busco una auxiliar de enfermería para mi suegra de día",
-      startedAt: clock - 120_000,
+      fillMs: 120_000,
     });
     const c2 = await sendAndGetCode(id2);
     expect(await handleVerifyOtp({ responseId: id2, code: c2 }, deps())).toMatchObject({
@@ -742,7 +893,7 @@ describe("handleVerifyOtp", () => {
     first.benefit_expires_at = new Date(clock - 1000).toISOString();
     const id3 = await submitOk({
       serviceOffer: "Busco una auxiliar de enfermería para mi tía de tarde",
-      startedAt: clock - 120_000,
+      fillMs: 120_000,
     });
     const c3 = await sendAndGetCode(id3);
     expect(await handleVerifyOtp({ responseId: id3, code: c3 }, deps())).toMatchObject({
@@ -804,7 +955,7 @@ describe("handleVerifyOtp", () => {
     clock += 2 * 3_600_000;
     const id2 = await submitOk({
       serviceOffer: "Busco una auxiliar de enfermería para mi suegra de día",
-      startedAt: clock - 120_000,
+      fillMs: 120_000,
     });
     const c2 = await sendAndGetCode(id2);
     // el primer código aparece justo después de la comprobación previa
@@ -826,6 +977,272 @@ describe("handleVerifyOtp", () => {
     db.from = original;
     expect(v1.ok && v2.ok).toBe(true);
     if (v1.ok && v2.ok) expect(v2.promoCode).toBe(v1.promoCode);
+  });
+});
+
+// ── Antifraude: respuestas copiadas y correos temporales ──────────────────────────────────────────────
+describe("antifraude", () => {
+  const verify = async (over: Record<string, unknown>) => {
+    const id = await submitOk(over);
+    const code = await sendAndGetCode(id);
+    const r = await handleVerifyOtp({ responseId: id, code }, deps());
+    if (!r.ok) throw new Error(`no se pudo verificar: ${r.error}`);
+    return { id, r };
+  };
+  const own = {
+    serviceOffer: "Necesito cuidado domiciliario para mi papá después de su cirugía de rodilla",
+    painPoint:
+      "Las enfermeras que he contratado llegan tarde y casi nunca reportan cómo estuvo el día completo",
+    targetAudience: "Familias con adultos mayores que viven solos en Medellín y trabajan fuera",
+    dailyChange:
+      "Sabría a qué hora llegó la enfermera y qué hizo durante el turno sin tener que llamar",
+  };
+
+  it("quien copia lo que escribió otra persona verificada no recibe código y se le explica", async () => {
+    const a = await verify({ contact: "primera@correo.com" });
+    expect(a.r).toMatchObject({ ok: true, benefit: "available" });
+    clock += 3_600_000;
+    const b = await verify({ contact: "segunda@correo.com" }); // mismo texto que la primera
+    expect(b.r).toMatchObject({ ok: true, benefit: "review", promoCode: null, redeemed: null });
+    const row = responses().find((x) => x.id === b.id)!;
+    expect(row.promo_code ?? null).toBeNull();
+    expect(row.benefit_status).toBe("none");
+    expect(row.quality_flags).toContain("duplicate_text");
+    expect(row.contact_verified_at).toBeTruthy(); // el dato de mercado igual cuenta
+  });
+
+  it("textos propios (aunque sean del mismo tema) sí reciben su código", async () => {
+    await verify({ contact: "primera@correo.com" });
+    clock += 3_600_000;
+    const b = await verify({ contact: "segunda@correo.com", ...own });
+    expect(b.r).toMatchObject({ ok: true, benefit: "available" });
+  });
+
+  it("si la otra respuesta nunca se verificó, no cuenta (quien se equivocó de número no se castiga)", async () => {
+    await submitOk({ contact: "sinverificar@correo.com" });
+    clock += 3_600_000;
+    const b = await verify({ contact: "segunda@correo.com" });
+    expect(b.r).toMatchObject({ ok: true, benefit: "available" });
+  });
+
+  it("solo se compara con lo recibido en las últimas 24 horas", async () => {
+    await verify({ contact: "primera@correo.com" });
+    clock += 25 * 3_600_000;
+    const b = await verify({ contact: "segunda@correo.com" });
+    expect(b.r).toMatchObject({ ok: true, benefit: "available" });
+  });
+
+  it("el mismo contacto con otra respuesta no es copia de sí mismo (recibe el mismo código)", async () => {
+    const a = await verify({ contact: "unica@correo.com" });
+    clock += 2 * 3_600_000;
+    const b = await verify({
+      contact: "unica@correo.com",
+      serviceOffer: "Busco una auxiliar de enfermería para mi suegra de día",
+    });
+    expect(a.r.ok && b.r.ok && a.r.benefit === "available" && b.r.benefit === "available").toBe(
+      true,
+    );
+  });
+
+  it("al recargar, la persona sigue viendo que debe reescribir (no «sin beneficio»)", async () => {
+    await verify({ contact: "primera@correo.com" });
+    clock += 3_600_000;
+    const b = await verify({ contact: "segunda@correo.com" });
+    const again = await handleVerifyOtp({ responseId: b.id, code: "000000" }, deps());
+    expect(again).toMatchObject({ ok: true, benefit: "review" });
+  });
+
+  it("puede reescribir con sus palabras: la respuesta retenida no se reutiliza y entonces sí recibe su código", async () => {
+    await verify({ contact: "primera@correo.com" });
+    clock += 3_600_000;
+    const held = await verify({ contact: "segunda@correo.com" });
+    expect(held.r).toMatchObject({ benefit: "review" });
+    clock += 5 * 60_000;
+    // mismo contacto y MISMA primera respuesta, pero el resto reescrito
+    const again = await verify({
+      contact: "segunda@correo.com",
+      serviceOffer: String(goodForm().serviceOffer),
+      painPoint: own.painPoint,
+      targetAudience: own.targetAudience,
+      dailyChange: own.dailyChange,
+    });
+    expect(again.id).not.toBe(held.id);
+    expect(again.r).toMatchObject({ ok: true, benefit: "available" });
+    expect(String((again.r as { promoCode: string }).promoCode)).toMatch(/^MLP-/);
+  });
+
+  it("una copia no activa la cuenta aunque haya sesión iniciada", async () => {
+    await verify({ contact: "primera@correo.com" });
+    clock += 3_600_000;
+    headers.authorization = "Bearer tok-user";
+    const b = await verify({ contact: "segunda@correo.com" });
+    expect(b.r).toMatchObject({ benefit: "review", redeemed: null });
+    expect(db.rpcCalls).toHaveLength(0);
+  });
+
+  it("si la lectura de comparación falla, no se castiga a nadie", async () => {
+    await verify({ contact: "primera@correo.com" });
+    clock += 3_600_000;
+    const original = db.from.bind(db);
+    db.from = ((t: string) => {
+      const b = original(t);
+      const sel = b.select.bind(b);
+      b.select = ((cols?: string, o?: { count?: string; head?: boolean }) => {
+        if (String(cols).includes("target_customer") && !String(cols).includes("quality_flags")) {
+          throw new Error("lectura caída");
+        }
+        return sel(cols, o);
+      }) as typeof b.select;
+      return b;
+    }) as typeof db.from;
+    const id = await submitOk({ contact: "segunda@correo.com" });
+    const code = await sendAndGetCode(id);
+    const r = await handleVerifyOtp({ responseId: id, code }, deps());
+    db.from = original;
+    expect(r).toMatchObject({ ok: true, benefit: "available" });
+  });
+
+  it("no acepta correos temporales ni al enviar el formulario ni al corregir el contacto", async () => {
+    const r = await handleSubmit(goodForm({ contact: "alguien@mailinator.com" }), deps());
+    expect(r).toMatchObject({ ok: false, error: "validation", fields: ["contact"] });
+    expect(responses()).toHaveLength(0);
+    const id = await submitOk({ contact: "300 123 4567" });
+    expect(await handleSendOtp({ responseId: id, contact: "otro@yopmail.com" }, deps())).toEqual({
+      ok: false,
+      error: "validation",
+    });
+    expect(fetchCalls).toHaveLength(0);
+  });
+});
+
+// ── Aviso al superadmin cuando entra un contacto fuerte ───────────────────────────────────────────────
+describe("avisos de contactos fuertes", () => {
+  const hot = {
+    paysCurrently: "yes",
+    willingnessPct: 95,
+    alternatives: ["Grupos de WhatsApp", "Agencia Salud Ya", "Cuidadora del barrio"],
+    painPoint:
+      "No encuentro a nadie de confianza para cuidar a mi mamá de noche, las agencias cobran mucho, tardan días en responder y no verifican antecedentes de nadie",
+    targetAudience:
+      "Hijos e hijas de entre treinta y cincuenta años que trabajan todo el día y viven lejos de sus padres en Bogotá",
+    dailyChange:
+      "Podría trabajar tranquila sabiendo que alguien verificado la acompaña, que me avisa cómo va el turno y que el pago queda registrado",
+    comments:
+      "Es indispensable ver los antecedentes judiciales, las referencias y la verificación del profesional antes de aceptar a cualquier persona en casa",
+  };
+  const admins = () => [
+    { user_id: "sa-1", role: "superadmin" },
+    { user_id: "sa-2", role: "superadmin" },
+    { user_id: "u-3", role: "family" },
+  ];
+  const verifyOne = async (over: Record<string, unknown>) => {
+    const id = await submitOk(over);
+    const code = await sendAndGetCode(id);
+    return handleVerifyOtp({ responseId: id, code }, deps());
+  };
+  const notes = () => db.tables.notifications ?? [];
+
+  it("avisa a cada superadmin, una vez, sin datos personales", async () => {
+    db.tables.user_roles = admins();
+    const r = await verifyOne({ contact: "fuerte@correo.com", ...hot });
+    expect(r).toMatchObject({ ok: true, benefit: "available" });
+    expect(responses()[0].signal_score).toBeGreaterThanOrEqual(70);
+    expect(notes().map((n) => n.user_id)).toEqual(["sa-1", "sa-2"]);
+    const n = notes()[0];
+    expect(n).toMatchObject({
+      type: "market_hot_lead",
+      link: "/superadmin/validacion",
+      title: "Nuevo contacto fuerte en la validación de mercado",
+    });
+    expect(String(n.body)).toContain("Familia / Usuario en Bogotá");
+    expect(String(n.body)).toMatch(/señal \d+ de 100/);
+    expect(JSON.stringify(n)).not.toMatch(/fuerte@correo\.com|Marta/);
+  });
+
+  it("un contacto de señal media no genera aviso", async () => {
+    db.tables.user_roles = admins();
+    await verifyOne({ contact: "medio@correo.com" }); // señal ~54
+    expect(responses()[0].signal_score).toBeLessThan(70);
+    expect(notes()).toHaveLength(0);
+  });
+
+  it("el mismo contacto que vuelve a verificar no avisa otra vez", async () => {
+    db.tables.user_roles = admins();
+    await verifyOne({ contact: "fuerte@correo.com", ...hot });
+    clock += 2 * 3_600_000;
+    await verifyOne({
+      contact: "fuerte@correo.com",
+      ...hot,
+      serviceOffer: "Busco una auxiliar de enfermería para mi suegra de día",
+    });
+    expect(notes()).toHaveLength(2); // solo los 2 del primer código
+  });
+
+  it("una copia retenida no genera aviso", async () => {
+    db.tables.user_roles = admins();
+    await verifyOne({ contact: "fuerte@correo.com", ...hot });
+    notes().length = 0;
+    clock += 3_600_000;
+    const copy = await verifyOne({ contact: "copia@correo.com", ...hot });
+    expect(copy).toMatchObject({ ok: true, benefit: "review" });
+    expect(notes()).toHaveLength(0);
+  });
+
+  it("el tope son 30 avisos por hora, contados como avisos (no como filas por superadmin)", async () => {
+    db.tables.user_roles = admins(); // 2 superadmin: cada aviso deja 2 filas
+    const fill = (rows: number) =>
+      (db.tables.notifications = Array.from({ length: rows }, (_, i) => ({
+        id: `n${i}`,
+        user_id: "sa-1",
+        type: "market_hot_lead",
+        created_at: new Date(NOW - 1000).toISOString(),
+      })));
+    fill(59); // 29 avisos y medio: todavía hay cupo
+    await verifyOne({ contact: "fuerte@correo.com", ...hot });
+    expect(notes()).toHaveLength(61);
+    // con 60 filas (30 avisos) el cupo se agotó
+    fill(60);
+    await verifyOne({
+      contact: "otra@correo.com",
+      ...hot,
+      serviceOffer: "Necesito enfermera para el turno de la noche en mi casa de Bogotá",
+      painPoint:
+        "Mi papá necesita cuidados constantes después de su cirugía y las enfermeras que contraté llegaron tarde varias veces sin avisar nunca a la familia",
+      targetAudience:
+        "Familias de adultos mayores con movilidad reducida en las ciudades grandes que no pueden estar presentes durante el turno",
+      dailyChange:
+        "Tendría la seguridad de saber quién entra a mi casa, a qué hora llega y qué hace durante todo el tiempo que cuida a mi padre",
+    });
+    expect(notes()).toHaveLength(60);
+  });
+
+  it("si el aviso falla o no hay superadmin, la persona igual recibe su beneficio", async () => {
+    // sin superadmin
+    expect(await verifyOne({ contact: "a@correo.com", ...hot })).toMatchObject({
+      benefit: "available",
+    });
+    expect(notes()).toHaveLength(0);
+    // con la tabla de avisos caída
+    db.tables.user_roles = admins();
+    const original = db.from.bind(db);
+    db.from = ((t: string) => {
+      if (t === "notifications") throw new Error("avisos caídos");
+      return original(t);
+    }) as typeof db.from;
+    clock += 3_600_000;
+    const r = await verifyOne({
+      contact: "b@correo.com",
+      ...hot,
+      serviceOffer: "Necesito enfermera para el turno de la noche en mi casa de Bogotá",
+      painPoint:
+        "Mi papá necesita cuidados constantes después de su cirugía y las enfermeras que contraté llegaron tarde varias veces sin avisar nunca a la familia",
+      targetAudience:
+        "Familias de adultos mayores con movilidad reducida en las ciudades grandes que no pueden estar presentes durante el turno",
+      dailyChange:
+        "Tendría la seguridad de saber quién entra a mi casa, a qué hora llega y qué hace durante todo el tiempo que cuida a mi padre",
+    });
+    db.from = original;
+    expect(r).toMatchObject({ ok: true, benefit: "available" });
   });
 });
 

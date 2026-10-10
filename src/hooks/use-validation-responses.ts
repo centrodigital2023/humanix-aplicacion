@@ -14,11 +14,16 @@ const sb = supabase as unknown as SupabaseClient;
 
 export const VALIDATION_KEY = ["superadmin", "validation-responses"] as const;
 
+/** Tope de filas que se traen al panel. Si se alcanza, el panel avisa que muestra solo las más recientes. */
+export const MAX_ROWS = 5000;
+/** Varios eventos seguidos (un formulario genera tres: guardar, verificar, código) se juntan en una sola recarga. */
+const REFETCH_DEBOUNCE_MS = 1200;
+
 const COLUMNS =
   "id, created_at, profile_type, full_name, whatsapp, email, city, service_offer, pain_point, target_customer, " +
   "key_benefit, pays_currently, alternatives, competitors, search_channels, retention_channels, willingness_pct, " +
   "comments, signal_score, total_score, quality_flags, contact_verified_at, verified_channel, promo_code, " +
-  "benefit_status, premium_activated, redeemed_at";
+  "benefit_status, benefit_expires_at, premium_activated, redeemed_at";
 
 export function useValidationResponses() {
   const qc = useQueryClient();
@@ -31,7 +36,7 @@ export function useValidationResponses() {
         .from("validation_responses")
         .select(COLUMNS)
         .order("created_at", { ascending: false })
-        .limit(5000);
+        .limit(MAX_ROWS);
       if (error) throw error;
       return (data ?? []) as unknown as ResponseRow[];
     },
@@ -39,19 +44,28 @@ export function useValidationResponses() {
   });
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      clearTimeout(timer);
+      timer = setTimeout(
+        () => void qc.invalidateQueries({ queryKey: VALIDATION_KEY }),
+        REFETCH_DEBOUNCE_MS,
+      );
+    };
     const channel = supabase
       .channel(`superadmin-validation-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { event: "*", schema: "public", table: "validation_responses" } as any,
-        () => void qc.invalidateQueries({ queryKey: VALIDATION_KEY }),
+        refresh,
       )
       .subscribe((status) => setLive(status === "SUBSCRIBED"));
     return () => {
+      clearTimeout(timer);
       void supabase.removeChannel(channel);
     };
   }, [qc]);
 
-  return { ...query, live };
+  return { ...query, live, truncated: (query.data?.length ?? 0) >= MAX_ROWS };
 }

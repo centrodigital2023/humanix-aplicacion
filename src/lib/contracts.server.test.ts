@@ -5,13 +5,7 @@ import {
   contractBodyHash,
   type ContractTerms,
 } from "./contractTemplate";
-import {
-  clientIp,
-  handleSign,
-  mapSignatureError,
-  type ContractDeps,
-  type Db,
-} from "./contracts.server";
+import { handleSign, mapSignatureError, type ContractDeps, type Db } from "./contracts.server";
 
 const NOW = Date.parse("2026-10-09T15:00:00Z");
 const nowSec = Math.floor(NOW / 1000);
@@ -383,28 +377,5 @@ describe("handleSign", () => {
       fullySigned: true,
       party: "institution",
     });
-  });
-});
-
-describe("clientIp", () => {
-  it("prefiere el encabezado de Cloudflare, luego x-forwarded-for y x-real-ip", () => {
-    expect(
-      clientIp(
-        (n) =>
-          (
-            ({ "cf-connecting-ip": "1.1.1.1", "x-forwarded-for": "2.2.2.2" }) as Record<
-              string,
-              string
-            >
-          )[n],
-      ),
-    ).toBe("1.1.1.1");
-    expect(
-      clientIp((n) => (({ "x-forwarded-for": "2.2.2.2, 3.3.3.3" }) as Record<string, string>)[n]),
-    ).toBe("2.2.2.2");
-    expect(clientIp((n) => (({ "x-real-ip": "4.4.4.4" }) as Record<string, string>)[n])).toBe(
-      "4.4.4.4",
-    );
-    expect(clientIp(() => undefined)).toBe("unknown");
   });
 });

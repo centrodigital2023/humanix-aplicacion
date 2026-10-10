@@ -13,18 +13,24 @@
 // contacto y por cuenta, y activarlo pasa por `redeem_validation_benefit` (único camino hacia `mp_subscriptions`).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { clientIp } from "./clientIp";
 import {
   BENEFIT,
   CONSENT_VERSION,
   MIN_FILL_MS,
   assessQuality,
   cleanSubmission,
+  isDisposableEmail,
+  isNearDuplicate,
   marketValidationSchema,
   normalizeContact,
+  PROFILE_META,
+  signalOf,
   signalScore,
   type ContactKind,
   type NormalizedContact,
 } from "./marketValidation";
+import { isHotLead } from "./marketInsights";
 
 export type Db = SupabaseClient;
 
@@ -55,11 +61,22 @@ export interface MarketDeps {
 const MAX_BODY_CHARS = 20_000;
 const HOUR = 3_600_000;
 export const LIMITS_SERVER = {
-  submitPerIpHour: 5,
+  /**
+   * Por IP solo cuentan los intentos SIN verificar: quien confirma su contacto no gasta el cupo de los demás.
+   * Así un hospital o una conexión de datos móviles (miles de personas tras una misma IP) no se bloquea sola, y
+   * quien manda a números ajenos (que nunca verifican) sí topa el límite.
+   */
+  submitPerIpHour: 20,
   submitPerContactHour: 3,
   otpPerResponse: 4,
   otpPerContactHour: 5,
-  otpPerIpHour: 10,
+  otpPerIpHour: 20,
+  /**
+   * Freno de costo SOLO para WhatsApp (cada mensaje cuesta): códigos de WhatsApp enviados en la última hora que nadie
+   * verificó. Al llegar al tope, WhatsApp queda «no disponible» y la persona puede usar su correo: un abuso no apaga
+   * todo el formulario.
+   */
+  otpGlobalWhatsappHour: 300,
   otpTtlMs: 15 * 60_000,
   otpMaxAttempts: 5,
   resendMs: 30_000,
@@ -82,14 +99,6 @@ function timingSafeEqual(a: string, b: string): boolean {
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return out === 0;
-}
-
-function clientIp(header: MarketDeps["header"]): string {
-  return (
-    (header("x-forwarded-for") ?? "").split(",")[0].trim() ||
-    header("cf-connecting-ip") ||
-    "unknown"
-  );
 }
 
 const rnd = (deps: MarketDeps) =>
@@ -149,9 +158,12 @@ async function count(
   filters: Array<[string, string]>,
   sinceCol: string,
   sinceIso: string,
+  /** Columnas que deben ser nulas (por ejemplo `verified_at`: solo lo que nadie verificó). */
+  nullCols: string[] = [],
 ): Promise<number> {
   let q = admin.from(table).select("id", { count: "exact", head: true });
   for (const [k, v] of filters) q = q.eq(k, v);
+  for (const c of nullCols) q = q.is(c, null);
   const { count: n } = await q.gte(sinceCol, sinceIso);
   return n ?? 0;
 }
@@ -239,10 +251,13 @@ export async function handleSubmit(data: unknown, deps: MarketDeps): Promise<Sub
   const now = (deps.now ?? Date.now)();
   const raw = (data ?? {}) as Record<string, unknown>;
 
-  // Campo trampa lleno o envío imposiblemente rápido: los robots creen que funcionó.
+  // Campo trampa lleno o envío imposiblemente rápido: los robots creen que funcionó. La rapidez es una DURACIÓN
+  // medida en el navegador (no una hora): así un reloj mal puesto en el celular no convierte a nadie en robot.
+  // Nuestro formulario siempre la manda; quien llama sin ella (un script) cae en la misma trampa.
   const trap =
     (typeof raw.website === "string" && raw.website.length > 0) ||
-    (typeof raw.startedAt === "number" && now - raw.startedAt < MIN_FILL_MS);
+    typeof raw.fillMs !== "number" ||
+    raw.fillMs < MIN_FILL_MS;
   if (trap) {
     const c = normalizeContact(typeof raw.contact === "string" ? raw.contact : "");
     return {
@@ -280,13 +295,9 @@ export async function handleSubmit(data: unknown, deps: MarketDeps): Promise<Sub
 
   try {
     if (
-      (await count(
-        admin,
-        "validation_responses",
-        [["ip_hash", ipHash]],
-        "created_at",
-        sinceHour,
-      )) >= LIMITS_SERVER.submitPerIpHour ||
+      (await count(admin, "validation_responses", [["ip_hash", ipHash]], "created_at", sinceHour, [
+        "contact_verified_at",
+      ])) >= LIMITS_SERVER.submitPerIpHour ||
       (await count(
         admin,
         "validation_responses",
@@ -307,14 +318,17 @@ export async function handleSubmit(data: unknown, deps: MarketDeps): Promise<Sub
     // Reenviar lo mismo (refrescar la página, doble clic): se reutiliza la respuesta de las últimas 24 horas.
     const { data: dup } = await admin
       .from("validation_responses")
-      .select("id")
+      .select("id, quality_flags")
       .eq("contact_key", clean.contact.key)
       .eq("service_offer", clean.serviceOffer)
       .gte("created_at", new Date(now - 24 * HOUR).toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (dup?.id) {
+    // Si la anterior se retuvo por parecer copiada, no se reutiliza: la persona puede reescribirla con sus palabras.
+    const reusable =
+      dup?.id && !((dup.quality_flags as string[] | null) ?? []).includes("duplicate_text");
+    if (reusable && dup?.id) {
       return {
         ok: true,
         responseId: dup.id as string,
@@ -416,6 +430,27 @@ export type SendOtpResult =
         | "server";
     };
 
+const SEND_TIMEOUT_MS = 8_000;
+
+/** POST con tope de espera: un proveedor colgado no debe dejar la petición abierta ni tumbar el flujo. */
+async function postJson(
+  deps: MarketDeps,
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+): Promise<Response | null> {
+  try {
+    return await (deps.fetch ?? fetch)(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function sendWhatsapp(
   deps: MarketDeps,
   phone: string,
@@ -450,16 +485,14 @@ async function sendWhatsapp(
           body: `🔐 Tu código de verificación Humanix es *${code}*. Vale 15 minutos. No lo compartas con nadie.`,
         },
       };
-  const res = await (deps.fetch ?? fetch)(
+  const res = await postJson(
+    deps,
     `https://graph.facebook.com/v21.0/${whatsappPhoneId}/messages`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${whatsappToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
+    { Authorization: `Bearer ${whatsappToken}`, "Content-Type": "application/json" },
+    body,
   );
-  if (!res.ok) {
-    console.error("[market-otp-wa]", res.status);
+  if (!res || !res.ok) {
+    console.error("[market-otp-wa]", res ? res.status : "sin respuesta");
     return "failed";
   }
   return "ok";
@@ -478,18 +511,19 @@ async function sendEmail(
 <p>Este código es válido por <strong>15 minutos</strong>. Con él confirmas tu contacto para recibir tu mes del plan Esencial.</p>
 <p style="color:#6b7280;font-size:12px">Si no lo solicitaste, ignora este mensaje. · humanix.lat</p>
 </body></html>`;
-  const res = await (deps.fetch ?? fetch)("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const res = await postJson(
+    deps,
+    "https://api.resend.com/emails",
+    { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+    {
       from: "Humanix <noreply@humanix.lat>",
       to: [email],
       subject: `Tu código Humanix: ${code}`,
       html,
-    }),
-  });
-  if (!res.ok) {
-    console.error("[market-otp-email]", res.status);
+    },
+  );
+  if (!res || !res.ok) {
+    console.error("[market-otp-email]", res ? res.status : "sin respuesta");
     return "failed";
   }
   return "ok";
@@ -521,7 +555,9 @@ export async function handleSendOtp(data: unknown, deps: MarketDeps): Promise<Se
     );
     if (p.data.contact) {
       const changed = normalizeContact(p.data.contact);
-      if (!changed) return { ok: false, error: "validation" };
+      if (!changed || (changed.kind === "email" && isDisposableEmail(changed.value))) {
+        return { ok: false, error: "validation" };
+      }
       contact = changed;
     }
     if (!contact) return { ok: false, error: "validation" };
@@ -543,10 +579,20 @@ export async function handleSendOtp(data: unknown, deps: MarketDeps): Promise<Se
         "created_at",
         sinceHour,
       )) >= LIMITS_SERVER.otpPerContactHour ||
-      (await count(admin, "validation_otps", [["ip_hash", ipHash]], "created_at", sinceHour)) >=
-        LIMITS_SERVER.otpPerIpHour
+      (await count(admin, "validation_otps", [["ip_hash", ipHash]], "created_at", sinceHour, [
+        "verified_at",
+      ])) >= LIMITS_SERVER.otpPerIpHour
     ) {
       return { ok: false, error: "rate_limited" };
+    }
+    if (
+      contact.kind === "whatsapp" &&
+      (await count(admin, "validation_otps", [["channel", "whatsapp"]], "created_at", sinceHour, [
+        "verified_at",
+      ])) >= LIMITS_SERVER.otpGlobalWhatsappHour
+    ) {
+      // Tope de costo alcanzado: WhatsApp descansa y el correo sigue funcionando.
+      return { ok: false, error: "channel_unavailable" };
     }
     const { data: last } = await admin
       .from("validation_otps")
@@ -634,7 +680,8 @@ const verifySchema = z.object({
     .regex(/^\d{6}$/),
 });
 
-export type BenefitState = "available" | "already_redeemed" | "expired" | "none";
+/** `review`: las respuestas se parecen demasiado a las de otra persona; no hay código hasta que las reescriba. */
+export type BenefitState = "available" | "already_redeemed" | "expired" | "review" | "none";
 
 export type VerifyOtpResult =
   | {
@@ -668,13 +715,17 @@ type ResponseBenefitRow = {
   benefit_status: string | null;
   redeemed_by: string | null;
   premium_activated: boolean | null;
+  quality_flags?: string[] | null;
 };
 
 function benefitFrom(
   row: ResponseBenefitRow,
   now: number,
 ): { state: BenefitState; code: string | null; expiresAt: string | null } {
-  if (!row.promo_code) return { state: "none", code: null, expiresAt: null };
+  if (!row.promo_code) {
+    const held = (row.quality_flags ?? []).includes("duplicate_text");
+    return { state: held ? "review" : "none", code: null, expiresAt: null };
+  }
   if (row.redeemed_by || row.premium_activated)
     return { state: "already_redeemed", code: null, expiresAt: null };
   if (row.benefit_expires_at && new Date(row.benefit_expires_at).getTime() <= now) {
@@ -684,7 +735,92 @@ function benefitFrom(
 }
 
 const BENEFIT_COLS =
-  "id, contact_key, contact_verified_at, promo_code, benefit_expires_at, benefit_status, redeemed_by, premium_activated";
+  "id, contact_key, contact_verified_at, promo_code, benefit_expires_at, benefit_status, redeemed_by, premium_activated, quality_flags";
+
+/** Respuestas de otras personas ya verificadas en las últimas 24 horas con las que se compara. */
+const DUPLICATE_LOOKBACK_MS = 24 * HOUR;
+const DUPLICATE_SCAN_LIMIT = 300;
+
+async function copiedFromAnotherPerson(
+  admin: Db,
+  response: ResponseBenefitRow,
+  now: number,
+): Promise<boolean> {
+  try {
+    const { data: mine } = await admin
+      .from("validation_responses")
+      .select("service_offer, pain_point, target_customer, key_benefit")
+      .eq("id", response.id)
+      .maybeSingle();
+    if (!mine) return false;
+    const { data: recent } = await admin
+      .from("validation_responses")
+      .select("contact_key, service_offer, pain_point, target_customer, key_benefit")
+      .not("contact_verified_at", "is", null)
+      .gte("created_at", new Date(now - DUPLICATE_LOOKBACK_MS).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(DUPLICATE_SCAN_LIMIT);
+    const texts = (r: Record<string, unknown>) => ({
+      serviceOffer: r.service_offer as string | null,
+      painPoint: r.pain_point as string | null,
+      targetAudience: r.target_customer as string | null,
+      dailyChange: r.key_benefit as string | null,
+    });
+    const a = texts(mine as Record<string, unknown>);
+    return ((recent ?? []) as Array<Record<string, unknown>>).some(
+      (r) => r.contact_key !== response.contact_key && isNearDuplicate(a, texts(r)),
+    );
+  } catch {
+    return false; // ante un error de lectura no se castiga a nadie
+  }
+}
+
+/** Tope de avisos por hora: un aviso nunca debe convertirse en ruido. */
+const HOT_LEAD_NOTIFICATIONS_PER_HOUR = 30;
+
+/**
+ * Avisa en la campana de los superadmin cuando entra un contacto fuerte y verificado. Sin datos personales en el
+ * aviso (solo perfil, ciudad y señal). Mejor esfuerzo: si algo falla, la verificación de la persona sigue igual.
+ */
+async function notifyHotLead(admin: Db, responseId: string, now: number): Promise<void> {
+  try {
+    const { data: r } = await admin
+      .from("validation_responses")
+      .select("signal_score, total_score, quality_flags, profile_type, city")
+      .eq("id", responseId)
+      .maybeSingle();
+    if (!r || !isHotLead(r as Parameters<typeof isHotLead>[0])) return;
+    const { data: admins } = await admin
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "superadmin");
+    const ids = ((admins ?? []) as Array<{ user_id: string }>)
+      .map((a) => a.user_id)
+      .filter(Boolean);
+    if (!ids.length) return;
+    // Cada aviso deja una fila por superadmin: el tope se cuenta en avisos, no en filas.
+    const since = new Date(now - HOUR).toISOString();
+    if (
+      (await count(admin, "notifications", [["type", "market_hot_lead"]], "created_at", since)) >=
+      HOT_LEAD_NOTIFICATIONS_PER_HOUR * ids.length
+    ) {
+      return;
+    }
+    const row = r as { profile_type: string; city: string | null };
+    const label = PROFILE_META[row.profile_type as keyof typeof PROFILE_META]?.label ?? "Contacto";
+    await admin.from("notifications").insert(
+      ids.map((user_id) => ({
+        user_id,
+        type: "market_hot_lead",
+        title: "Nuevo contacto fuerte en la validación de mercado",
+        body: `${label}${row.city ? ` en ${row.city}` : ""} · señal ${signalOf(r as Parameters<typeof signalOf>[0])} de 100 · contacto verificado.`,
+        link: "/superadmin/validacion",
+      })),
+    );
+  } catch {
+    /* un aviso nunca debe romper la verificación */
+  }
+}
 
 /** Entrega el código del contacto: el que ya tenía (idempotente) o uno nuevo. */
 async function issueBenefit(
@@ -692,7 +828,13 @@ async function issueBenefit(
   response: ResponseBenefitRow,
   channel: ContactKind,
   now: number,
-): Promise<{ state: BenefitState; code: string | null; expiresAt: string | null }> {
+): Promise<{
+  state: BenefitState;
+  code: string | null;
+  expiresAt: string | null;
+  /** true solo cuando este contacto recibió su código ahora (no uno que ya tenía). */
+  fresh?: boolean;
+}> {
   const { admin } = deps;
   const verifiedAt = new Date(now).toISOString();
 
@@ -718,6 +860,21 @@ async function issueBenefit(
     }
   }
 
+  // ¿Copió lo que acaba de contestar OTRA persona ya verificada? (granjas de premios): sin código, pero con camino.
+  if (await copiedFromAnotherPerson(admin, response, now)) {
+    const flags = [...new Set([...(response.quality_flags ?? []), "duplicate_text"])];
+    await admin
+      .from("validation_responses")
+      .update({
+        contact_verified_at: verifiedAt,
+        verified_channel: channel,
+        quality_flags: flags,
+        benefit_status: "none",
+      })
+      .eq("id", response.id);
+    return { state: "review", code: null, expiresAt: null };
+  }
+
   const expiresAt = new Date(now + BENEFIT.validDays * 86_400_000).toISOString();
   for (let attempt = 0; attempt < 3; attempt++) {
     const code = makeBenefitCode(deps);
@@ -731,7 +888,7 @@ async function issueBenefit(
         benefit_expires_at: expiresAt,
       })
       .eq("id", response.id);
-    if (!error) return { state: "available", code, expiresAt };
+    if (!error) return { state: "available", code, expiresAt, fresh: true };
     if (
       error.code === "23505" &&
       String(error.message).includes("uq_validation_benefit_contact") &&
@@ -844,7 +1001,9 @@ export async function handleVerifyOtp(data: unknown, deps: MarketDeps): Promise<
       .from("validation_otps")
       .update({ verified_at: new Date(now).toISOString() })
       .eq("id", otp.id as string);
-    return finish(await issueBenefit(deps, response, otp.channel as ContactKind, now));
+    const issued = await issueBenefit(deps, response, otp.channel as ContactKind, now);
+    if (issued.fresh && issued.state === "available") await notifyHotLead(admin, response.id, now);
+    return finish(issued);
   } catch (e) {
     console.error("[verifyValidationOtp]", (e as Error).message);
     return { ok: false, error: "server" };

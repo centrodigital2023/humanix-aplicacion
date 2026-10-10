@@ -3,7 +3,7 @@
 // beneficios. Las cifras se recalculan en vivo (Realtime) con funciones puras de `src/lib/marketValidation.ts`.
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
-import { Download, Gift, Loader2, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, Download, Gift, Loader2, RefreshCw, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +22,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InsightsTab } from "@/components/humanix/validation/InsightsTab";
+import { nf } from "@/components/humanix/validation/format";
+import { Bar, Panel } from "@/components/humanix/validation/panels";
 import { useValidationResponses } from "@/hooks/use-validation-responses";
 import {
   CHANNEL_LABEL,
   PAY_LABEL,
   PROFILES,
   PROFILE_META,
+  QUALITY_FLAG_LABEL,
   SIGNAL_TIER_LABEL,
   alternativesOf,
   filterRows,
@@ -59,43 +63,6 @@ const TIER_CLASS: Record<SignalTier, string> = {
   medium: "bg-warn/15 text-warn",
   weak: "bg-destructive/15 text-destructive",
 };
-
-const nf = new Intl.NumberFormat("es-CO");
-
-function Bar({ pct, label }: { pct: number; label?: string }) {
-  return (
-    <div
-      className="h-2 w-full min-w-16 overflow-hidden rounded-full bg-muted"
-      role="img"
-      aria-label={label ?? `${pct}%`}
-    >
-      <div
-        className="h-2 rounded-full bg-trust"
-        style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
-      />
-    </div>
-  );
-}
-
-function Panel({
-  title,
-  caption,
-  children,
-}: {
-  title: string;
-  caption?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm">
-      <div className="border-b border-border p-5">
-        <h2 className="text-lg font-bold">{title}</h2>
-        {caption && <p className="text-sm text-muted-foreground">{caption}</p>}
-      </div>
-      <div className="overflow-x-auto">{children}</div>
-    </section>
-  );
-}
 
 function RankTable({
   title,
@@ -202,7 +169,8 @@ function Detail({ label, value }: { label: string; value: ReactNode }) {
 }
 
 function ValidationDashboard() {
-  const { data, isLoading, isError, isFetching, refetch, live } = useValidationResponses();
+  const { data, isLoading, isError, isFetching, refetch, live, truncated } =
+    useValidationResponses();
   const rows = useMemo(() => data ?? [], [data]);
   const t = useMemo(() => tabulate(rows), [rows]);
   const [filter, setFilter] = useState<RowFilter>({
@@ -306,6 +274,13 @@ function ValidationDashboard() {
           </p>
         )}
 
+        {truncated && (
+          <p role="status" className="rounded-2xl bg-warn/10 p-4 text-sm font-semibold text-warn">
+            Se muestran las {nf.format(rows.length)} respuestas más recientes: hay más en la base y
+            las cifras de abajo no las incluyen.
+          </p>
+        )}
+
         <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {kpis.map((k) => (
             <div
@@ -319,13 +294,18 @@ function ValidationDashboard() {
           ))}
         </section>
 
-        <Tabs defaultValue="resumen" className="space-y-4">
+        <Tabs defaultValue="hallazgos" className="space-y-4">
           <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="hallazgos">Hallazgos</TabsTrigger>
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
             <TabsTrigger value="mercado">Mercado y competencia</TabsTrigger>
             <TabsTrigger value="dolor">Dolor y requisitos</TabsTrigger>
             <TabsTrigger value="respuestas">Respuestas ({nf.format(rows.length)})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="hallazgos">
+            <InsightsTab rows={rows} />
+          </TabsContent>
 
           <TabsContent value="resumen" className="space-y-4">
             <Panel
@@ -634,7 +614,17 @@ function ValidationDashboard() {
                         {PROFILE_SHORT[r.profile_type as Profile] ?? r.profile_type}
                       </TableCell>
                       <TableCell className="max-w-56">
-                        <p className="truncate font-semibold">{r.full_name ?? "—"}</p>
+                        <p className="flex items-center gap-1.5 truncate font-semibold">
+                          {r.quality_flags && r.quality_flags.length > 0 && (
+                            <AlertTriangle
+                              className="h-3.5 w-3.5 shrink-0 text-warn"
+                              aria-label={`Aviso de calidad: ${r.quality_flags
+                                .map((f) => QUALITY_FLAG_LABEL[f] ?? f)
+                                .join(", ")}`}
+                            />
+                          )}
+                          <span className="truncate">{r.full_name ?? "—"}</span>
+                        </p>
                         <p className="truncate text-xs text-muted-foreground">{contactOf(r)}</p>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
@@ -752,7 +742,10 @@ function ValidationDashboard() {
                 />
                 <Detail label="4.2 Comentarios y requisitos" value={selected.comments} />
                 {selected.quality_flags && selected.quality_flags.length > 0 && (
-                  <Detail label="Avisos de calidad" value={selected.quality_flags.join(", ")} />
+                  <Detail
+                    label="Avisos de calidad"
+                    value={selected.quality_flags.map((f) => QUALITY_FLAG_LABEL[f] ?? f).join(", ")}
+                  />
                 )}
               </dl>
             </>

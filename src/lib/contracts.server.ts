@@ -12,6 +12,7 @@
 // La base de datos vuelve a validar estado, plazo, identidad (RETHUS / NIT) y dobles firmas.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { clientIp } from "./clientIp";
 import {
   contractBodyHash,
   isSupportedTemplate,
@@ -100,15 +101,6 @@ async function hmacHex(secret: string, text: string): Promise<string> {
   return Array.from(new Uint8Array(sig), (b) => b.toString(16).padStart(2, "0"))
     .join("")
     .slice(0, 40);
-}
-
-export function clientIp(header: ContractDeps["header"]): string {
-  return (
-    (header("cf-connecting-ip") ?? "").trim() ||
-    (header("x-forwarded-for") ?? "").split(",")[0].trim() ||
-    (header("x-real-ip") ?? "").trim() ||
-    "unknown"
-  );
 }
 
 /** Traduce el error de la base de datos (por la pista `HINT`) a un código estable. */

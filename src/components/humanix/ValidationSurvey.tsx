@@ -70,12 +70,12 @@ type Draft = {
   v: 1;
   step: number;
   savedAt: number;
-  /** Cuándo se abrió el formulario por primera vez: quien vuelve a un borrador no es un robot que envía de golpe. */
-  startedAt?: number;
+  /** Tiempo que la persona ya dedicó al formulario: quien vuelve a un borrador no es un robot que envía de golpe. */
+  elapsedMs?: number;
   values: Partial<MarketValidationInput>;
 };
 
-const SAVE_EXCLUDED = ["contact", "consent", "website", "startedAt"] as const;
+const SAVE_EXCLUDED = ["contact", "consent", "website", "fillMs"] as const;
 
 function readDraft(): Draft | null {
   try {
@@ -117,7 +117,11 @@ export function ValidationSurvey() {
   const [result, setResult] = useState<VerifiedResult | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
-  const startedAt = useRef<number>(0);
+  // Tiempo llenando el formulario con un reloj monotónico: no depende de la hora del dispositivo.
+  const openedAt = useRef<number>(0);
+  const carriedMs = useRef<number>(0);
+  const elapsedMs = () =>
+    Math.max(0, Math.round(carriedMs.current + performance.now() - openedAt.current));
   const cardRef = useRef<HTMLDivElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -128,9 +132,9 @@ export function ValidationSurvey() {
   });
   const profile = form.watch("profile") as Profile | undefined;
 
-  // Instante en que se abrió el formulario (el servidor descarta envíos imposiblemente rápidos).
+  // Cuándo se abrió el formulario (el servidor descarta envíos imposiblemente rápidos).
   useEffect(() => {
-    startedAt.current = Date.now();
+    openedAt.current = performance.now();
   }, []);
 
   // Borrador guardado en este dispositivo (nunca incluye contacto ni autorización).
@@ -142,10 +146,7 @@ export function ValidationSurvey() {
           form.setValue(k, d.values[k] as never);
       });
       setStep(Math.min(Math.max(d.step ?? 0, 0), STEPS.length - 1));
-      startedAt.current = Math.min(
-        typeof d.startedAt === "number" ? d.startedAt : Date.now(),
-        Date.now() - MIN_FILL_MS,
-      );
+      carriedMs.current = Math.max(typeof d.elapsedMs === "number" ? d.elapsedMs : 0, MIN_FILL_MS);
       setDraftRestored(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,7 +168,7 @@ export function ValidationSurvey() {
               v: 1,
               step: stepRef.current,
               savedAt: Date.now(),
-              startedAt: startedAt.current,
+              elapsedMs: elapsedMs(),
               values: safe,
             }),
           );
@@ -261,7 +262,7 @@ export function ValidationSurvey() {
       const res = await submitMarketValidation({
         data: {
           ...values,
-          startedAt: startedAt.current,
+          fillMs: elapsedMs(),
           source: new URLSearchParams(window.location.search).get("utm_source") ?? undefined,
         },
       });
@@ -291,7 +292,7 @@ export function ValidationSurvey() {
         }
         return;
       }
-      clearDraft();
+      // El borrador se conserva hasta verificar el contacto: si la solicitud venciera, no se pierde nada.
       setResponse({ id: res.responseId, kind: res.contact.kind, masked: res.contact.masked });
       setPhase("otp");
       toTop();
@@ -304,6 +305,25 @@ export function ValidationSurvey() {
 
   const isLast = step === STEPS.length - 1;
   const progress = useMemo(() => Math.round(((step + 1) / STEPS.length) * 100), [step]);
+
+  /** Vuelve a la última sección con las respuestas intactas (por ejemplo, si la solicitud venció). */
+  const backToForm = () => {
+    setPhase("form");
+    setStep(STEPS.length - 1);
+    setResponse(null);
+    setServerError(null);
+    toTop();
+  };
+
+  /** Vuelve a las respuestas abiertas (sección 2) con lo escrito, para reescribirlas con otras palabras. */
+  const rewrite = () => {
+    setResult(null);
+    setResponse(null);
+    setPhase("form");
+    setStep(1);
+    setServerError(null);
+    toTop();
+  };
 
   const restart = () => {
     clearDraft();
@@ -437,16 +457,23 @@ export function ValidationSurvey() {
             responseId={response.id}
             initial={{ kind: response.kind, masked: response.masked }}
             onVerified={(r) => {
+              // Si debe reescribir sus respuestas, el borrador se conserva: recargar la página no le hace perder nada.
+              if (r.benefit !== "review") clearDraft();
               setResult(r);
               setPhase("result");
               toTop();
             }}
-            onRestart={restart}
+            onRestart={backToForm}
           />
         )}
 
         {phase === "result" && result && (
-          <ValidationResult result={result} profile={profile} loggedIn={loggedIn} />
+          <ValidationResult
+            result={result}
+            profile={profile}
+            loggedIn={loggedIn}
+            onRewrite={rewrite}
+          />
         )}
       </div>
 

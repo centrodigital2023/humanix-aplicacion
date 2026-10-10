@@ -143,3 +143,32 @@ con autorización expresa (simulacro que se deshace solo con 28 comprobaciones, 
 estructura idénticas a la réplica y prueba de humo posterior 28/28 revertida; Realtime 14 → 15 tablas). No se pudo probar: Realtime real, PostgREST con JWT reales, envío real por
 WhatsApp/Resend y navegadores móviles reales. Operación pendiente: secretos `WHATSAPP_OTP_TEMPLATE` (plantilla de
 autenticación aprobada en Meta; sin ella el mensaje solo llega dentro de la ventana de 24 h) y `RESEND_API_KEY`.
+
+## Novena pasada: funciones inteligentes y auditoría de la validación de mercado
+
+Se añadió la capa de inteligencia (pestaña «Hallazgos», antifraude, avisos de contactos fuertes) y se auditó de nuevo toda
+la lógica del formulario, con una revisión independiente del código nuevo. **No hay migración nueva**: todo se calcula
+en el navegador o en funciones de servidor sobre las tablas ya aplicadas.
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 73 | **La IP del cliente salía del primer valor de `x-forwarded-for`, que escribe quien llama**: los límites por IP de PQRS, contratos y del formulario se evadían cambiando un encabezado (o se podía agotar el cupo de otra persona) | `src/lib/clientIp.ts`: manda `cf-connecting-ip` (lo escribe el borde de Cloudflare), con respaldo `x-forwarded-for` y `x-real-ip`; una sola función para los tres módulos, con prueba de falsificación |
+| 74 | El filtro de rapidez comparaba la hora del dispositivo con la del servidor: un reloj atrasado o adelantado dejaba pasar a un robot o tomaba por robot a una persona real | El formulario envía una **duración** (`fillMs`, `performance.now()`), obligatoria; el borrador conserva el tiempo ya invertido |
+| 75 | Los límites por IP (5/h) bloqueaban a oficinas y redes móviles compartidas, justo el público de una validación de mercado | 20/h y **solo cuentan los no verificados**; freno global de WhatsApp de 300/h que no afecta al correo (`channel_unavailable`) |
+| 76 | La serie «respuestas por día» agrupaba por día UTC (lo recibido desde las 7 p. m. de Colombia caía en el día siguiente) y se rompía con una fecha dañada | Alineada a la hora de Colombia y con guarda para fechas inválidas |
+| 77 | Las llamadas a Meta y a Resend no tenían tiempo máximo: una caída del proveedor dejaba colgado el envío | Límite de 8 s y error claro; el cambio de canal sigue disponible |
+| 78 | **Nada impedía que varias personas pegaran el mismo texto y cada una ganara 1 mes del plan Esencial**, ni usar correos temporales | `isDisposableEmail` y comparación de textos entre contactos verificados distintos (Jaccard ≥ 0,8): la respuesta queda en revisión, sin código |
+| 79 | Quien quedaba en revisión perdía el borrador y debía escribir todo de nuevo | El borrador se conserva y «Reescribir con mis palabras» vuelve a la sección 2 con lo escrito |
+| 80 | (Revisión independiente) **Las respuestas con aviso grave inflaban el veredicto, la madurez de la muestra, los temas, los segmentos y la lista de contacto**: 60 respuestas copiadas «perfectas» podían volver «validado» un mercado débil | Esas respuestas siguen guardadas y visibles en «Respuestas», pero no cuentan en la lectura; un hallazgo dice cuántas quedaron fuera |
+| 81 | (Revisión independiente) Los segmentos se agrupaban uniendo perfil y ciudad con `\|`: una ciudad escrita con ese símbolo se partía mal | Agrupación por objeto, no por texto concatenado |
+| 82 | (Revisión independiente) Los avisos de contactos fuertes no tenían tope: una ráfaga de respuestas inundaba las notificaciones de los superadmin | Tope de 30 avisos por hora; son de mejor esfuerzo y nunca rompen la verificación |
+| 83 | El panel cargaba como máximo 5 000 filas sin decirlo; en 390 px el código del beneficio se salía de su tarjeta | Aviso de recorte y diseño apilado que parte el código |
+
+Un hallazgo de la revisión se aceptó como **límite documentado**: la detección de respuestas copiadas depende del orden de
+llegada (la primera persona conserva el código) y dos envíos casi simultáneos pueden pasar ambos; el costo máximo es un
+mes Esencial.
+
+Detalle de reglas, operación y límites en `docs/VALIDACION_MERCADO.md` (§4, §7.1, §11). Verificado con 250 pruebas del
+módulo (783 en total en 37 archivos), PostgreSQL 16 sobre la réplica de producción (regresión completa 264 + 252 + 37 +
+57, sin fallos), render en servidor (11/11) y Chromium (53/53 pasos, sin errores de consola). No se pudo probar: Realtime
+real, envío real por WhatsApp/Resend y navegadores móviles reales.

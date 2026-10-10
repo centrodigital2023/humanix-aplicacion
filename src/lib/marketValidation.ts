@@ -166,6 +166,75 @@ export function normalizeContact(raw: string): NormalizedContact | null {
   };
 }
 
+/**
+ * Dominios de correo temporal («10 minutos», buzones públicos): sirven para cobrar el beneficio muchas veces.
+ * Se rechazan también sus subdominios. La lista es corta a propósito: solo los más usados.
+ */
+const DISPOSABLE_DOMAINS = new Set([
+  "mailinator.com",
+  "guerrillamail.com",
+  "guerrillamail.net",
+  "guerrillamail.org",
+  "guerrillamail.biz",
+  "guerrillamail.de",
+  "guerrillamailblock.com",
+  "sharklasers.com",
+  "grr.la",
+  "10minutemail.com",
+  "10minutemail.net",
+  "20minutemail.com",
+  "tempmail.com",
+  "tempmail.net",
+  "tempmailo.com",
+  "temp-mail.org",
+  "temp-mail.io",
+  "tmpmail.org",
+  "tmpmail.net",
+  "yopmail.com",
+  "yopmail.fr",
+  "yopmail.net",
+  "throwawaymail.com",
+  "trashmail.com",
+  "trashmail.net",
+  "trashmail.de",
+  "trashmail.me",
+  "getnada.com",
+  "nada.email",
+  "dispostable.com",
+  "maildrop.cc",
+  "mailnesia.com",
+  "mohmal.com",
+  "fakeinbox.com",
+  "mintemail.com",
+  "mytemp.email",
+  "emailondeck.com",
+  "spamgourmet.com",
+  "burnermail.io",
+  "discard.email",
+  "mailcatch.com",
+  "inboxkitten.com",
+  "moakt.com",
+  "tempinbox.com",
+  "mail.tm",
+  "owlymail.com",
+]);
+
+export function isDisposableEmail(email: string): boolean {
+  const at = email.lastIndexOf("@");
+  if (at < 0) return false;
+  const domain = email
+    .slice(at + 1)
+    .trim()
+    .toLowerCase();
+  if (!domain) return false;
+  const parts = domain.split(".");
+  // «x.mailinator.com» también cuenta: se prueba cada sufijo del dominio
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (DISPOSABLE_DOMAINS.has(parts.slice(i).join("."))) return true;
+  }
+  return false;
+}
+
 // ─── Textos por perfil (la pregunta es la misma; los ejemplos se adaptan) ────────
 
 export interface QuestionCopy {
@@ -349,7 +418,11 @@ export const marketValidationSchema = z
       .refine(
         (v) => normalizeContact(v) !== null,
         "Escribe un celular colombiano de 10 dígitos (3001234567) o un correo válido",
-      ),
+      )
+      .refine((v) => {
+        const c = normalizeContact(v);
+        return !(c?.kind === "email" && isDisposableEmail(c.value));
+      }, "Usa tu correo personal: no aceptamos correos temporales"),
     city: z.string().trim().max(80),
     serviceOffer: openText(
       15,
@@ -383,8 +456,11 @@ export const marketValidationSchema = z
     consent: z.literal(true, { error: "Debes autorizar el tratamiento de tus datos" }),
     /** Campo trampa: las personas no lo ven ni lo llenan. */
     website: z.string().max(0),
-    /** Instante (ms) en que se abrió el formulario; el servidor descarta envíos imposiblemente rápidos. */
-    startedAt: z.number().int().optional(),
+    /**
+     * Milisegundos que la persona tardó en llenar el formulario, medidos en su navegador con un reloj que no se
+     * desajusta. El servidor descarta envíos imposiblemente rápidos (no usa horas: un reloj mal puesto no cuenta).
+     */
+    fillMs: z.number().int().min(0).optional(),
     source: z.string().trim().max(60).optional(),
   })
   .superRefine((v, ctx) => {
@@ -601,6 +677,54 @@ export function assessQuality(v: QualityInput): QualityReport {
   return { flags: [...flags], severe, fields: [...suspicious] };
 }
 
+// ─── Respuestas copiadas entre personas (granjas de premios) ────────────────────────────
+
+export interface AnswerTexts {
+  serviceOffer: string | null | undefined;
+  painPoint: string | null | undefined;
+  targetAudience: string | null | undefined;
+  dailyChange: string | null | undefined;
+}
+
+export const DUPLICATE_RULE = {
+  /** Parecido mínimo (0–1, por palabras distintas) para considerar que dos textos son el mismo. */
+  threshold: 0.8,
+  /** Un texto cuenta solo si tiene al menos estas palabras (las frases cortas coinciden por casualidad). */
+  minWords: 5,
+  /** Cuántas de las 4 respuestas abiertas deben parecerse para llamarlo copia. */
+  minFields: 3,
+} as const;
+
+/**
+ * ¿Una persona copió lo que escribió otra? Exige que parezcan iguales al menos 3 de las 4 respuestas abiertas, y
+ * cada una con 5 o más palabras: dos personas distintas casi nunca coinciden así sin copiar y pegar.
+ */
+export function isNearDuplicate(a: AnswerTexts, b: AnswerTexts): boolean {
+  const keys = ["serviceOffer", "painPoint", "targetAudience", "dailyChange"] as const;
+  let same = 0;
+  for (const k of keys) {
+    const x = a[k] ?? "";
+    const y = b[k] ?? "";
+    if (
+      countWords(x) >= DUPLICATE_RULE.minWords &&
+      countWords(y) >= DUPLICATE_RULE.minWords &&
+      similarity(x, y) >= DUPLICATE_RULE.threshold
+    ) {
+      same++;
+    }
+  }
+  return same >= DUPLICATE_RULE.minFields;
+}
+
+/** Nombres claros de los avisos de calidad para el panel. */
+export const QUALITY_FLAG_LABEL: Record<string, string> = {
+  gibberish: "Texto sin sentido",
+  repeated_text: "Misma respuesta en varias preguntas",
+  low_effort: "Respuestas muy cortas",
+  example_copy: "Copió el ejemplo",
+  duplicate_text: "Parecida a la de otra persona",
+};
+
 // ─── Señal de demanda (explicable, 0 a 100) ────────────────────────────────────────
 
 export type SignalTier = "strong" | "medium" | "weak";
@@ -686,22 +810,37 @@ export interface ResponseRow {
   verified_channel: string | null;
   promo_code: string | null;
   benefit_status: string | null;
+  /** Hasta cuándo vale el código (opcional: las filas de pruebas antiguas no lo traen). */
+  benefit_expires_at?: string | null;
   premium_activated: boolean | null;
   redeemed_at: string | null;
 }
 
 /** Señal de la fila: la nueva (0-100) o, en filas antiguas, el puntaje del worksheet (0-30) llevado a 100. */
 export function signalOf(r: Pick<ResponseRow, "signal_score" | "total_score">): number | null {
-  if (r.signal_score !== null && r.signal_score !== undefined) return r.signal_score;
-  if (r.total_score !== null && r.total_score !== undefined && r.total_score > 0) {
-    return Math.round((r.total_score / 30) * 100);
+  const clamp = (n: number) => Math.min(100, Math.max(0, n));
+  if (typeof r.signal_score === "number" && Number.isFinite(r.signal_score)) {
+    return clamp(r.signal_score);
+  }
+  if (typeof r.total_score === "number" && Number.isFinite(r.total_score) && r.total_score > 0) {
+    return clamp(Math.round((r.total_score / 30) * 100));
   }
   return null;
 }
 
-const avg = (xs: number[]): number => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
-const round1 = (n: number): number => Math.round(n * 10) / 10;
-const pct = (n: number, d: number): number => (d ? Math.round((n / d) * 100) : 0);
+/** Disposición a pagar válida (0 a 100). Un dato fuera de rango (fila antigua dañada) no cuenta. */
+export function wtpOf(r: Pick<ResponseRow, "willingness_pct">): number | null {
+  const v = r.willingness_pct;
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 100 ? v : null;
+}
+
+/** Colombia no tiene horario de verano: UTC-5 todo el año (se suma a un instante UTC para ver la hora de allá). */
+const BOGOTA_OFFSET_MS = -5 * 3_600_000;
+
+export const avg = (xs: number[]): number =>
+  xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0;
+export const round1 = (n: number): number => Math.round(n * 10) / 10;
+export const pct = (n: number, d: number): number => (d ? Math.round((n / d) * 100) : 0);
 
 export function median(xs: number[]): number {
   if (!xs.length) return 0;
@@ -753,7 +892,7 @@ export function alternativesOf(r: ResponseRow): string[] {
   return splitLegacyAlternatives(r.competitors);
 }
 
-function channelsOf(r: ResponseRow): string[] {
+export function channelsOf(r: ResponseRow): string[] {
   const chips = (r.search_channels ?? []).map((c) =>
     c in CHANNEL_LABEL ? CHANNEL_LABEL[c as ChannelValue] : canonicalName(c),
   );
@@ -834,7 +973,7 @@ function emptyPays(): Record<PayAnswer | "unknown", number> {
   return { yes: 0, no: 0, not_researched: 0, unknown: 0 };
 }
 
-function payOf(r: ResponseRow): PayAnswer | "unknown" {
+export function payOf(r: ResponseRow): PayAnswer | "unknown" {
   return (PAY_VALUES as readonly string[]).includes(r.pays_currently ?? "")
     ? (r.pays_currently as PayAnswer)
     : "unknown";
@@ -843,9 +982,7 @@ function payOf(r: ResponseRow): PayAnswer | "unknown" {
 function profileStats(rows: ResponseRow[], profile: Profile, grandTotal: number): ProfileStats {
   const subset = rows.filter((r) => r.profile_type === profile);
   const signals = subset.map(signalOf).filter((x): x is number => x !== null);
-  const wtps = subset
-    .map((r) => r.willingness_pct)
-    .filter((x): x is number => x !== null && x !== undefined);
+  const wtps = subset.map(wtpOf).filter((x): x is number => x !== null);
   const pays = emptyPays();
   subset.forEach((r) => (pays[payOf(r)] += 1));
   const answered = pays.yes + pays.no + pays.not_researched;
@@ -866,9 +1003,7 @@ function profileStats(rows: ResponseRow[], profile: Profile, grandTotal: number)
 export function tabulate(rows: ResponseRow[], now: number = Date.now()): Tabulation {
   const total = rows.length;
   const signals = rows.map(signalOf).filter((x): x is number => x !== null);
-  const wtps = rows
-    .map((r) => r.willingness_pct)
-    .filter((x): x is number => x !== null && x !== undefined);
+  const wtps = rows.map(wtpOf).filter((x): x is number => x !== null);
   const pays = emptyPays();
   rows.forEach((r) => (pays[payOf(r)] += 1));
   const answered = pays.yes + pays.no + pays.not_researched;
@@ -911,8 +1046,9 @@ export function tabulate(rows: ResponseRow[], now: number = Date.now()): Tabulat
       return { ...k, name: best };
     });
 
+  // Días de Colombia (UTC-5, sin horario de verano): el último es «hoy» allá, aunque en UTC ya sea mañana.
   const dayMs = 86_400_000;
-  const start = new Date(now);
+  const start = new Date(now + BOGOTA_OFFSET_MS);
   start.setUTCHours(0, 0, 0, 0);
   const daily = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(start.getTime() - (13 - i) * dayMs);
@@ -920,9 +1056,9 @@ export function tabulate(rows: ResponseRow[], now: number = Date.now()): Tabulat
   });
   const idx = new Map(daily.map((d, i) => [d.day, i]));
   rows.forEach((r) => {
-    const i = idx.get(
-      new Date(new Date(r.created_at).getTime() - 5 * 3_600_000).toISOString().slice(0, 10),
-    );
+    const t = new Date(r.created_at).getTime();
+    if (!Number.isFinite(t)) return; // una fecha dañada no debe tumbar el panel
+    const i = idx.get(new Date(t + BOGOTA_OFFSET_MS).toISOString().slice(0, 10));
     if (i !== undefined) daily[i].count += 1;
   });
 
@@ -1037,7 +1173,7 @@ export function responsesToCsv(rows: ResponseRow[]): string {
 
 export function responsesFilename(now: Date | number | string = Date.now()): string {
   const t = new Date(now).getTime();
-  const d = new Date((Number.isFinite(t) ? t : Date.now()) - 5 * 3_600_000)
+  const d = new Date((Number.isFinite(t) ? t : Date.now()) + BOGOTA_OFFSET_MS)
     .toISOString()
     .slice(0, 10);
   return `validacion-de-mercado-${d}.csv`;
