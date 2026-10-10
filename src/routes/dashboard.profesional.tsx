@@ -43,6 +43,7 @@ import { AvatarUploader } from "@/components/humanix/AvatarUploader";
 import { DocumentsManager } from "@/components/humanix/DocumentsManager";
 import { RethusAutoVerification } from "@/components/humanix/RethusAutoVerification";
 import { HealthComplianceCard } from "@/components/humanix/HealthComplianceCard";
+import { CareCompassCard } from "@/components/humanix/CareCompassCard";
 import { AvailabilityCalendar } from "@/components/humanix/AvailabilityCalendar";
 import { OnboardingTour } from "@/components/humanix/OnboardingTour";
 import { AiFingerprintCard } from "@/components/humanix/AiFingerprintCard";
@@ -598,6 +599,7 @@ function ProDashboard() {
         {tab === "inicio" && (
           <div className="space-y-4">
 
+            {userId && <CareCompassCard role="professional" userId={userId} name={fullName} />}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
 
             {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
