@@ -3621,33 +3621,39 @@ export type Database = {
         Row: {
           attempts: number
           channel: string
-          code: string
+          code: string | null
+          code_hash: string | null
           contact: string
           created_at: string
           expires_at: string
           id: string
+          ip_hash: string | null
           response_id: string | null
           verified_at: string | null
         }
         Insert: {
           attempts?: number
           channel: string
-          code: string
+          code?: string | null
+          code_hash?: string | null
           contact: string
           created_at?: string
           expires_at?: string
           id?: string
+          ip_hash?: string | null
           response_id?: string | null
           verified_at?: string | null
         }
         Update: {
           attempts?: number
           channel?: string
-          code?: string
+          code?: string | null
+          code_hash?: string | null
           contact?: string
           created_at?: string
           expires_at?: string
           id?: string
+          ip_hash?: string | null
           response_id?: string | null
           verified_at?: string | null
         }
@@ -3663,18 +3669,32 @@ export type Database = {
       }
       validation_responses: {
         Row: {
+          alternatives: string[]
+          benefit_expires_at: string | null
+          benefit_plan: string
+          benefit_status: string
+          city: string | null
           comments: string | null
           competitors: string | null
+          consent_at: string | null
+          consent_version: string | null
+          contact_key: string | null
+          contact_verified_at: string | null
           created_at: string
           current_solutions: string | null
           email: string | null
           full_name: string | null
           id: string
+          ip_hash: string | null
           key_benefit: string | null
           pain_point: string | null
+          pays_currently: string | null
           premium_activated: boolean | null
           profile_type: string
           promo_code: string | null
+          quality_flags: string[]
+          redeemed_at: string | null
+          redeemed_by: string | null
           retention_channels: string | null
           score_benefit: number | null
           score_clear_problem: number | null
@@ -3682,25 +3702,44 @@ export type Database = {
           score_demand: number | null
           score_passion: number | null
           score_reach: number | null
+          search_channels: string[]
           service_offer: string | null
+          signal_score: number | null
+          source: string | null
           target_customer: string | null
           total_score: number | null
+          user_id: string | null
+          verified_channel: string | null
           whatsapp: string | null
           willingness_pct: number | null
         }
         Insert: {
+          alternatives?: string[]
+          benefit_expires_at?: string | null
+          benefit_plan?: string
+          benefit_status?: string
+          city?: string | null
           comments?: string | null
           competitors?: string | null
+          consent_at?: string | null
+          consent_version?: string | null
+          contact_key?: string | null
+          contact_verified_at?: string | null
           created_at?: string
           current_solutions?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          ip_hash?: string | null
           key_benefit?: string | null
           pain_point?: string | null
+          pays_currently?: string | null
           premium_activated?: boolean | null
           profile_type?: string
           promo_code?: string | null
+          quality_flags?: string[]
+          redeemed_at?: string | null
+          redeemed_by?: string | null
           retention_channels?: string | null
           score_benefit?: number | null
           score_clear_problem?: number | null
@@ -3708,25 +3747,44 @@ export type Database = {
           score_demand?: number | null
           score_passion?: number | null
           score_reach?: number | null
+          search_channels?: string[]
           service_offer?: string | null
+          signal_score?: number | null
+          source?: string | null
           target_customer?: string | null
           total_score?: number | null
+          user_id?: string | null
+          verified_channel?: string | null
           whatsapp?: string | null
           willingness_pct?: number | null
         }
         Update: {
+          alternatives?: string[]
+          benefit_expires_at?: string | null
+          benefit_plan?: string
+          benefit_status?: string
+          city?: string | null
           comments?: string | null
           competitors?: string | null
+          consent_at?: string | null
+          consent_version?: string | null
+          contact_key?: string | null
+          contact_verified_at?: string | null
           created_at?: string
           current_solutions?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          ip_hash?: string | null
           key_benefit?: string | null
           pain_point?: string | null
+          pays_currently?: string | null
           premium_activated?: boolean | null
           profile_type?: string
           promo_code?: string | null
+          quality_flags?: string[]
+          redeemed_at?: string | null
+          redeemed_by?: string | null
           retention_channels?: string | null
           score_benefit?: number | null
           score_clear_problem?: number | null
@@ -3734,9 +3792,14 @@ export type Database = {
           score_demand?: number | null
           score_passion?: number | null
           score_reach?: number | null
+          search_channels?: string[]
           service_offer?: string | null
+          signal_score?: number | null
+          source?: string | null
           target_customer?: string | null
           total_score?: number | null
+          user_id?: string | null
+          verified_channel?: string | null
           whatsapp?: string | null
           willingness_pct?: number | null
         }
@@ -4695,6 +4758,10 @@ export type Database = {
           email: string
           role: Database["public"]["Enums"]["app_role"]
         }[]
+      }
+      redeem_validation_benefit: {
+        Args: { p_code: string; p_user: string }
+        Returns: Json
       }
       release_expired_reservations: { Args: never; Returns: undefined }
       respond_circle_invitation: {
