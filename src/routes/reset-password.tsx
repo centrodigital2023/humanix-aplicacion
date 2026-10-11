@@ -84,7 +84,9 @@ function ResetPasswordPage() {
       setDone(true);
       toast.success("Contraseña actualizada. Ya puedes iniciar sesión.");
       setTimeout(() => {
-        supabase.auth.signOut().finally(() => navigate({ to: "/auth", search: { mode: "signin" } }));
+        supabase.auth
+          .signOut()
+          .finally(() => navigate({ to: "/auth", search: { mode: "signin" } }));
       }, 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo actualizar");

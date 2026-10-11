@@ -1,5 +1,5 @@
-import { TileLayer, useMap } from 'react-leaflet';
-import { useEffect, useState } from 'react';
+import { TileLayer, useMap } from "react-leaflet";
+import { useEffect, useState } from "react";
 
 /**
  * Lazy-loaded TileLayer that only renders when the map is within reasonable bounds
@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
  */
 export function LazyTileLayer({
   attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  url = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 }: {
   attribution?: string;
   url?: string;
@@ -24,9 +24,9 @@ export function LazyTileLayer({
       // Tiles auto-manage in Leaflet, this is just a hook for future optimization
     };
 
-    map.on('zoom', handleZoom);
+    map.on("zoom", handleZoom);
     return () => {
-      map.off('zoom', handleZoom);
+      map.off("zoom", handleZoom);
     };
   }, [map]);
 

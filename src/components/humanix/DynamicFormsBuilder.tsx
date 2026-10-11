@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * DYNAMIC FORMS BUILDER - PROFESIONALES / OFERTAS
- * 
+ *
  * Features:
  * - Constructor de formularios dinámicos
  * - Campos personalizables por oferta
@@ -125,7 +125,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
             data?.map((f: any) => ({
               ...f,
               fields: f.fields || [],
-            })) ?? []
+            })) ?? [],
           );
         }
       } catch (e) {
@@ -218,9 +218,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
   };
 
   const updateField = (id: string, updates: Partial<FormField>) => {
-    setFormFields((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, ...updates } : f))
-    );
+    setFormFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...updates } : f)));
   };
 
   const removeField = (id: string) => {
@@ -229,10 +227,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
 
   const deleteForm = async (id: string) => {
     try {
-      const { error } = await (supabase as any)
-        .from("dynamic_forms")
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase as any).from("dynamic_forms").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -292,13 +287,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
         {
           label: "Ciudades donde puede trabajar",
           type: "checkbox",
-          options: [
-            "Bogotá",
-            "Medellín",
-            "Cali",
-            "Barranquilla",
-            "Cartagena",
-          ],
+          options: ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena"],
         },
         {
           label: "Horarios disponibles",
@@ -402,11 +391,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
                 </div>
               </button>
             ))}
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={() => setShowCreateForm(true)}
-            >
+            <Button className="w-full" variant="outline" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-1.5" /> Agregar formulario
             </Button>
           </div>
@@ -415,9 +400,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
         {/* Respuestas del formulario seleccionado */}
         {selectedForm && (
           <div className="mt-6 pt-4 border-t space-y-3">
-            <h4 className="font-semibold text-sm">
-              Respuestas ({responses.length})
-            </h4>
+            <h4 className="font-semibold text-sm">Respuestas ({responses.length})</h4>
             {loadingResponses ? (
               <div className="text-center text-sm text-muted-foreground py-4">
                 <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
@@ -427,10 +410,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {responses.map((resp) => (
-                  <div
-                    key={resp.id}
-                    className="p-2 rounded-lg border border-border text-sm"
-                  >
+                  <div key={resp.id} className="p-2 rounded-lg border border-border text-sm">
                     <div className="flex items-center justify-between">
                       <p className="font-medium">{resp.respondent_name}</p>
                       {resp.ai_score && (
@@ -492,15 +472,13 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
                             value: opt,
                             label: opt,
                           })),
-                        }))
+                        })),
                       );
                     }}
                     className="text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors"
                   >
                     <p className="font-medium text-sm">{template.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {template.fields.length} campos
-                    </p>
+                    <p className="text-xs text-muted-foreground">{template.fields.length} campos</p>
                   </button>
                 ))}
               </div>
@@ -511,11 +489,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium">Campos ({formFields.length})</label>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={addField}
-                  >
+                  <Button size="sm" variant="outline" onClick={addField}>
                     <Plus className="h-3 w-3 mr-1" /> Agregar
                   </Button>
                 </div>
@@ -533,11 +507,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
                           {field.required && " (requerido)"}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeField(field.id)}
-                      >
+                      <Button size="sm" variant="ghost" onClick={() => removeField(field.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

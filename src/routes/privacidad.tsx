@@ -40,40 +40,51 @@ function PrivacidadPage() {
               Pasaporte), dirección, correo electrónico y teléfono móvil.
             </li>
             <li>
-              <strong>Perfil profesional (solo profesionales):</strong> hojas de vida, certificaciones
-              académicas, antecedentes judiciales consultados en fuentes públicas, registros del REPS,
-              tarjeta profesional y fotografía de perfil.
+              <strong>Perfil profesional (solo profesionales):</strong> hojas de vida,
+              certificaciones académicas, antecedentes judiciales consultados en fuentes públicas,
+              registros del REPS, tarjeta profesional y fotografía de perfil.
             </li>
             <li>
-              <strong>Datos técnicos de navegación:</strong> dirección IP, geolocalización aproximada,
-              tipo de dispositivo, sistema operativo, cookies y metadatos de uso de la Plataforma.
+              <strong>Datos técnicos de navegación:</strong> dirección IP, geolocalización
+              aproximada, tipo de dispositivo, sistema operativo, cookies y metadatos de uso de la
+              Plataforma.
             </li>
           </ul>
         </LegalSection>
 
         <LegalSection title="2. Finalidades del tratamiento">
           <ul className="list-disc pl-6 space-y-2">
-            <li>Validar la identidad y mitigar riesgos de suplantación, fraude o conductas delictivas.</li>
-            <li>Permitir la indexación y búsqueda de perfiles profesionales por clientes potenciales.</li>
+            <li>
+              Validar la identidad y mitigar riesgos de suplantación, fraude o conductas delictivas.
+            </li>
+            <li>
+              Permitir la indexación y búsqueda de perfiles profesionales por clientes potenciales.
+            </li>
             <li>Facilitar canales de comunicación internos (chats, alertas de asignación).</li>
-            <li>Procesar pagos, facturación y cobro de tarifas de intermediación tecnológica, si aplica.</li>
+            <li>
+              Procesar pagos, facturación y cobro de tarifas de intermediación tecnológica, si
+              aplica.
+            </li>
             <li>Enviar alertas de seguridad, actualizaciones técnicas y soporte al cliente.</li>
-            <li>Remitir comunicaciones comerciales o encuestas, previa autorización del usuario.</li>
+            <li>
+              Remitir comunicaciones comerciales o encuestas, previa autorización del usuario.
+            </li>
           </ul>
         </LegalSection>
 
         <LegalSection title="3. No tratamiento de datos sensibles de salud (historias clínicas)">
           <p>
-            Humanix S.A.S. declara expresamente que <strong>NO recolecta, NO almacena, NO custodia y
-            NO realiza tratamiento alguno</strong> sobre datos de salud sensibles tales como
-            historias clínicas, diagnósticos, prescripciones, exámenes de laboratorio o reportes
-            psicológicos, conforme a las restricciones de la Ley 1581 de 2012.
+            Humanix S.A.S. declara expresamente que{" "}
+            <strong>NO recolecta, NO almacena, NO custodia y NO realiza tratamiento alguno</strong>{" "}
+            sobre datos de salud sensibles tales como historias clínicas, diagnósticos,
+            prescripciones, exámenes de laboratorio o reportes psicológicos, conforme a las
+            restricciones de la Ley 1581 de 2012.
           </p>
           <p>
             La Plataforma funciona únicamente para la coordinación logística del contacto. Toda
-            información clínica compartida durante el cuidado ocurre dentro de la reserva profesional
-            médico-paciente (<strong>Ley 23 de 1981</strong>) y se maneja directamente entre el
-            profesional y el cliente, sin que Humanix posea acceso, copia o archivo.
+            información clínica compartida durante el cuidado ocurre dentro de la reserva
+            profesional médico-paciente (<strong>Ley 23 de 1981</strong>) y se maneja directamente
+            entre el profesional y el cliente, sin que Humanix posea acceso, copia o archivo.
           </p>
         </LegalSection>
 
@@ -121,9 +132,19 @@ function PrivacidadPage() {
         <LegalSection title="8. Contacto">
           <p>
             Para ejercer derechos o resolver dudas sobre el tratamiento de datos:{" "}
-            <a href="mailto:soporte@humanix.lat" className="text-foreground underline underline-offset-4">soporte@humanix.lat</a>{" "}
+            <a
+              href="mailto:soporte@humanix.lat"
+              className="text-foreground underline underline-offset-4"
+            >
+              soporte@humanix.lat
+            </a>{" "}
             · respaldo:{" "}
-            <a href="mailto:centrodigital2023@gmail.com" className="text-foreground underline underline-offset-4">centrodigital2023@gmail.com</a>{" "}
+            <a
+              href="mailto:centrodigital2023@gmail.com"
+              className="text-foreground underline underline-offset-4"
+            >
+              centrodigital2023@gmail.com
+            </a>{" "}
             · teléfono <strong>+57 314 744 4715</strong>.
           </p>
         </LegalSection>

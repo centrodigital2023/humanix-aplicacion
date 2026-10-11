@@ -248,13 +248,7 @@ function labelForDocType(t: string): string {
 }
 
 /** Cinta horizontal deslizable con mini-tarjetas por documento, verificación IA y match de nombre. */
-function DocStrip({
-  docs,
-  registeredName,
-}: {
-  docs: ProDocLite[];
-  registeredName: string | null;
-}) {
+function DocStrip({ docs, registeredName }: { docs: ProDocLite[]; registeredName: string | null }) {
   if (!docs.length) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2 text-center">
@@ -275,9 +269,7 @@ function DocStrip({
         </p>
         <span className="text-[10px] text-muted-foreground">← desliza →</span>
       </div>
-      <div
-        className="flex gap-2 overflow-x-auto pb-1.5 scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full"
-      >
+      <div className="flex gap-2 overflow-x-auto pb-1.5 scroll-smooth snap-x snap-mandatory [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
         {docs.map((d) => {
           const match = docNameMatch(registeredName, d);
           const aiVerified = d.ai_verified === true;
@@ -318,9 +310,7 @@ function DocStrip({
               <p className="text-[11px] font-semibold leading-tight capitalize line-clamp-2">
                 {labelForDocType(d.doc_type)}
               </p>
-              <p className="text-[9.5px] text-muted-foreground truncate">
-                {d.file_name ?? "—"}
-              </p>
+              <p className="text-[9.5px] text-muted-foreground truncate">{d.file_name ?? "—"}</p>
               <div className="flex items-center justify-between gap-1 mt-auto">
                 {score != null ? (
                   <span
@@ -408,16 +398,76 @@ type WebTarget = {
 };
 
 const WEB_TARGETS: WebTarget[] = [
-  { id: "google", label: "Google", sub: "Rastro general", icon: Globe, tone: "from-sky-500/15 to-sky-500/5 border-sky-500/30 text-sky-600" },
-  { id: "google_cv", label: "CV público", sub: "filetype:pdf", icon: FileText, tone: "from-fuchsia-neural/15 to-fuchsia-neural/5 border-fuchsia-neural/30 text-fuchsia-neural" },
-  { id: "linkedin", label: "LinkedIn", sub: "Trayectoria laboral", icon: Briefcase, tone: "from-blue-500/15 to-blue-500/5 border-blue-500/30 text-blue-600" },
-  { id: "facebook", label: "Facebook", sub: "Perfil personal", icon: Users, tone: "from-indigo-500/15 to-indigo-500/5 border-indigo-500/30 text-indigo-600" },
-  { id: "instagram", label: "Instagram", sub: "Reputación visual", icon: Eye, tone: "from-pink-500/15 to-pink-500/5 border-pink-500/30 text-pink-600" },
-  { id: "x", label: "X / Twitter", sub: "Opiniones públicas", icon: Megaphone, tone: "from-zinc-500/15 to-zinc-500/5 border-zinc-500/30 text-zinc-700" },
-  { id: "youtube", label: "YouTube", sub: "Videos / menciones", icon: Eye, tone: "from-red-500/15 to-red-500/5 border-red-500/30 text-red-600" },
-  { id: "scholar", label: "Scholar", sub: "Publicaciones", icon: GraduationCap, tone: "from-emerald-500/15 to-emerald-500/5 border-emerald-500/30 text-emerald-600" },
-  { id: "google_news", label: "Noticias", sub: "Menciones en prensa", icon: Newspaper, tone: "from-amber-500/15 to-amber-500/5 border-amber-500/30 text-amber-600" },
-  { id: "rethus", label: "RETHUS", sub: "Registro oficial MinSalud", icon: ShieldCheck, tone: "from-biosensor/20 to-biosensor/5 border-biosensor/40 text-biosensor" },
+  {
+    id: "google",
+    label: "Google",
+    sub: "Rastro general",
+    icon: Globe,
+    tone: "from-sky-500/15 to-sky-500/5 border-sky-500/30 text-sky-600",
+  },
+  {
+    id: "google_cv",
+    label: "CV público",
+    sub: "filetype:pdf",
+    icon: FileText,
+    tone: "from-fuchsia-neural/15 to-fuchsia-neural/5 border-fuchsia-neural/30 text-fuchsia-neural",
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    sub: "Trayectoria laboral",
+    icon: Briefcase,
+    tone: "from-blue-500/15 to-blue-500/5 border-blue-500/30 text-blue-600",
+  },
+  {
+    id: "facebook",
+    label: "Facebook",
+    sub: "Perfil personal",
+    icon: Users,
+    tone: "from-indigo-500/15 to-indigo-500/5 border-indigo-500/30 text-indigo-600",
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    sub: "Reputación visual",
+    icon: Eye,
+    tone: "from-pink-500/15 to-pink-500/5 border-pink-500/30 text-pink-600",
+  },
+  {
+    id: "x",
+    label: "X / Twitter",
+    sub: "Opiniones públicas",
+    icon: Megaphone,
+    tone: "from-zinc-500/15 to-zinc-500/5 border-zinc-500/30 text-zinc-700",
+  },
+  {
+    id: "youtube",
+    label: "YouTube",
+    sub: "Videos / menciones",
+    icon: Eye,
+    tone: "from-red-500/15 to-red-500/5 border-red-500/30 text-red-600",
+  },
+  {
+    id: "scholar",
+    label: "Scholar",
+    sub: "Publicaciones",
+    icon: GraduationCap,
+    tone: "from-emerald-500/15 to-emerald-500/5 border-emerald-500/30 text-emerald-600",
+  },
+  {
+    id: "google_news",
+    label: "Noticias",
+    sub: "Menciones en prensa",
+    icon: Newspaper,
+    tone: "from-amber-500/15 to-amber-500/5 border-amber-500/30 text-amber-600",
+  },
+  {
+    id: "rethus",
+    label: "RETHUS",
+    sub: "Registro oficial MinSalud",
+    icon: ShieldCheck,
+    tone: "from-biosensor/20 to-biosensor/5 border-biosensor/40 text-biosensor",
+  },
 ];
 
 /** Panel IA: verificación de nombre + presencia web + reputación social. */
@@ -492,7 +542,8 @@ function WebPresencePanel({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-            <Globe className="h-3.5 w-3.5 text-fuchsia-neural" /> Presencia web &amp; verificación IA
+            <Globe className="h-3.5 w-3.5 text-fuchsia-neural" /> Presencia web &amp; verificación
+            IA
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Verifica el nombre contra los documentos y explora el rastro público del profesional.
@@ -524,7 +575,8 @@ function WebPresencePanel({
               </Badge>
             ) : (
               <Badge variant="destructive" className="text-[10px]">
-                <AlertTriangle className="h-3 w-3 mr-0.5" /> ≠ Nombre en {mismatchCount}/{analyzable} docs
+                <AlertTriangle className="h-3 w-3 mr-0.5" /> ≠ Nombre en {mismatchCount}/
+                {analyzable} docs
               </Badge>
             )
           ) : (
@@ -534,8 +586,7 @@ function WebPresencePanel({
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Nombre registrado:{" "}
-          <span className="font-medium text-foreground">{name || "—"}</span>
+          Nombre registrado: <span className="font-medium text-foreground">{name || "—"}</span>
         </p>
         {nameMatches.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -633,7 +684,9 @@ function WebPresencePanel({
           <div className="grid sm:grid-cols-2 gap-2">
             {trust.strengths.length > 0 && (
               <div className="rounded bg-biosensor/10 border border-biosensor/20 p-2">
-                <p className="text-[10px] uppercase font-semibold text-biosensor mb-1">Fortalezas</p>
+                <p className="text-[10px] uppercase font-semibold text-biosensor mb-1">
+                  Fortalezas
+                </p>
                 <ul className="text-[11px] space-y-0.5">
                   {trust.strengths.map((s, i) => (
                     <li key={i} className="flex gap-1">
@@ -776,9 +829,7 @@ function ProfessionalsTab({ reviewerId }: { reviewerId: string }) {
     if (userIds.length) {
       const { data: docRows } = await supabase
         .from("professional_documents")
-        .select(
-          "id, doc_type, file_name, user_id, status, ai_score, ai_verified, ai_extracted",
-        )
+        .select("id, doc_type, file_name, user_id, status, ai_score, ai_verified, ai_extracted")
         .in("user_id", userIds)
         .order("created_at", { ascending: false });
       docsByUser = new Map();
@@ -1129,9 +1180,7 @@ function ProfessionalDetailDialog({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success(
-        wipeAccount
-          ? "Cuenta y email eliminados por completo"
-          : "Perfil profesional eliminado",
+        wipeAccount ? "Cuenta y email eliminados por completo" : "Perfil profesional eliminado",
       );
       setConfirmDelete(false);
       setConfirmText("");
@@ -1444,602 +1493,628 @@ function ProfessionalDetailDialog({
                   </div>
                 </Card>
               )}
-
-              {detailTab === "perfil" && (<>
-              {/* ── Fila 1: KPIs + Contacto ─────────────────────────────────── */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                {/* KPIs */}
-                <Card className="p-4">
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
-                    <Star className="h-3.5 w-3.5 text-copper" /> Métricas de desempeño
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-copper/8 border border-copper/20 p-3 text-center">
-                      <Star className="h-3.5 w-3.5 text-copper mx-auto mb-1" />
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Rating
+              {detailTab === "perfil" && (
+                <>
+                  {/* ── Fila 1: KPIs + Contacto ─────────────────────────────────── */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {/* KPIs */}
+                    <Card className="p-4">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5 text-copper" /> Métricas de desempeño
                       </p>
-                      <p className="text-xl font-bold text-copper">
-                        {pro.avg_rating ? Number(pro.avg_rating).toFixed(1) : "—"}
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-fuchsia-neural/8 border border-fuchsia-neural/20 p-3 text-center">
-                      <Briefcase className="h-3.5 w-3.5 text-fuchsia-neural mx-auto mb-1" />
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Trabajos
-                      </p>
-                      <p className="text-xl font-bold text-fuchsia-neural">{pro.total_jobs ?? 0}</p>
-                    </div>
-                    <div className="rounded-xl bg-muted/40 border border-border p-3 text-center">
-                      <Award className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Años exp.
-                      </p>
-                      <p className="text-xl font-bold">{pro.years_experience ?? 0}</p>
-                    </div>
-                    <div
-                      className={`rounded-xl border p-3 text-center ${
-                        (pro.social_trust_score ?? 0) >= 70
-                          ? "bg-biosensor/8 border-biosensor/20"
-                          : (pro.social_trust_score ?? 0) > 0
-                            ? "bg-copper/8 border-copper/20"
-                            : "bg-muted/40 border-border"
-                      }`}
-                    >
-                      <ShieldCheck
-                        className={`h-3.5 w-3.5 mx-auto mb-1 ${
-                          (pro.social_trust_score ?? 0) >= 70
-                            ? "text-biosensor"
-                            : "text-muted-foreground"
-                        }`}
-                      />
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Trust
-                      </p>
-                      <p
-                        className={`text-xl font-bold ${
-                          (pro.social_trust_score ?? 0) >= 70
-                            ? "text-biosensor"
-                            : (pro.social_trust_score ?? 0) > 0
-                              ? "text-copper"
-                              : ""
-                        }`}
-                      >
-                        {pro.social_trust_score ?? 0}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Contacto */}
-                <Card className="p-4 space-y-3">
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-biosensor" /> Contacto e identidad
-                  </p>
-                  <div className="space-y-2">
-                    <a
-                      href={pro.profile?.email ? `mailto:${pro.profile.email}` : undefined}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/30 hover:bg-muted/60 transition-colors group"
-                    >
-                      <Mail className="h-3.5 w-3.5 text-biosensor shrink-0" />
-                      <span className="text-sm truncate group-hover:text-foreground text-muted-foreground">
-                        {pro.profile?.email || "—"}
-                      </span>
-                    </a>
-                    <a
-                      href={pro.profile?.phone ? `tel:${pro.profile.phone}` : undefined}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/30 hover:bg-muted/60 transition-colors group"
-                    >
-                      <Phone className="h-3.5 w-3.5 text-biosensor shrink-0" />
-                      <span className="text-sm group-hover:text-foreground text-muted-foreground">
-                        {pro.profile?.phone || "—"}
-                      </span>
-                    </a>
-                    <div className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/30">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-sm text-muted-foreground">{pro.home_city || "—"}</span>
-                    </div>
-                    {pro.rethus_number && (
-                      <div className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-biosensor/8 border border-biosensor/20">
-                        <FileCheck className="h-3.5 w-3.5 text-biosensor shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] uppercase tracking-wider text-biosensor/70">
-                            RETHUS
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl bg-copper/8 border border-copper/20 p-3 text-center">
+                          <Star className="h-3.5 w-3.5 text-copper mx-auto mb-1" />
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Rating
                           </p>
-                          <p className="font-mono text-sm font-semibold text-biosensor">
-                            {pro.rethus_number}
+                          <p className="text-xl font-bold text-copper">
+                            {pro.avg_rating ? Number(pro.avg_rating).toFixed(1) : "—"}
                           </p>
                         </div>
-                        {pro.rethus_verified ? (
-                          <Badge className="bg-biosensor/20 text-biosensor text-[10px] shrink-0">
-                            <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
-                            Verificado
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-[10px] shrink-0">
-                            Sin verificar
-                          </Badge>
+                        <div className="rounded-xl bg-fuchsia-neural/8 border border-fuchsia-neural/20 p-3 text-center">
+                          <Briefcase className="h-3.5 w-3.5 text-fuchsia-neural mx-auto mb-1" />
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Trabajos
+                          </p>
+                          <p className="text-xl font-bold text-fuchsia-neural">
+                            {pro.total_jobs ?? 0}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-muted/40 border border-border p-3 text-center">
+                          <Award className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Años exp.
+                          </p>
+                          <p className="text-xl font-bold">{pro.years_experience ?? 0}</p>
+                        </div>
+                        <div
+                          className={`rounded-xl border p-3 text-center ${
+                            (pro.social_trust_score ?? 0) >= 70
+                              ? "bg-biosensor/8 border-biosensor/20"
+                              : (pro.social_trust_score ?? 0) > 0
+                                ? "bg-copper/8 border-copper/20"
+                                : "bg-muted/40 border-border"
+                          }`}
+                        >
+                          <ShieldCheck
+                            className={`h-3.5 w-3.5 mx-auto mb-1 ${
+                              (pro.social_trust_score ?? 0) >= 70
+                                ? "text-biosensor"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Trust
+                          </p>
+                          <p
+                            className={`text-xl font-bold ${
+                              (pro.social_trust_score ?? 0) >= 70
+                                ? "text-biosensor"
+                                : (pro.social_trust_score ?? 0) > 0
+                                  ? "text-copper"
+                                  : ""
+                            }`}
+                          >
+                            {pro.social_trust_score ?? 0}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Contacto */}
+                    <Card className="p-4 space-y-3">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-biosensor" /> Contacto e identidad
+                      </p>
+                      <div className="space-y-2">
+                        <a
+                          href={pro.profile?.email ? `mailto:${pro.profile.email}` : undefined}
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/30 hover:bg-muted/60 transition-colors group"
+                        >
+                          <Mail className="h-3.5 w-3.5 text-biosensor shrink-0" />
+                          <span className="text-sm truncate group-hover:text-foreground text-muted-foreground">
+                            {pro.profile?.email || "—"}
+                          </span>
+                        </a>
+                        <a
+                          href={pro.profile?.phone ? `tel:${pro.profile.phone}` : undefined}
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/30 hover:bg-muted/60 transition-colors group"
+                        >
+                          <Phone className="h-3.5 w-3.5 text-biosensor shrink-0" />
+                          <span className="text-sm group-hover:text-foreground text-muted-foreground">
+                            {pro.profile?.phone || "—"}
+                          </span>
+                        </a>
+                        <div className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/30">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-sm text-muted-foreground">
+                            {pro.home_city || "—"}
+                          </span>
+                        </div>
+                        {pro.rethus_number && (
+                          <div className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-biosensor/8 border border-biosensor/20">
+                            <FileCheck className="h-3.5 w-3.5 text-biosensor shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] uppercase tracking-wider text-biosensor/70">
+                                RETHUS
+                              </p>
+                              <p className="font-mono text-sm font-semibold text-biosensor">
+                                {pro.rethus_number}
+                              </p>
+                            </div>
+                            {pro.rethus_verified ? (
+                              <Badge className="bg-biosensor/20 text-biosensor text-[10px] shrink-0">
+                                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+                                Verificado
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px] shrink-0">
+                                Sin verificar
+                              </Badge>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
+                    </Card>
                   </div>
-                </Card>
-              </div>
 
-              {/* ── Fila 2: Tarifas + Especialidades ────────────────────────── */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Card className="p-4">
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
-                    <Briefcase className="h-3.5 w-3.5 text-fuchsia-neural" /> Tarifas declaradas
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: "Por hora", value: pro.hourly_rate },
-                      { label: "Por turno", value: null },
-                      { label: "Mensual", value: null },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="rounded-xl bg-muted/40 p-2 text-center">
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                          {label}
-                        </p>
-                        <p className="text-xs font-semibold mt-0.5">
-                          {value ? `$${value.toLocaleString("es-CO")}` : "—"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card className="p-4 space-y-2">
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-biosensor" /> Habilidades y cobertura
-                  </p>
-                  {pro.languages && pro.languages.length > 0 && (
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Idiomas</p>
-                      <div className="flex flex-wrap gap-1">
-                        {pro.languages.map((l, i) => (
-                          <Badge key={i} variant="secondary" className="text-[10px]">
-                            {l}
-                          </Badge>
+                  {/* ── Fila 2: Tarifas + Especialidades ────────────────────────── */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <Card className="p-4">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5 text-fuchsia-neural" /> Tarifas declaradas
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { label: "Por hora", value: pro.hourly_rate },
+                          { label: "Por turno", value: null },
+                          { label: "Mensual", value: null },
+                        ].map(({ label, value }) => (
+                          <div key={label} className="rounded-xl bg-muted/40 p-2 text-center">
+                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                              {label}
+                            </p>
+                            <p className="text-xs font-semibold mt-0.5">
+                              {value ? `$${value.toLocaleString("es-CO")}` : "—"}
+                            </p>
+                          </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-                  {pro.service_cities && pro.service_cities.length > 0 && (
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Ciudades de servicio</p>
-                      <div className="flex flex-wrap gap-1">
-                        {pro.service_cities.map((c, i) => (
-                          <Badge key={i} variant="outline" className="text-[10px]">
-                            <MapPin className="h-2.5 w-2.5 mr-0.5" />
-                            {c}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {Array.isArray(pro.certifications) &&
-                    (pro.certifications as unknown[]).length > 0 && (
-                      <div>
-                        <p className="text-[10px] text-muted-foreground mb-1">Certificaciones</p>
-                        <div className="flex flex-wrap gap-1">
-                          {(pro.certifications as string[]).map((c, i) => (
-                            <Badge key={i} variant="outline" className="text-[10px]">
-                              {c}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                </Card>
-              </div>
+                    </Card>
 
-              {/* ── Fila 3: Bio + Experiencia ────────────────────────────────── */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                {(pro.bio || pro.ai_summary) && (
-                  <Card className="p-4 space-y-3">
-                    {pro.bio && (
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
-                          Biografía
-                        </p>
-                        <div className="border-l-2 border-biosensor/40 pl-3">
-                          <p className="text-sm text-muted-foreground leading-relaxed">{pro.bio}</p>
-                        </div>
-                      </div>
-                    )}
-                    {pro.ai_summary && (
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          <Sparkles className="h-3 w-3 text-fuchsia-neural" /> Resumen IA
-                        </p>
-                        <div className="border-l-2 border-fuchsia-neural/40 pl-3">
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            {pro.ai_summary}
-                          </p>
-                        </div>
-                        {pro.ai_strengths && pro.ai_strengths.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {pro.ai_strengths.map((s, i) => (
+                    <Card className="p-4 space-y-2">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-biosensor" /> Habilidades y
+                        cobertura
+                      </p>
+                      {pro.languages && pro.languages.length > 0 && (
+                        <div>
+                          <p className="text-[10px] text-muted-foreground mb-1">Idiomas</p>
+                          <div className="flex flex-wrap gap-1">
+                            {pro.languages.map((l, i) => (
                               <Badge key={i} variant="secondary" className="text-[10px]">
-                                {s}
+                                {l}
                               </Badge>
                             ))}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </Card>
-                )}
-
-                <Card className="p-4 space-y-2">
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
-                    Referencias ({refs.length})
-                  </p>
-                  {refs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Sin referencias cargadas.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {refs.map((r) => (
-                        <div
-                          key={r.id}
-                          className="rounded-lg bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="font-medium truncate">{r.full_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {r.phone} · {r.relation || r.ref_type}
-                            </p>
-                          </div>
-                          {r.verified && (
-                            <Badge variant="outline" className="text-[10px] shrink-0">
-                              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5 text-biosensor" />
-                              Verif.
-                            </Badge>
-                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </div>
-
-              {/* ── Experiencia laboral ──────────────────────────────────────── */}
-              {Array.isArray(pro.work_experience) && pro.work_experience.length > 0 && (
-                <Card className="p-4">
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">
-                    Experiencia laboral
-                  </p>
-                  <div className="grid sm:grid-cols-2 gap-2">
-                    {(pro.work_experience as Array<Record<string, unknown>>).map((w, i) => (
-                      <div key={i} className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                        <p className="font-medium">{String(w.role ?? "Rol")}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {String(w.company ?? "")} {w.years ? `· ${String(w.years)} años` : ""}
-                        </p>
-                      </div>
-                    ))}
+                      )}
+                      {pro.service_cities && pro.service_cities.length > 0 && (
+                        <div>
+                          <p className="text-[10px] text-muted-foreground mb-1">
+                            Ciudades de servicio
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {pro.service_cities.map((c, i) => (
+                              <Badge key={i} variant="outline" className="text-[10px]">
+                                <MapPin className="h-2.5 w-2.5 mr-0.5" />
+                                {c}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {Array.isArray(pro.certifications) &&
+                        (pro.certifications as unknown[]).length > 0 && (
+                          <div>
+                            <p className="text-[10px] text-muted-foreground mb-1">
+                              Certificaciones
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {(pro.certifications as string[]).map((c, i) => (
+                                <Badge key={i} variant="outline" className="text-[10px]">
+                                  {c}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </Card>
                   </div>
-                </Card>
-              )}
 
-              {/* ── Presencia web &amp; verificación IA ─────────────────────── */}
-              </>)} {/* end perfil tab */}
-
-              {detailTab === "documentos" && (<>
-              {/* Todos los documentos adjuntos — grid responsivo */}
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-fuchsia-neural" />
-                  {docs.length} documento{docs.length !== 1 ? "s" : ""} adjunto{docs.length !== 1 ? "s" : ""}
-                </p>
-                {docs.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={analyzeAllDocs}
-                    disabled={analyzingAll}
-                    className="h-7 text-[10px]"
-                  >
-                    {analyzingAll ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-0.5" />
-                    ) : (
-                      <Sparkles className="h-3 w-3 mr-0.5" />
-                    )}
-                    Analizar todos con IA
-                  </Button>
-                )}
-              </div>
-              {docs.length === 0 ? (
-                <Card className="p-10 text-center">
-                  <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Sin documentos cargados.</p>
-                </Card>
-              ) : (
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {docs.map((d) => {
-                    const extra = docExtras[d.id];
-                    const extracted = extra?.ai_extracted as
-                      | Record<string, unknown>
-                      | null
-                      | undefined;
-                    const isExpanded = expandedDoc === d.id;
-                    const aiOk = extra?.ai_verified === true;
-                    const aiBad = extra?.ai_verified === false;
-                    return (
-                      <div
-                        key={d.id}
-                        className={`rounded-xl border flex flex-col overflow-hidden bg-card ${aiOk ? "border-biosensor/30" : aiBad ? "border-destructive/30" : "border-border"}`}
-                      >
-                        <div
-                          className={`px-3 py-2 flex items-center justify-between gap-2 ${aiOk ? "bg-biosensor/5" : aiBad ? "bg-destructive/5" : "bg-muted/30"}`}
-                        >
-                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                            <Badge variant="secondary" className="uppercase text-[10px]">
-                              {d.doc_type}
-                            </Badge>
-                            <Badge
-                              variant={
-                                d.status === "approved"
-                                  ? "default"
-                                  : d.status === "rejected"
-                                    ? "destructive"
-                                    : "outline"
-                              }
-                              className="text-[10px] capitalize"
-                            >
-                              {d.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {d.ai_score != null && (
-                              <span
-                                className={`text-[10px] font-bold ${d.ai_score >= 70 ? "text-biosensor" : "text-destructive"}`}
-                              >
-                                {d.ai_score}/100
-                              </span>
-                            )}
-                            {aiOk && <CheckCircle2 className="h-3.5 w-3.5 text-biosensor" />}
-                            {aiBad && <XCircle className="h-3.5 w-3.5 text-destructive" />}
-                          </div>
-                        </div>
-                        <div className="px-3 py-2 flex-1">
-                          <p
-                            className="text-xs font-medium truncate"
-                            title={d.file_name || "Sin nombre"}
-                          >
-                            {d.file_name || "Sin nombre"}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            {new Date(d.created_at).toLocaleDateString("es-CO")}
-                            {d.ai_score != null && (
-                              <span
-                                className={`ml-1 font-semibold ${d.ai_score >= 70 ? "text-biosensor" : "text-destructive"}`}
-                              >
-                                {" "}· IA {d.ai_score}/100
-                              </span>
-                            )}
-                          </p>
-                          {d.ai_notes && (
-                            <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 italic">
-                              {d.ai_notes}
+                  {/* ── Fila 3: Bio + Experiencia ────────────────────────────────── */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {(pro.bio || pro.ai_summary) && (
+                      <Card className="p-4 space-y-3">
+                        {pro.bio && (
+                          <div>
+                            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
+                              Biografía
                             </p>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-3 gap-1 px-2 pb-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openPreview(d)}
-                            disabled={previewLoading}
-                            className="h-7 text-[10px]"
-                          >
-                            <Eye className="h-3 w-3 mr-0.5" /> Ver
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadDoc(d)}
-                            className="h-7 text-[10px]"
-                          >
-                            <Download className="h-3 w-3 mr-0.5" /> Bajar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={analyzingDoc === d.id ? "secondary" : "outline"}
-                            onClick={() => analyzeDoc(d)}
-                            disabled={analyzingDoc === d.id}
-                            className="h-7 text-[10px]"
-                          >
-                            {analyzingDoc === d.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <>
-                                <Sparkles className="h-3 w-3 mr-0.5" />
-                                IA
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {(extra?.ai_notes ||
-                          (extracted && Object.keys(extracted).length > 0)) && (
-                          <button
-                            onClick={() => setExpandedDoc(isExpanded ? null : d.id)}
-                            className="text-[10px] text-muted-foreground hover:text-foreground px-3 pb-2 text-left underline underline-offset-2"
-                          >
-                            {isExpanded ? "Ocultar análisis IA" : "Ver análisis IA"}
-                          </button>
+                            <div className="border-l-2 border-biosensor/40 pl-3">
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {pro.bio}
+                              </p>
+                            </div>
+                          </div>
                         )}
-                        {isExpanded && (
-                          <div className="border-t mx-2 mb-2 px-2 pt-2 bg-muted/10 rounded-b-lg space-y-1.5 text-xs max-h-36 overflow-y-auto">
-                            {extra?.ai_notes && (
-                              <div>
-                                <p className="font-semibold uppercase text-[9px] text-muted-foreground mb-0.5">
-                                  Veredicto IA
-                                </p>
-                                <p className="text-muted-foreground">{extra.ai_notes}</p>
-                              </div>
-                            )}
-                            {extracted && Object.keys(extracted).length > 0 && (
-                              <div>
-                                <p className="font-semibold uppercase text-[9px] text-muted-foreground mb-0.5">
-                                  Datos extraídos
-                                </p>
-                                {Object.entries(extracted).map(([k, v]) => (
-                                  <p key={k} className="text-muted-foreground">
-                                    <span className="font-medium text-foreground">{k}:</span>{" "}
-                                    {typeof v === "object" ? JSON.stringify(v) : String(v)}
-                                  </p>
+                        {pro.ai_summary && (
+                          <div>
+                            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                              <Sparkles className="h-3 w-3 text-fuchsia-neural" /> Resumen IA
+                            </p>
+                            <div className="border-l-2 border-fuchsia-neural/40 pl-3">
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {pro.ai_summary}
+                              </p>
+                            </div>
+                            {pro.ai_strengths && pro.ai_strengths.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {pro.ai_strengths.map((s, i) => (
+                                  <Badge key={i} variant="secondary" className="text-[10px]">
+                                    {s}
+                                  </Badge>
                                 ))}
                               </div>
                             )}
                           </div>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              </>)} {/* end documentos tab */}
-
-              {detailTab === "herramientas" && (<>
-              <WebPresencePanel
-                pro={pro}
-                docs={docs.map((d) => ({
-                  id: d.id,
-                  doc_type: d.doc_type,
-                  file_name: d.file_name,
-                  status: d.status,
-                  ai_score: d.ai_score,
-                  ai_verified: docExtras[d.id]?.ai_verified ?? null,
-                  ai_extracted: docExtras[d.id]?.ai_extracted ?? null,
-                }))}
-                onScoreUpdated={() => onChanged()}
-              />
-
-              {/* ── Programar entrevista + descargar carpeta + analizar todos ── */}
-              <InterviewActions
-                proName={pro.profile?.full_name ?? "Profesional"}
-                proEmail={pro.profile?.email ?? null}
-                proPhone={pro.profile?.phone ?? null}
-                docs={docs.map((d) => ({
-                  id: d.id,
-                  doc_type: d.doc_type,
-                  file_name: d.file_name,
-                  file_url: d.file_url,
-                }))}
-                onAnalyzeAll={analyzeAllDocs}
-                analyzingAll={analyzingAll}
-              />
-
-              {/* ── Tarea 2: seguimiento en casa · signos vitales ──────────── */}
-              <VitalSignsMonitor patientName={pro.profile?.full_name ?? undefined} />
-
-              {/* ── Análisis IA holístico ────────────────────────────────────── */}
-              <Card className="p-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-fuchsia-neural" /> Validación integral IA
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="hero"
-                    onClick={runHolisticAnalysis}
-                    disabled={holisticBusy || docs.length === 0}
-                  >
-                    {holisticBusy ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                        Analizando…
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-3.5 w-3.5 mr-1" />
-                        Validar perfil completo
-                      </>
+                      </Card>
                     )}
-                  </Button>
-                </div>
-                {holistic && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {holistic.is_publishable ? (
-                        <Badge className="bg-biosensor/20 text-biosensor">
-                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                          Publicable
-                        </Badge>
+
+                    <Card className="p-4 space-y-2">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+                        Referencias ({refs.length})
+                      </p>
+                      {refs.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Sin referencias cargadas.</p>
                       ) : (
-                        <Badge variant="destructive">
-                          <XCircle className="h-3.5 w-3.5 mr-1" />
-                          No publicable
-                        </Badge>
+                        <div className="space-y-2">
+                          {refs.map((r) => (
+                            <div
+                              key={r.id}
+                              className="rounded-lg bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-2"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{r.full_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {r.phone} · {r.relation || r.ref_type}
+                                </p>
+                              </div>
+                              {r.verified && (
+                                <Badge variant="outline" className="text-[10px] shrink-0">
+                                  <CheckCircle2 className="h-2.5 w-2.5 mr-0.5 text-biosensor" />
+                                  Verif.
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${holistic.score >= 70 ? "bg-biosensor" : holistic.score >= 50 ? "bg-copper" : "bg-destructive"}`}
-                            style={{ width: `${holistic.score}%` }}
-                          />
-                        </div>
-                        <span
-                          className={`font-semibold text-sm ${holistic.score >= 70 ? "text-biosensor" : "text-destructive"}`}
-                        >
-                          {holistic.score}/100
-                        </span>
+                    </Card>
+                  </div>
+
+                  {/* ── Experiencia laboral ──────────────────────────────────────── */}
+                  {Array.isArray(pro.work_experience) && pro.work_experience.length > 0 && (
+                    <Card className="p-4">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">
+                        Experiencia laboral
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {(pro.work_experience as Array<Record<string, unknown>>).map((w, i) => (
+                          <div key={i} className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                            <p className="font-medium">{String(w.role ?? "Rol")}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {String(w.company ?? "")} {w.years ? `· ${String(w.years)} años` : ""}
+                            </p>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{holistic.ai_summary}</p>
-                    {holistic.critical_errors.length > 0 && (
-                      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
-                        <p className="text-xs font-semibold text-destructive uppercase mb-1.5">
-                          Errores críticos ({holistic.critical_errors.length})
-                        </p>
-                        <div className="grid sm:grid-cols-2 gap-1.5">
-                          {holistic.critical_errors.map((e, i) => (
-                            <div key={i} className="text-xs bg-background/60 rounded px-2 py-1.5">
-                              <span className="font-medium text-destructive">{e.field}:</span>{" "}
-                              <span className="text-muted-foreground">{e.message}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {holistic.warnings.length > 0 && (
-                      <div className="rounded-lg border border-muted bg-muted/30 p-3">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
-                          Advertencias ({holistic.warnings.length})
-                        </p>
-                        <div className="grid sm:grid-cols-2 gap-1.5">
-                          {holistic.warnings.map((w, i) => (
-                            <div key={i} className="text-xs bg-background/60 rounded px-2 py-1.5">
-                              <span className="font-medium">{w.field}:</span>{" "}
-                              <span className="text-muted-foreground">{w.message}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                    </Card>
+                  )}
+
+                  {/* ── Presencia web &amp; verificación IA ─────────────────────── */}
+                </>
+              )}{" "}
+              {/* end perfil tab */}
+              {detailTab === "documentos" && (
+                <>
+                  {/* Todos los documentos adjuntos — grid responsivo */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-fuchsia-neural" />
+                      {docs.length} documento{docs.length !== 1 ? "s" : ""} adjunto
+                      {docs.length !== 1 ? "s" : ""}
+                    </p>
+                    {docs.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={analyzeAllDocs}
+                        disabled={analyzingAll}
+                        className="h-7 text-[10px]"
+                      >
+                        {analyzingAll ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-0.5" />
+                        ) : (
+                          <Sparkles className="h-3 w-3 mr-0.5" />
+                        )}
+                        Analizar todos con IA
+                      </Button>
                     )}
                   </div>
-                )}
-              </Card>
+                  {docs.length === 0 ? (
+                    <Card className="p-10 text-center">
+                      <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Sin documentos cargados.</p>
+                    </Card>
+                  ) : (
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {docs.map((d) => {
+                        const extra = docExtras[d.id];
+                        const extracted = extra?.ai_extracted as
+                          | Record<string, unknown>
+                          | null
+                          | undefined;
+                        const isExpanded = expandedDoc === d.id;
+                        const aiOk = extra?.ai_verified === true;
+                        const aiBad = extra?.ai_verified === false;
+                        return (
+                          <div
+                            key={d.id}
+                            className={`rounded-xl border flex flex-col overflow-hidden bg-card ${aiOk ? "border-biosensor/30" : aiBad ? "border-destructive/30" : "border-border"}`}
+                          >
+                            <div
+                              className={`px-3 py-2 flex items-center justify-between gap-2 ${aiOk ? "bg-biosensor/5" : aiBad ? "bg-destructive/5" : "bg-muted/30"}`}
+                            >
+                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                <Badge variant="secondary" className="uppercase text-[10px]">
+                                  {d.doc_type}
+                                </Badge>
+                                <Badge
+                                  variant={
+                                    d.status === "approved"
+                                      ? "default"
+                                      : d.status === "rejected"
+                                        ? "destructive"
+                                        : "outline"
+                                  }
+                                  className="text-[10px] capitalize"
+                                >
+                                  {d.status}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {d.ai_score != null && (
+                                  <span
+                                    className={`text-[10px] font-bold ${d.ai_score >= 70 ? "text-biosensor" : "text-destructive"}`}
+                                  >
+                                    {d.ai_score}/100
+                                  </span>
+                                )}
+                                {aiOk && <CheckCircle2 className="h-3.5 w-3.5 text-biosensor" />}
+                                {aiBad && <XCircle className="h-3.5 w-3.5 text-destructive" />}
+                              </div>
+                            </div>
+                            <div className="px-3 py-2 flex-1">
+                              <p
+                                className="text-xs font-medium truncate"
+                                title={d.file_name || "Sin nombre"}
+                              >
+                                {d.file_name || "Sin nombre"}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {new Date(d.created_at).toLocaleDateString("es-CO")}
+                                {d.ai_score != null && (
+                                  <span
+                                    className={`ml-1 font-semibold ${d.ai_score >= 70 ? "text-biosensor" : "text-destructive"}`}
+                                  >
+                                    {" "}
+                                    · IA {d.ai_score}/100
+                                  </span>
+                                )}
+                              </p>
+                              {d.ai_notes && (
+                                <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 italic">
+                                  {d.ai_notes}
+                                </p>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-1 px-2 pb-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openPreview(d)}
+                                disabled={previewLoading}
+                                className="h-7 text-[10px]"
+                              >
+                                <Eye className="h-3 w-3 mr-0.5" /> Ver
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadDoc(d)}
+                                className="h-7 text-[10px]"
+                              >
+                                <Download className="h-3 w-3 mr-0.5" /> Bajar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={analyzingDoc === d.id ? "secondary" : "outline"}
+                                onClick={() => analyzeDoc(d)}
+                                disabled={analyzingDoc === d.id}
+                                className="h-7 text-[10px]"
+                              >
+                                {analyzingDoc === d.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-3 w-3 mr-0.5" />
+                                    IA
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                            {(extra?.ai_notes ||
+                              (extracted && Object.keys(extracted).length > 0)) && (
+                              <button
+                                onClick={() => setExpandedDoc(isExpanded ? null : d.id)}
+                                className="text-[10px] text-muted-foreground hover:text-foreground px-3 pb-2 text-left underline underline-offset-2"
+                              >
+                                {isExpanded ? "Ocultar análisis IA" : "Ver análisis IA"}
+                              </button>
+                            )}
+                            {isExpanded && (
+                              <div className="border-t mx-2 mb-2 px-2 pt-2 bg-muted/10 rounded-b-lg space-y-1.5 text-xs max-h-36 overflow-y-auto">
+                                {extra?.ai_notes && (
+                                  <div>
+                                    <p className="font-semibold uppercase text-[9px] text-muted-foreground mb-0.5">
+                                      Veredicto IA
+                                    </p>
+                                    <p className="text-muted-foreground">{extra.ai_notes}</p>
+                                  </div>
+                                )}
+                                {extracted && Object.keys(extracted).length > 0 && (
+                                  <div>
+                                    <p className="font-semibold uppercase text-[9px] text-muted-foreground mb-0.5">
+                                      Datos extraídos
+                                    </p>
+                                    {Object.entries(extracted).map(([k, v]) => (
+                                      <p key={k} className="text-muted-foreground">
+                                        <span className="font-medium text-foreground">{k}:</span>{" "}
+                                        {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}{" "}
+              {/* end documentos tab */}
+              {detailTab === "herramientas" && (
+                <>
+                  <WebPresencePanel
+                    pro={pro}
+                    docs={docs.map((d) => ({
+                      id: d.id,
+                      doc_type: d.doc_type,
+                      file_name: d.file_name,
+                      status: d.status,
+                      ai_score: d.ai_score,
+                      ai_verified: docExtras[d.id]?.ai_verified ?? null,
+                      ai_extracted: docExtras[d.id]?.ai_extracted ?? null,
+                    }))}
+                    onScoreUpdated={() => onChanged()}
+                  />
 
-              {/* ── Motivo de bloqueo ────────────────────────────────────────── */}
-              <Card className="p-4 space-y-2">
-                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <Ban className="h-3.5 w-3.5 text-destructive" /> Motivo de bloqueo (si aplica)
-                </p>
-                <Textarea
-                  value={blockReason}
-                  onChange={(e) => setBlockReason(e.target.value)}
-                  placeholder="Ej: Tarjeta profesional vencida. Sube la tarjeta actualizada."
-                  rows={2}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Visible para el profesional al iniciar sesión.
-                </p>
-              </Card>
-              </>)} {/* end herramientas tab */}
+                  {/* ── Programar entrevista + descargar carpeta + analizar todos ── */}
+                  <InterviewActions
+                    proName={pro.profile?.full_name ?? "Profesional"}
+                    proEmail={pro.profile?.email ?? null}
+                    proPhone={pro.profile?.phone ?? null}
+                    docs={docs.map((d) => ({
+                      id: d.id,
+                      doc_type: d.doc_type,
+                      file_name: d.file_name,
+                      file_url: d.file_url,
+                    }))}
+                    onAnalyzeAll={analyzeAllDocs}
+                    analyzingAll={analyzingAll}
+                  />
+
+                  {/* ── Tarea 2: seguimiento en casa · signos vitales ──────────── */}
+                  <VitalSignsMonitor patientName={pro.profile?.full_name ?? undefined} />
+
+                  {/* ── Análisis IA holístico ────────────────────────────────────── */}
+                  <Card className="p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-fuchsia-neural" /> Validación integral
+                        IA
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="hero"
+                        onClick={runHolisticAnalysis}
+                        disabled={holisticBusy || docs.length === 0}
+                      >
+                        {holisticBusy ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                            Analizando…
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3.5 w-3.5 mr-1" />
+                            Validar perfil completo
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {holistic && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {holistic.is_publishable ? (
+                            <Badge className="bg-biosensor/20 text-biosensor">
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                              Publicable
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <XCircle className="h-3.5 w-3.5 mr-1" />
+                              No publicable
+                            </Badge>
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${holistic.score >= 70 ? "bg-biosensor" : holistic.score >= 50 ? "bg-copper" : "bg-destructive"}`}
+                                style={{ width: `${holistic.score}%` }}
+                              />
+                            </div>
+                            <span
+                              className={`font-semibold text-sm ${holistic.score >= 70 ? "text-biosensor" : "text-destructive"}`}
+                            >
+                              {holistic.score}/100
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{holistic.ai_summary}</p>
+                        {holistic.critical_errors.length > 0 && (
+                          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                            <p className="text-xs font-semibold text-destructive uppercase mb-1.5">
+                              Errores críticos ({holistic.critical_errors.length})
+                            </p>
+                            <div className="grid sm:grid-cols-2 gap-1.5">
+                              {holistic.critical_errors.map((e, i) => (
+                                <div
+                                  key={i}
+                                  className="text-xs bg-background/60 rounded px-2 py-1.5"
+                                >
+                                  <span className="font-medium text-destructive">{e.field}:</span>{" "}
+                                  <span className="text-muted-foreground">{e.message}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {holistic.warnings.length > 0 && (
+                          <div className="rounded-lg border border-muted bg-muted/30 p-3">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+                              Advertencias ({holistic.warnings.length})
+                            </p>
+                            <div className="grid sm:grid-cols-2 gap-1.5">
+                              {holistic.warnings.map((w, i) => (
+                                <div
+                                  key={i}
+                                  className="text-xs bg-background/60 rounded px-2 py-1.5"
+                                >
+                                  <span className="font-medium">{w.field}:</span>{" "}
+                                  <span className="text-muted-foreground">{w.message}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* ── Motivo de bloqueo ────────────────────────────────────────── */}
+                  <Card className="p-4 space-y-2">
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <Ban className="h-3.5 w-3.5 text-destructive" /> Motivo de bloqueo (si aplica)
+                    </p>
+                    <Textarea
+                      value={blockReason}
+                      onChange={(e) => setBlockReason(e.target.value)}
+                      placeholder="Ej: Tarjeta profesional vencida. Sube la tarjeta actualizada."
+                      rows={2}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Visible para el profesional al iniciar sesión.
+                    </p>
+                  </Card>
+                </>
+              )}{" "}
+              {/* end herramientas tab */}
             </div>
           </ScrollArea>
 
@@ -2106,13 +2181,12 @@ function ProfessionalDetailDialog({
                 <AlertDialogDescription asChild>
                   <div className="space-y-2 text-sm">
                     <p>
-                      Se borrarán perfil, documentos, referencias y archivos en
-                      almacenamiento. Esta acción no se puede deshacer.
+                      Se borrarán perfil, documentos, referencias y archivos en almacenamiento. Esta
+                      acción no se puede deshacer.
                     </p>
                     {pro.profile?.email && (
                       <p className="text-xs text-muted-foreground">
-                        Email registrado:{" "}
-                        <span className="font-mono">{pro.profile.email}</span>
+                        Email registrado: <span className="font-mono">{pro.profile.email}</span>
                       </p>
                     )}
                   </div>
@@ -2131,8 +2205,8 @@ function ProfessionalDetailDialog({
                     Eliminar también la cuenta y el email de inscripción
                   </p>
                   <p className="text-muted-foreground mt-0.5">
-                    Borra el usuario de autenticación. El email quedará libre para volver
-                    a registrarse desde cero.
+                    Borra el usuario de autenticación. El email quedará libre para volver a
+                    registrarse desde cero.
                   </p>
                 </div>
               </label>
@@ -2311,7 +2385,10 @@ function OffersTab({ reviewerId }: { reviewerId: string }) {
         .from("job_offer_private")
         .select("job_offer_id, contact_phone")
         .in("job_offer_id", offerIds.slice(i, i + 100));
-      for (const row of (priv ?? []) as Array<{ job_offer_id: string; contact_phone: string | null }>) {
+      for (const row of (priv ?? []) as Array<{
+        job_offer_id: string;
+        contact_phone: string | null;
+      }>) {
         phones.set(row.job_offer_id, row.contact_phone);
       }
     }

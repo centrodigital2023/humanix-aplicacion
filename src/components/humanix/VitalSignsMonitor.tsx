@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Activity, HeartPulse, Thermometer, Wind, Droplet, AlertTriangle, CheckCircle2, Play, Pause } from "lucide-react";
+import {
+  Activity,
+  HeartPulse,
+  Thermometer,
+  Wind,
+  Droplet,
+  AlertTriangle,
+  CheckCircle2,
+  Play,
+  Pause,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,7 +89,8 @@ export function VitalSignsMonitor({ patientName }: { patientName?: string }) {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-            <Activity className="h-3.5 w-3.5 text-fuchsia-neural" /> Seguimiento en casa · Signos vitales
+            <Activity className="h-3.5 w-3.5 text-fuchsia-neural" /> Seguimiento en casa · Signos
+            vitales
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Monitoreo {live ? "en tiempo real" : "pausado"}
@@ -115,11 +126,31 @@ export function VitalSignsMonitor({ patientName }: { patientName?: string }) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        <Stat icon={<HeartPulse className="h-4 w-4 text-rose-500" />} label="FC" value={`${Math.round(v.hr)} bpm`} />
-        <Stat icon={<Droplet className="h-4 w-4 text-sky-500" />} label="SpO₂" value={`${Math.round(v.spo2)}%`} />
-        <Stat icon={<Activity className="h-4 w-4 text-fuchsia-neural" />} label="PA" value={`${Math.round(v.sys)}/${Math.round(v.dia)}`} />
-        <Stat icon={<Thermometer className="h-4 w-4 text-amber-500" />} label="Temp" value={`${v.temp.toFixed(1)}°C`} />
-        <Stat icon={<Wind className="h-4 w-4 text-emerald-500" />} label="FR" value={`${Math.round(v.resp)} rpm`} />
+        <Stat
+          icon={<HeartPulse className="h-4 w-4 text-rose-500" />}
+          label="FC"
+          value={`${Math.round(v.hr)} bpm`}
+        />
+        <Stat
+          icon={<Droplet className="h-4 w-4 text-sky-500" />}
+          label="SpO₂"
+          value={`${Math.round(v.spo2)}%`}
+        />
+        <Stat
+          icon={<Activity className="h-4 w-4 text-fuchsia-neural" />}
+          label="PA"
+          value={`${Math.round(v.sys)}/${Math.round(v.dia)}`}
+        />
+        <Stat
+          icon={<Thermometer className="h-4 w-4 text-amber-500" />}
+          label="Temp"
+          value={`${v.temp.toFixed(1)}°C`}
+        />
+        <Stat
+          icon={<Wind className="h-4 w-4 text-emerald-500" />}
+          label="FR"
+          value={`${Math.round(v.resp)} rpm`}
+        />
         <Stat
           icon={<Activity className="h-4 w-4 text-muted-foreground" />}
           label="Estado"

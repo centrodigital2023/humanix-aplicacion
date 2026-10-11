@@ -178,10 +178,17 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
         })}
       </ul>
       {error && (
-        <div role="alert" className="mt-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div
+          role="alert"
+          className="mt-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+        >
           <div className="flex-1">
-            <p className="font-semibold text-rose-700 dark:text-rose-400">No se pudo procesar el pago</p>
-            <p className="text-sm text-muted-foreground mt-0.5">Inténtalo de nuevo desde la página de planes.</p>
+            <p className="font-semibold text-rose-700 dark:text-rose-400">
+              No se pudo procesar el pago
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Inténtalo de nuevo desde la página de planes.
+            </p>
           </div>
           <a
             href="/planes"

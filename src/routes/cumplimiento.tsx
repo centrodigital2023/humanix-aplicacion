@@ -52,7 +52,8 @@ function CumplimientoPage() {
         <LegalSection title="Marco TIC (Ley 1341 de 2009)">
           <p>
             Operamos bajo los principios de libre competencia, masificación de las TIC, protección
-            al usuario del sector tecnológico y promoción del acceso a la sociedad de la información.
+            al usuario del sector tecnológico y promoción del acceso a la sociedad de la
+            información.
           </p>
         </LegalSection>
 
@@ -68,10 +69,10 @@ function CumplimientoPage() {
 
         <LegalSection title="Régimen Corporativo (Ley 1258 de 2008)">
           <p>
-            Humanix está constituida legalmente como <strong>Sociedad por Acciones Simplificada
-            (S.A.S.)</strong>, con formalidad comercial e institucional ante la Cámara de Comercio
-            correspondiente, limitando la responsabilidad de sus accionistas al monto de sus
-            aportes.
+            Humanix está constituida legalmente como{" "}
+            <strong>Sociedad por Acciones Simplificada (S.A.S.)</strong>, con formalidad comercial e
+            institucional ante la Cámara de Comercio correspondiente, limitando la responsabilidad
+            de sus accionistas al monto de sus aportes.
           </p>
         </LegalSection>
 
@@ -85,7 +86,8 @@ function CumplimientoPage() {
             y la{" "}
             <a href="/habeas-data" className="text-foreground underline underline-offset-4">
               Política de Habeas Data
-            </a>.
+            </a>
+            .
           </p>
         </LegalSection>
 
@@ -101,22 +103,38 @@ function CumplimientoPage() {
         <LegalSection title="Verificación de Oferentes en Salud (cuando aplica)">
           <p>
             Cuando la naturaleza del servicio autónomo lo exija, verificamos la inscripción del
-            profesional en el <strong>REPS</strong> conforme a la <strong>Resolución 3100 de 2019</strong>{" "}
-            y la <strong>Resolución 226 de 2015</strong>, así como su tarjeta profesional vigente
-            ante la autoridad competente. Humanix.lat no presta servicios de salud directamente.
+            profesional en el <strong>REPS</strong> conforme a la{" "}
+            <strong>Resolución 3100 de 2019</strong> y la <strong>Resolución 226 de 2015</strong>,
+            así como su tarjeta profesional vigente ante la autoridad competente. Humanix.lat no
+            presta servicios de salud directamente.
           </p>
         </LegalSection>
 
         <LegalSection title="Contacto Compliance">
           <p>
             Notificaciones legales y soporte normativo:{" "}
-            <a href="mailto:soporte@humanix.lat" className="text-foreground underline underline-offset-4">soporte@humanix.lat</a>{" "}
+            <a
+              href="mailto:soporte@humanix.lat"
+              className="text-foreground underline underline-offset-4"
+            >
+              soporte@humanix.lat
+            </a>{" "}
             ·{" "}
-            <a href="mailto:hola@humanix.lat" className="text-foreground underline underline-offset-4">hola@humanix.lat</a>{" "}
+            <a
+              href="mailto:hola@humanix.lat"
+              className="text-foreground underline underline-offset-4"
+            >
+              hola@humanix.lat
+            </a>{" "}
             · respaldo:{" "}
-            <a href="mailto:centrodigital2023@gmail.com" className="text-foreground underline underline-offset-4">centrodigital2023@gmail.com</a>{" "}
-            · teléfono <strong>+57 314 744 4715</strong> · domicilio: <strong>Pasto, Nariño,
-            Colombia</strong>.
+            <a
+              href="mailto:centrodigital2023@gmail.com"
+              className="text-foreground underline underline-offset-4"
+            >
+              centrodigital2023@gmail.com
+            </a>{" "}
+            · teléfono <strong>+57 314 744 4715</strong> · domicilio:{" "}
+            <strong>Pasto, Nariño, Colombia</strong>.
           </p>
         </LegalSection>
       </LegalPage>

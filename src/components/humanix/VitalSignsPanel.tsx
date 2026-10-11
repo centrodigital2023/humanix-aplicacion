@@ -1,12 +1,6 @@
 import { type ReactNode } from "react";
 import { TrendingUp, TrendingDown, Minus, Wifi, WifiOff } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  ReferenceLine,
-} from "recharts";
+import { LineChart, Line, ResponsiveContainer, Tooltip, ReferenceLine } from "recharts";
 import { cn } from "@/lib/utils";
 
 export type VitalStatus = "normal" | "warning" | "critical" | "unknown";
@@ -126,10 +120,7 @@ export function VitalSignsPanel({
             <WifiOff className="h-3 w-3 text-muted-foreground" />
           )}
           <span
-            className={cn(
-              "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
-              badge.cls,
-            )}
+            className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full border", badge.cls)}
           >
             {badge.label}
           </span>
@@ -160,10 +151,20 @@ export function VitalSignsPanel({
           <ResponsiveContainer width="100%" height={36}>
             <LineChart data={chartData}>
               {minRef !== undefined && (
-                <ReferenceLine y={minRef} stroke={lineColor} strokeDasharray="3 2" strokeOpacity={0.5} />
+                <ReferenceLine
+                  y={minRef}
+                  stroke={lineColor}
+                  strokeDasharray="3 2"
+                  strokeOpacity={0.5}
+                />
               )}
               {maxRef !== undefined && (
-                <ReferenceLine y={maxRef} stroke={lineColor} strokeDasharray="3 2" strokeOpacity={0.5} />
+                <ReferenceLine
+                  y={maxRef}
+                  stroke={lineColor}
+                  strokeDasharray="3 2"
+                  strokeOpacity={0.5}
+                />
               )}
               <Line
                 type="monotone"
@@ -178,7 +179,9 @@ export function VitalSignsPanel({
                   if (!active || !payload?.length) return null;
                   return (
                     <div className="text-xs bg-card border border-border rounded-lg px-2 py-1 shadow-sm">
-                      {Number(payload[0].value).toLocaleString("es-CO", { maximumFractionDigits: 1 })}{" "}
+                      {Number(payload[0].value).toLocaleString("es-CO", {
+                        maximumFractionDigits: 1,
+                      })}{" "}
                       {unit}
                     </div>
                   );

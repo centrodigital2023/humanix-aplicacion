@@ -224,17 +224,20 @@ function ProDashboard() {
   const greetingName = useMemo(() => fullName.split(" ")[0] || "profesional", [fullName]);
 
   // Profile completion steps
-  const completionSteps = useMemo(() => [
-    { label: "Foto de perfil", done: !!profile?.avatar_url },
-    { label: "Especialidad", done: !!specialty },
-    { label: "Bio profesional", done: bio.trim().length > 10 },
-    { label: "Años de experiencia", done: years !== "" && Number(years) > 0 },
-    { label: "Ciudades de servicio", done: cities.trim().length > 0 },
-    { label: "Hoja de vida", done: !!docSummary["cv"] },
-    { label: "Cédula", done: !!docSummary["id_document"] },
-    { label: "Recibo servicios", done: !!docSummary["utility_bill"] },
-    { label: "RETHUS o Diploma", done: !!(docSummary["rethus"] || docSummary["diploma"]) },
-  ], [profile?.avatar_url, specialty, bio, years, cities, docSummary]);
+  const completionSteps = useMemo(
+    () => [
+      { label: "Foto de perfil", done: !!profile?.avatar_url },
+      { label: "Especialidad", done: !!specialty },
+      { label: "Bio profesional", done: bio.trim().length > 10 },
+      { label: "Años de experiencia", done: years !== "" && Number(years) > 0 },
+      { label: "Ciudades de servicio", done: cities.trim().length > 0 },
+      { label: "Hoja de vida", done: !!docSummary["cv"] },
+      { label: "Cédula", done: !!docSummary["id_document"] },
+      { label: "Recibo servicios", done: !!docSummary["utility_bill"] },
+      { label: "RETHUS o Diploma", done: !!(docSummary["rethus"] || docSummary["diploma"]) },
+    ],
+    [profile?.avatar_url, specialty, bio, years, cities, docSummary],
+  );
 
   const completionPct = Math.round(
     (completionSteps.filter((s) => s.done).length / completionSteps.length) * 100,
@@ -279,19 +282,65 @@ function ProDashboard() {
 
       // Enrich bookings with client names and offer titles
       if (bks.data && bks.data.length > 0) {
-        const clientIds = [...new Set((bks.data as { client_id: string }[]).map((b) => b.client_id))];
-        const offerIds = [...new Set((bks.data as { job_offer_id: string | null }[]).map((b) => b.job_offer_id).filter(Boolean))] as string[];
+        const clientIds = [
+          ...new Set((bks.data as { client_id: string }[]).map((b) => b.client_id)),
+        ];
+        const offerIds = [
+          ...new Set(
+            (bks.data as { job_offer_id: string | null }[])
+              .map((b) => b.job_offer_id)
+              .filter(Boolean),
+          ),
+        ] as string[];
         const [clients, bkOffers] = await Promise.all([
-          supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", clientIds),
-          offerIds.length ? supabase.from("job_offers").select("id, title, city").in("id", offerIds) : Promise.resolve({ data: [] }),
+          supabase
+            .from("profiles")
+            .select("user_id, full_name, avatar_url")
+            .in("user_id", clientIds),
+          offerIds.length
+            ? supabase.from("job_offers").select("id, title, city").in("id", offerIds)
+            : Promise.resolve({ data: [] }),
         ]);
-        const clientMap = new Map((clients.data ?? []).map((c: { user_id: string; full_name: string | null; avatar_url: string | null }) => [c.user_id, c]));
-        const offerMap2 = new Map((bkOffers.data ?? []).map((o: { id: string; title: string; city: string }) => [o.id, o]));
-        setBookings((bks.data as { id: string; scheduled_at: string | null; status: "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled"; notes: string | null; client_id: string; job_offer_id: string | null }[]).map((b) => {
-          const c = clientMap.get(b.client_id) as { full_name: string; avatar_url: string } | undefined;
-          const o = b.job_offer_id ? offerMap2.get(b.job_offer_id) as { title: string; city: string } | undefined : undefined;
-          return { id: b.id, scheduled_at: b.scheduled_at, status: b.status, notes: b.notes, client_name: c?.full_name ?? null, client_avatar: c?.avatar_url ?? null, offer_title: o?.title ?? null, city: o?.city ?? null };
-        }));
+        const clientMap = new Map(
+          (clients.data ?? []).map(
+            (c: { user_id: string; full_name: string | null; avatar_url: string | null }) => [
+              c.user_id,
+              c,
+            ],
+          ),
+        );
+        const offerMap2 = new Map(
+          (bkOffers.data ?? []).map((o: { id: string; title: string; city: string }) => [o.id, o]),
+        );
+        setBookings(
+          (
+            bks.data as {
+              id: string;
+              scheduled_at: string | null;
+              status: "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled";
+              notes: string | null;
+              client_id: string;
+              job_offer_id: string | null;
+            }[]
+          ).map((b) => {
+            const c = clientMap.get(b.client_id) as
+              | { full_name: string; avatar_url: string }
+              | undefined;
+            const o = b.job_offer_id
+              ? (offerMap2.get(b.job_offer_id) as { title: string; city: string } | undefined)
+              : undefined;
+            return {
+              id: b.id,
+              scheduled_at: b.scheduled_at,
+              status: b.status,
+              notes: b.notes,
+              client_name: c?.full_name ?? null,
+              client_avatar: c?.avatar_url ?? null,
+              offer_title: o?.title ?? null,
+              city: o?.city ?? null,
+            };
+          }),
+        );
       } else {
         setBookings([]);
       }
@@ -321,7 +370,8 @@ function ProDashboard() {
         setWorkExp(Array.isArray(pp.work_experience) ? pp.work_experience : []);
       } else {
         const ins = await supabase.from("professional_profiles").insert({ user_id: uid });
-        if (ins.error) console.warn("[pro dashboard] could not create empty profile:", ins.error.message);
+        if (ins.error)
+          console.warn("[pro dashboard] could not create empty profile:", ins.error.message);
       }
     } catch (err) {
       console.error("[pro dashboard] loadAll failed:", err);
@@ -345,28 +395,49 @@ function ProDashboard() {
       try {
         const seen = localStorage.getItem(`hx_tour_${uid}`);
         if (!seen && active) setShowTour(true);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     })();
-    const safety = setTimeout(() => { if (active) setLoading(false); }, 6000);
-    return () => { active = false; clearTimeout(safety); };
+    const safety = setTimeout(() => {
+      if (active) setLoading(false);
+    }, 6000);
+    return () => {
+      active = false;
+      clearTimeout(safety);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
   useRealtimeRefresh(
     `pro-dash-realtime-${userId ?? "anon"}`,
     [
-      { table: "professional_profiles", event: "UPDATE", filter: userId ? `user_id=eq.${userId}` : undefined },
-      { table: "applications", event: "*", filter: userId ? `professional_id=eq.${userId}` : undefined },
+      {
+        table: "professional_profiles",
+        event: "UPDATE",
+        filter: userId ? `user_id=eq.${userId}` : undefined,
+      },
+      {
+        table: "applications",
+        event: "*",
+        filter: userId ? `professional_id=eq.${userId}` : undefined,
+      },
       { table: "job_offers", event: "*" },
     ],
-    () => { if (userId) void loadAll(userId); },
+    () => {
+      if (userId) void loadAll(userId);
+    },
     !!userId,
   );
 
   const closeTour = () => {
     setShowTour(false);
     if (userId) {
-      try { localStorage.setItem(`hx_tour_${userId}`, "1"); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(`hx_tour_${userId}`, "1");
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -381,7 +452,9 @@ function ProDashboard() {
         .eq("user_id", userId);
       setIsOnline(next);
       setProfile((prev) => (prev ? { ...prev, active: next } : prev));
-      toast.success(next ? "¡Estás disponible! Las familias pueden encontrarte." : "Cambiaste a no disponible.");
+      toast.success(
+        next ? "¡Estás disponible! Las familias pueden encontrarte." : "Cambiaste a no disponible.",
+      );
     } catch {
       toast.error("No se pudo actualizar tu disponibilidad.");
     } finally {
@@ -406,10 +479,15 @@ function ProDashboard() {
 
   const extractFromText = async () => {
     const text = aiText.trim();
-    if (!text) { toast.error("Cuéntame primero sobre tu experiencia"); return; }
+    if (!text) {
+      toast.error("Cuéntame primero sobre tu experiencia");
+      return;
+    }
     setAiBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke("onboarding-extractor", { body: { text } });
+      const { data, error } = await supabase.functions.invoke("onboarding-extractor", {
+        body: { text },
+      });
       if (error) throw error;
       applyExtraction(data?.profile ?? {});
       toast.success("✨ Listo. Revisa los campos antes de guardar.");
@@ -427,9 +505,18 @@ function ProDashboard() {
     hourly_rate: hourly === "" ? null : Number(hourly),
     shift_rate: shift === "" ? null : Number(shift),
     monthly_rate: monthly === "" ? null : Number(monthly),
-    service_cities: cities.split(",").map((s) => s.trim()).filter(Boolean),
-    sub_specialties: subs.split(",").map((s) => s.trim()).filter(Boolean),
-    certifications: certs.split(",").map((s) => s.trim()).filter(Boolean),
+    service_cities: cities
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    sub_specialties: subs
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    certifications: certs
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     bio: bio || null,
     work_experience: workExp,
   });
@@ -442,7 +529,10 @@ function ProDashboard() {
       .eq("user_id", userId)
       .select()
       .maybeSingle();
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     if (data) setProfile(data as unknown as ProProfile);
     toast.success("Perfil guardado");
   };
@@ -460,12 +550,22 @@ function ProDashboard() {
       const score = typeof ev.trust_score === "number" ? Math.round(ev.trust_score) : 0;
       const upd = await supabase
         .from("professional_profiles")
-        .update({ ai_summary: ev.ai_summary ?? null, ai_strengths: ev.ai_strengths ?? [], ai_suggestions: ev.ai_suggestions ?? [], trust_score: score, ai_preapproved: score >= 70 })
+        .update({
+          ai_summary: ev.ai_summary ?? null,
+          ai_strengths: ev.ai_strengths ?? [],
+          ai_suggestions: ev.ai_suggestions ?? [],
+          trust_score: score,
+          ai_preapproved: score >= 70,
+        })
         .eq("user_id", userId)
         .select()
         .maybeSingle();
       if (upd.data) setProfile(upd.data as unknown as ProProfile);
-      toast.success(score >= 70 ? "✨ Pre-aprobado por IA. Nuestro equipo confirmará pronto." : "Trust Score actualizado");
+      toast.success(
+        score >= 70
+          ? "✨ Pre-aprobado por IA. Nuestro equipo confirmará pronto."
+          : "Trust Score actualizado",
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error en validación IA");
     } finally {
@@ -477,7 +577,9 @@ function ProDashboard() {
     if (!userId) return;
     setSuggesting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("rate-suggester", { body: { profile: buildPayload() } });
+      const { data, error } = await supabase.functions.invoke("rate-suggester", {
+        body: { profile: buildPayload() },
+      });
       if (error) throw error;
       const s = data?.suggestion ?? {};
       if (typeof s.hourly_rate === "number") setHourly(s.hourly_rate);
@@ -503,18 +605,30 @@ function ProDashboard() {
       return;
     }
     const [{ data: appsData }, { data: offersData }] = await Promise.all([
-      supabase.from("applications").select("id, job_offer_id, status, created_at").eq("professional_id", userId),
-      supabase.from("job_offers").select(FAMILY_OFFER_COLUMNS).eq("poster_type", "family").eq("status", "open").order("created_at", { ascending: false }).limit(20),
+      supabase
+        .from("applications")
+        .select("id, job_offer_id, status, created_at")
+        .eq("professional_id", userId),
+      supabase
+        .from("job_offers")
+        .select(FAMILY_OFFER_COLUMNS)
+        .eq("poster_type", "family")
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
     if (appsData) setApps(appsData as AppRow[]);
     if (offersData) setOffers(offersData as unknown as Offer[]);
   };
 
-  const logout = async () => { await appLogout(); };
+  const logout = async () => {
+    await appLogout();
+  };
 
   const appliedIds = new Set(apps.map((a) => a.job_offer_id));
 
-  const addExp = () => setWorkExp((prev) => [...prev, { role: "", employer: "", city: "", start: "", end: "" }]);
+  const addExp = () =>
+    setWorkExp((prev) => [...prev, { role: "", employer: "", city: "", start: "", end: "" }]);
   const updateExp = (i: number, k: keyof WorkExp, v: string) =>
     setWorkExp((prev) => prev.map((e, idx) => (idx === i ? { ...e, [k]: v } : e)));
   const removeExp = (i: number) => setWorkExp((prev) => prev.filter((_, idx) => idx !== i));
@@ -551,8 +665,19 @@ function ProDashboard() {
 
           {/* Online toggle */}
           <div className="flex items-center gap-2">
-            <span className={cn("text-xs font-semibold transition-colors", isOnline ? "text-emerald-500" : "text-muted-foreground")}>
-              {togglingOnline ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isOnline ? "Disponible" : "No disponible"}
+            <span
+              className={cn(
+                "text-xs font-semibold transition-colors",
+                isOnline ? "text-emerald-500" : "text-muted-foreground",
+              )}
+            >
+              {togglingOnline ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : isOnline ? (
+                "Disponible"
+              ) : (
+                "No disponible"
+              )}
             </span>
             <Switch
               checked={isOnline}
@@ -594,11 +719,9 @@ function ProDashboard() {
 
       {/* ── Main content ── */}
       <main className="mx-auto max-w-4xl px-4 py-6">
-
         {/* ══ TAB: INICIO ══ */}
         {tab === "inicio" && (
           <div className="space-y-4">
-
             {userId && <CareCompassCard role="professional" userId={userId} name={fullName} />}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
 
@@ -620,7 +743,10 @@ function ProDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm">¡Bienvenido/a, {greetingName}! Empieza aquí</p>
-                    <p className="text-xs text-muted-foreground mt-1">Completa tu perfil para aparecer en el marketplace y recibir ofertas de familias e instituciones.</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Completa tu perfil para aparecer en el marketplace y recibir ofertas de
+                      familias e instituciones.
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button size="sm" variant="hero" onClick={() => setTab("perfil")}>
                         <User className="h-3.5 w-3.5 mr-1.5" /> Completar perfil
@@ -651,7 +777,9 @@ function ProDashboard() {
                   )}
                   <div>
                     <p className="font-bold text-lg leading-tight">{greetingName}</p>
-                    <p className="text-sm text-muted-foreground">{specialty || "Completa tu especialidad"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {specialty || "Completa tu especialidad"}
+                    </p>
                     <div className="mt-1 flex items-center gap-2">
                       {profile?.verified && (
                         <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
@@ -676,10 +804,23 @@ function ProDashboard() {
                 <div className="shrink-0 text-center">
                   <div className="relative h-16 w-16">
                     <svg className="h-16 w-16 -rotate-90" viewBox="0 0 60 60">
-                      <circle cx="30" cy="30" r="26" fill="none" stroke="currentColor" strokeWidth="4" className="text-muted/30" />
                       <circle
-                        cx="30" cy="30" r="26" fill="none" stroke="currentColor" strokeWidth="4"
-                        strokeDasharray={`${2 * Math.PI * 26 * trust / 100} ${2 * Math.PI * 26 * (1 - trust / 100)}`}
+                        cx="30"
+                        cy="30"
+                        r="26"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-muted/30"
+                      />
+                      <circle
+                        cx="30"
+                        cy="30"
+                        r="26"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeDasharray={`${(2 * Math.PI * 26 * trust) / 100} ${2 * Math.PI * 26 * (1 - trust / 100)}`}
                         strokeLinecap="round"
                         className="text-biosensor transition-all duration-700"
                       />
@@ -694,9 +835,21 @@ function ProDashboard() {
 
               {/* Stats row */}
               <div className="mt-4 grid grid-cols-3 gap-2">
-                <StatPill icon={<Briefcase className="h-3.5 w-3.5" />} label="Turnos" value={String(profile?.total_jobs ?? 0)} />
-                <StatPill icon={<Star className="h-3.5 w-3.5" />} label="Rating" value={(profile?.avg_rating ?? 0).toFixed(1)} />
-                <StatPill icon={<TrendingUp className="h-3.5 w-3.5" />} label="Ofertas" value={String(offers.length)} />
+                <StatPill
+                  icon={<Briefcase className="h-3.5 w-3.5" />}
+                  label="Turnos"
+                  value={String(profile?.total_jobs ?? 0)}
+                />
+                <StatPill
+                  icon={<Star className="h-3.5 w-3.5" />}
+                  label="Rating"
+                  value={(profile?.avg_rating ?? 0).toFixed(1)}
+                />
+                <StatPill
+                  icon={<TrendingUp className="h-3.5 w-3.5" />}
+                  label="Ofertas"
+                  value={String(offers.length)}
+                />
               </div>
 
               {/* Public profile link */}
@@ -720,33 +873,60 @@ function ProDashboard() {
             </div>
 
             {/* Next booking preview */}
-            {bookings.length > 0 && (() => {
-              const next = bookings[0];
-              const dt = next.scheduled_at ? new Date(next.scheduled_at) : null;
-              return (
-                <div
-                  className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex items-center gap-4 cursor-pointer hover:bg-emerald-500/10 transition-colors"
-                  onClick={() => setTab("agenda")}
-                  role="button"
-                >
-                  <div className="h-10 w-10 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
-                    <CalendarDays className="h-5 w-5 text-emerald-600" />
+            {bookings.length > 0 &&
+              (() => {
+                const next = bookings[0];
+                const dt = next.scheduled_at ? new Date(next.scheduled_at) : null;
+                return (
+                  <div
+                    className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex items-center gap-4 cursor-pointer hover:bg-emerald-500/10 transition-colors"
+                    onClick={() => setTab("agenda")}
+                    role="button"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                      <CalendarDays className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                        Próximo turno
+                      </p>
+                      <p className="text-sm font-bold truncate">
+                        {next.offer_title ?? "Servicio programado"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {dt
+                          ? dt.toLocaleDateString("es-CO", {
+                              weekday: "short",
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                        {next.city ? ` · ${next.city}` : ""}
+                      </p>
+                    </div>
+                    <span className="text-xs text-emerald-600 font-semibold shrink-0">
+                      {bookings.length} turno{bookings.length > 1 ? "s" : ""} →
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Próximo turno</p>
-                    <p className="text-sm font-bold truncate">{next.offer_title ?? "Servicio programado"}</p>
-                    <p className="text-xs text-muted-foreground">{dt ? dt.toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}{next.city ? ` · ${next.city}` : ""}</p>
-                  </div>
-                  <span className="text-xs text-emerald-600 font-semibold shrink-0">{bookings.length} turno{bookings.length > 1 ? "s" : ""} →</span>
-                </div>
-              );
-            })()}
+                );
+              })()}
 
             {/* Profile completion */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold">Completitud del perfil</p>
-                <span className={cn("text-sm font-bold", completionPct >= 80 ? "text-emerald-500" : completionPct >= 50 ? "text-amber-500" : "text-rose-500")}>
+                <span
+                  className={cn(
+                    "text-sm font-bold",
+                    completionPct >= 80
+                      ? "text-emerald-500"
+                      : completionPct >= 50
+                        ? "text-amber-500"
+                        : "text-rose-500",
+                  )}
+                >
                   {completionPct}%
                 </span>
               </div>
@@ -754,19 +934,27 @@ function ProDashboard() {
               {pendingSteps.length > 0 && (
                 <div className="mt-3 space-y-1.5">
                   {pendingSteps.slice(0, 3).map((s) => (
-                    <div key={s.label} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div
+                      key={s.label}
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
                       <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                      <span>Falta: <strong>{s.label}</strong></span>
+                      <span>
+                        Falta: <strong>{s.label}</strong>
+                      </span>
                     </div>
                   ))}
                   {pendingSteps.length > 3 && (
-                    <p className="text-xs text-muted-foreground">+{pendingSteps.length - 3} más pendientes</p>
+                    <p className="text-xs text-muted-foreground">
+                      +{pendingSteps.length - 3} más pendientes
+                    </p>
                   )}
                 </div>
               )}
               {completionPct === 100 && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-emerald-600">
-                  <CircleCheck className="h-4 w-4" /> ¡Perfil completo! Estás listo para recibir ofertas.
+                  <CircleCheck className="h-4 w-4" /> ¡Perfil completo! Estás listo para recibir
+                  ofertas.
                 </div>
               )}
             </div>
@@ -776,12 +964,15 @@ function ProDashboard() {
               <div className="rounded-2xl border border-fuchsia-neural/20 bg-fuchsia-neural/5 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-4 w-4 text-fuchsia-neural" />
-                  <p className="text-sm font-semibold text-fuchsia-neural">Sugerencias IA para ti</p>
+                  <p className="text-sm font-semibold text-fuchsia-neural">
+                    Sugerencias IA para ti
+                  </p>
                 </div>
                 <ul className="space-y-1.5">
                   {(profile?.ai_suggestions ?? []).slice(0, 3).map((s, i) => (
                     <li key={i} className="text-xs text-muted-foreground flex gap-2">
-                      <ChevronRight className="h-3.5 w-3.5 text-fuchsia-neural mt-0.5 shrink-0" /> {s}
+                      <ChevronRight className="h-3.5 w-3.5 text-fuchsia-neural mt-0.5 shrink-0" />{" "}
+                      {s}
                     </li>
                   ))}
                 </ul>
@@ -795,7 +986,10 @@ function ProDashboard() {
                   <Sparkles className="h-4 w-4 text-biosensor" />
                   <p className="text-sm font-semibold">Ofertas para ti</p>
                 </div>
-                <button onClick={() => setTab("ofertas")} className="text-xs text-biosensor hover:underline flex items-center gap-1">
+                <button
+                  onClick={() => setTab("ofertas")}
+                  className="text-xs text-biosensor hover:underline flex items-center gap-1"
+                >
                   Ver todas <ChevronRight className="h-3 w-3" />
                 </button>
               </div>
@@ -803,7 +997,9 @@ function ProDashboard() {
                 <OfferCard key={o.id} offer={o} applied={appliedIds.has(o.id)} onApply={apply} />
               ))}
               {offers.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No hay ofertas activas en este momento.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No hay ofertas activas en este momento.
+                </p>
               )}
             </div>
 
@@ -824,11 +1020,43 @@ function ProDashboard() {
 
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-3">
-              <QuickAction icon={<User className="h-5 w-5 text-biosensor" />} label="Completar perfil" sub="Datos + foto + bio" onClick={() => setTab("perfil")} />
-              <QuickAction icon={<FileText className="h-5 w-5 text-fuchsia-neural" />} label="Subir documentos" sub={`${Object.keys(docSummary).length} subidos`} onClick={() => setTab("documentos")} />
-              <QuickAction icon={<CalendarDays className="h-5 w-5 text-biosensor" />} label="Mi agenda" sub="Disponibilidad" onClick={() => setTab("agenda")} />
-              <QuickAction icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />} label="Re-evaluar Trust" sub={`Score: ${trust}/100`} onClick={validateWithAI} loading={validating} />
-              <QuickAction icon={<HeartPulse className="h-5 w-5 text-rose-500" />} label="Monitoreo de pacientes" sub="Signos vitales y alertas en vivo" onClick={() => { setTab("inicio"); setTimeout(() => { const el = document.getElementById("clinical-monitor-section"); el?.scrollIntoView({ behavior: "smooth" }); }, 100); }} />
+              <QuickAction
+                icon={<User className="h-5 w-5 text-biosensor" />}
+                label="Completar perfil"
+                sub="Datos + foto + bio"
+                onClick={() => setTab("perfil")}
+              />
+              <QuickAction
+                icon={<FileText className="h-5 w-5 text-fuchsia-neural" />}
+                label="Subir documentos"
+                sub={`${Object.keys(docSummary).length} subidos`}
+                onClick={() => setTab("documentos")}
+              />
+              <QuickAction
+                icon={<CalendarDays className="h-5 w-5 text-biosensor" />}
+                label="Mi agenda"
+                sub="Disponibilidad"
+                onClick={() => setTab("agenda")}
+              />
+              <QuickAction
+                icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />}
+                label="Re-evaluar Trust"
+                sub={`Score: ${trust}/100`}
+                onClick={validateWithAI}
+                loading={validating}
+              />
+              <QuickAction
+                icon={<HeartPulse className="h-5 w-5 text-rose-500" />}
+                label="Monitoreo de pacientes"
+                sub="Signos vitales y alertas en vivo"
+                onClick={() => {
+                  setTab("inicio");
+                  setTimeout(() => {
+                    const el = document.getElementById("clinical-monitor-section");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }, 100);
+                }}
+              />
             </div>
 
             {/* Monitoreo Clínico propio del profesional */}
@@ -873,7 +1101,6 @@ function ProDashboard() {
         {/* ══ TAB: PERFIL ══ */}
         {tab === "perfil" && (
           <div className="space-y-4">
-
             {/* Avatar */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
@@ -896,7 +1123,8 @@ function ProDashboard() {
                 <p className="text-sm font-semibold">Llena tu perfil con IA</p>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                Cuéntame en una frase tu experiencia y completo los campos por ti. O sube tu hoja de vida en Documentos.
+                Cuéntame en una frase tu experiencia y completo los campos por ti. O sube tu hoja de
+                vida en Documentos.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Textarea
@@ -906,8 +1134,17 @@ function ProDashboard() {
                   placeholder='Ej: "Soy enfermera, 7 años en cuidado adulto mayor, RETHUS 12345, atiendo Bogotá y Soacha, tengo BLS vigente."'
                   className="flex-1 text-sm"
                 />
-                <Button onClick={extractFromText} disabled={aiBusy} variant="hero" className="shrink-0">
-                  {aiBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
+                <Button
+                  onClick={extractFromText}
+                  disabled={aiBusy}
+                  variant="hero"
+                  className="shrink-0"
+                >
+                  {aiBusy ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-1.5" />
+                  )}
                   Extraer
                 </Button>
               </div>
@@ -918,7 +1155,9 @@ function ProDashboard() {
               <div className="rounded-2xl border border-biosensor/20 bg-biosensor/5 p-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-biosensor">Vista pública de tu perfil</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Así te ven las familias e instituciones al buscarte.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Así te ven las familias e instituciones al buscarte.
+                  </p>
                 </div>
                 <Link
                   to="/profesional/$proId"
@@ -934,8 +1173,18 @@ function ProDashboard() {
             <div className="rounded-2xl border border-border bg-card/95 p-5">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <p className="text-sm font-semibold">Datos profesionales</p>
-                <Button size="sm" variant="glass" onClick={suggestRatesAndBio} disabled={suggesting || !specialty} title={!specialty ? "Llena la especialidad primero" : undefined}>
-                  {suggesting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <DollarSign className="h-3.5 w-3.5 mr-1.5" />}
+                <Button
+                  size="sm"
+                  variant="glass"
+                  onClick={suggestRatesAndBio}
+                  disabled={suggesting || !specialty}
+                  title={!specialty ? "Llena la especialidad primero" : undefined}
+                >
+                  {suggesting ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                  )}
                   Sugerir tarifas con IA
                 </Button>
               </div>
@@ -945,19 +1194,42 @@ function ProDashboard() {
                 <FormSection label="Identidad profesional">
                   <div className="grid sm:grid-cols-2 gap-3">
                     <Field label="Especialidad principal *">
-                      <Input value={specialty} onChange={(e) => setSpecialty(e.target.value)} placeholder="Cuidado adulto mayor" />
+                      <Input
+                        value={specialty}
+                        onChange={(e) => setSpecialty(e.target.value)}
+                        placeholder="Cuidado adulto mayor"
+                      />
                     </Field>
                     <Field label="Años de experiencia">
-                      <Input type="number" value={years} onChange={(e) => setYears(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" />
+                      <Input
+                        type="number"
+                        value={years}
+                        onChange={(e) =>
+                          setYears(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        placeholder="0"
+                      />
                     </Field>
                     <Field label="Número RETHUS">
-                      <Input value={rethus} onChange={(e) => setRethus(e.target.value)} placeholder="RN-XXXXXXX" />
+                      <Input
+                        value={rethus}
+                        onChange={(e) => setRethus(e.target.value)}
+                        placeholder="RN-XXXXXXX"
+                      />
                     </Field>
                     <Field label="Sub-especialidades">
-                      <Input value={subs} onChange={(e) => setSubs(e.target.value)} placeholder="Heridas, EPOC" />
+                      <Input
+                        value={subs}
+                        onChange={(e) => setSubs(e.target.value)}
+                        placeholder="Heridas, EPOC"
+                      />
                     </Field>
                     <Field label="Certificaciones" className="sm:col-span-2">
-                      <Input value={certs} onChange={(e) => setCerts(e.target.value)} placeholder="BLS, ACLS" />
+                      <Input
+                        value={certs}
+                        onChange={(e) => setCerts(e.target.value)}
+                        placeholder="BLS, ACLS"
+                      />
                     </Field>
                   </div>
                 </FormSection>
@@ -965,7 +1237,11 @@ function ProDashboard() {
                 {/* Cobertura */}
                 <FormSection label="Cobertura geográfica">
                   <Field label="Ciudades de servicio (separadas por coma)">
-                    <Input value={cities} onChange={(e) => setCities(e.target.value)} placeholder="Bogotá, Soacha, Chía" />
+                    <Input
+                      value={cities}
+                      onChange={(e) => setCities(e.target.value)}
+                      placeholder="Bogotá, Soacha, Chía"
+                    />
                   </Field>
                 </FormSection>
 
@@ -973,20 +1249,45 @@ function ProDashboard() {
                 <FormSection label="Tarifas (COP)">
                   <div className="grid grid-cols-3 gap-3">
                     <Field label="Por hora">
-                      <Input type="number" value={hourly} onChange={(e) => setHourly(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" />
+                      <Input
+                        type="number"
+                        value={hourly}
+                        onChange={(e) =>
+                          setHourly(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        placeholder="0"
+                      />
                     </Field>
                     <Field label="Por turno">
-                      <Input type="number" value={shift} onChange={(e) => setShift(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" />
+                      <Input
+                        type="number"
+                        value={shift}
+                        onChange={(e) =>
+                          setShift(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        placeholder="0"
+                      />
                     </Field>
                     <Field label="Mensual">
-                      <Input type="number" value={monthly} onChange={(e) => setMonthly(e.target.value === "" ? "" : Number(e.target.value))} placeholder="0" />
+                      <Input
+                        type="number"
+                        value={monthly}
+                        onChange={(e) =>
+                          setMonthly(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        placeholder="0"
+                      />
                     </Field>
                   </div>
                   {(hourly || shift || monthly) && (
                     <div className="mt-2 grid grid-cols-3 gap-3 text-xs text-muted-foreground">
                       {hourly ? <p className="text-center">{COP(Number(hourly))}/h</p> : <span />}
                       {shift ? <p className="text-center">{COP(Number(shift))}/turno</p> : <span />}
-                      {monthly ? <p className="text-center">{COP(Number(monthly))}/mes</p> : <span />}
+                      {monthly ? (
+                        <p className="text-center">{COP(Number(monthly))}/mes</p>
+                      ) : (
+                        <span />
+                      )}
                     </div>
                   )}
                 </FormSection>
@@ -994,7 +1295,12 @@ function ProDashboard() {
                 {/* Bio */}
                 <FormSection label="Bio profesional">
                   <Field label="Lo que ven familias e IPS">
-                    <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} placeholder="Cuéntale al mundo quién eres en 2-3 frases." />
+                    <Textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      rows={3}
+                      placeholder="Cuéntale al mundo quién eres en 2-3 frases."
+                    />
                   </Field>
                 </FormSection>
               </div>
@@ -1013,29 +1319,64 @@ function ProDashboard() {
                     className="w-full rounded-xl border-2 border-dashed border-border hover:border-biosensor/50 transition-colors py-6 text-center text-sm text-muted-foreground"
                   >
                     <Briefcase className="h-5 w-5 mx-auto mb-1 opacity-40" />
-                    Agrega tu experiencia laboral<br />
-                    <span className="text-xs">O sube tu CV en Documentos y la IA la llena por ti</span>
+                    Agrega tu experiencia laboral
+                    <br />
+                    <span className="text-xs">
+                      O sube tu CV en Documentos y la IA la llena por ti
+                    </span>
                   </button>
                 ) : (
                   <ul className="space-y-3">
                     {workExp.map((e, i) => (
                       <li key={i} className="rounded-xl border border-border bg-background p-3">
                         <div className="flex justify-between items-center mb-2">
-                          <p className="text-xs text-muted-foreground font-medium">Experiencia {i + 1}</p>
-                          <button onClick={() => removeExp(i)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Eliminar">
+                          <p className="text-xs text-muted-foreground font-medium">
+                            Experiencia {i + 1}
+                          </p>
+                          <button
+                            onClick={() => removeExp(i)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            aria-label="Eliminar"
+                          >
                             <X className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="grid sm:grid-cols-2 gap-2">
-                          <Input placeholder="Cargo / Rol" value={e.role} onChange={(ev) => updateExp(i, "role", ev.target.value)} />
-                          <Input placeholder="Empresa / IPS / Clínica" value={e.employer} onChange={(ev) => updateExp(i, "employer", ev.target.value)} />
-                          <Input placeholder="Ciudad" value={e.city ?? ""} onChange={(ev) => updateExp(i, "city", ev.target.value)} />
+                          <Input
+                            placeholder="Cargo / Rol"
+                            value={e.role}
+                            onChange={(ev) => updateExp(i, "role", ev.target.value)}
+                          />
+                          <Input
+                            placeholder="Empresa / IPS / Clínica"
+                            value={e.employer}
+                            onChange={(ev) => updateExp(i, "employer", ev.target.value)}
+                          />
+                          <Input
+                            placeholder="Ciudad"
+                            value={e.city ?? ""}
+                            onChange={(ev) => updateExp(i, "city", ev.target.value)}
+                          />
                           <div className="grid grid-cols-2 gap-2">
-                            <Input placeholder="Inicio (2020)" value={e.start ?? ""} onChange={(ev) => updateExp(i, "start", ev.target.value)} />
-                            <Input placeholder="Fin (Actual)" value={e.end ?? ""} onChange={(ev) => updateExp(i, "end", ev.target.value)} />
+                            <Input
+                              placeholder="Inicio (2020)"
+                              value={e.start ?? ""}
+                              onChange={(ev) => updateExp(i, "start", ev.target.value)}
+                            />
+                            <Input
+                              placeholder="Fin (Actual)"
+                              value={e.end ?? ""}
+                              onChange={(ev) => updateExp(i, "end", ev.target.value)}
+                            />
                           </div>
                         </div>
-                        <Textarea className="mt-2" rows={2} placeholder="Logros y responsabilidades clave" value={e.description ?? ""} onChange={(ev) => updateExp(i, "description", ev.target.value)} />
+                        <Textarea
+                          className="mt-2"
+                          rows={2}
+                          placeholder="Logros y responsabilidades clave"
+                          value={e.description ?? ""}
+                          onChange={(ev) => updateExp(i, "description", ev.target.value)}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -1047,10 +1388,16 @@ function ProDashboard() {
                 <div className="mt-5 pt-5 border-t border-border">
                   <PublishGate
                     userId={userId}
-                    profilePayload={{ ...buildPayload(), full_name: fullName, rethus_verified: profile?.rethus_verified ?? false }}
+                    profilePayload={{
+                      ...buildPayload(),
+                      full_name: fullName,
+                      rethus_verified: profile?.rethus_verified ?? false,
+                    }}
                     published={profile?.published ?? false}
                     onSaved={saveProfile}
-                    onPublished={async () => { setProfile((prev) => (prev ? { ...prev, published: true } : prev)); }}
+                    onPublished={async () => {
+                      setProfile((prev) => (prev ? { ...prev, published: true } : prev));
+                    }}
                   />
                 </div>
               )}
@@ -1060,7 +1407,9 @@ function ProDashboard() {
             {(profile?.ai_summary || (profile?.ai_strengths?.length ?? 0) > 0) && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-border bg-card/95 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-medium">Resumen IA</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-medium">
+                    Resumen IA
+                  </p>
                   <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
                     <ReactMarkdown>{profile?.ai_summary ?? ""}</ReactMarkdown>
                   </div>
@@ -1075,7 +1424,9 @@ function ProDashboard() {
                   )}
                 </div>
                 <div className="rounded-2xl border border-border bg-card/95 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-medium">Para subir tu Trust Score</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-medium">
+                    Para subir tu Trust Score
+                  </p>
                   <ul className="space-y-1.5">
                     {(profile?.ai_suggestions ?? []).map((s, i) => (
                       <li key={i} className="flex gap-2 text-sm">
@@ -1090,11 +1441,17 @@ function ProDashboard() {
             {/* Trust re-evaluate */}
             <div className="rounded-2xl border border-border bg-card/95 p-4 flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold">Trust Score: <span className="text-biosensor">{trust}/100</span></p>
+                <p className="text-sm font-semibold">
+                  Trust Score: <span className="text-biosensor">{trust}/100</span>
+                </p>
                 <p className="text-xs text-muted-foreground">≥70 = pre-aprobado por IA</p>
               </div>
               <Button variant="glass" size="sm" onClick={validateWithAI} disabled={validating}>
-                {validating ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+                {validating ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-1.5" />
+                )}
                 Re-evaluar
               </Button>
             </div>
@@ -1103,7 +1460,9 @@ function ProDashboard() {
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <p className="text-sm font-semibold mb-1">Referencias laborales y familiares</p>
-                <p className="text-xs text-muted-foreground mb-4">Mínimo 2 laborales y 2 familiares (nombre y celular).</p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Mínimo 2 laborales y 2 familiares (nombre y celular).
+                </p>
                 <ReferencesManager userId={userId} />
               </div>
             )}
@@ -1124,11 +1483,24 @@ function ProDashboard() {
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold">Documentos requeridos</p>
                 <span className="text-sm font-bold text-biosensor">
-                  {[docSummary["cv"], docSummary["id_document"], docSummary["utility_bill"]].filter(Boolean).length}/3
+                  {
+                    [
+                      docSummary["cv"],
+                      docSummary["id_document"],
+                      docSummary["utility_bill"],
+                    ].filter(Boolean).length
+                  }
+                  /3
                 </span>
               </div>
               <Progress
-                value={([docSummary["cv"], docSummary["id_document"], docSummary["utility_bill"]].filter(Boolean).length / 3) * 100}
+                value={
+                  ([docSummary["cv"], docSummary["id_document"], docSummary["utility_bill"]].filter(
+                    Boolean,
+                  ).length /
+                    3) *
+                  100
+                }
                 className="h-2"
               />
               <div className="mt-3 grid grid-cols-3 gap-2">
@@ -1137,8 +1509,20 @@ function ProDashboard() {
                   { key: "id_document", label: "Cédula" },
                   { key: "utility_bill", label: "Recibo" },
                 ].map((d) => (
-                  <div key={d.key} className={cn("rounded-lg p-2.5 text-center text-xs font-medium border", docSummary[d.key] ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" : "bg-amber-500/10 border-amber-500/20 text-amber-600")}>
-                    {docSummary[d.key] ? <CheckCircle2 className="h-4 w-4 mx-auto mb-1" /> : <Clock className="h-4 w-4 mx-auto mb-1" />}
+                  <div
+                    key={d.key}
+                    className={cn(
+                      "rounded-lg p-2.5 text-center text-xs font-medium border",
+                      docSummary[d.key]
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600"
+                        : "bg-amber-500/10 border-amber-500/20 text-amber-600",
+                    )}
+                  >
+                    {docSummary[d.key] ? (
+                      <CheckCircle2 className="h-4 w-4 mx-auto mb-1" />
+                    ) : (
+                      <Clock className="h-4 w-4 mx-auto mb-1" />
+                    )}
                     {d.label}
                   </div>
                 ))}
@@ -1147,7 +1531,13 @@ function ProDashboard() {
 
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
-                <DocumentsManager userId={userId} onCvExtracted={(p) => { applyExtraction(p); setTab("perfil"); }} />
+                <DocumentsManager
+                  userId={userId}
+                  onCvExtracted={(p) => {
+                    applyExtraction(p);
+                    setTab("perfil");
+                  }}
+                />
               </div>
             )}
 
@@ -1159,7 +1549,6 @@ function ProDashboard() {
         {/* ══ TAB: OFERTAS ══ */}
         {tab === "ofertas" && (
           <div className="space-y-4">
-
             {/* Agenda: familias y EPS/IPS/clínicas. Postularse, negociar el valor y desbloquear contacto */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-4">
@@ -1181,7 +1570,11 @@ function ProDashboard() {
             {/* Postulaciones a instituciones (responder, negociar, firmar) y contratos inteligentes */}
             {userId && (
               <>
-                <OfferApplicationsPanel userId={userId} proName={fullName || null} onChanged={() => void loadAll(userId)} />
+                <OfferApplicationsPanel
+                  userId={userId}
+                  proName={fullName || null}
+                  onChanged={() => void loadAll(userId)}
+                />
                 <ContractsPanel userId={userId} title="Mis contratos inteligentes" />
               </>
             )}
@@ -1202,7 +1595,10 @@ function ProDashboard() {
                   {apps.slice(0, 5).map((a) => {
                     const offer = offers.find((o) => o.id === a.job_offer_id);
                     return (
-                      <li key={a.id} className="flex items-center justify-between gap-3 rounded-xl bg-muted/30 px-3 py-2.5">
+                      <li
+                        key={a.id}
+                        className="flex items-center justify-between gap-3 rounded-xl bg-muted/30 px-3 py-2.5"
+                      >
                         <div>
                           <p className="text-sm font-medium">{offer?.title ?? "Oferta"}</p>
                           <p className="text-xs text-muted-foreground">{offer?.city}</p>
@@ -1229,29 +1625,40 @@ function ProDashboard() {
             {/* All offers */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold">Ofertas de familias activas ({offers.length})</p>
-                <Link to="/buscar" search={{ tab: "ofertas" }} className="text-xs text-biosensor hover:underline">
+                <p className="text-sm font-semibold">
+                  Ofertas de familias activas ({offers.length})
+                </p>
+                <Link
+                  to="/buscar"
+                  search={{ tab: "ofertas" }}
+                  className="text-xs text-biosensor hover:underline"
+                >
                   Marketplace →
                 </Link>
               </div>
               {offers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No hay ofertas activas en este momento.</p>
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No hay ofertas activas en este momento.
+                </p>
               ) : (
                 <div className="space-y-2">
                   {offers.map((o) => (
-                    <OfferCard key={o.id} offer={o} applied={appliedIds.has(o.id)} onApply={apply} />
+                    <OfferCard
+                      key={o.id}
+                      offer={o}
+                      applied={appliedIds.has(o.id)}
+                      onApply={apply}
+                    />
                   ))}
                 </div>
               )}
             </div>
-
           </div>
         )}
 
         {/* ══ TAB: AGENDA ══ */}
         {tab === "agenda" && (
           <div className="space-y-4">
-
             {/* Smart accordion agenda */}
             {userId && <ProAgendaModule userId={userId} />}
 
@@ -1260,7 +1667,10 @@ function ProDashboard() {
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <div className="mb-4">
                   <p className="text-sm font-semibold">Vista semanal — como te ven los clientes</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Así ve tu horario una familia o institución al buscarte. Haz clic en un bloque para marcarlo libre u ocupado.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Así ve tu horario una familia o institución al buscarte. Haz clic en un bloque
+                    para marcarlo libre u ocupado.
+                  </p>
                 </div>
                 <AgendaViewer
                   targetUserId={userId}
@@ -1277,7 +1687,9 @@ function ProDashboard() {
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <div className="mb-4">
                   <p className="text-sm font-semibold">Gestionar disponibilidad</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Crea bloques de horas disponibles para que puedan reservarte.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Crea bloques de horas disponibles para que puedan reservarte.
+                  </p>
                 </div>
                 <AvailabilityCalendar userId={userId} />
               </div>
@@ -1288,7 +1700,9 @@ function ProDashboard() {
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <div className="mb-4">
                   <p className="text-sm font-semibold">Tu ubicación principal</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Marca dónde prestas servicio. Aparecerás en el mapa del marketplace.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Marca dónde prestas servicio. Aparecerás en el mapa del marketplace.
+                  </p>
                 </div>
                 <LocationPicker
                   lat={profile?.lat ?? null}
@@ -1297,9 +1711,15 @@ function ProDashboard() {
                   onChange={async (lat, lng, address) => {
                     await supabase
                       .from("professional_profiles")
-                      .update({ lat, lng, home_city: address ?? profile?.home_city ?? null } as never)
+                      .update({
+                        lat,
+                        lng,
+                        home_city: address ?? profile?.home_city ?? null,
+                      } as never)
                       .eq("user_id", userId);
-                    setProfile((prev) => prev ? { ...prev, lat, lng, home_city: address ?? prev.home_city } : prev);
+                    setProfile((prev) =>
+                      prev ? { ...prev, lat, lng, home_city: address ?? prev.home_city } : prev,
+                    );
                     toast.success("Ubicación guardada");
                   }}
                 />
@@ -1319,9 +1739,15 @@ function ProDashboard() {
                   onChange: async (lat, lng, address) => {
                     await supabase
                       .from("professional_profiles")
-                      .update({ lat, lng, home_city: address ?? profile?.home_city ?? null } as never)
+                      .update({
+                        lat,
+                        lng,
+                        home_city: address ?? profile?.home_city ?? null,
+                      } as never)
                       .eq("user_id", userId);
-                    setProfile((prev) => prev ? { ...prev, lat, lng, home_city: address ?? prev.home_city } : prev);
+                    setProfile((prev) =>
+                      prev ? { ...prev, lat, lng, home_city: address ?? prev.home_city } : prev,
+                    );
                   },
                 }}
               />
@@ -1361,9 +1787,22 @@ function ProDashboard() {
 
 // ── Sub-components ──
 
-function OfferCard({ offer: o, applied, onApply }: { offer: Offer; applied: boolean; onApply: (id: string) => void }) {
+function OfferCard({
+  offer: o,
+  applied,
+  onApply,
+}: {
+  offer: Offer;
+  applied: boolean;
+  onApply: (id: string) => void;
+}) {
   return (
-    <div className={cn("rounded-xl border bg-background p-4 transition-all", applied ? "border-biosensor/30" : "border-border hover:border-biosensor/20")}>
+    <div
+      className={cn(
+        "rounded-xl border bg-background p-4 transition-all",
+        applied ? "border-biosensor/30" : "border-border hover:border-biosensor/20",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -1390,7 +1829,13 @@ function OfferCard({ offer: o, applied, onApply }: { offer: Offer; applied: bool
             onClick={() => onApply(o.id)}
             className="mt-1.5"
           >
-            {applied ? <><CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Aplicada</> : "Aplicar"}
+            {applied ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Aplicada
+              </>
+            ) : (
+              "Aplicar"
+            )}
           </Button>
         </div>
       </div>
@@ -1401,17 +1846,32 @@ function OfferCard({ offer: o, applied, onApply }: { offer: Offer; applied: bool
 function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-xl bg-background/60 border border-border/50 px-3 py-2 text-center">
-      <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5">{icon}</div>
+      <div className="flex items-center justify-center gap-1 text-muted-foreground mb-0.5">
+        {icon}
+      </div>
       <p className="font-bold text-sm">{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
     </div>
   );
 }
 
-function QuickAction({ icon, label, sub, onClick, loading, to }: {
-  icon: React.ReactNode; label: string; sub: string; onClick?: () => void; loading?: boolean; to?: string;
+function QuickAction({
+  icon,
+  label,
+  sub,
+  onClick,
+  loading,
+  to,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  sub: string;
+  onClick?: () => void;
+  loading?: boolean;
+  to?: string;
 }) {
-  const className = "rounded-2xl border border-border bg-card/95 p-4 text-left hover:border-biosensor/30 transition-colors active:scale-[0.98] block";
+  const className =
+    "rounded-2xl border border-border bg-card/95 p-4 text-left hover:border-biosensor/30 transition-colors active:scale-[0.98] block";
   const content = (
     <>
       <div className="flex items-center gap-2 mb-1">
@@ -1438,13 +1898,23 @@ function QuickAction({ icon, label, sub, onClick, loading, to }: {
 function FormSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{label}</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        {label}
+      </p>
       {children}
     </div>
   );
 }
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <div className={cn("space-y-1.5", className)}>
       <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -1461,9 +1931,17 @@ function AppStatusBadge({ status }: { status: AppRow["status"] }) {
     withdrawn: { label: "Retirada", cls: "bg-muted text-muted-foreground" },
   } as const;
   const s = map[status];
-  return <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", s.cls)}>{s.label}</span>;
+  return (
+    <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", s.cls)}>{s.label}</span>
+  );
 }
 
 function labelModality(m: Offer["modality"]) {
-  return m === "hour" ? "Por hora" : m === "shift" ? "Por turno" : m === "month" ? "Mensual" : "Paquete";
+  return m === "hour"
+    ? "Por hora"
+    : m === "shift"
+      ? "Por turno"
+      : m === "month"
+        ? "Mensual"
+        : "Paquete";
 }

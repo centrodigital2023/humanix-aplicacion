@@ -171,10 +171,12 @@ export function InterviewActions({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5 text-fuchsia-neural" /> Programar entrevista &amp; contacto
+            <Calendar className="h-3.5 w-3.5 text-fuchsia-neural" /> Programar entrevista &amp;
+            contacto
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Envía la cita por WhatsApp o email, llama directamente o descarga toda la carpeta documental.
+            Envía la cita por WhatsApp o email, llama directamente o descarga toda la carpeta
+            documental.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">

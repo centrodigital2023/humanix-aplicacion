@@ -62,12 +62,26 @@ function HabeasDataPage() {
           <ul className="list-disc pl-6 space-y-2">
             <li>
               Correos:{" "}
-              <a href="mailto:soporte@humanix.lat" className="text-foreground underline underline-offset-4">soporte@humanix.lat</a>{" "}
+              <a
+                href="mailto:soporte@humanix.lat"
+                className="text-foreground underline underline-offset-4"
+              >
+                soporte@humanix.lat
+              </a>{" "}
               con copia a{" "}
-              <a href="mailto:centrodigital2023@gmail.com" className="text-foreground underline underline-offset-4">centrodigital2023@gmail.com</a>
+              <a
+                href="mailto:centrodigital2023@gmail.com"
+                className="text-foreground underline underline-offset-4"
+              >
+                centrodigital2023@gmail.com
+              </a>
             </li>
-            <li>Línea telefónica: <strong>+57 314 744 4715</strong></li>
-            <li>Asunto: <em>Solicitud Derechos Habeas Data – [Nombre del Usuario]</em></li>
+            <li>
+              Línea telefónica: <strong>+57 314 744 4715</strong>
+            </li>
+            <li>
+              Asunto: <em>Solicitud Derechos Habeas Data – [Nombre del Usuario]</em>
+            </li>
           </ul>
           <p>La solicitud deberá contener obligatoriamente:</p>
           <ul className="list-disc pl-6 space-y-2">
@@ -85,9 +99,10 @@ function HabeasDataPage() {
           </p>
           <p>
             <strong>Reclamos:</strong> quince (15) días hábiles desde el día siguiente a la
-            recepción. Si el reclamo está incompleto, se requerirá al interesado dentro de los
-            cinco (5) días siguientes para subsanar; pasados dos (2) meses sin respuesta se entiende
-            desistido. El plazo podrá prorrogarse máximo ocho (8) días hábiles informando al usuario.
+            recepción. Si el reclamo está incompleto, se requerirá al interesado dentro de los cinco
+            (5) días siguientes para subsanar; pasados dos (2) meses sin respuesta se entiende
+            desistido. El plazo podrá prorrogarse máximo ocho (8) días hábiles informando al
+            usuario.
           </p>
         </LegalSection>
 

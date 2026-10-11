@@ -30,9 +30,7 @@ export const Route = createFileRoute("/recursos/$slug")({
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center px-4">
         <h1 className="text-3xl font-bold">Artículo no encontrado</h1>
-        <p className="mt-2 text-muted-foreground">
-          El recurso que buscas no existe o fue movido.
-        </p>
+        <p className="mt-2 text-muted-foreground">El recurso que buscas no existe o fue movido.</p>
         <a href="/recursos" className="mt-4 inline-block underline text-biosensor">
           Ver todos los recursos
         </a>

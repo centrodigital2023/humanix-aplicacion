@@ -75,9 +75,15 @@ export function ProfileChooser({ onChoose }: { onChoose: (a: Audience) => void }
                   <span className="mt-0.5 block text-sm text-muted-foreground">{HINT[a]}</span>
                 </div>
                 {/* micro-copy bullets — appear on hover via group */}
-                <ul className="mt-auto space-y-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true">
+                <ul
+                  className="mt-auto space-y-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                  aria-hidden="true"
+                >
                   {hints.map((h) => (
-                    <li key={h} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <li
+                      key={h}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"
+                    >
                       <span className="text-ok">✓</span>
                       {h}
                     </li>

@@ -1,6 +1,6 @@
 /**
  * ENHANCED INSTITUTION OPERATIONS DASHBOARD
- * 
+ *
  * Métricas operativas en tiempo real:
  * - Ofertas activas y cubiertas
  * - Aplicantes pendientes
@@ -40,11 +40,7 @@ type OperationalMetrics = {
   professional_utilization_rate: number;
 };
 
-export function EnhancedInstitutionOperations({
-  userId,
-}: {
-  userId: string;
-}) {
+export function EnhancedInstitutionOperations({ userId }: { userId: string }) {
   const [metrics, setMetrics] = useState<OperationalMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,9 +72,7 @@ export function EnhancedInstitutionOperations({
         }
 
         const totalApplicants = applicationsData.length;
-        const pendingApplicants = applicationsData.filter(
-          (a) => a.status === "pending"
-        ).length;
+        const pendingApplicants = applicationsData.filter((a) => a.status === "pending").length;
 
         // Calcular métricas
         const averageCostPerHire = filledOffers > 0 ? totalSpent / filledOffers : 0;
@@ -91,7 +85,7 @@ export function EnhancedInstitutionOperations({
           if (o.status === "filled") {
             const createdDate = new Date(o.created_at);
             const daysElapsed = Math.floor(
-              (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+              (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24),
             );
             totalDays += daysElapsed;
             filledCount++;
@@ -132,8 +126,7 @@ export function EnhancedInstitutionOperations({
   if (loading || !metrics) {
     return (
       <Card className="p-8 text-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando
-        métricas…
+        <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando métricas…
       </Card>
     );
   }
@@ -237,26 +230,22 @@ export function EnhancedInstitutionOperations({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {card.label}
-                  </p>
+                  <p className="text-xs text-muted-foreground mb-1">{card.label}</p>
                   <div className="flex items-baseline gap-1">
-                    <p className={`text-2xl font-bold ${textColors[card.color] || textColors.emerald}`}>
+                    <p
+                      className={`text-2xl font-bold ${textColors[card.color] || textColors.emerald}`}
+                    >
                       {card.value}
                     </p>
-                    {card.total && (
-                      <p className="text-xs text-muted-foreground">
-                        /{card.total}
-                      </p>
-                    )}
+                    {card.total && <p className="text-xs text-muted-foreground">/{card.total}</p>}
                   </div>
                   {card.benchmark && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Meta: {card.benchmark}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Meta: {card.benchmark}</p>
                   )}
                 </div>
-                <Icon className={`h-5 w-5 ${textColors[card.color] || textColors.emerald} opacity-30 shrink-0`} />
+                <Icon
+                  className={`h-5 w-5 ${textColors[card.color] || textColors.emerald} opacity-30 shrink-0`}
+                />
               </div>
             </Card>
           );
@@ -266,9 +255,7 @@ export function EnhancedInstitutionOperations({
       {/* Insights */}
       <Card className="p-4 bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-blue-200/30">
         <div className="space-y-2">
-          <p className="font-semibold text-sm text-foreground">
-            💡 Insights operacionales
-          </p>
+          <p className="font-semibold text-sm text-foreground">💡 Insights operacionales</p>
           <ul className="space-y-1 text-xs text-muted-foreground">
             {metrics.filled_offers === metrics.total_offers && metrics.total_offers > 0 && (
               <li>✅ Todas tus ofertas están cubiertas - ¡excelente desempeño!</li>

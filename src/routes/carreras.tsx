@@ -195,7 +195,10 @@ function CarrerasPage() {
         <div className="mt-8 pt-8 border-t border-border text-center">
           <p className="text-muted-foreground mb-4">
             ¿Viste una posición que te interesa? Envía tu CV a{" "}
-            <a href="mailto:jobs@humanix.lat" className="text-biosensor font-medium hover:underline">
+            <a
+              href="mailto:jobs@humanix.lat"
+              className="text-biosensor font-medium hover:underline"
+            >
               jobs@humanix.lat
             </a>
           </p>

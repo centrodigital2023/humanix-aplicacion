@@ -72,7 +72,12 @@ export function AiCreditsBalance({ userId }: { userId: string }) {
       .channel(`ai-credits:${userId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "ai_credits_ledger", filter: `user_id=eq.${userId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "ai_credits_ledger",
+          filter: `user_id=eq.${userId}`,
+        },
         () => load(),
       )
       .subscribe();
@@ -87,7 +92,8 @@ export function AiCreditsBalance({ userId }: { userId: string }) {
   }
   if (!balance) return null;
 
-  const pctUsed = balance.allowance > 0 ? Math.min(100, Math.round((balance.used / balance.allowance) * 100)) : 0;
+  const pctUsed =
+    balance.allowance > 0 ? Math.min(100, Math.round((balance.used / balance.allowance) * 100)) : 0;
   const low = balance.remaining <= Math.max(1, Math.round(balance.allowance * 0.15));
 
   return (
@@ -101,10 +107,18 @@ export function AiCreditsBalance({ userId }: { userId: string }) {
             </div>
             <div>
               <p className="text-sm font-bold font-display">Créditos IA</p>
-              <p className="text-[10px] text-muted-foreground capitalize">Ciclo de {monthLabel(balance.period_start)}</p>
+              <p className="text-[10px] text-muted-foreground capitalize">
+                Ciclo de {monthLabel(balance.period_start)}
+              </p>
             </div>
           </div>
-          <Badge variant="outline" className={cn("text-[10px] gap-1", low ? "border-amber-500/30 text-amber-600" : "border-emerald-500/30 text-emerald-600")}>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] gap-1",
+              low ? "border-amber-500/30 text-amber-600" : "border-emerald-500/30 text-emerald-600",
+            )}
+          >
             <Zap className="h-3 w-3" /> {balance.remaining} restantes
           </Badge>
         </div>
@@ -122,7 +136,12 @@ export function AiCreditsBalance({ userId }: { userId: string }) {
             <p className="text-[11px] text-amber-700 dark:text-amber-400">
               Tu cupo IA está por agotarse este mes.
             </p>
-            <Button asChild size="sm" variant="outline" className="h-6 text-[10px] gap-1 flex-shrink-0 border-amber-500/30">
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="h-6 text-[10px] gap-1 flex-shrink-0 border-amber-500/30"
+            >
               <Link to="/planes">
                 <Crown className="h-3 w-3" /> Subir de plan
               </Link>
@@ -137,9 +156,15 @@ export function AiCreditsBalance({ userId }: { userId: string }) {
             </p>
             {history.map((h) => (
               <div key={h.id} className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground truncate">{FEATURE_LABEL[h.feature] ?? h.feature}</span>
+                <span className="text-muted-foreground truncate">
+                  {FEATURE_LABEL[h.feature] ?? h.feature}
+                </span>
                 <span className="font-medium tabular-nums flex-shrink-0 ml-2">
-                  −{h.credits_used} · {new Date(h.created_at).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}
+                  −{h.credits_used} ·{" "}
+                  {new Date(h.created_at).toLocaleDateString("es-CO", {
+                    day: "2-digit",
+                    month: "short",
+                  })}
                 </span>
               </div>
             ))}

@@ -21,8 +21,8 @@ export function AiCreditsWidget({ userId }: { userId: string }) {
         critical
           ? "bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/15"
           : low
-          ? "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/15"
-          : "bg-biosensor/5 border-biosensor/20 hover:bg-biosensor/10"
+            ? "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/15"
+            : "bg-biosensor/5 border-biosensor/20 hover:bg-biosensor/10"
       }`}
     >
       {critical ? (
@@ -33,7 +33,9 @@ export function AiCreditsWidget({ userId }: { userId: string }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1">
           <p className="text-xs font-medium leading-none">Créditos IA</p>
-          <p className={`text-xs font-bold tabular-nums ${critical ? "text-rose-600" : low ? "text-amber-600" : "text-biosensor"}`}>
+          <p
+            className={`text-xs font-bold tabular-nums ${critical ? "text-rose-600" : low ? "text-amber-600" : "text-biosensor"}`}
+          >
             {total.toLocaleString("es-CO")}
           </p>
         </div>

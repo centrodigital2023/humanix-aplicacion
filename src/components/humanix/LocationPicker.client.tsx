@@ -231,11 +231,7 @@ export function LocationPicker({
         )}
       </div>
 
-      <MapModal
-        open={expanded}
-        onOpenChange={setExpanded}
-        title="Selector de ubicación"
-      >
+      <MapModal open={expanded} onOpenChange={setExpanded} title="Selector de ubicación">
         {mapContent}
       </MapModal>
     </>

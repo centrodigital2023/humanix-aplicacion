@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * SMART INSTITUTION PROFILE FORM
- * 
+ *
  * Features:
  * - Formulario inteligente con validación FUID
  * - NIT y cámara de comercio
@@ -119,16 +119,12 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
             setFormData({
               institution_name: profile.institution_name || "",
               nit: profile.nit || "",
-              chamber_of_commerce_number:
-                profile.chamber_of_commerce_number || "",
+              chamber_of_commerce_number: profile.chamber_of_commerce_number || "",
               chamber_of_commerce_date: profile.chamber_of_commerce_date || "",
               institution_type: profile.institution_type || "ips",
-              legal_representative_name:
-                profile.legal_representative_name || "",
-              legal_representative_email:
-                profile.legal_representative_email || "",
-              legal_representative_phone:
-                profile.legal_representative_phone || "",
+              legal_representative_name: profile.legal_representative_name || "",
+              legal_representative_email: profile.legal_representative_email || "",
+              legal_representative_phone: profile.legal_representative_phone || "",
               city: profile.city || "",
               address: profile.address || "",
               website: profile.website || "",
@@ -247,7 +243,9 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
 
   const complianceChecks = {
     has_nit: !!formData.nit && isValidNIT(formData.nit),
-    has_chamber: !!formData.chamber_of_commerce_number && isValidChamberNumber(formData.chamber_of_commerce_number),
+    has_chamber:
+      !!formData.chamber_of_commerce_number &&
+      isValidChamberNumber(formData.chamber_of_commerce_number),
     has_legal_rep: !!formData.legal_representative_name && !!formData.legal_representative_email,
     has_address: !!formData.address && !!formData.city,
     documents_uploaded: documents.filter((d) => d.status === "approved").length >= 1,
@@ -304,9 +302,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                 )}
                 <span className={val ? "text-emerald-700" : "text-amber-700"}>
-                  {key
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                 </span>
               </div>
             ))}
@@ -334,14 +330,8 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
             <Input
               placeholder="ej: 830001234-5"
               value={formData.nit}
-              onChange={(e) =>
-                setFormData({ ...formData, nit: e.target.value })
-              }
-              className={
-                formData.nit && !isValidNIT(formData.nit)
-                  ? "border-red-500"
-                  : ""
-              }
+              onChange={(e) => setFormData({ ...formData, nit: e.target.value })}
+              className={formData.nit && !isValidNIT(formData.nit) ? "border-red-500" : ""}
             />
             {formData.nit && !isValidNIT(formData.nit) && (
               <p className="text-xs text-red-600 mt-1">Formato NIT inválido</p>
@@ -424,9 +414,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
             <Input
               placeholder="Bogotá"
               value={formData.city}
-              onChange={(e) =>
-                setFormData({ ...formData, city: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
             />
           </div>
 
@@ -435,9 +423,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
             <Input
               placeholder="Calle 10 #20-30"
               value={formData.address}
-              onChange={(e) =>
-                setFormData({ ...formData, address: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             />
           </div>
 
@@ -446,9 +432,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
             <Input
               placeholder="https://ejemplo.com"
               value={formData.website}
-              onChange={(e) =>
-                setFormData({ ...formData, website: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
             />
           </div>
 
@@ -472,11 +456,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-semibold text-sm">Documentos institucionales</h4>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDocDialog(true)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setShowDocDialog(true)}>
               <Upload className="h-3.5 w-3.5 mr-1" /> Agregar
             </Button>
           </div>
@@ -518,12 +498,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
 
         {/* Botones */}
         <div className="flex gap-2">
-          <Button
-            onClick={saveProfile}
-            disabled={saving}
-            variant="hero"
-            className="flex-1"
-          >
+          <Button onClick={saveProfile} disabled={saving} variant="hero" className="flex-1">
             {saving ? (
               <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
             ) : (
@@ -555,9 +530,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
               <div className="space-y-2">
                 <Upload className="h-8 w-8 text-muted-foreground mx-auto" />
                 <p className="font-medium text-sm">Arrastra o haz clic para subir</p>
-                <p className="text-xs text-muted-foreground">
-                  PDF, JPG, PNG - máx 10MB
-                </p>
+                <p className="text-xs text-muted-foreground">PDF, JPG, PNG - máx 10MB</p>
               </div>
               <input
                 type="file"
@@ -570,10 +543,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDocDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowDocDialog(false)}>
               Cancelar
             </Button>
           </DialogFooter>

@@ -246,7 +246,7 @@ export const INSTITUTION_BILLING: InstitutionBillingConfig = {
   extraProfessionalCOP: 5_000,
   includedProfessionals: 10,
   includedBranches: 1,
-  annualDiscount: 0.20,
+  annualDiscount: 0.2,
   trialDays: 14,
   graceDays: 7,
 };
@@ -286,13 +286,22 @@ export function calculateInstitutionBilling(opts: {
   const totalCOP = rawTotal - annualDiscountCOP;
 
   const lines: InstitutionBillingBreakdown["lines"] = [
-    { label: `Plan Institución base (${cfg.includedBranches} sede, ${cfg.includedProfessionals} profesionales)`, amountCOP: baseCOP },
+    {
+      label: `Plan Institución base (${cfg.includedBranches} sede, ${cfg.includedProfessionals} profesionales)`,
+      amountCOP: baseCOP,
+    },
   ];
   if (extraBranches > 0) {
-    lines.push({ label: `${extraBranches} sede${extraBranches > 1 ? "s" : ""} adicional${extraBranches > 1 ? "es" : ""}`, amountCOP: extraBranchesCOP });
+    lines.push({
+      label: `${extraBranches} sede${extraBranches > 1 ? "s" : ""} adicional${extraBranches > 1 ? "es" : ""}`,
+      amountCOP: extraBranchesCOP,
+    });
   }
   if (extraPros > 0) {
-    lines.push({ label: `${extraPros} profesional${extraPros > 1 ? "es" : ""} adicional${extraPros > 1 ? "es" : ""}`, amountCOP: extraProfessionalsCOP });
+    lines.push({
+      label: `${extraPros} profesional${extraPros > 1 ? "es" : ""} adicional${extraPros > 1 ? "es" : ""}`,
+      amountCOP: extraProfessionalsCOP,
+    });
   }
   if (cycle === "annual") {
     lines.push({ label: "Descuento anual (−20%)", amountCOP: -annualDiscountCOP });
@@ -311,12 +320,7 @@ export function calculateInstitutionBilling(opts: {
 }
 
 /** Estados posibles de una suscripción */
-export type SubscriptionStatus =
-  | "trial"
-  | "active"
-  | "past_due"
-  | "suspended"
-  | "cancelled";
+export type SubscriptionStatus = "trial" | "active" | "past_due" | "suspended" | "cancelled";
 
 /** Determina si la suscripción está en buen estado para acceder a la plataforma */
 export function isSubscriptionAccessible(status: SubscriptionStatus): boolean {

@@ -57,8 +57,8 @@ function CosmosPage() {
           </div>
           <h1 className="text-4xl md:text-5xl font-bold">Una pausa cósmica</h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            La misma humanidad que cuida vidas también mira al cielo. Cada día, una imagen astronómica
-            curada por NASA y explicada en español neutro por nuestra IA.
+            La misma humanidad que cuida vidas también mira al cielo. Cada día, una imagen
+            astronómica curada por NASA y explicada en español neutro por nuestra IA.
           </p>
         </header>
 

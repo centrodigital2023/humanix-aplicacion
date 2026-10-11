@@ -100,9 +100,7 @@ export const Route = createFileRoute("/profesional/$proId")({
     };
     return {
       ...built,
-      scripts: [
-        { type: "application/ld+json", children: jsonLdString(personLd) },
-      ],
+      scripts: [{ type: "application/ld+json", children: jsonLdString(personLd) }],
     };
   },
   component: ProfessionalPublicPage,
@@ -379,9 +377,7 @@ function ProfessionalPublicPage() {
           <section id="agenda" className="mt-6 scroll-mt-24">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold">Agenda y disponibilidad</h2>
-              <span className="text-[11px] text-muted-foreground">
-                Horarios en tiempo real
-              </span>
+              <span className="text-[11px] text-muted-foreground">Horarios en tiempo real</span>
             </div>
             <AgendaViewer
               targetUserId={pro.user_id}

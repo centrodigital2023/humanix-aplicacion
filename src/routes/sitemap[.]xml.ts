@@ -64,10 +64,24 @@ const STATIC_ROUTES: StaticEntry[] = [
 // City × specialty combinations handled by the $-catch-all route.
 // 18 cities × 8 specialties = 144 SEO landing pages.
 const SEO_CITIES = [
-  "bogota", "medellin", "cali", "barranquilla", "cartagena",
-  "bucaramanga", "pereira", "manizales", "cucuta", "ibague",
-  "villavicencio", "santa-marta", "monteria", "pasto",
-  "armenia", "valledupar", "sincelejo", "neiva",
+  "bogota",
+  "medellin",
+  "cali",
+  "barranquilla",
+  "cartagena",
+  "bucaramanga",
+  "pereira",
+  "manizales",
+  "cucuta",
+  "ibague",
+  "villavicencio",
+  "santa-marta",
+  "monteria",
+  "pasto",
+  "armenia",
+  "valledupar",
+  "sincelejo",
+  "neiva",
 ];
 
 const SEO_SPECIALTIES = [
@@ -83,8 +97,13 @@ const SEO_SPECIALTIES = [
 
 // Priority decreases slightly for smaller cities
 const CITY_PRIORITY: Record<string, number> = {
-  bogota: 0.88, medellin: 0.86, cali: 0.84, barranquilla: 0.82,
-  cartagena: 0.8, bucaramanga: 0.78, pereira: 0.76,
+  bogota: 0.88,
+  medellin: 0.86,
+  cali: 0.84,
+  barranquilla: 0.82,
+  cartagena: 0.8,
+  bucaramanga: 0.78,
+  pereira: 0.76,
 };
 
 function getCitySpecialtyCombos(today: string): string[] {
@@ -92,14 +111,7 @@ function getCitySpecialtyCombos(today: string): string[] {
   for (const city of SEO_CITIES) {
     const basePriority = CITY_PRIORITY[city] ?? 0.72;
     for (const specialty of SEO_SPECIALTIES) {
-      entries.push(
-        urlEntry(
-          `${SITE_URL}/${specialty}-${city}`,
-          today,
-          "weekly",
-          basePriority,
-        ),
-      );
+      entries.push(urlEntry(`${SITE_URL}/${specialty}-${city}`, today, "weekly", basePriority));
     }
   }
   return entries;

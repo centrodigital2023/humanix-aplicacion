@@ -43,7 +43,11 @@ export const Route = createFileRoute("/dashboard/monitoreo")({
   head: () => ({
     meta: [
       { title: "Monitoreo Clínico · Humanix" },
-      { name: "description", content: "Monitoreo de signos vitales en tiempo real con Apple HealthKit y Google Health Connect" },
+      {
+        name: "description",
+        content:
+          "Monitoreo de signos vitales en tiempo real con Apple HealthKit y Google Health Connect",
+      },
     ],
   }),
   component: MonitoreoPage,
@@ -105,13 +109,13 @@ function MonitoreoPage() {
     setSavingManual(true);
     try {
       const UNITS: Record<string, string> = {
-        heart_rate:         "lpm",
-        spo2:               "%",
-        temperature:        "°C",
+        heart_rate: "lpm",
+        spo2: "%",
+        temperature: "°C",
         blood_pressure_sys: "mmHg",
         blood_pressure_dia: "mmHg",
-        respiratory_rate:   "resp/min",
-        glucose:            "mg/dL",
+        respiratory_rate: "resp/min",
+        glucose: "mg/dL",
       };
 
       // El tipo seleccionado por el usuario (viene del <select> abajo)
@@ -119,12 +123,12 @@ function MonitoreoPage() {
 
       const { error } = await sb.from("vital_signs_readings").insert({
         family_user_id: patientId,
-        reading_type:   readingType,
-        value:          parseFloat(manualVital.value),
-        unit:           UNITS[readingType] ?? "",
-        source:         "manual",
-        severity:       "normal",
-        recorded_at:    new Date().toISOString(),
+        reading_type: readingType,
+        value: parseFloat(manualVital.value),
+        unit: UNITS[readingType] ?? "",
+        source: "manual",
+        severity: "normal",
+        recorded_at: new Date().toISOString(),
       });
 
       if (error) throw error;
@@ -164,7 +168,9 @@ function MonitoreoPage() {
               </div>
               <div>
                 <p className="text-base font-bold font-display leading-tight">
-                  {!targetPatientId ? `Hola, ${user.fullName.split(" ")[0]}` : "Monitoreo del paciente"}
+                  {!targetPatientId
+                    ? `Hola, ${user.fullName.split(" ")[0]}`
+                    : "Monitoreo del paciente"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Signos vitales, alertas e IA clínica sincronizados en tiempo real
@@ -255,16 +261,9 @@ function MonitoreoPage() {
         </div>
 
         {/* Tab content */}
-        {tab === "vitales" && (
-          <ClinicalMonitor
-            patientId={patientId}
-            showDeviceGuide={true}
-          />
-        )}
+        {tab === "vitales" && <ClinicalMonitor patientId={patientId} showDeviceGuide={true} />}
 
-        {tab === "alertas" && (
-          <AlertSystem patientId={patientId} />
-        )}
+        {tab === "alertas" && <AlertSystem patientId={patientId} />}
 
         {tab === "riesgo" && (
           <PatientRiskCard
@@ -330,7 +329,8 @@ function MonitoreoPage() {
             <div className="border-t border-border pt-3">
               <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                 <Info className="h-3 w-3" />
-                Las mediciones manuales se marcan como fuente "manual" y quedan en el historial del paciente.
+                Las mediciones manuales se marcan como fuente "manual" y quedan en el historial del
+                paciente.
               </p>
             </div>
           </Card>

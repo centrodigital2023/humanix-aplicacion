@@ -75,7 +75,10 @@ export const Route = createFileRoute("/oferta/$offerId")({
     const url = `${SITE_URL}/oferta/${params.offerId}`;
     if (!offer) {
       return {
-        meta: [{ title: `Oferta no disponible · ${SITE_NAME}` }, { name: "robots", content: "noindex,nofollow" }],
+        meta: [
+          { title: `Oferta no disponible · ${SITE_NAME}` },
+          { name: "robots", content: "noindex,nofollow" },
+        ],
         links: [{ rel: "canonical", href: url }],
       };
     }

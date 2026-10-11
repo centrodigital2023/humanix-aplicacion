@@ -265,7 +265,9 @@ export function PromoCards({ origin }: { origin: string }) {
       const [prosRes, offersRes] = await Promise.all([
         supabase
           .from("professional_profiles")
-          .select("user_id, specialty, home_city, avg_rating, total_jobs, avatar_url, bio, hourly_rate")
+          .select(
+            "user_id, specialty, home_city, avg_rating, total_jobs, avatar_url, bio, hourly_rate",
+          )
           .eq("published", true)
           .eq("active", true)
           .order("avg_rating", { ascending: false })
@@ -462,25 +464,22 @@ export function PromoCards({ origin }: { origin: string }) {
   );
 
   // Subir imagen local
-  const handleUploadImage = useCallback(
-    (tpl: PromoTemplate, file: File) => {
-      if (!file.type.startsWith("image/")) {
-        toast.error("Selecciona una imagen válida");
-        return;
-      }
-      if (file.size > 8 * 1024 * 1024) {
-        toast.error("Imagen demasiado grande (máx 8 MB)");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setBgImages((p) => ({ ...p, [tpl.id]: reader.result as string }));
-        toast.success("Imagen agregada");
-      };
-      reader.readAsDataURL(file);
-    },
-    [],
-  );
+  const handleUploadImage = useCallback((tpl: PromoTemplate, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecciona una imagen válida");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Imagen demasiado grande (máx 8 MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setBgImages((p) => ({ ...p, [tpl.id]: reader.result as string }));
+      toast.success("Imagen agregada");
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   // Renderizar TODAS las tarjetas como blobs PNG (carrusel)
   const renderAllBlobs = useCallback(async (): Promise<{ name: string; blob: Blob }[]> => {
@@ -537,9 +536,7 @@ export function PromoCards({ origin }: { origin: string }) {
     try {
       const blobs = await renderAllBlobs();
       if (!blobs.length) throw new Error("No se pudo renderizar");
-      const files = blobs.map(
-        ({ name, blob }) => new File([blob], name, { type: "image/png" }),
-      );
+      const files = blobs.map(({ name, blob }) => new File([blob], name, { type: "image/png" }));
       const shareText = `Carrusel Humanix · ${TEMPLATES.length} tarjetas\n\n${origin}\n\n#HumanixCo #SaludDigital #IAenSalud`;
       const nav = navigator as Navigator & {
         canShare?: (data: ShareData) => boolean;
@@ -665,11 +662,7 @@ export function PromoCards({ origin }: { origin: string }) {
               ref={(el) => {
                 cardRefs.current[tpl.id] = el;
               }}
-              className={cn(
-                "w-[540px] aspect-square rounded-2xl overflow-hidden",
-                s.bg,
-                s.text,
-              )}
+              className={cn("w-[540px] aspect-square rounded-2xl overflow-hidden", s.bg, s.text)}
             >
               <CardContent tpl={tpl} styles={s} bgImage={bgImages[tpl.id]} large />
             </div>
@@ -967,10 +960,10 @@ export function PromoCards({ origin }: { origin: string }) {
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-[10px] text-muted-foreground flex gap-1.5">
             <Info className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
             <span>
-              <strong className="text-foreground">Tip Facebook:</strong> si Facebook muestra
-              "Enlace no disponible", verifica el dominio <code>humanix.lat</code> en
-              Business Manager → Seguridad de marca → Dominios. Mientras tanto, usa el botón
-              "Compartir imagen" para subir la tarjeta como foto directa.
+              <strong className="text-foreground">Tip Facebook:</strong> si Facebook muestra "Enlace
+              no disponible", verifica el dominio <code>humanix.lat</code> en Business Manager →
+              Seguridad de marca → Dominios. Mientras tanto, usa el botón "Compartir imagen" para
+              subir la tarjeta como foto directa.
             </span>
           </div>
         </div>
@@ -1056,18 +1049,13 @@ export function PromoCards({ origin }: { origin: string }) {
                       <Ico className="h-4 w-4" />
                     </div>
                     <div
-                      className={cn(
-                        "font-mono px-2 py-1 rounded-full border text-[9px]",
-                        s.chip,
-                      )}
+                      className={cn("font-mono px-2 py-1 rounded-full border text-[9px]", s.chip)}
                     >
                       {String(i + 1).padStart(2, "0")} / {TEMPLATES.length}
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <p className="font-bold text-sm leading-snug line-clamp-3">
-                      {tpl.headline}
-                    </p>
+                    <p className="font-bold text-sm leading-snug line-clamp-3">{tpl.headline}</p>
                     <p className="text-[11px] opacity-90 line-clamp-2">{tpl.subline}</p>
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[10px] opacity-75">humanix.lat</span>

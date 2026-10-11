@@ -111,7 +111,11 @@ function waLink(phone: string | null | undefined, name: string, context = "una o
   )}`;
 }
 
-function waInvite(phone: string | null | undefined, name: string, instName = "nuestra institución") {
+function waInvite(
+  phone: string | null | undefined,
+  name: string,
+  instName = "nuestra institución",
+) {
   if (!phone) return null;
   const clean = phone.replace(/[^0-9]/g, "");
   const num = clean.startsWith("57") ? clean : `57${clean}`;
@@ -210,10 +214,7 @@ export function TalentTab({
 
   // Merged pool: applicants first, then marketplace extras not already in pool
   const rawPool = useMemo(() => {
-    return [
-      ...Object.values(proMap),
-      ...extraPros.filter((p) => !applicantIds.has(p.user_id)),
-    ];
+    return [...Object.values(proMap), ...extraPros.filter((p) => !applicantIds.has(p.user_id))];
   }, [proMap, extraPros, applicantIds]);
 
   const filteredPool = useMemo(() => {
@@ -247,8 +248,7 @@ export function TalentTab({
           return false;
         if (filterSpecialty && !p.specialty?.toLowerCase().includes(filterSpecialty.toLowerCase()))
           return false;
-        if (filterCity && !p.city?.toLowerCase().includes(filterCity.toLowerCase()))
-          return false;
+        if (filterCity && !p.city?.toLowerCase().includes(filterCity.toLowerCase())) return false;
         if (filterAvailable && !p.available) return false;
         if (filterMinTrust > 0 && (p.trust_score ?? 0) < filterMinTrust) return false;
         if (filterRethus && !p.rethus_verified) return false;
@@ -389,9 +389,7 @@ export function TalentTab({
             years_experience: (r as { years_experience?: number }).years_experience ?? null,
             bio: (r as { bio?: string }).bio ?? null,
             total_jobs: (r as { total_jobs?: number }).total_jobs ?? null,
-            certifications: Array.isArray(r.certifications)
-              ? (r.certifications as string[])
-              : null,
+            certifications: Array.isArray(r.certifications) ? (r.certifications as string[]) : null,
           };
         });
 
@@ -495,14 +493,14 @@ export function TalentTab({
 
   return (
     <div className="space-y-4">
-
       {/* ── Pending alert banner ── */}
       {pendingApps.length > 0 && (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-              {pendingApps.length} postulación{pendingApps.length !== 1 ? "es" : ""} pendiente{pendingApps.length !== 1 ? "s" : ""}
+              {pendingApps.length} postulación{pendingApps.length !== 1 ? "es" : ""} pendiente
+              {pendingApps.length !== 1 ? "s" : ""}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Revisa y responde para no perder talento valioso.
@@ -511,7 +509,10 @@ export function TalentTab({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => { setPoolTab("pending"); setShowFilters(false); }}
+            onClick={() => {
+              setPoolTab("pending");
+              setShowFilters(false);
+            }}
             className="shrink-0 text-amber-600 hover:bg-amber-500/10 text-xs h-7 px-3"
           >
             Ver ahora →
@@ -532,16 +533,20 @@ export function TalentTab({
             </div>
             <div className="text-left">
               <p className="text-sm font-semibold">Mapa en tiempo real</p>
-              <p className="text-xs text-muted-foreground">Profesionales disponibles · actualización automática</p>
+              <p className="text-xs text-muted-foreground">
+                Profesionales disponibles · actualización automática
+              </p>
             </div>
             <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium ml-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               En vivo
             </span>
           </div>
-          {showMap
-            ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-            : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+          {showMap ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          )}
         </button>
         {showMap && (
           <div className="border-t border-border">
@@ -564,7 +569,10 @@ export function TalentTab({
           label="Disponibles"
           value={kpis.available}
           tone="bio"
-          onClick={() => { setPoolTab("all"); setFilterAvailable(true); }}
+          onClick={() => {
+            setPoolTab("all");
+            setFilterAvailable(true);
+          }}
         />
         <TalentKpi
           icon={<Clock className="h-4 w-4" />}
@@ -586,7 +594,10 @@ export function TalentTab({
           label="Con RETHUS"
           value={kpis.rethusCount}
           tone="fuchsia"
-          onClick={() => { setPoolTab("all"); setFilterRethus(true); }}
+          onClick={() => {
+            setPoolTab("all");
+            setFilterRethus(true);
+          }}
         />
         <TalentKpi
           icon={<Star className="h-4 w-4" />}
@@ -603,7 +614,12 @@ export function TalentTab({
             { id: "all" as PoolTab, label: "Todos", count: rawPool.length },
             { id: "pending" as PoolTab, label: "Pendientes", count: pendingCount },
             { id: "accepted" as PoolTab, label: "Aceptados", count: acceptedCount },
-            { id: "market" as PoolTab, label: "Mercado", count: marketCount, icon: <Globe className="h-3 w-3" /> },
+            {
+              id: "market" as PoolTab,
+              label: "Mercado",
+              count: marketCount,
+              icon: <Globe className="h-3 w-3" />,
+            },
           ] as { id: PoolTab; label: string; count: number; icon?: React.ReactNode }[]
         ).map((t) => (
           <button
@@ -723,7 +739,9 @@ export function TalentTab({
               >
                 <option value="">Todas</option>
                 {SPECIALTIES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
             </div>
@@ -741,7 +759,9 @@ export function TalentTab({
 
             {/* Filter by offer */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Filtrar por oferta</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Filtrar por oferta
+              </label>
               <select
                 value={filterOffer}
                 onChange={(e) => setFilterOffer(e.target.value)}
@@ -749,7 +769,9 @@ export function TalentTab({
               >
                 <option value="">Todas las ofertas</option>
                 {offers.map((o) => (
-                  <option key={o.id} value={o.id}>{o.title}</option>
+                  <option key={o.id} value={o.id}>
+                    {o.title}
+                  </option>
                 ))}
               </select>
             </div>
@@ -772,16 +794,35 @@ export function TalentTab({
                 className="w-full h-1.5 accent-fuchsia-neural"
               />
               <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+                <span>0</span>
+                <span>25</span>
+                <span>50</span>
+                <span>75</span>
+                <span>100</span>
               </div>
             </div>
           </div>
 
           {/* Toggle chips */}
           <div className="flex flex-wrap gap-2">
-            <FilterChip label="Disponible ahora" active={filterAvailable} icon="🟢" onClick={() => setFilterAvailable((v) => !v)} />
-            <FilterChip label="RETHUS verificado" active={filterRethus} icon="🛡️" onClick={() => setFilterRethus((v) => !v)} />
-            <FilterChip label="Perfil verificado" active={filterVerified} icon="✅" onClick={() => setFilterVerified((v) => !v)} />
+            <FilterChip
+              label="Disponible ahora"
+              active={filterAvailable}
+              icon="🟢"
+              onClick={() => setFilterAvailable((v) => !v)}
+            />
+            <FilterChip
+              label="RETHUS verificado"
+              active={filterRethus}
+              icon="🛡️"
+              onClick={() => setFilterRethus((v) => !v)}
+            />
+            <FilterChip
+              label="Perfil verificado"
+              active={filterVerified}
+              icon="✅"
+              onClick={() => setFilterVerified((v) => !v)}
+            />
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearFilters}
@@ -823,21 +864,26 @@ export function TalentTab({
         >
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-fuchsia-neural" />
-            <span className="text-sm font-semibold text-fuchsia-neural">Búsqueda IA · Lenguaje Natural</span>
+            <span className="text-sm font-semibold text-fuchsia-neural">
+              Búsqueda IA · Lenguaje Natural
+            </span>
             {aiMode && (
               <span className="text-[11px] bg-fuchsia-neural/15 text-fuchsia-neural px-2 py-0.5 rounded-full font-medium">
                 ✨ {aiResults.length} resultados activos
               </span>
             )}
           </div>
-          {showAi
-            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          {showAi ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
         </button>
         {showAi && (
           <div className="px-4 pb-4 border-t border-fuchsia-neural/15 pt-3 space-y-3">
             <p className="text-xs text-muted-foreground">
-              Describe el perfil que necesitas y la IA busca los mejores candidatos en toda la plataforma.
+              Describe el perfil que necesitas y la IA busca los mejores candidatos en toda la
+              plataforma.
             </p>
             <div className="flex gap-2">
               <Textarea
@@ -885,7 +931,8 @@ export function TalentTab({
             <>
               <Sparkles className="inline h-3.5 w-3.5 text-fuchsia-neural mr-1 -mt-px" />
               <span className="text-fuchsia-neural font-medium">Resultados IA</span>
-              {" · "}{filteredPool.length} candidato{filteredPool.length !== 1 ? "s" : ""}
+              {" · "}
+              {filteredPool.length} candidato{filteredPool.length !== 1 ? "s" : ""}
             </>
           ) : (
             <>
@@ -897,9 +944,7 @@ export function TalentTab({
           )}
         </p>
         {filteredPool.length !== rawPool.length && !aiMode && (
-          <span className="text-xs text-muted-foreground">
-            de {rawPool.length} total
-          </span>
+          <span className="text-xs text-muted-foreground">de {rawPool.length} total</span>
         )}
       </div>
 
@@ -908,7 +953,10 @@ export function TalentTab({
         /* Skeleton while Phase 2 (professional profiles) is in flight */
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-border bg-card/95 p-4 animate-pulse space-y-3">
+            <div
+              key={i}
+              className="rounded-2xl border border-border bg-card/95 p-4 animate-pulse space-y-3"
+            >
               <div className="h-4 w-20 bg-muted rounded-full" />
               <div className="flex items-start gap-3">
                 <div className="h-12 w-12 rounded-full bg-muted shrink-0" />
@@ -935,7 +983,10 @@ export function TalentTab({
         <EmptyPool
           poolTab={poolTab}
           hasSearched={hasSearched}
-          onSearch={() => { setShowFilters(true); void searchMarketplace(); }}
+          onSearch={() => {
+            setShowFilters(true);
+            void searchMarketplace();
+          }}
           onShowAll={() => setPoolTab("all")}
         />
       ) : viewMode === "cards" ? (
@@ -1046,7 +1097,10 @@ function ProCard({
               </div>
             )}
             {pro.available && (
-              <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-background" title="Disponible ahora" />
+              <span
+                className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-background"
+                title="Disponible ahora"
+              />
             )}
           </div>
 
@@ -1057,7 +1111,9 @@ function ProCard({
                 <PlanNameGate name={pro.full_name} canView={canViewNames} fallback="—" />
               </p>
               {pro.verified && <BadgeCheck className="h-3.5 w-3.5 text-biosensor shrink-0" />}
-              {pro.rethus_verified && <ShieldCheck className="h-3.5 w-3.5 text-fuchsia-neural shrink-0" />}
+              {pro.rethus_verified && (
+                <ShieldCheck className="h-3.5 w-3.5 text-fuchsia-neural shrink-0" />
+              )}
             </div>
             <p className="text-xs text-muted-foreground truncate mt-0.5">
               {pro.specialty ?? "—"}
@@ -1075,18 +1131,30 @@ function ProCard({
             <div className="relative h-12 w-12">
               <svg className="h-12 w-12 -rotate-90" viewBox="0 0 44 44">
                 <circle
-                  cx="22" cy="22" r="18"
-                  fill="none" stroke="currentColor" strokeWidth="3.5"
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3.5"
                   className="text-muted/30"
                 />
                 <circle
-                  cx="22" cy="22" r="18"
-                  fill="none" stroke="currentColor" strokeWidth="3.5"
-                  strokeDasharray={`${2 * Math.PI * 18 * trust / 100} ${2 * Math.PI * 18 * (1 - trust / 100)}`}
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3.5"
+                  strokeDasharray={`${(2 * Math.PI * 18 * trust) / 100} ${2 * Math.PI * 18 * (1 - trust / 100)}`}
                   strokeLinecap="round"
                   className={cn(
                     "transition-all",
-                    trust >= 70 ? "text-biosensor" : trust >= 50 ? "text-amber-500" : "text-muted-foreground",
+                    trust >= 70
+                      ? "text-biosensor"
+                      : trust >= 50
+                        ? "text-amber-500"
+                        : "text-muted-foreground",
                   )}
                 />
               </svg>
@@ -1107,7 +1175,10 @@ function ProCard({
             />
           )}
           {pro.total_jobs != null && (
-            <Chip icon={<Briefcase className="h-3 w-3 text-muted-foreground" />} label={`${pro.total_jobs} turnos`} />
+            <Chip
+              icon={<Briefcase className="h-3 w-3 text-muted-foreground" />}
+              label={`${pro.total_jobs} turnos`}
+            />
           )}
           {(pro.shift_rate ?? pro.hourly_rate) ? (
             <Chip
@@ -1116,12 +1187,24 @@ function ProCard({
             />
           ) : null}
           {pro.rethus_verified && (
-            <Chip icon={<ShieldCheck className="h-3 w-3 text-fuchsia-neural" />} label="RETHUS" accent />
+            <Chip
+              icon={<ShieldCheck className="h-3 w-3 text-fuchsia-neural" />}
+              label="RETHUS"
+              accent
+            />
           )}
           {pro.available ? (
-            <Chip icon={<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />} label="Disponible" bio />
+            <Chip
+              icon={<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              label="Disponible"
+              bio
+            />
           ) : (
-            <Chip icon={<Clock className="h-3 w-3 text-muted-foreground" />} label="No disponible" muted />
+            <Chip
+              icon={<Clock className="h-3 w-3 text-muted-foreground" />}
+              label="No disponible"
+              muted
+            />
           )}
         </div>
 
@@ -1158,7 +1241,10 @@ function ProCard({
             )}
             {latestApp.proposed_amount != null && (
               <p className="mt-0.5 text-muted-foreground">
-                Propone: <span className="font-medium text-foreground">{COP(latestApp.proposed_amount)}</span>
+                Propone:{" "}
+                <span className="font-medium text-foreground">
+                  {COP(latestApp.proposed_amount)}
+                </span>
               </p>
             )}
             {latestApp.message && (
@@ -1177,32 +1263,45 @@ function ProCard({
         {/* Expanded: bio + sub-specialties + certs */}
         {expanded && (
           <div className="mt-3 space-y-2 border-t border-border pt-3">
-            {pro.bio && (
-              <p className="text-xs text-muted-foreground">{pro.bio}</p>
-            )}
+            {pro.bio && <p className="text-xs text-muted-foreground">{pro.bio}</p>}
             {pro.sub_specialties && pro.sub_specialties.length > 0 && (
               <div>
-                <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Sub-especialidades</p>
+                <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">
+                  Sub-especialidades
+                </p>
                 <div className="flex flex-wrap gap-1">
                   {pro.sub_specialties.map((s) => (
-                    <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{s}</span>
+                    <span
+                      key={s}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
+                    >
+                      {s}
+                    </span>
                   ))}
                 </div>
               </div>
             )}
             {pro.certifications && pro.certifications.length > 0 && (
               <div>
-                <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Certificaciones</p>
+                <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">
+                  Certificaciones
+                </p>
                 <div className="flex flex-wrap gap-1">
                   {pro.certifications.map((c) => (
-                    <span key={c} className="text-[10px] px-2 py-0.5 rounded-full bg-fuchsia-neural/10 text-fuchsia-neural">{c}</span>
+                    <span
+                      key={c}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-fuchsia-neural/10 text-fuchsia-neural"
+                    >
+                      {c}
+                    </span>
                   ))}
                 </div>
               </div>
             )}
             {pro.monthly_rate && (
               <p className="text-xs text-muted-foreground">
-                Mensual: <span className="font-semibold text-foreground">{COP(pro.monthly_rate)}</span>
+                Mensual:{" "}
+                <span className="font-semibold text-foreground">{COP(pro.monthly_rate)}</span>
               </p>
             )}
           </div>
@@ -1320,7 +1419,11 @@ function TalentTable({
               {/* Avatar */}
               <div className="relative w-8">
                 {pro.avatar_url ? (
-                  <img src={pro.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover border border-border" />
+                  <img
+                    src={pro.avatar_url}
+                    alt=""
+                    className="h-8 w-8 rounded-full object-cover border border-border"
+                  />
                 ) : (
                   <div className="h-8 w-8 rounded-full bg-fuchsia-neural/10 flex items-center justify-center text-xs font-bold">
                     {(pro.full_name ?? "?").charAt(0).toUpperCase()}
@@ -1338,11 +1441,15 @@ function TalentTable({
                     <PlanNameGate name={pro.full_name} canView={canViewNames} fallback="—" />
                   </p>
                   {pro.verified && <BadgeCheck className="h-3.5 w-3.5 text-biosensor shrink-0" />}
-                  {pro.rethus_verified && <ShieldCheck className="h-3.5 w-3.5 text-fuchsia-neural shrink-0" />}
+                  {pro.rethus_verified && (
+                    <ShieldCheck className="h-3.5 w-3.5 text-fuchsia-neural shrink-0" />
+                  )}
                   <span
                     className={cn(
                       "text-[9px] font-semibold px-1.5 py-px rounded-full",
-                      isApplicant ? "bg-biosensor/10 text-biosensor" : "bg-fuchsia-neural/10 text-fuchsia-neural",
+                      isApplicant
+                        ? "bg-biosensor/10 text-biosensor"
+                        : "bg-fuchsia-neural/10 text-fuchsia-neural",
                     )}
                   >
                     {isApplicant ? "Aplicó" : "Mercado"}
@@ -1370,7 +1477,11 @@ function TalentTable({
                 <span
                   className={cn(
                     "text-sm font-bold",
-                    trust >= 70 ? "text-biosensor" : trust >= 50 ? "text-amber-500" : "text-muted-foreground",
+                    trust >= 70
+                      ? "text-biosensor"
+                      : trust >= 50
+                        ? "text-amber-500"
+                        : "text-muted-foreground",
                   )}
                 >
                   {pro.trust_score ?? "—"}
@@ -1402,8 +1513,18 @@ function TalentTable({
                   </Link>
                 </Button>
                 {wa && (
-                  <Button size="sm" variant="outline" className="h-7 px-2 border-biosensor/30 text-biosensor" asChild>
-                    <a href={wa} target="_blank" rel="noopener noreferrer" title="Contactar por WhatsApp">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 border-biosensor/30 text-biosensor"
+                    asChild
+                  >
+                    <a
+                      href={wa}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Contactar por WhatsApp"
+                    >
                       <Phone className="h-3.5 w-3.5" />
                     </a>
                   </Button>
@@ -1417,9 +1538,11 @@ function TalentTable({
                       disabled={updatingApp === latestApp.id}
                       title="Aceptar"
                     >
-                      {updatingApp === latestApp.id
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {updatingApp === latestApp.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      )}
                     </Button>
                     <Button
                       size="sm"
@@ -1468,11 +1591,11 @@ function EmptyPool({
     },
     accepted: {
       title: "Ningún profesional aceptado",
-      sub: "Acepta postulantes desde la vista \"Todos\" o \"Pendientes\".",
+      sub: 'Acepta postulantes desde la vista "Todos" o "Pendientes".',
     },
     market: {
       title: "Marketplace vacío",
-      sub: "Usa los filtros y haz clic en \"Buscar mercado\" para ampliar tu búsqueda.",
+      sub: 'Usa los filtros y haz clic en "Buscar mercado" para ampliar tu búsqueda.',
     },
   };
   const m = messages[poolTab];
@@ -1532,7 +1655,9 @@ function TalentKpi({
         urgent && "border-amber-500/30 bg-amber-500/5",
       )}
     >
-      <div className={cn("inline-flex h-8 w-8 items-center justify-center rounded-xl mb-2", colors)}>
+      <div
+        className={cn("inline-flex h-8 w-8 items-center justify-center rounded-xl mb-2", colors)}
+      >
         {icon}
       </div>
       <p className={cn("text-xl font-bold", urgent && value !== 0 && "text-amber-600")}>{value}</p>
@@ -1607,7 +1732,9 @@ function AppStatusBadge({ status }: { status: AppStatus }) {
   };
   const s = map[status];
   return (
-    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap", s.cls)}>
+    <span
+      className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap", s.cls)}
+    >
       {s.label}
     </span>
   );

@@ -56,8 +56,8 @@ export function MercadoPagoSubscription({
             key === "institution_monthly"
               ? "/dashboard/institucion"
               : key === "essential_monthly"
-              ? "/dashboard/familia"
-              : "/dashboard/profesional",
+                ? "/dashboard/familia"
+                : "/dashboard/profesional",
         },
       });
       if (error) throw error;

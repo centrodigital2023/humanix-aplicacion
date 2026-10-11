@@ -33,11 +33,7 @@ function InstitutionProfile() {
       nav={getNav()}
       title="Perfil de Institución"
       subtitle="Completa y valida tu información organizacional con cumplimiento FUID automático."
-      crumbs={[
-        { label: "Inicio", to: "/" },
-        { label: "Institución" },
-        { label: "Perfil" },
-      ]}
+      crumbs={[{ label: "Inicio", to: "/" }, { label: "Institución" }, { label: "Perfil" }]}
       badge={{ label: "Perfil", tone: "bio" }}
     >
       <div className="max-w-4xl mx-auto space-y-8">

@@ -53,11 +53,11 @@ export function FourModalitiesShowcase() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="text-center max-w-3xl mx-auto mb-14">
           <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">
-            Las 4 modalidades de{" "}
-            <span className="text-gradient-bio">pago y tarifas</span>
+            Las 4 modalidades de <span className="text-gradient-bio">pago y tarifas</span>
           </h2>
           <p className="text-muted-foreground">
-            Flexibilidad total. Profesionales establecen sus tarifas. Familias negocian presupuestos. IPS define presupuestos institucionales.
+            Flexibilidad total. Profesionales establecen sus tarifas. Familias negocian
+            presupuestos. IPS define presupuestos institucionales.
           </p>
         </div>
 
@@ -103,8 +103,10 @@ export function FourModalitiesShowcase() {
         {/* Footer text */}
         <div className="mt-12 p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center">
           <p className="text-sm text-slate-300">
-            <strong>Profesionales:</strong> Define tus tarifas estándar. Familias y IPS ven tus precios y pueden proponer alternativas.{" "}
-            <strong>Familias:</strong> Siempre puedes negociar presupuestos custom. <strong>IPS/EPS:</strong> Presupuestos institucionales estructurados por jornada.
+            <strong>Profesionales:</strong> Define tus tarifas estándar. Familias y IPS ven tus
+            precios y pueden proponer alternativas. <strong>Familias:</strong> Siempre puedes
+            negociar presupuestos custom. <strong>IPS/EPS:</strong> Presupuestos institucionales
+            estructurados por jornada.
           </p>
         </div>
       </div>

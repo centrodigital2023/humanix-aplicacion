@@ -79,7 +79,12 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
       .channel(`branches:${institutionId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "institution_branches", filter: `institution_id=eq.${institutionId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "institution_branches",
+          filter: `institution_id=eq.${institutionId}`,
+        },
         () => load(),
       )
       .subscribe();
@@ -155,7 +160,10 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
             <div>
               <p className="text-sm font-bold font-display flex items-center gap-1.5">
                 Plan IPS Mejorado
-                <Badge variant="outline" className="text-[10px] gap-1 border-fuchsia-neural/30 text-fuchsia-neural">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] gap-1 border-fuchsia-neural/30 text-fuchsia-neural"
+                >
                   <Sparkles className="h-3 w-3" /> Cobro por sucursales
                 </Badge>
               </p>
@@ -168,7 +176,10 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
             <p className="text-2xl font-bold font-display tabular-nums text-fuchsia-neural">
               {billing.totalFormatted}
             </p>
-            <p className="text-[10px] text-muted-foreground">/mes · {activeBranches} sede{activeBranches !== 1 ? "s" : ""} activa{activeBranches !== 1 ? "s" : ""}</p>
+            <p className="text-[10px] text-muted-foreground">
+              /mes · {activeBranches} sede{activeBranches !== 1 ? "s" : ""} activa
+              {activeBranches !== 1 ? "s" : ""}
+            </p>
           </div>
         </div>
       </Card>
@@ -182,14 +193,19 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
           {billing.breakdown.lines.map((line, i) => (
             <div key={i} className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{line.label}</span>
-              <span className={cn("font-medium tabular-nums", line.amountCOP < 0 && "text-emerald-600")}>
-                {line.amountCOP < 0 ? "−" : ""}{COP(Math.abs(line.amountCOP))}
+              <span
+                className={cn("font-medium tabular-nums", line.amountCOP < 0 && "text-emerald-600")}
+              >
+                {line.amountCOP < 0 ? "−" : ""}
+                {COP(Math.abs(line.amountCOP))}
               </span>
             </div>
           ))}
           <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
             <span className="font-semibold">Total</span>
-            <span className="font-bold tabular-nums text-fuchsia-neural">{billing.totalFormatted}</span>
+            <span className="font-bold tabular-nums text-fuchsia-neural">
+              {billing.totalFormatted}
+            </span>
           </div>
         </div>
         <p className="text-[10px] text-muted-foreground flex items-center gap-1 pt-1">
@@ -218,26 +234,46 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
               </DialogHeader>
               <div className="space-y-3 pt-1">
                 <p className="text-xs text-muted-foreground">
-                  Cada sede adicional se cobra a {COP(50_000)}/mes y aparece como un tenant propio en tu Dashboard EPS (KPIs, agenda y cumplimiento independientes).
+                  Cada sede adicional se cobra a {COP(50_000)}/mes y aparece como un tenant propio
+                  en tu Dashboard EPS (KPIs, agenda y cumplimiento independientes).
                 </p>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Nombre de la sede</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: IPS Norte — Medellín" className="h-9 text-sm" />
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ej: IPS Norte — Medellín"
+                    className="h-9 text-sm"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Ciudad</Label>
-                    <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Medellín" className="h-9 text-sm" />
+                    <Input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Medellín"
+                      className="h-9 text-sm"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Dirección</Label>
-                    <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Cra 45 #12-30" className="h-9 text-sm" />
+                    <Input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Cra 45 #12-30"
+                      className="h-9 text-sm"
+                    />
                   </div>
                 </div>
               </div>
               <DialogFooter>
                 <Button onClick={addBranch} disabled={saving} className="w-full gap-2">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
                   Agregar sede
                 </Button>
               </DialogFooter>
@@ -247,37 +283,55 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
 
         {loading ? (
           <div className="space-y-2">
-            {[...Array(2)].map((_, i) => <div key={i} className="h-12 bg-muted/30 rounded-lg animate-pulse" />)}
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-12 bg-muted/30 rounded-lg animate-pulse" />
+            ))}
           </div>
         ) : (
           <div className="space-y-1.5">
             {branches.map((b) => (
-              <div key={b.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-card">
+              <div
+                key={b.id}
+                className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-card"
+              >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={cn(
-                    "h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                    b.is_main ? "bg-fuchsia-neural/10 text-fuchsia-neural" : "bg-muted/50 text-muted-foreground",
-                  )}>
+                  <div
+                    className={cn(
+                      "h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                      b.is_main
+                        ? "bg-fuchsia-neural/10 text-fuchsia-neural"
+                        : "bg-muted/50 text-muted-foreground",
+                    )}
+                  >
                     <Building2 className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-semibold truncate">{b.name}</p>
                       {b.is_main && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-fuchsia-neural/30 text-fuchsia-neural">
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1.5 py-0 border-fuchsia-neural/30 text-fuchsia-neural"
+                        >
                           Principal
                         </Badge>
                       )}
                     </div>
                     {(b.city || b.address) && (
                       <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
-                        <MapPin className="h-2.5 w-2.5" /> {[b.address, b.city].filter(Boolean).join(", ")}
+                        <MapPin className="h-2.5 w-2.5" />{" "}
+                        {[b.address, b.city].filter(Boolean).join(", ")}
                       </p>
                     )}
                   </div>
                 </div>
                 {!b.is_main && (
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600" onClick={() => removeBranch(b)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                    onClick={() => removeBranch(b)}
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 )}

@@ -618,7 +618,9 @@ describe("classifyHubError", () => {
     expect(classifyHubError({ hint: "shift_full" }).kind).toBe("shift_full");
     expect(classifyHubError({ hint: "shifts_required" }).kind).toBe("shifts_required");
     expect(classifyHubError({ hint: "contract_locked" }).kind).toBe("contract_locked");
-    expect(classifyHubError({ hint: "forbidden_content", message: "x" }).kind).toBe("forbidden_content");
+    expect(classifyHubError({ hint: "forbidden_content", message: "x" }).kind).toBe(
+      "forbidden_content",
+    );
   });
   it("y por código o texto cuando no hay pista", () => {
     expect(classifyHubError({ code: "23505" }).kind).toBe("duplicate");

@@ -53,7 +53,12 @@ describe("careCompass", () => {
   });
 
   it("institución ve turnos por cubrir y candidatos", () => {
-    const b = buildBriefing({ ...base, role: "institution", openOffers: 3, pendingApplications: 1 });
+    const b = buildBriefing({
+      ...base,
+      role: "institution",
+      openOffers: 3,
+      pendingApplications: 1,
+    });
     expect(b.actions.map((a) => a.id)).toEqual(["applications", "coverage"]);
     expect(b.stats[1]).toEqual({ label: "Por cubrir", value: 3 });
     expect(b.tone).toBe("attention");

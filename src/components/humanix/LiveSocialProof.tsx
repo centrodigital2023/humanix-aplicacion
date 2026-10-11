@@ -13,11 +13,8 @@ const events = [
 
 export function LiveSocialProof() {
   const [i, setI] = useState(0);
-  const {
-    professionals, professionalsAvailable,
-    families, institutions,
-    loading,
-  } = useActiveUsersCount();
+  const { professionals, professionalsAvailable, families, institutions, loading } =
+    useActiveUsersCount();
 
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % events.length), 4000);

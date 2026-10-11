@@ -25,7 +25,9 @@ export function normalizeName(name: string | null | undefined): string {
  */
 export function namesMatch(profileName: string, officialName: string): boolean {
   const off = new Set(normalizeName(officialName).split(" ").filter(Boolean));
-  const tokens = normalizeName(profileName).split(" ").filter((t) => t.length >= 3);
+  const tokens = normalizeName(profileName)
+    .split(" ")
+    .filter((t) => t.length >= 3);
   if (tokens.length === 0 || off.size === 0) return false;
   const hits = tokens.filter((t) => off.has(t)).length;
   return hits >= Math.min(2, tokens.length);
@@ -37,8 +39,12 @@ export function isValidDocumentNumber(doc: string): boolean {
 }
 
 /** ¿Ya existe un intento que consume la verificación única (no re-verificación de admin)? */
-export function hasConsumedSingleAttempt(rows: { status: string; reverified?: boolean | null }[]): boolean {
-  return rows.some((r) => !r.reverified && (RETHUS_FINAL_STATUSES as readonly string[]).includes(r.status));
+export function hasConsumedSingleAttempt(
+  rows: { status: string; reverified?: boolean | null }[],
+): boolean {
+  return rows.some(
+    (r) => !r.reverified && (RETHUS_FINAL_STATUSES as readonly string[]).includes(r.status),
+  );
 }
 
 export type RethusPrereqs = { hasConsent: boolean; hasActivePlan: boolean; hasDocument: boolean };

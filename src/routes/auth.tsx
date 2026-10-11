@@ -215,7 +215,8 @@ function AuthPage() {
       if (roles.includes("hr_staff")) return "/talento-humano";
       if (roles.includes("evaluator")) return "/evaluador";
       if (roles.includes("institution") || role === "institution") return "/dashboard/institucion";
-      if (roles.includes("professional") || role === "professional") return "/dashboard/profesional";
+      if (roles.includes("professional") || role === "professional")
+        return "/dashboard/profesional";
       return "/dashboard";
     };
 
@@ -692,75 +693,77 @@ function AuthPage() {
                           </div>
                         </div>
                       )}
-                      {isFamily ? (
-                        <div className="space-y-1.5">
-                          <Label htmlFor="phone" className="text-base">
-                            Tu celular
-                          </Label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="phone"
-                              type="tel"
-                              inputMode="numeric"
-                              autoComplete="tel"
-                              value={phone}
-                              onChange={(e) => setPhone(e.target.value)}
-                              className="h-12 pl-9 text-base"
-                              placeholder="300 123 4567"
-                            />
-                          </div>
-                        </div>
-                      ) : role === "professional" ? (
-                        <>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <Label htmlFor="phone">Teléfono</Label>
+                      {
+                        isFamily ? (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="phone" className="text-base">
+                              Tu celular
+                            </Label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
                                 id="phone"
+                                type="tel"
+                                inputMode="numeric"
+                                autoComplete="tel"
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
-                                placeholder="3001234567"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label htmlFor="city">Ciudad</Label>
-                              <Input
-                                id="city"
-                                value={city}
-                                onChange={(e) => setCity(e.target.value)}
-                                placeholder="Bogotá"
+                                className="h-12 pl-9 text-base"
+                                placeholder="300 123 4567"
                               />
                             </div>
                           </div>
-
-                          {/* Ubicación principal de servicio — solo para profesionales */}
-                          <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="text-sm font-semibold flex items-center gap-1.5">
-                                  <MapPin className="h-3.5 w-3.5 text-biosensor" />
-                                  Ubicación principal de servicio
-                                </p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  Se marca automáticamente con tu dispositivo. Puedes ajustar
-                                  tocando el mapa o activar seguimiento en tiempo real.
-                                </p>
+                        ) : role === "professional" ? (
+                          <>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label htmlFor="phone">Teléfono</Label>
+                                <Input
+                                  id="phone"
+                                  value={phone}
+                                  onChange={(e) => setPhone(e.target.value)}
+                                  placeholder="3001234567"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="city">Ciudad</Label>
+                                <Input
+                                  id="city"
+                                  value={city}
+                                  onChange={(e) => setCity(e.target.value)}
+                                  placeholder="Bogotá"
+                                />
                               </div>
                             </div>
-                            <LocationPicker
-                              lat={coords.lat}
-                              lng={coords.lng}
-                              defaultCity={city || "Bogotá"}
-                              height={160}
-                              onChange={(lat, lng, addr) => {
-                                setCoords({ lat, lng });
-                                if (addr && !address) setAddress(addr);
-                              }}
-                            />
-                          </div>
-                        </>
-                      ) : null /* institución: solo nombre + correo + contraseña; el resto va en el onboarding */}
+
+                            {/* Ubicación principal de servicio — solo para profesionales */}
+                            <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-semibold flex items-center gap-1.5">
+                                    <MapPin className="h-3.5 w-3.5 text-biosensor" />
+                                    Ubicación principal de servicio
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    Se marca automáticamente con tu dispositivo. Puedes ajustar
+                                    tocando el mapa o activar seguimiento en tiempo real.
+                                  </p>
+                                </div>
+                              </div>
+                              <LocationPicker
+                                lat={coords.lat}
+                                lng={coords.lng}
+                                defaultCity={city || "Bogotá"}
+                                height={160}
+                                onChange={(lat, lng, addr) => {
+                                  setCoords({ lat, lng });
+                                  if (addr && !address) setAddress(addr);
+                                }}
+                              />
+                            </div>
+                          </>
+                        ) : null /* institución: solo nombre + correo + contraseña; el resto va en el onboarding */
+                      }
                     </>
                   )}
 

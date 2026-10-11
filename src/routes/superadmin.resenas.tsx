@@ -65,7 +65,12 @@ type StatusFilter = "all" | "published" | "flagged" | "removed";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const Route = (createFileRoute as any)("/superadmin/resenas")({
-  head: () => buildSeo({ title: "Moderación reseñas · Superadmin", path: "/superadmin/resenas", noindex: true }),
+  head: () =>
+    buildSeo({
+      title: "Moderación reseñas · Superadmin",
+      path: "/superadmin/resenas",
+      noindex: true,
+    }),
   component: ResenasPage,
 });
 
@@ -93,7 +98,9 @@ function ResenasPage() {
     }
   }, [user, filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const updateStatus = async (ids: string[], status: "published" | "removed") => {
     try {
@@ -130,7 +137,8 @@ function ResenasPage() {
   const toggleSelect = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
 
@@ -153,7 +161,13 @@ function ResenasPage() {
             >
               <p className="text-2xl font-bold font-display">{counts[s]}</p>
               <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                {s === "all" ? "Total" : s === "published" ? "Publicadas" : s === "flagged" ? "Reportadas" : "Eliminadas"}
+                {s === "all"
+                  ? "Total"
+                  : s === "published"
+                    ? "Publicadas"
+                    : s === "flagged"
+                      ? "Reportadas"
+                      : "Eliminadas"}
               </p>
             </button>
           ))}
@@ -204,19 +218,33 @@ function ResenasPage() {
                     <input
                       type="checkbox"
                       onChange={(e) =>
-                        setSelected(e.target.checked ? new Set(filtered.map((r) => r.id)) : new Set())
+                        setSelected(
+                          e.target.checked ? new Set(filtered.map((r) => r.id)) : new Set(),
+                        )
                       }
                       checked={selected.size === filtered.length && filtered.length > 0}
                       className="accent-biosensor"
                     />
                   </th>
-                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">Revisor</th>
-                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">Calificado</th>
-                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">Puntuación</th>
-                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">Comentario</th>
-                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">Estado</th>
+                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">
+                    Revisor
+                  </th>
+                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">
+                    Calificado
+                  </th>
+                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">
+                    Puntuación
+                  </th>
+                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">
+                    Comentario
+                  </th>
+                  <th className="py-3 px-3 text-left font-semibold text-muted-foreground">
+                    Estado
+                  </th>
                   <th className="py-3 px-3 text-left font-semibold text-muted-foreground">Fecha</th>
-                  <th className="py-3 px-3 text-right font-semibold text-muted-foreground">Acciones</th>
+                  <th className="py-3 px-3 text-right font-semibold text-muted-foreground">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -250,7 +278,9 @@ function ResenasPage() {
                       </td>
                       <td className="py-3 px-3">
                         <span className="text-xs font-mono text-muted-foreground">
-                          {r.is_anonymous ? "Anónimo" : (r.reviewer_name ?? r.reviewer_id.slice(0, 8))}
+                          {r.is_anonymous
+                            ? "Anónimo"
+                            : (r.reviewer_name ?? r.reviewer_id.slice(0, 8))}
                         </span>
                       </td>
                       <td className="py-3 px-3">
@@ -263,7 +293,9 @@ function ResenasPage() {
                       </td>
                       <td className="py-3 px-3 max-w-[200px]">
                         <p className="text-xs text-foreground/80 truncate" title={r.comment ?? ""}>
-                          {r.comment ?? <span className="italic text-muted-foreground">Sin comentario</span>}
+                          {r.comment ?? (
+                            <span className="italic text-muted-foreground">Sin comentario</span>
+                          )}
                         </p>
                         {r.flagged_reason && (
                           <p className="text-xs text-destructive mt-0.5">⚑ {r.flagged_reason}</p>
@@ -275,16 +307,16 @@ function ResenasPage() {
                             r.status === "published"
                               ? "default"
                               : r.status === "flagged"
-                              ? "destructive"
-                              : "secondary"
+                                ? "destructive"
+                                : "secondary"
                           }
                           className="text-[10px]"
                         >
                           {r.status === "published"
                             ? "Publicada"
                             : r.status === "flagged"
-                            ? "Reportada"
-                            : "Eliminada"}
+                              ? "Reportada"
+                              : "Eliminada"}
                         </Badge>
                       </td>
                       <td className="py-3 px-3 text-xs text-muted-foreground whitespace-nowrap">

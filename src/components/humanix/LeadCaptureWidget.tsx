@@ -120,7 +120,9 @@ export function LeadCaptureWidget({ userId }: { userId?: string }) {
               🎁
             </span>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-trust">Oferta exclusiva</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-trust">
+                Oferta exclusiva
+              </p>
               <p className="text-base font-bold leading-tight">1 mes Premium gratis</p>
             </div>
           </div>

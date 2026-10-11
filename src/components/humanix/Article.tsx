@@ -53,9 +53,7 @@ export function Article({
           </Link>
 
           <h1 className="font-display text-3xl sm:text-5xl font-bold leading-tight">{title}</h1>
-          {subtitle ? (
-            <p className="mt-4 text-lg text-muted-foreground">{subtitle}</p>
-          ) : null}
+          {subtitle ? <p className="mt-4 text-lg text-muted-foreground">{subtitle}</p> : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">

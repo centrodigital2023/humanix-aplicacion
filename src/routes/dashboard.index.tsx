@@ -87,7 +87,9 @@ function DashboardRouter() {
               go("/dashboard/eps");
               return;
             }
-          } catch { /* fall through to default */ }
+          } catch {
+            /* fall through to default */
+          }
         }
 
         go(pathForRole(primary));

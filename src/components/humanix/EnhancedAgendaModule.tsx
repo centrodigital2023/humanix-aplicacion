@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * ENHANCED AGENDA MODULE
- * 
+ *
  * Features:
  * - Vista de calendario de 7 días con detalles
  * - Gestión de turnos
@@ -46,11 +46,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 
@@ -92,9 +88,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
       try {
         const { data } = await (supabase as any)
           .from("service_bookings")
-          .select(
-            `id, professional_id, scheduled_at, created_at, notes, job_offer_id`
-          )
+          .select(`id, professional_id, scheduled_at, created_at, notes, job_offer_id`)
           .eq("client_id", userId)
           .gte("scheduled_at", new Date().toISOString())
           .order("scheduled_at", { ascending: true })
@@ -103,9 +97,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
         if (!active) return;
 
         // Obtener info de profesionales
-        const proIds = Array.from(
-          new Set((data ?? []).map((b: any) => b.professional_id))
-        );
+        const proIds = Array.from(new Set((data ?? []).map((b: any) => b.professional_id)));
 
         const [proProfiles, offers, appData] = await Promise.all([
           supabase
@@ -117,10 +109,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
             .select("id, title, city, posted_by")
             .eq("posted_by", userId)
             .limit(100),
-          supabase
-            .from("applications")
-            .select("id, job_offer_id")
-            .in("professional_id", proIds),
+          supabase.from("applications").select("id, job_offer_id").in("professional_id", proIds),
         ]);
 
         const proMap: Record<string, any> = {};
@@ -195,7 +184,12 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
         date: d,
         events,
         no_show_count: events.filter((e) => e.status === "no_show").length,
-        utilization: events.length > 0 ? Math.round((events.filter((e) => e.status === "completed").length / events.length) * 100) : 0,
+        utilization:
+          events.length > 0
+            ? Math.round(
+                (events.filter((e) => e.status === "completed").length / events.length) * 100,
+              )
+            : 0,
       } as DayEvents;
     });
   }, [bookings, days]);
@@ -221,9 +215,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
       toast.success(`Estado actualizado a "${newStatus}"`);
       // En producción: actualizar en BD
       setBookings((prev) =>
-        prev.map((b) =>
-          b.id === selectedEvent.id ? { ...b, status: newStatus } : b
-        )
+        prev.map((b) => (b.id === selectedEvent.id ? { ...b, status: newStatus } : b)),
       );
       setShowEventDialog(false);
     } catch (e: any) {
@@ -240,10 +232,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
         const clean = phone.replace(/[^0-9]/g, "");
         const normalized = clean.startsWith("57") ? clean : `57${clean}`;
         const message = `Recordatorio: Turno en ${selectedEvent.offer_title} mañana a las ${new Date(selectedEvent.starts_at || "").toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}`;
-        window.open(
-          `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`,
-          "_blank"
-        );
+        window.open(`https://wa.me/${normalized}?text=${encodeURIComponent(message)}`, "_blank");
       }
       toast.success("Recordatorio enviado");
     } catch (e) {
@@ -348,9 +337,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     {date.toLocaleDateString("es-CO", { weekday: "short" })}
                   </p>
-                  <p className="text-lg font-display font-bold">
-                    {date.getDate()}
-                  </p>
+                  <p className="text-lg font-display font-bold">{date.getDate()}</p>
                 </div>
 
                 {hasNoShow && (
@@ -397,9 +384,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
               <div className="space-y-3">
                 <h4 className="font-semibold text-sm">Configurar recordatorios</h4>
                 <div>
-                  <label className="text-xs font-medium">
-                    Horas antes del turno
-                  </label>
+                  <label className="text-xs font-medium">Horas antes del turno</label>
                   <Input
                     type="number"
                     value={reminderTime}
@@ -427,9 +412,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{selectedEvent?.offer_title}</DialogTitle>
-            <DialogDescription>
-              {selectedEvent?.professional_name}
-            </DialogDescription>
+            <DialogDescription>{selectedEvent?.professional_name}</DialogDescription>
           </DialogHeader>
 
           {selectedEvent && (
@@ -466,7 +449,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
                       >
                         {st}
                       </Button>
-                    )
+                    ),
                   )}
                 </div>
               </div>
@@ -482,11 +465,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
                 />
               </div>
 
-              <Button
-                onClick={sendReminder}
-                variant="outline"
-                className="w-full"
-              >
+              <Button onClick={sendReminder} variant="outline" className="w-full">
                 <Send className="h-4 w-4 mr-1.5" /> Enviar recordatorio
               </Button>
             </div>

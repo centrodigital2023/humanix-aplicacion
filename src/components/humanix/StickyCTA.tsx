@@ -42,7 +42,8 @@ export function StickyCTA() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold leading-tight">Encuentra cuidador hoy</p>
             <p className="text-[11px] text-muted-foreground leading-tight">
-              <span className="text-emerald-500 font-bold">{professionalsAvailable}</span> disponibles · {professionals} registrados · desde $9.000/mes
+              <span className="text-emerald-500 font-bold">{professionalsAvailable}</span>{" "}
+              disponibles · {professionals} registrados · desde $9.000/mes
             </p>
           </div>
           <button

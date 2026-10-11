@@ -30,7 +30,8 @@ function Page() {
       ]}
       serviceJsonLd={serviceLd({
         name: "Enfermería a Domicilio en Medellín",
-        description: "Enfermería domiciliaria 24/7 en Medellín y Valle de Aburrá con RETHUS verificado.",
+        description:
+          "Enfermería domiciliaria 24/7 en Medellín y Valle de Aburrá con RETHUS verificado.",
         path: "/enfermeria-medellin",
         areaName: "Medellín",
       })}

@@ -53,7 +53,10 @@ export function FamilyNeedsCalendar({
   const [note, setNote] = useState("");
 
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart],
+  );
 
   useEffect(() => {
     let active = true;
@@ -61,7 +64,9 @@ export function FamilyNeedsCalendar({
     (async () => {
       const { data, error } = await sb
         .from("family_needs")
-        .select("id, family_user_id, starts_at, ends_at, hourly_rate, status, service_address, notes")
+        .select(
+          "id, family_user_id, starts_at, ends_at, hourly_rate, status, service_address, notes",
+        )
         .eq("family_user_id", userId)
         .gte("starts_at", weekStart.toISOString())
         .lt("starts_at", weekEnd.toISOString())
@@ -80,7 +85,12 @@ export function FamilyNeedsCalendar({
       .channel(`family_needs_${userId}_${weekStart.toISOString()}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "family_needs", filter: `family_user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "family_needs",
+          filter: `family_user_id=eq.${userId}`,
+        },
         (payload) => {
           const row = (payload.new ?? payload.old) as Need | undefined;
           if (!row) return;
@@ -106,7 +116,9 @@ export function FamilyNeedsCalendar({
   const needAt = (day: Date, hour: number): Need | undefined =>
     needs.find((n) => {
       const s = new Date(n.starts_at);
-      return s.getDate() === day.getDate() && s.getMonth() === day.getMonth() && s.getHours() === hour;
+      return (
+        s.getDate() === day.getDate() && s.getMonth() === day.getMonth() && s.getHours() === hour
+      );
     });
 
   async function toggleNeed(day: Date, hour: number) {
@@ -162,7 +174,8 @@ export function FamilyNeedsCalendar({
             Tu agenda de necesidades
           </p>
           <p className="text-[11px] text-muted-foreground">
-            {openCount} h abiertas · {matchedCount} h cubiertas · marca en azul cuándo necesitas ayuda
+            {openCount} h abiertas · {matchedCount} h cubiertas · marca en azul cuándo necesitas
+            ayuda
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -247,14 +260,17 @@ export function FamilyNeedsCalendar({
               <tr className="border-b border-border">
                 <th className="p-2 w-12 text-left font-medium text-muted-foreground"></th>
                 {days.map((d) => {
-                  const isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
+                  const isToday =
+                    d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
                   return (
                     <th
                       key={d.toISOString()}
                       className={`p-2 text-center font-medium ${isToday ? "text-biosensor" : "text-muted-foreground"}`}
                     >
                       <div>{DAY_LABEL[(d.getDay() + 6) % 7]}</div>
-                      <div className={`text-[10px] ${isToday ? "font-bold" : ""}`}>{d.getDate()}</div>
+                      <div className={`text-[10px] ${isToday ? "font-bold" : ""}`}>
+                        {d.getDate()}
+                      </div>
                     </th>
                   );
                 })}

@@ -1,4 +1,4 @@
-import L from 'leaflet';
+import L from "leaflet";
 
 /**
  * Simple clustering logic for Leaflet markers
@@ -35,7 +35,7 @@ export function getDistance(lat1: number, lng1: number, lat2: number, lng2: numb
  */
 export function clusterMarkers<T extends { id: string; lat: number; lng: number }>(
   items: T[],
-  clusterRadiusKm: number = 1 // 1 km default
+  clusterRadiusKm: number = 1, // 1 km default
 ): (T | ClusterData)[] {
   const clustered: (T | ClusterData)[] = [];
   const processed = new Set<string>();
@@ -63,7 +63,7 @@ export function clusterMarkers<T extends { id: string; lat: number; lng: number 
       const avgLat = cluster.reduce((sum, c) => sum + c.lat, 0) / cluster.length;
       const avgLng = cluster.reduce((sum, c) => sum + c.lng, 0) / cluster.length;
       clustered.push({
-        id: `cluster-${cluster.map((c) => c.id).join(',')}`,
+        id: `cluster-${cluster.map((c) => c.id).join(",")}`,
         lat: avgLat,
         lng: avgLng,
         count: cluster.length,
@@ -94,7 +94,7 @@ export function createClusterIcon(count: number): L.DivIcon {
   }
 
   return L.divIcon({
-    className: 'leaflet-marker-cluster',
+    className: "leaflet-marker-cluster",
     html: `
       <div style="
         width: ${size}px;
@@ -121,5 +121,5 @@ export function createClusterIcon(count: number): L.DivIcon {
  * Check if a point is a cluster
  */
 export function isCluster(item: any): item is ClusterData {
-  return 'count' in item && 'items' in item && item.count > 1;
+  return "count" in item && "items" in item && item.count > 1;
 }

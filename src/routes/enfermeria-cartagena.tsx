@@ -30,7 +30,8 @@ function Page() {
       ]}
       serviceJsonLd={serviceLd({
         name: "Enfermería a Domicilio en Cartagena",
-        description: "Servicio de enfermería domiciliaria en Cartagena de Indias y municipios cercanos.",
+        description:
+          "Servicio de enfermería domiciliaria en Cartagena de Indias y municipios cercanos.",
         path: "/enfermeria-cartagena",
         areaName: "Cartagena",
       })}

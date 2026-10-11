@@ -145,9 +145,7 @@ export function SeoLanding({
               </div>
             ))}
           </div>
-          {pricingNote ? (
-            <p className="mt-4 text-xs text-muted-foreground">{pricingNote}</p>
-          ) : null}
+          {pricingNote ? <p className="mt-4 text-xs text-muted-foreground">{pricingNote}</p> : null}
         </section>
 
         {/* CONTENT (children) ------------------------------------------ */}
@@ -205,9 +203,7 @@ export function SeoLanding({
         {/* FINAL CTA --------------------------------------------------- */}
         <section className="mx-auto max-w-5xl px-4 sm:px-6 mt-16">
           <div className="rounded-3xl border border-border bg-gradient-to-br from-card to-card/40 p-8 text-center">
-            <h2 className="font-display text-2xl sm:text-3xl font-bold">
-              ¿Listo para empezar?
-            </h2>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold">¿Listo para empezar?</h2>
             <p className="mt-2 text-sm sm:text-base text-muted-foreground">
               Encuentra el profesional ideal en menos de 2 minutos.
             </p>

@@ -59,7 +59,9 @@ export function AdBanner({
         // no internal banner, fall through to AdSense
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [slot]);
 
   useEffect(() => {

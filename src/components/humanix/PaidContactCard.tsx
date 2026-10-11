@@ -43,8 +43,8 @@ export function PaidContactCard({ bookingId, peerName, isPaid, amountCOP }: Prop
         <p className="font-semibold text-foreground mb-1">🔒 Chat y llamada al aceptar</p>
         <p>
           Podrás escribir o llamar a <span className="font-medium text-foreground">{peerName}</span>{" "}
-          apenas se acepte el servicio. Total acordado:{" "}
-          <span className="font-semibold">{COP}</span>, que se paga directo al terminar.
+          apenas se acepte el servicio. Total acordado: <span className="font-semibold">{COP}</span>
+          , que se paga directo al terminar.
         </p>
       </div>
     );

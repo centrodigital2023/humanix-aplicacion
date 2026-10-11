@@ -148,8 +148,7 @@ describe("CTA flow → Mercado Pago checkout", () => {
     });
     expect(invoke).not.toHaveBeenCalled();
     expect(result.kind).toBe("navigate");
-    if (result.kind === "navigate")
-      expect(result.href.startsWith("https://wa.me/")).toBe(true);
+    if (result.kind === "navigate") expect(result.href.startsWith("https://wa.me/")).toBe(true);
   });
 
   it("checkout falls back to sandbox_init_point when init_point missing", async () => {

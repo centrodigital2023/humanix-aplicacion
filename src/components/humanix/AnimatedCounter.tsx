@@ -7,7 +7,12 @@ function useInView(threshold = 0.3) {
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setInView(true); obs.disconnect(); } },
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
       { threshold },
     );
     obs.observe(el);
@@ -60,7 +65,9 @@ export function AnimatedCounter({
 
   return (
     <span ref={ref} className={className}>
-      {prefix}{display.toLocaleString("es-CO")}{suffix}
+      {prefix}
+      {display.toLocaleString("es-CO")}
+      {suffix}
     </span>
   );
 }

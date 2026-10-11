@@ -30,7 +30,8 @@ function Page() {
       ]}
       serviceJsonLd={serviceLd({
         name: "Enfermería a Domicilio en Pereira",
-        description: "Cuidado en casa con enfermeras y cuidadores verificados en Pereira y Eje Cafetero.",
+        description:
+          "Cuidado en casa con enfermeras y cuidadores verificados en Pereira y Eje Cafetero.",
         path: "/enfermeria-pereira",
         areaName: "Pereira",
       })}

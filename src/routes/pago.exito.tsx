@@ -59,17 +59,23 @@ function PagoExito() {
           </h1>
           {tipo === "creditos" && !isPending && creditos && (
             <p className="text-muted-foreground">
-              Se acreditaron <strong className="text-biosensor">{parseInt(creditos).toLocaleString("es-CO")} créditos IA</strong> en tu cuenta. Ya puedes usarlos.
+              Se acreditaron{" "}
+              <strong className="text-biosensor">
+                {parseInt(creditos).toLocaleString("es-CO")} créditos IA
+              </strong>{" "}
+              en tu cuenta. Ya puedes usarlos.
             </p>
           )}
           {tipo === "plan" && !isPending && plan && (
             <p className="text-muted-foreground">
-              Tu suscripción <strong>{PLAN_LABELS[plan] ?? plan}</strong> está activa. ¡Disfruta todas las funciones premium!
+              Tu suscripción <strong>{PLAN_LABELS[plan] ?? plan}</strong> está activa. ¡Disfruta
+              todas las funciones premium!
             </p>
           )}
           {isPending && (
             <p className="text-muted-foreground">
-              Tu pago está siendo procesado por Mercado Pago. Te notificaremos cuando se confirme. Esto puede tardar unos minutos.
+              Tu pago está siendo procesado por Mercado Pago. Te notificaremos cuando se confirme.
+              Esto puede tardar unos minutos.
             </p>
           )}
         </div>

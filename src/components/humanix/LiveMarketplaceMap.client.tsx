@@ -20,10 +20,23 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { geocodeCity, getBrowserLocation, distanceKm, formatKm, cityToLatLng, deterministicOffset } from "@/lib/geo";
+import {
+  geocodeCity,
+  getBrowserLocation,
+  distanceKm,
+  formatKm,
+  cityToLatLng,
+  deterministicOffset,
+} from "@/lib/geo";
 import { Star, Phone, MessageCircle, User as UserIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { clusterMarkers, isCluster } from "@/lib/marker-clustering";
 import { useThrottle } from "@/hooks/use-throttle";
 import { useNavigate } from "@tanstack/react-router";
@@ -70,8 +83,7 @@ function makeMarkerIcon(
 ) {
   const shape = kind === "institution" ? "6px" : "9999px";
   const baseColor = COLORS[kind];
-  const color =
-    status === "busy" ? "#f59e0b" : status === "away" ? "#9ca3af" : baseColor;
+  const color = status === "busy" ? "#f59e0b" : status === "away" ? "#9ca3af" : baseColor;
   // GPS en vivo → pulso rápido; disponible normal → pulso normal; ocupado → pulso lento
   const dur = isLive ? 0.9 : kind === "professional" ? 2 : kind === "family" ? 2.4 : 2.8;
   const pulse = isLive
@@ -376,7 +388,9 @@ export function LiveMarketplaceMap({
           .limit(300),
         supabase
           .from("public_family_map_safe")
-          .select("user_id, default_lat, default_lng, has_exact_location, patient_name, default_address, visible_on_map, whatsapp, full_name, avatar_url, phone")
+          .select(
+            "user_id, default_lat, default_lng, has_exact_location, patient_name, default_address, visible_on_map, whatsapp, full_name, avatar_url, phone",
+          )
           .limit(300),
         supabase
           .from("public_institutions_safe")
@@ -389,17 +403,24 @@ export function LiveMarketplaceMap({
       // Retry con columnas mínimas si la vista aún no tiene los nuevos campos
       const [proRes, famRes, instRes] = await Promise.all([
         isColErr(proFull)
-          ? supabase.from("public_professionals_safe")
-              .select("user_id, lat, lng, specialty, sub_specialties, gender, years_experience, home_city, hourly_rate, avg_rating, available, availability_status, avatar_url")
+          ? supabase
+              .from("public_professionals_safe")
+              .select(
+                "user_id, lat, lng, specialty, sub_specialties, gender, years_experience, home_city, hourly_rate, avg_rating, available, availability_status, avatar_url",
+              )
               .limit(300)
           : Promise.resolve(proFull),
         isColErr(famFull)
-          ? supabase.from("public_family_map_safe")
-              .select("user_id, default_lat, default_lng, patient_name, default_address, visible_on_map, whatsapp")
+          ? supabase
+              .from("public_family_map_safe")
+              .select(
+                "user_id, default_lat, default_lng, patient_name, default_address, visible_on_map, whatsapp",
+              )
               .limit(300)
           : Promise.resolve(famFull),
         isColErr(instFull)
-          ? supabase.from("public_institutions_safe")
+          ? supabase
+              .from("public_institutions_safe")
               .select("user_id, lat, lng, institution_name, city, institution_type, visible_on_map")
               .limit(300)
           : Promise.resolve(instFull),
@@ -438,7 +459,7 @@ export function LiveMarketplaceMap({
             gender: p.gender ?? null,
             yearsExperience: p.years_experience ?? null,
             subSpecialties: p.sub_specialties ?? null,
-            hasExactLocation: p.has_exact_location ?? (p.lat != null),
+            hasExactLocation: p.has_exact_location ?? p.lat != null,
             availabilityStatus:
               p.availability_status === "busy"
                 ? "busy"
@@ -450,7 +471,12 @@ export function LiveMarketplaceMap({
       );
       setFamilies(
         (famRes.data ?? []).map((p: any) => {
-          const coords = resolveCoords(p.default_lat, p.default_lng, p.default_address ?? null, p.user_id);
+          const coords = resolveCoords(
+            p.default_lat,
+            p.default_lng,
+            p.default_address ?? null,
+            p.user_id,
+          );
           return {
             id: `fam-${p.user_id}`,
             ...coords,
@@ -462,8 +488,9 @@ export function LiveMarketplaceMap({
             fullName: p.full_name ?? null,
             phone: p.whatsapp ?? p.phone ?? null,
             meta: p.default_address ?? null,
-            hasExactLocation: p.has_exact_location ?? (p.default_lat != null),
-            availabilityStatus: p.visible_on_map === true ? ("available" as const) : ("away" as const),
+            hasExactLocation: p.has_exact_location ?? p.default_lat != null,
+            availabilityStatus:
+              p.visible_on_map === true ? ("available" as const) : ("away" as const),
           };
         }),
       );
@@ -482,8 +509,9 @@ export function LiveMarketplaceMap({
             phone: p.phone ?? null,
             city: p.city ?? null,
             meta: p.institution_type ?? null,
-            hasExactLocation: p.has_exact_location ?? (p.lat != null),
-            availabilityStatus: p.visible_on_map === true ? ("available" as const) : ("away" as const),
+            hasExactLocation: p.has_exact_location ?? p.lat != null,
+            availabilityStatus:
+              p.visible_on_map === true ? ("available" as const) : ("away" as const),
           };
         }),
       );
@@ -499,11 +527,23 @@ export function LiveMarketplaceMap({
     const suffix = Math.random().toString(36).slice(2, 8);
     const ch = supabase
       .channel(`live-marketplace-map-${suffix}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "professional_profiles" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "family_profiles" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "institution_profiles" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "job_offers" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () =>
+        loadAll(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "professional_profiles" },
+        () => loadAll(),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "family_profiles" }, () =>
+        loadAll(),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "institution_profiles" }, () =>
+        loadAll(),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "job_offers" }, () =>
+        loadAll(),
+      )
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadAll())
       .subscribe();
     return () => {
@@ -819,7 +859,7 @@ export function LiveMarketplaceMap({
             </Badge>
           );
         })()}
-        {(
+        {
           <>
             <Badge variant="outline" className="gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
@@ -829,7 +869,9 @@ export function LiveMarketplaceMap({
               <span className="text-muted-foreground">/ {families.length} familias</span>
               {(() => {
                 const lf = families.filter((f) => f.userId && liveLocations.has(f.userId)).length;
-                return lf > 0 ? <span style={{ color: "#22c55e", fontSize: 10 }}>({lf} GPS)</span> : null;
+                return lf > 0 ? (
+                  <span style={{ color: "#22c55e", fontSize: 10 }}>({lf} GPS)</span>
+                ) : null;
               })()}
             </Badge>
             <Badge variant="outline" className="gap-1.5">
@@ -839,12 +881,16 @@ export function LiveMarketplaceMap({
               </span>
               <span className="text-muted-foreground">/ {institutions.length} instituciones</span>
               {(() => {
-                const li = institutions.filter((i) => i.userId && liveLocations.has(i.userId)).length;
-                return li > 0 ? <span style={{ color: "#22c55e", fontSize: 10 }}>({li} GPS)</span> : null;
+                const li = institutions.filter(
+                  (i) => i.userId && liveLocations.has(i.userId),
+                ).length;
+                return li > 0 ? (
+                  <span style={{ color: "#22c55e", fontSize: 10 }}>({li} GPS)</span>
+                ) : null;
               })()}
             </Badge>
           </>
-        )}
+        }
         {pickLocation && (
           <Badge variant="outline" className="gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-biosensor" />
@@ -903,13 +949,11 @@ export function LiveMarketplaceMap({
             Estado:
           </span>
           {(["all", "available", "busy"] as const).map((s) => {
-            const label =
-              s === "all" ? "Todos" : s === "available" ? "Disponibles" : "Ocupados";
+            const label = s === "all" ? "Todos" : s === "available" ? "Disponibles" : "Ocupados";
             const busyCount = pros.filter((p) => p.availabilityStatus === "busy").length;
             const availCount = pros.filter((p) => p.availabilityStatus === "available").length;
             const count = s === "all" ? pros.length : s === "available" ? availCount : busyCount;
-            const dotColor =
-              s === "available" ? "#22c55e" : s === "busy" ? "#f59e0b" : "#6b7280";
+            const dotColor = s === "available" ? "#22c55e" : s === "busy" ? "#f59e0b" : "#6b7280";
             const active = filterAvailability === s;
             return (
               <button
@@ -1157,19 +1201,29 @@ export function LiveMarketplaceMap({
                         <div className="mt-2 space-y-1 text-xs">
                           {counts.professional > 0 && (
                             <div className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS.professional }} />
-                              {counts.professional} profesional{counts.professional !== 1 ? "es" : ""}
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ background: COLORS.professional }}
+                              />
+                              {counts.professional} profesional
+                              {counts.professional !== 1 ? "es" : ""}
                             </div>
                           )}
                           {counts.family > 0 && (
                             <div className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS.family }} />
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ background: COLORS.family }}
+                              />
                               {counts.family} familia{counts.family !== 1 ? "s" : ""}
                             </div>
                           )}
                           {counts.institution > 0 && (
                             <div className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COLORS.institution }} />
+                              <span
+                                className="h-2.5 w-2.5 rounded-sm"
+                                style={{ background: COLORS.institution }}
+                              />
                               {counts.institution} institución/es
                             </div>
                           )}
@@ -1184,7 +1238,13 @@ export function LiveMarketplaceMap({
               }
               const p = item as Point;
               const isSelected = selectedId === p.id;
-              const icon = makeMarkerIcon(p.kind, p.availabilityStatus ?? "available", isSelected, p.hasExactLocation !== false, p.isLive === true);
+              const icon = makeMarkerIcon(
+                p.kind,
+                p.availabilityStatus ?? "available",
+                isSelected,
+                p.hasExactLocation !== false,
+                p.isLive === true,
+              );
               const Icon =
                 p.kind === "professional" ? HeartPulse : p.kind === "family" ? Users : Building2;
               const dist =
@@ -1269,13 +1329,8 @@ export function LiveMarketplaceMap({
                                 gap: 4,
                                 marginTop: 2,
                                 background:
-                                  p.availabilityStatus === "busy"
-                                    ? "#f59e0b22"
-                                    : "#22c55e22",
-                                color:
-                                  p.availabilityStatus === "busy"
-                                    ? "#d97706"
-                                    : "#16a34a",
+                                  p.availabilityStatus === "busy" ? "#f59e0b22" : "#22c55e22",
+                                color: p.availabilityStatus === "busy" ? "#d97706" : "#16a34a",
                               }}
                             >
                               <span
@@ -1285,14 +1340,10 @@ export function LiveMarketplaceMap({
                                   borderRadius: 9999,
                                   display: "inline-block",
                                   background:
-                                    p.availabilityStatus === "busy"
-                                      ? "#f59e0b"
-                                      : "#22c55e",
+                                    p.availabilityStatus === "busy" ? "#f59e0b" : "#22c55e",
                                 }}
                               />
-                              {p.availabilityStatus === "busy"
-                                ? "Ocupado"
-                                : "Disponible ahora"}
+                              {p.availabilityStatus === "busy" ? "Ocupado" : "Disponible ahora"}
                             </span>
                           )}
                         </div>
@@ -1305,13 +1356,39 @@ export function LiveMarketplaceMap({
                         </p>
                       )}
                       {p.isLive && (
-                        <p style={{ fontSize: 10, margin: "2px 0", color: "#22c55e", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block", animation: "livePulse 1s infinite" }} />
+                        <p
+                          style={{
+                            fontSize: 10,
+                            margin: "2px 0",
+                            color: "#22c55e",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: "#22c55e",
+                              display: "inline-block",
+                              animation: "livePulse 1s infinite",
+                            }}
+                          />
                           GPS en vivo · posición exacta ahora
                         </p>
                       )}
                       {!p.hasExactLocation && !p.isLive && (
-                        <p style={{ fontSize: 10, margin: "2px 0", color: "#9ca3af", fontStyle: "italic" }}>
+                        <p
+                          style={{
+                            fontSize: 10,
+                            margin: "2px 0",
+                            color: "#9ca3af",
+                            fontStyle: "italic",
+                          }}
+                        >
                           📍 Ubicación aproximada · ciudad
                         </p>
                       )}

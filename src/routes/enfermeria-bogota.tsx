@@ -30,7 +30,8 @@ function Page() {
       ]}
       serviceJsonLd={serviceLd({
         name: "Enfermería a Domicilio en Bogotá",
-        description: "Servicio de enfermería domiciliaria 24/7 en Bogotá con verificación RETHUS y GPS en vivo.",
+        description:
+          "Servicio de enfermería domiciliaria 24/7 en Bogotá con verificación RETHUS y GPS en vivo.",
         path: "/enfermeria-bogota",
         areaName: "Bogotá",
       })}

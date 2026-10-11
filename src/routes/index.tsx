@@ -82,7 +82,9 @@ function NorthStarStrip() {
         // non-fatal
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (!stats) return null;
@@ -94,10 +96,7 @@ function NorthStarStrip() {
   ];
 
   return (
-    <div
-      aria-label="Actividad en vivo"
-      className="mx-auto max-w-6xl px-4 sm:px-6"
-    >
+    <div aria-label="Actividad en vivo" className="mx-auto max-w-6xl px-4 sm:px-6">
       <ul className="flex flex-wrap justify-center gap-3">
         {items.map((item, i) => (
           <li

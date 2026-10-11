@@ -12,16 +12,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { HomeButton } from "@/components/humanix/HomeButton";
 import { z } from "zod";
-import {
-  Smartphone,
-  QrCode,
-  Copy,
-  CheckCircle2,
-  ArrowLeft,
-  Heart,
-  Wifi,
-  Info,
-} from "lucide-react";
+import { Smartphone, QrCode, Copy, CheckCircle2, ArrowLeft, Heart, Wifi, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -29,9 +20,9 @@ import { toast } from "sonner";
 // ─── Route definition ─────────────────────────────────────────────────────────
 
 const searchSchema = z.object({
-  c:  z.string().optional(),   // pairing code
-  pv: z.string().optional(),   // provider
-  u:  z.string().optional(),   // patient UUID
+  c: z.string().optional(), // pairing code
+  pv: z.string().optional(), // provider
+  u: z.string().optional(), // patient UUID
 });
 
 export const Route = createFileRoute("/pair")({
@@ -39,7 +30,10 @@ export const Route = createFileRoute("/pair")({
   head: () => ({
     meta: [
       { title: "Vincular dispositivo · Humanix" },
-      { name: "description", content: "Empareja tu wearable con Humanix para sincronizar signos vitales en tiempo real" },
+      {
+        name: "description",
+        content: "Empareja tu wearable con Humanix para sincronizar signos vitales en tiempo real",
+      },
     ],
   }),
   component: PairPage,
@@ -155,8 +149,8 @@ function PairPage() {
           </div>
           <h1 className="font-bold text-base">Enlace de emparejamiento inválido</h1>
           <p className="text-xs text-muted-foreground">
-            El enlace que escaneaste no tiene los parámetros necesarios. Escanea
-            de nuevo el QR desde la sección <strong>Wearables</strong> en tu portal Humanix.
+            El enlace que escaneaste no tiene los parámetros necesarios. Escanea de nuevo el QR
+            desde la sección <strong>Wearables</strong> en tu portal Humanix.
           </p>
           <Link to="/dashboard/monitoreo">
             <Button size="sm" className="gap-2 text-xs">
@@ -172,7 +166,6 @@ function PairPage() {
     <div className="min-h-screen bg-gradient-to-br from-violet-500/5 via-background to-sky-500/5 flex items-center justify-center p-4">
       <HomeButton className="fixed left-4 top-4" />
       <div className="max-w-sm w-full space-y-4">
-
         {/* Header */}
         <div className="text-center space-y-1">
           <div className="h-14 w-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto mb-3">
@@ -243,8 +236,8 @@ function PairPage() {
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 flex items-start gap-2">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
             <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
-              Una vez que tu dispositivo envíe el primer dato, el monitor clínico
-              de Humanix se actualizará <strong>en tiempo real</strong> de forma automática.
+              Una vez que tu dispositivo envíe el primer dato, el monitor clínico de Humanix se
+              actualizará <strong>en tiempo real</strong> de forma automática.
             </p>
           </div>
         </Card>
@@ -268,7 +261,10 @@ function PairPage() {
 
         {/* Back link */}
         <div className="text-center">
-          <Link to="/dashboard/monitoreo" className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2">
+          <Link
+            to="/dashboard/monitoreo"
+            className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+          >
             Volver al portal de monitoreo
           </Link>
         </div>

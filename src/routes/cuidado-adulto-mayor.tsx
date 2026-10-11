@@ -69,15 +69,23 @@ function Page() {
     >
       <h2>¿Qué incluye el servicio de cuidado para el adulto mayor?</h2>
       <p>
-        En Humanix coordinamos cuidadores y auxiliares de enfermería que cubren tareas básicas y avanzadas: higiene personal, vestido, alimentación, control de signos vitales, administración de medicamentos por horario, acompañamiento en caminatas y citas médicas, y compañía emocional. Cuando el caso lo requiere, asignamos enfermería profesional con tarjeta RETHUS para procedimientos como curaciones, oxigenoterapia o sondas.
+        En Humanix coordinamos cuidadores y auxiliares de enfermería que cubren tareas básicas y
+        avanzadas: higiene personal, vestido, alimentación, control de signos vitales,
+        administración de medicamentos por horario, acompañamiento en caminatas y citas médicas, y
+        compañía emocional. Cuando el caso lo requiere, asignamos enfermería profesional con tarjeta
+        RETHUS para procedimientos como curaciones, oxigenoterapia o sondas.
       </p>
       <h2>¿Cómo elegimos el mejor cuidador para tu familia?</h2>
       <p>
-        Nuestra IA analiza la condición clínica del paciente, la zona, el horario y las preferencias familiares para presentarte 3-5 perfiles compatibles en menos de 2 minutos. Cada perfil incluye experiencia, calificación, distancia y especialidades. Tú agendas con un toque y recibes confirmación inmediata por WhatsApp.
+        Nuestra IA analiza la condición clínica del paciente, la zona, el horario y las preferencias
+        familiares para presentarte 3-5 perfiles compatibles en menos de 2 minutos. Cada perfil
+        incluye experiencia, calificación, distancia y especialidades. Tú agendas con un toque y
+        recibes confirmación inmediata por WhatsApp.
       </p>
       <h2>Ciudades donde operamos</h2>
       <p>
-        Bogotá, Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira y municipios cercanos. Si vives fuera de estas ciudades, escríbenos y activamos cobertura bajo demanda.
+        Bogotá, Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira y municipios cercanos.
+        Si vives fuera de estas ciudades, escríbenos y activamos cobertura bajo demanda.
       </p>
     </SeoLanding>
   );

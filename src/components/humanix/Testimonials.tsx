@@ -153,17 +153,17 @@ export function Testimonials() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-2xl">
-          <span className="text-xs uppercase tracking-[0.2em] text-fuchsia-neural font-semibold">
-            Casos reales
-          </span>
-          <h2 className="mt-3 font-display text-3xl sm:text-4xl font-bold leading-tight">
-            Historias que pasan en Colombia,{" "}
-            <span className="text-gradient-bio">todos los días</span>.
-          </h2>
-          <p className="mt-4 text-muted-foreground leading-relaxed">
-            Profesionales y familias que ya transformaron su forma de cuidar y de trabajar con
-            Humanix.
-          </p>
+            <span className="text-xs uppercase tracking-[0.2em] text-fuchsia-neural font-semibold">
+              Casos reales
+            </span>
+            <h2 className="mt-3 font-display text-3xl sm:text-4xl font-bold leading-tight">
+              Historias que pasan en Colombia,{" "}
+              <span className="text-gradient-bio">todos los días</span>.
+            </h2>
+            <p className="mt-4 text-muted-foreground leading-relaxed">
+              Profesionales y familias que ya transformaron su forma de cuidar y de trabajar con
+              Humanix.
+            </p>
           </div>
           <TestimonialComposer />
         </div>

@@ -525,7 +525,6 @@ function FamilyDashboard() {
       actions={<HiringCopilot />}
     >
       <div className="space-y-6">
-
         {/* Acciones rápidas */}
         <FamilyQuickActions />
 
@@ -579,12 +578,18 @@ function FamilyDashboard() {
         )}
 
         {/* ── PAGO / PLAN ─────────────────────────────────── */}
-        <section id="planes" className="rounded-[2rem] bg-gradient-to-br from-card to-card/60 p-6 ring-1 ring-border shadow-sm">
+        <section
+          id="planes"
+          className="rounded-[2rem] bg-gradient-to-br from-card to-card/60 p-6 ring-1 ring-border shadow-sm"
+        >
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl font-bold flex items-center gap-2">
               <Crown className="h-5 w-5 text-copper" /> Tu plan
             </h2>
-            <Link to="/planes" className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+            <Link
+              to="/planes"
+              className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
+            >
               Ver planes <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -626,7 +631,6 @@ function FamilyDashboard() {
             />
           </summary>
           <div className="mt-6 space-y-8">
-
             {/* Mapa completo con ubicación */}
             {user && (
               <div>
@@ -685,7 +689,9 @@ function FamilyDashboard() {
                   <Inbox className="h-4 w-4 text-fuchsia-neural" />
                   Postulaciones
                 </h2>
-                <span className="text-xs text-muted-foreground">{applications.length} en total</span>
+                <span className="text-xs text-muted-foreground">
+                  {applications.length} en total
+                </span>
               </div>
               {dataLoading ? (
                 <Card className="p-6 text-center text-sm text-muted-foreground">
@@ -695,7 +701,9 @@ function FamilyDashboard() {
                 <Card className="p-8 text-center">
                   <Inbox className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
                   <p className="font-semibold">Sin postulaciones aún</p>
-                  <p className="text-sm text-muted-foreground mt-1">Publica una solicitud para recibirlas.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Publica una solicitud para recibirlas.
+                  </p>
                 </Card>
               ) : (
                 <div className="grid gap-3">
@@ -723,7 +731,9 @@ function FamilyDashboard() {
                           )}
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold truncate">{pro?.full_name ?? "Profesional"}</p>
+                              <p className="font-semibold truncate">
+                                {pro?.full_name ?? "Profesional"}
+                              </p>
                               {stars > 0 && (
                                 <span className="inline-flex items-center gap-0.5 text-xs text-copper">
                                   <Star className="h-3 w-3 fill-copper" />
@@ -734,14 +744,20 @@ function FamilyDashboard() {
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {pro?.specialty ?? "Salud"} · {pro?.city ?? "—"}
-                              {pro?.hourly_rate ? ` · $${pro.hourly_rate.toLocaleString("es-CO")}/h` : ""}
+                              {pro?.hourly_rate
+                                ? ` · $${pro.hourly_rate.toLocaleString("es-CO")}/h`
+                                : ""}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {offer?.title ?? "Solicitud"}
-                              {a.proposed_amount ? ` · $${a.proposed_amount.toLocaleString("es-CO")} COP` : ""}
+                              {a.proposed_amount
+                                ? ` · $${a.proposed_amount.toLocaleString("es-CO")} COP`
+                                : ""}
                             </p>
                             {a.message && (
-                              <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">"{a.message}"</p>
+                              <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">
+                                "{a.message}"
+                              </p>
                             )}
                           </div>
                         </div>
@@ -752,7 +768,12 @@ function FamilyDashboard() {
                             </Link>
                           </Button>
                           {wa && (
-                            <Button size="sm" variant="outline" asChild className="flex-1 border-biosensor/40 text-biosensor hover:bg-biosensor/5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              asChild
+                              className="flex-1 border-biosensor/40 text-biosensor hover:bg-biosensor/5"
+                            >
                               <a href={wa} target="_blank" rel="noopener noreferrer">
                                 <Phone className="h-3.5 w-3.5 mr-1" /> WhatsApp
                               </a>
@@ -788,33 +809,56 @@ function FamilyDashboard() {
                     <Card key={`np-${p.user_id}`} className="p-3 flex items-center gap-3">
                       <div className="relative shrink-0">
                         {p.avatar_url ? (
-                          <img src={p.avatar_url} alt={p.full_name ?? ""} className="h-10 w-10 rounded-full object-cover border border-border" />
+                          <img
+                            src={p.avatar_url}
+                            alt={p.full_name ?? ""}
+                            className="h-10 w-10 rounded-full object-cover border border-border"
+                          />
                         ) : (
                           <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
                             {(p.full_name ?? "?").slice(0, 1).toUpperCase()}
                           </div>
                         )}
-                        <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${p.available ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
+                        <span
+                          className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${p.available ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`}
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">
-                          <PlanNameGate name={p.full_name} canView={canViewNames} fallback="Profesional" />
+                          <PlanNameGate
+                            name={p.full_name}
+                            canView={canViewNames}
+                            fallback="Profesional"
+                          />
                         </p>
                         <p className="text-[11px] text-muted-foreground truncate">
                           {p.specialty ?? "Salud"} · {p.city ?? "—"}
                           {p.avg_rating != null && p.avg_rating > 0 && (
-                            <> · <Star className="h-2.5 w-2.5 inline fill-copper text-copper" /> {Number(p.avg_rating).toFixed(1)}</>
+                            <>
+                              {" "}
+                              · <Star className="h-2.5 w-2.5 inline fill-copper text-copper" />{" "}
+                              {Number(p.avg_rating).toFixed(1)}
+                            </>
                           )}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
                         {p.km != null ? (
-                          <span className="text-xs font-semibold text-biosensor">{formatKm(p.km)}</span>
+                          <span className="text-xs font-semibold text-biosensor">
+                            {formatKm(p.km)}
+                          </span>
                         ) : (
                           <span className="text-[10px] text-muted-foreground">—</span>
                         )}
-                        <Button size="sm" variant="outline" className="block mt-1 text-xs h-7" asChild>
-                          <Link to="/profesional/$proId" params={{ proId: p.user_id }}>Ver</Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="block mt-1 text-xs h-7"
+                          asChild
+                        >
+                          <Link to="/profesional/$proId" params={{ proId: p.user_id }}>
+                            Ver
+                          </Link>
                         </Button>
                       </div>
                     </Card>
@@ -823,8 +867,11 @@ function FamilyDashboard() {
               )}
               {nearby.length > 0 && (
                 <p className="text-[11px] text-muted-foreground mt-3">
-                  {nearby.length} solicitud{nearby.length !== 1 ? "es" : ""} activa{nearby.length !== 1 ? "s" : ""} en {familyCity} —{" "}
-                  <Link to="/buscar" className="underline hover:text-foreground">ver mercado</Link>
+                  {nearby.length} solicitud{nearby.length !== 1 ? "es" : ""} activa
+                  {nearby.length !== 1 ? "s" : ""} en {familyCity} —{" "}
+                  <Link to="/buscar" className="underline hover:text-foreground">
+                    ver mercado
+                  </Link>
                 </p>
               )}
             </section>
@@ -833,25 +880,36 @@ function FamilyDashboard() {
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-display text-base font-semibold">Mis solicitudes</h2>
-                <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">Ver todas →</Link>
+                <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">
+                  Ver todas →
+                </Link>
               </div>
               {offers.length === 0 ? (
                 <Card className="p-10 text-center">
                   <Heart className="h-8 w-8 text-copper mx-auto mb-3" />
                   <p className="font-semibold">Sin solicitudes aún</p>
-                  <p className="text-sm text-muted-foreground mt-1">Publicar es <span className="font-semibold text-emerald-600">gratis</span>.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Publicar es <span className="font-semibold text-emerald-600">gratis</span>.
+                  </p>
                   <div className="mt-4 flex flex-wrap gap-2 justify-center">
                     <HiringCopilot />
-                    <Button variant="outline" asChild><Link to="/buscar">Buscar ahora</Link></Button>
+                    <Button variant="outline" asChild>
+                      <Link to="/buscar">Buscar ahora</Link>
+                    </Button>
                   </div>
                 </Card>
               ) : (
                 <div className="grid gap-3">
                   {Array.from(new Map(offers.map((o) => [o.id, o])).values()).map((o) => (
-                    <Card key={`my-offer-${o.id}`} className="p-4 flex items-center justify-between gap-3 flex-wrap">
+                    <Card
+                      key={`my-offer-${o.id}`}
+                      className="p-4 flex items-center justify-between gap-3 flex-wrap"
+                    >
                       <div>
                         <p className="font-medium">{o.title}</p>
-                        <p className="text-xs text-muted-foreground">{o.city} · {o.modality} · ${o.amount.toLocaleString("es-CO")} COP</p>
+                        <p className="text-xs text-muted-foreground">
+                          {o.city} · {o.modality} · ${o.amount.toLocaleString("es-CO")} COP
+                        </p>
                       </div>
                       <StatusPill status={o.status} />
                     </Card>
@@ -863,7 +921,9 @@ function FamilyDashboard() {
             {/* Mapa de solicitudes */}
             {offers.some((o) => o.lat != null && o.lng != null) && (
               <section>
-                <h2 className="font-display text-base font-semibold mb-3">Solicitudes en el mapa</h2>
+                <h2 className="font-display text-base font-semibold mb-3">
+                  Solicitudes en el mapa
+                </h2>
                 <OffersMap
                   points={offers
                     .filter((o) => o.lat != null && o.lng != null)

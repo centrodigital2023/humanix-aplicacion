@@ -203,14 +203,13 @@ function genCode(patientId: string, provider: Provider): string {
   let n = h;
   for (let i = 0; i < 8; i++) {
     code += chars[n % chars.length];
-    n = (n >>> 5) || ((h >> i) & 0xff);
+    n = n >>> 5 || (h >> i) & 0xff;
   }
   return code;
 }
 
 function buildPairingUrl(code: string, provider: Provider, patientId: string): string {
-  const base =
-    typeof window !== "undefined" ? window.location.origin : "https://app.humanix.co";
+  const base = typeof window !== "undefined" ? window.location.origin : "https://app.humanix.co";
   const params = new URLSearchParams({ c: code, pv: provider, u: patientId });
   return `${base}/pair?${params.toString()}`;
 }
@@ -223,10 +222,7 @@ function QrFullscreen({ url, onClose }: { url: string; onClose: () => void }) {
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div
-        className="rounded-3xl bg-white p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <QRCode value={url} size={280} bgColor="#ffffff" fgColor="#0f0a2e" level="H" />
       </div>
       <button
@@ -255,7 +251,15 @@ interface QrModalProps {
 }
 
 function QrModal({
-  patientId, provider, label, emoji, steps, code, syncing, onClose, onRenew,
+  patientId,
+  provider,
+  label,
+  emoji,
+  steps,
+  code,
+  syncing,
+  onClose,
+  onRenew,
 }: QrModalProps) {
   const url = buildPairingUrl(code, provider, patientId);
   const [fullscreen, setFullscreen] = useState(false);
@@ -282,7 +286,6 @@ function QrModal({
 
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <div className="relative bg-background border border-border rounded-2xl shadow-2xl max-w-sm w-full overflow-y-auto max-h-[90vh]">
-
           {/* Header */}
           <div className="flex items-center justify-between p-5 pb-3">
             <div className="flex items-center gap-2">
@@ -358,9 +361,13 @@ function QrModal({
 
           {/* Pairing code */}
           <div className="mx-5 mb-3 rounded-xl bg-muted/60 p-3 space-y-1">
-            <p className="text-[10px] text-muted-foreground font-medium">Código de emparejamiento</p>
+            <p className="text-[10px] text-muted-foreground font-medium">
+              Código de emparejamiento
+            </p>
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-base font-bold tracking-[0.25em] select-all">{code}</span>
+              <span className="font-mono text-base font-bold tracking-[0.25em] select-all">
+                {code}
+              </span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={copyCode}
@@ -383,7 +390,10 @@ function QrModal({
 
           {/* Footer */}
           <div className="px-5 pb-5 space-y-1.5">
-            <button onClick={copyLink} className="w-full text-[10px] text-violet-600 hover:underline">
+            <button
+              onClick={copyLink}
+              className="w-full text-[10px] text-violet-600 hover:underline"
+            >
               ¿Sin app? Copia el enlace de emparejamiento
             </button>
             <p className="text-center text-[10px] text-muted-foreground">
@@ -427,13 +437,18 @@ export function WearableConnections({ patientId }: { patientId: string }) {
         }
 
         const dbStore: PairingStore = {};
-        for (const conn of (data ?? []) as Array<{ provider: string; external_user_id: string; connected_at: string; last_synced_at: string | null }>) {
+        for (const conn of (data ?? []) as Array<{
+          provider: string;
+          external_user_id: string;
+          connected_at: string;
+          last_synced_at: string | null;
+        }>) {
           dbStore[conn.provider as Provider] = {
-            provider:   conn.provider as Provider,
-            code:       conn.external_user_id,
-            pairedAt:   conn.connected_at,
+            provider: conn.provider as Provider,
+            code: conn.external_user_id,
+            pairedAt: conn.connected_at,
             lastSyncAt: conn.last_synced_at,
-            syncing:    false,
+            syncing: false,
           };
         }
 
@@ -450,7 +465,9 @@ export function WearableConnections({ patientId }: { patientId: string }) {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [patientId]);
 
   const persist = useCallback(
@@ -513,17 +530,15 @@ export function WearableConnections({ patientId }: { patientId: string }) {
       const code = genCode(patientId, provider);
 
       // Guardar en wearable_connections (DB) — fuente de verdad para wearable-ingest
-      const { error: dbError } = await (supabase as any)
-        .from("wearable_connections")
-        .upsert(
-          {
-            patient_id:       patientId,
-            provider,
-            external_user_id: code,
-            status:           "active",
-          },
-          { onConflict: "patient_id,provider" },
-        );
+      const { error: dbError } = await (supabase as any).from("wearable_connections").upsert(
+        {
+          patient_id: patientId,
+          provider,
+          external_user_id: code,
+          status: "active",
+        },
+        { onConflict: "patient_id,provider" },
+      );
 
       if (dbError) {
         console.error("[WearableConnections] upsert:", dbError);
@@ -534,9 +549,9 @@ export function WearableConnections({ patientId }: { patientId: string }) {
       const device: PairedDevice = {
         provider,
         code,
-        pairedAt:   new Date().toISOString(),
+        pairedAt: new Date().toISOString(),
         lastSyncAt: null,
-        syncing:    false,
+        syncing: false,
       };
       persist({ ...store, [provider]: device });
       setQrOpen(provider);
@@ -590,7 +605,7 @@ export function WearableConnections({ patientId }: { patientId: string }) {
   };
 
   const qrProvider = PROVIDERS.find((p) => p.id === qrOpen);
-  const qrDevice   = qrOpen ? store[qrOpen] : undefined;
+  const qrDevice = qrOpen ? store[qrOpen] : undefined;
 
   return (
     <>
@@ -626,9 +641,9 @@ export function WearableConnections({ patientId }: { patientId: string }) {
           <Info className="h-3.5 w-3.5 text-sky-500 mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-sky-700 dark:text-sky-300">
             Toca <strong>Vincular</strong> para generar tu código de emparejamiento.{" "}
-            <strong>Escanéalo con la app Humanix en tu celular</strong> para que los signos
-            vitales fluyan en tiempo real — Apple HealthKit (iOS) y Google Health Connect
-            (Android) son compatibles de forma nativa.
+            <strong>Escanéalo con la app Humanix en tu celular</strong> para que los signos vitales
+            fluyan en tiempo real — Apple HealthKit (iOS) y Google Health Connect (Android) son
+            compatibles de forma nativa.
           </p>
         </div>
 
@@ -642,9 +657,9 @@ export function WearableConnections({ patientId }: { patientId: string }) {
         ) : (
           <div className="space-y-2">
             {PROVIDERS.map((p) => {
-              const device     = store[p.id];
-              const isActive   = !!device;
-              const isSyncing  = device?.syncing;
+              const device = store[p.id];
+              const isActive = !!device;
+              const isSyncing = device?.syncing;
               const isConnecting = connectingProvider === p.id;
 
               return (
@@ -654,15 +669,19 @@ export function WearableConnections({ patientId }: { patientId: string }) {
                     isSyncing
                       ? "border-emerald-500/30 bg-emerald-500/5"
                       : isActive
-                      ? "border-violet-500/20 bg-violet-500/5"
-                      : "border-border"
+                        ? "border-violet-500/20 bg-violet-500/5"
+                        : "border-border"
                   }`}
                 >
                   {/* Info */}
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div
                       className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg leading-none ${
-                        isSyncing ? "bg-emerald-500/10" : isActive ? "bg-violet-500/10" : "bg-muted/50"
+                        isSyncing
+                          ? "bg-emerald-500/10"
+                          : isActive
+                            ? "bg-violet-500/10"
+                            : "bg-muted/50"
                       }`}
                     >
                       {p.emoji}
@@ -672,11 +691,16 @@ export function WearableConnections({ patientId }: { patientId: string }) {
                       {isSyncing ? (
                         <div className="flex items-center gap-1">
                           <Wifi className="h-2.5 w-2.5 text-emerald-500" />
-                          <span className="text-[10px] text-emerald-600 font-medium">Sincronizando en vivo</span>
+                          <span className="text-[10px] text-emerald-600 font-medium">
+                            Sincronizando en vivo
+                          </span>
                         </div>
                       ) : isActive && device ? (
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <Badge variant="outline" className="text-[10px] gap-1 border-violet-500/30 text-violet-600 dark:text-violet-400">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] gap-1 border-violet-500/30 text-violet-600 dark:text-violet-400"
+                          >
                             <CheckCircle2 className="h-2.5 w-2.5" /> Vinculado
                           </Badge>
                           <span className="text-[10px] text-muted-foreground">
@@ -740,20 +764,26 @@ export function WearableConnections({ patientId }: { patientId: string }) {
         <div className="rounded-xl border border-violet-500/10 bg-violet-500/5 p-2.5 flex items-start gap-2">
           <AlertCircle className="h-3.5 w-3.5 text-violet-400 mt-0.5 flex-shrink-0" />
           <p className="text-[10px] text-violet-700 dark:text-violet-300">
-            Los datos se sincronizan de forma encriptada. Tu profesional de salud solo
-            accede a los vitales que tú autorice. Código guardado en tu cuenta.
+            Los datos se sincronizan de forma encriptada. Tu profesional de salud solo accede a los
+            vitales que tú autorice. Código guardado en tu cuenta.
           </p>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground border-t border-border pt-2">
-          <span className="flex items-center gap-1"><Smartphone className="h-3 w-3" /> iOS</span>
+          <span className="flex items-center gap-1">
+            <Smartphone className="h-3 w-3" /> iOS
+          </span>
           <span className="text-border">·</span>
           <span>Android</span>
           <span className="text-border">·</span>
-          <span className="flex items-center gap-1"><Wifi className="h-3 w-3" /> Bluetooth</span>
+          <span className="flex items-center gap-1">
+            <Wifi className="h-3 w-3" /> Bluetooth
+          </span>
           <span className="text-border">·</span>
-          <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /> Humanix SDK</span>
+          <span className="flex items-center gap-1">
+            <Zap className="h-3 w-3 text-amber-500" /> Humanix SDK
+          </span>
         </div>
       </Card>
     </>

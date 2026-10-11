@@ -30,7 +30,8 @@ function Page() {
       ]}
       serviceJsonLd={serviceLd({
         name: "Enfermería a Domicilio en Bucaramanga",
-        description: "Servicio de enfermería domiciliaria en Bucaramanga y área metropolitana de Santander.",
+        description:
+          "Servicio de enfermería domiciliaria en Bucaramanga y área metropolitana de Santander.",
         path: "/enfermeria-bucaramanga",
         areaName: "Bucaramanga",
       })}

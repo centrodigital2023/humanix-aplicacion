@@ -81,14 +81,14 @@ type Tab =
   | "perfil";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "inicio",     label: "Inicio",     icon: <LayoutDashboard className="h-5 w-5" /> },
-  { id: "ofertas",    label: "Ofertas",    icon: <Briefcase className="h-5 w-5" /> },
-  { id: "talento",    label: "Talento",    icon: <Users className="h-5 w-5" /> },
-  { id: "operaciones",label: "Ops",        icon: <BarChart3 className="h-5 w-5" /> },
-  { id: "pacientes",  label: "Pacientes",  icon: <Stethoscope className="h-5 w-5" /> },
-  { id: "monitoreo",  label: "Monitoreo",  icon: <Heart className="h-5 w-5" /> },
-  { id: "agenda",     label: "Agenda",     icon: <CalendarDays className="h-5 w-5" /> },
-  { id: "perfil",     label: "Perfil",     icon: <UserCircle className="h-5 w-5" /> },
+  { id: "inicio", label: "Inicio", icon: <LayoutDashboard className="h-5 w-5" /> },
+  { id: "ofertas", label: "Ofertas", icon: <Briefcase className="h-5 w-5" /> },
+  { id: "talento", label: "Talento", icon: <Users className="h-5 w-5" /> },
+  { id: "operaciones", label: "Ops", icon: <BarChart3 className="h-5 w-5" /> },
+  { id: "pacientes", label: "Pacientes", icon: <Stethoscope className="h-5 w-5" /> },
+  { id: "monitoreo", label: "Monitoreo", icon: <Heart className="h-5 w-5" /> },
+  { id: "agenda", label: "Agenda", icon: <CalendarDays className="h-5 w-5" /> },
+  { id: "perfil", label: "Perfil", icon: <UserCircle className="h-5 w-5" /> },
 ];
 
 type Offer = {
@@ -184,11 +184,26 @@ function buildProMap(
   profileRows.forEach((p) => {
     const uid = p.user_id as string;
     const existing = map[uid] ?? {
-      user_id: uid, full_name: null, avatar_url: null, city: null, phone: null,
-      specialty: null, sub_specialties: null, avg_rating: null, trust_score: null,
-      hourly_rate: null, shift_rate: null, monthly_rate: null, verified: null,
-      rethus_verified: null, ai_preapproved: null, available: false,
-      years_experience: null, bio: null, total_jobs: null, certifications: null,
+      user_id: uid,
+      full_name: null,
+      avatar_url: null,
+      city: null,
+      phone: null,
+      specialty: null,
+      sub_specialties: null,
+      avg_rating: null,
+      trust_score: null,
+      hourly_rate: null,
+      shift_rate: null,
+      monthly_rate: null,
+      verified: null,
+      rethus_verified: null,
+      ai_preapproved: null,
+      available: false,
+      years_experience: null,
+      bio: null,
+      total_jobs: null,
+      certifications: null,
     };
     map[uid] = {
       ...existing,
@@ -202,7 +217,11 @@ function buildProMap(
 }
 
 function InstitutionDashboard() {
-  const { user, loading: authLoading, logout } = useAppUser({
+  const {
+    user,
+    loading: authLoading,
+    logout,
+  } = useAppUser({
     allow: ["institution", "superadmin"],
   });
   const navigate = useNavigate();
@@ -224,43 +243,40 @@ function InstitutionDashboard() {
   const signal = useRef({ cancelled: false });
 
   // ── Phase 2: load professional profiles for a set of proIds ───────────────
-  const loadTalent = useCallback(
-    async (proIds: string[]) => {
-      if (!proIds.length) {
-        setProMap({});
-        setTalentLoading(false);
-        return;
-      }
-      setTalentLoading(true);
-      try {
-        const [proRowsRes, profilesRes] = await Promise.all([
-          supabase
-            .from("professional_profiles")
-            .select(
-              "user_id, specialty, sub_specialties, avg_rating, trust_score, hourly_rate, shift_rate, monthly_rate, verified, rethus_verified, ai_preapproved, available, years_experience, bio, total_jobs, certifications",
-            )
-            .in("user_id", proIds),
-          supabase
-            .from("profiles")
-            .select("user_id, full_name, avatar_url, city, phone")
-            .in("user_id", proIds),
-        ]);
+  const loadTalent = useCallback(async (proIds: string[]) => {
+    if (!proIds.length) {
+      setProMap({});
+      setTalentLoading(false);
+      return;
+    }
+    setTalentLoading(true);
+    try {
+      const [proRowsRes, profilesRes] = await Promise.all([
+        supabase
+          .from("professional_profiles")
+          .select(
+            "user_id, specialty, sub_specialties, avg_rating, trust_score, hourly_rate, shift_rate, monthly_rate, verified, rethus_verified, ai_preapproved, available, years_experience, bio, total_jobs, certifications",
+          )
+          .in("user_id", proIds),
+        supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url, city, phone")
+          .in("user_id", proIds),
+      ]);
 
-        if (signal.current.cancelled) return;
-        setProMap(
-          buildProMap(
-            (proRowsRes.data ?? []) as Record<string, unknown>[],
-            (profilesRes.data ?? []) as Record<string, unknown>[],
-          ),
-        );
-      } catch (err) {
-        console.error("[inst] talent load failed:", err);
-      } finally {
-        if (!signal.current.cancelled) setTalentLoading(false);
-      }
-    },
-    [],
-  );
+      if (signal.current.cancelled) return;
+      setProMap(
+        buildProMap(
+          (proRowsRes.data ?? []) as Record<string, unknown>[],
+          (profilesRes.data ?? []) as Record<string, unknown>[],
+        ),
+      );
+    } catch (err) {
+      console.error("[inst] talent load failed:", err);
+    } finally {
+      if (!signal.current.cancelled) setTalentLoading(false);
+    }
+  }, []);
 
   // ── Full load: Phase 1 (3-way parallel) → Phase 2 ─────────────────────────
   //
@@ -286,7 +302,9 @@ function InstitutionDashboard() {
 
           supabase
             .from("institution_profiles")
-            .select("institution_name, institution_type, city, verified, nit, compliance_fuid, onboarding_complete")
+            .select(
+              "institution_name, institution_type, city, verified, nit, compliance_fuid, onboarding_complete",
+            )
             .eq("user_id", uid)
             .maybeSingle(),
 
@@ -402,10 +420,16 @@ function InstitutionDashboard() {
         const { error } = await sb.rpc("accept_application", { p_application_id: appId });
         if (error) throw error;
       } else if (newStatus === "rejected") {
-        const { error } = await sb.rpc("decline_application", { p_application_id: appId, p_note: null });
+        const { error } = await sb.rpc("decline_application", {
+          p_application_id: appId,
+          p_note: null,
+        });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("applications").update({ status: newStatus }).eq("id", appId);
+        const { error } = await supabase
+          .from("applications")
+          .update({ status: newStatus })
+          .eq("id", appId);
         if (error) throw error;
       }
       setApplications((prev) =>
@@ -420,7 +444,8 @@ function InstitutionDashboard() {
       const failure = classifyHubError(e as ServerError);
       if (failure.kind === "shifts_required") {
         toast.error(failure.message, {
-          description: "Acepta desde Inicio → Postulaciones para indicar los turnos de esta oferta.",
+          description:
+            "Acepta desde Inicio → Postulaciones para indicar los turnos de esta oferta.",
         });
       } else {
         toast.error(failure.message);
@@ -437,9 +462,7 @@ function InstitutionDashboard() {
         .update({ status: newStatus })
         .eq("id", offerId);
       if (error) throw error;
-      setOffers((prev) =>
-        prev.map((o) => (o.id === offerId ? { ...o, status: newStatus } : o)),
-      );
+      setOffers((prev) => prev.map((o) => (o.id === offerId ? { ...o, status: newStatus } : o)));
       toast.success(
         newStatus === "open"
           ? "Oferta reactivada"
@@ -458,9 +481,7 @@ function InstitutionDashboard() {
     const filled = offers.filter((o) => o.status === "filled").length;
     const pending = applications.filter((a) => a.status === "pending").length;
     const accepted = applications.filter((a) => a.status === "accepted").length;
-    const convRate = applications.length
-      ? Math.round((accepted / applications.length) * 100)
-      : 0;
+    const convRate = applications.length ? Math.round((accepted / applications.length) * 100) : 0;
     const totalBudget = offers
       .filter((o) => o.status === "open" || o.status === "filled")
       .reduce((s, o) => s + (o.amount ?? 0), 0);
@@ -485,8 +506,7 @@ function InstitutionDashboard() {
     );
   }
 
-  const instName =
-    instProfile?.institution_name || user.fullName || "Mi institución";
+  const instName = instProfile?.institution_name || user.fullName || "Mi institución";
   const instType = instProfile?.institution_type ?? "IPS / Clínica";
 
   const onboardingIncomplete =
@@ -514,7 +534,8 @@ function InstitutionDashboard() {
       {onboardingIncomplete && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <p className="text-sm text-amber-700 dark:text-amber-400 flex-1">
-            <span className="font-semibold">Tu perfil está incompleto.</span> Complétalo para aparecer en búsquedas y contratar profesionales.
+            <span className="font-semibold">Tu perfil está incompleto.</span> Complétalo para
+            aparecer en búsquedas y contratar profesionales.
           </p>
           <Button
             size="sm"
@@ -553,7 +574,8 @@ function InstitutionDashboard() {
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-medium hover:bg-amber-500/20 transition-colors"
             >
               <Bell className="h-3.5 w-3.5 animate-pulse" />
-              {pendingApps.length} postulación{pendingApps.length > 1 ? "es" : ""} nueva{pendingApps.length > 1 ? "s" : ""}
+              {pendingApps.length} postulación{pendingApps.length > 1 ? "es" : ""} nueva
+              {pendingApps.length > 1 ? "s" : ""}
             </button>
           )}
 
@@ -598,11 +620,9 @@ function InstitutionDashboard() {
 
       {/* ── Main ── */}
       <main className="mx-auto max-w-7xl px-4 py-6">
-
         {/* ══ TAB: INICIO ══ */}
         {tab === "inicio" && (
           <div className="space-y-5">
-
             <CoverageCenter
               userId={user.id}
               profile={
@@ -616,7 +636,9 @@ function InstitutionDashboard() {
                   : null
               }
               onPublish={() => setPublishOpen(true)}
-              onGoToInbox={() => inboxRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              onGoToInbox={() =>
+                inboxRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
               onGoToTalent={() => setTab("talento")}
             />
 
@@ -666,11 +688,17 @@ function InstitutionDashboard() {
                     <DollarSign className="h-4 w-4 text-fuchsia-neural" />
                     <p className="text-sm font-semibold">Presupuesto en ofertas activas</p>
                   </div>
-                  <p className="text-sm font-bold text-fuchsia-neural">{COP(metrics.totalBudget)}</p>
+                  <p className="text-sm font-bold text-fuchsia-neural">
+                    {COP(metrics.totalBudget)}
+                  </p>
                 </div>
-                <Progress value={Math.min(100, (metrics.filled / Math.max(offers.length, 1)) * 100)} className="h-1.5" />
+                <Progress
+                  value={Math.min(100, (metrics.filled / Math.max(offers.length, 1)) * 100)}
+                  className="h-1.5"
+                />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {metrics.filled} de {offers.length} ofertas cubiertas · conversión {metrics.convRate}%
+                  {metrics.filled} de {offers.length} ofertas cubiertas · conversión{" "}
+                  {metrics.convRate}%
                 </p>
               </div>
             )}
@@ -697,7 +725,10 @@ function InstitutionDashboard() {
                   <Briefcase className="h-4 w-4 text-fuchsia-neural" />
                   <p className="text-sm font-semibold">Mis ofertas</p>
                 </div>
-                <button onClick={() => setTab("ofertas")} className="text-xs text-fuchsia-neural hover:underline flex items-center gap-1">
+                <button
+                  onClick={() => setTab("ofertas")}
+                  className="text-xs text-fuchsia-neural hover:underline flex items-center gap-1"
+                >
                   Gestionar <ChevronRight className="h-3 w-3" />
                 </button>
               </div>
@@ -706,7 +737,8 @@ function InstitutionDashboard() {
                   <Building2 className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
                   <p className="text-sm font-semibold">Sin ofertas publicadas</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Publica <span className="text-biosensor font-medium">gratis</span> y la IA distribuye a los mejores profesionales.
+                    Publica <span className="text-biosensor font-medium">gratis</span> y la IA
+                    distribuye a los mejores profesionales.
                   </p>
                   <div className="mt-3 flex justify-center">
                     <HiringCopilot />
@@ -733,10 +765,30 @@ function InstitutionDashboard() {
 
             {/* Quick actions */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <QuickAction icon={<Plus className="h-5 w-5 text-fuchsia-neural" />} label="Nueva oferta" sub="IA copilot" onClick={() => setTab("ofertas")} />
-              <QuickAction icon={<Users className="h-5 w-5 text-biosensor" />} label="Ver talento" sub="Mapa en vivo" onClick={() => setTab("talento")} />
-              <QuickAction icon={<ClipboardList className="h-5 w-5 text-fuchsia-neural" />} label="Pacientes" sub="Casos activos" onClick={() => setTab("pacientes")} />
-              <QuickAction icon={<BarChart3 className="h-5 w-5 text-biosensor" />} label="Reportes" sub="Métricas operativas" onClick={() => setTab("operaciones")} />
+              <QuickAction
+                icon={<Plus className="h-5 w-5 text-fuchsia-neural" />}
+                label="Nueva oferta"
+                sub="IA copilot"
+                onClick={() => setTab("ofertas")}
+              />
+              <QuickAction
+                icon={<Users className="h-5 w-5 text-biosensor" />}
+                label="Ver talento"
+                sub="Mapa en vivo"
+                onClick={() => setTab("talento")}
+              />
+              <QuickAction
+                icon={<ClipboardList className="h-5 w-5 text-fuchsia-neural" />}
+                label="Pacientes"
+                sub="Casos activos"
+                onClick={() => setTab("pacientes")}
+              />
+              <QuickAction
+                icon={<BarChart3 className="h-5 w-5 text-biosensor" />}
+                label="Reportes"
+                sub="Métricas operativas"
+                onClick={() => setTab("operaciones")}
+              />
             </div>
           </div>
         )}
@@ -744,12 +796,13 @@ function InstitutionDashboard() {
         {/* ══ TAB: OFERTAS ══ */}
         {tab === "ofertas" && (
           <div className="space-y-5">
-
             {/* Create offer */}
             <div className="rounded-2xl border border-fuchsia-neural/20 bg-fuchsia-neural/5 p-4 flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-sm font-semibold">Publicar nueva oferta</p>
-                <p className="text-xs text-muted-foreground">La IA escribe la descripción y encuentra los mejores candidatos.</p>
+                <p className="text-xs text-muted-foreground">
+                  La IA escribe la descripción y encuentra los mejores candidatos.
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="hero" size="sm" onClick={() => setPublishOpen(true)}>
@@ -762,7 +815,9 @@ function InstitutionDashboard() {
             <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
               <div className="p-4 border-b border-border">
                 <p className="text-sm font-semibold">Semáforo de cobertura</p>
-                <p className="text-xs text-muted-foreground">Estado de cada oferta: cubierta, con postulantes por aprobar o sin candidatos.</p>
+                <p className="text-xs text-muted-foreground">
+                  Estado de cada oferta: cubierta, con postulantes por aprobar o sin candidatos.
+                </p>
               </div>
               <div className="p-4">
                 <CoverageSemaphore userId={user.id} />
@@ -773,10 +828,16 @@ function InstitutionDashboard() {
             <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
               <div className="p-4 border-b border-border">
                 <p className="text-sm font-semibold">Ofertas masivas con IA</p>
-                <p className="text-xs text-muted-foreground">Publica múltiples turnos a la vez y calcula automáticamente cuántos profesionales disponibles hay.</p>
+                <p className="text-xs text-muted-foreground">
+                  Publica múltiples turnos a la vez y calcula automáticamente cuántos profesionales
+                  disponibles hay.
+                </p>
               </div>
               <div className="p-4">
-                <EnhancedBulkOffersModule userId={user.id} defaultCity={instProfile?.city ?? undefined} />
+                <EnhancedBulkOffersModule
+                  userId={user.id}
+                  defaultCity={instProfile?.city ?? undefined}
+                />
               </div>
             </div>
 
@@ -792,7 +853,9 @@ function InstitutionDashboard() {
                 </button>
               </div>
               {offers.length === 0 ? (
-                <div className="p-10 text-center text-sm text-muted-foreground">Sin ofertas aún.</div>
+                <div className="p-10 text-center text-sm text-muted-foreground">
+                  Sin ofertas aún.
+                </div>
               ) : (
                 <div className="divide-y divide-border">
                   {offers.map((o) => {
@@ -814,11 +877,15 @@ function InstitutionDashboard() {
                             <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
                               <MapPin className="h-3 w-3 shrink-0" /> {o.city}
                               {o.specialty_required && <span>· {o.specialty_required}</span>}
-                              <span>· {COP(o.amount)} / {labelModality(o.modality as never)}</span>
+                              <span>
+                                · {COP(o.amount)} / {labelModality(o.modality as never)}
+                              </span>
                               <span>· {offerApps.length} postulaciones</span>
                             </p>
                             {o.description && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{o.description}</p>
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                {o.description}
+                              </p>
                             )}
                           </div>
                           <div className="flex gap-2 shrink-0">
@@ -873,7 +940,9 @@ function InstitutionDashboard() {
                                   <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold shrink-0">
                                     {(pro?.full_name ?? "?").charAt(0).toUpperCase()}
                                   </div>
-                                  <span className="max-w-[80px] truncate">{pro?.full_name ?? "—"}</span>
+                                  <span className="max-w-[80px] truncate">
+                                    {pro?.full_name ?? "—"}
+                                  </span>
                                   <AppStatusDot status={a.status} />
                                 </div>
                               );
@@ -922,7 +991,6 @@ function InstitutionDashboard() {
         {/* ══ TAB: TALENTO ══ */}
         {tab === "talento" && (
           <div className="space-y-5">
-            
             <TalentTab
               userId={user.id}
               applications={applications}
@@ -970,9 +1038,7 @@ function InstitutionDashboard() {
         )}
 
         {/* ══ TAB: MONITOREO ══ */}
-        {tab === "monitoreo" && (
-          <InstitutionClinicalMonitoring institutionId={user.id} />
-        )}
+        {tab === "monitoreo" && <InstitutionClinicalMonitoring institutionId={user.id} />}
 
         {/* ══ TAB: AGENDA ══ */}
         {tab === "agenda" && (
@@ -1016,13 +1082,23 @@ function InstitutionDashboard() {
                   </div>
                   <div className="rounded-lg bg-background/60 border border-border/50 px-3 py-2">
                     <p className="text-muted-foreground">FUID</p>
-                    <p className={cn("font-semibold mt-0.5", instProfile.compliance_fuid ? "text-biosensor" : "text-muted-foreground")}>
+                    <p
+                      className={cn(
+                        "font-semibold mt-0.5",
+                        instProfile.compliance_fuid ? "text-biosensor" : "text-muted-foreground",
+                      )}
+                    >
                       {instProfile.compliance_fuid ? "Completo" : "Pendiente"}
                     </p>
                   </div>
                   <div className="rounded-lg bg-background/60 border border-border/50 px-3 py-2">
                     <p className="text-muted-foreground">Estado</p>
-                    <p className={cn("font-semibold mt-0.5", instProfile.verified ? "text-biosensor" : "text-amber-500")}>
+                    <p
+                      className={cn(
+                        "font-semibold mt-0.5",
+                        instProfile.verified ? "text-biosensor" : "text-amber-500",
+                      )}
+                    >
                       {instProfile.verified ? "Verificada" : "En revisión"}
                     </p>
                   </div>
@@ -1040,7 +1116,9 @@ function InstitutionDashboard() {
             <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
               <div className="p-4 border-b border-border">
                 <p className="text-sm font-semibold">Datos de la institución</p>
-                <p className="text-xs text-muted-foreground mt-0.5">NIT, cámara de comercio, representante legal y compliance.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  NIT, cámara de comercio, representante legal y compliance.
+                </p>
               </div>
               <div className="p-4">
                 <SmartInstitutionProfileForm userId={user.id} />
@@ -1117,19 +1195,34 @@ function KpiCard({
   }[tone];
 
   return (
-    <div className={cn("rounded-2xl border bg-card/95 p-4 transition-all", urgent && "border-amber-500/30 shadow-sm shadow-amber-500/10")}>
+    <div
+      className={cn(
+        "rounded-2xl border bg-card/95 p-4 transition-all",
+        urgent && "border-amber-500/30 shadow-sm shadow-amber-500/10",
+      )}
+    >
       <div className={cn("inline-flex h-9 w-9 items-center justify-center rounded-xl", colors)}>
         {icon}
       </div>
       <p className="mt-3 text-2xl font-bold font-display">{value}</p>
-      <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
+      <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+        {label}
+      </p>
       {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }
 
-function QuickAction({ icon, label, sub, onClick }: {
-  icon: React.ReactNode; label: string; sub: string; onClick: () => void;
+function QuickAction({
+  icon,
+  label,
+  sub,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  sub: string;
+  onClick: () => void;
 }) {
   return (
     <button
@@ -1148,13 +1241,21 @@ function QuickAction({ icon, label, sub, onClick }: {
 function OfferStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     open: { label: "Abierta", cls: "bg-biosensor/10 text-biosensor border-biosensor/20" },
-    filled: { label: "Cubierta", cls: "bg-fuchsia-neural/10 text-fuchsia-neural border-fuchsia-neural/20" },
+    filled: {
+      label: "Cubierta",
+      cls: "bg-fuchsia-neural/10 text-fuchsia-neural border-fuchsia-neural/20",
+    },
     closed: { label: "Cerrada", cls: "bg-muted text-muted-foreground border-border" },
     reserved: { label: "Reservada", cls: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
   };
   const s = map[status] ?? map.closed;
   return (
-    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap", s.cls)}>
+    <span
+      className={cn(
+        "text-[10px] px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap",
+        s.cls,
+      )}
+    >
       {s.label}
     </span>
   );
@@ -1169,7 +1270,9 @@ function AppStatusBadge({ status }: { status: AppStatus }) {
   };
   const s = map[status];
   return (
-    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap", s.cls)}>
+    <span
+      className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap", s.cls)}
+    >
       {s.label}
     </span>
   );
