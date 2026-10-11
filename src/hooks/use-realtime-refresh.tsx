@@ -33,6 +33,11 @@ export function useRealtimeRefresh(
   useEffect(() => {
     if (!enabled || tables.length === 0) return;
 
+    // supabase-js reutiliza canales por nombre: si el efecto se vuelve a montar
+    // (StrictMode, reconexión) el canal ya está suscrito y agregar .on() lanza
+    // "cannot add callbacks after subscribe()". Sufijo único por montaje.
+    const uniqueName = `${channelName}-${Math.random().toString(36).slice(2, 10)}`;
+
     const ch = tables.reduce(
       (channel, { table, event = "*", filter }) =>
         channel.on(
@@ -41,7 +46,7 @@ export function useRealtimeRefresh(
           { event, schema: "public", table, ...(filter ? { filter } : {}) } as any,
           () => refreshRef.current(),
         ),
-      supabase.channel(channelName),
+      supabase.channel(uniqueName),
     );
 
     ch.subscribe();
