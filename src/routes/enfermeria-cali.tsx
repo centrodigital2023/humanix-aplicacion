@@ -30,7 +30,8 @@ function Page() {
       ]}
       serviceJsonLd={serviceLd({
         name: "Enfermería a Domicilio en Cali",
-        description: "Servicio de enfermería domiciliaria en Cali con cuidadores y auxiliares verificados.",
+        description:
+          "Servicio de enfermería domiciliaria en Cali con cuidadores y auxiliares verificados.",
         path: "/enfermeria-cali",
         areaName: "Cali",
       })}

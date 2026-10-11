@@ -75,7 +75,8 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
     if (c.institutionName) parts.push(`Institución ${c.institutionName}`);
     if (c.city) parts.push(`en ${c.city}`);
     if (c.offersCount) parts.push(`${c.offersCount} vacantes activas`);
-    if (c.specialties?.length) parts.push(`especialidades: ${c.specialties.slice(0, 3).join(", ")}`);
+    if (c.specialties?.length)
+      parts.push(`especialidades: ${c.specialties.slice(0, 3).join(", ")}`);
     return parts.join(", ");
   };
 
@@ -93,10 +94,7 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
       if (error) throw error;
       const url: string | undefined = data?.image;
       if (!url) throw new Error("Sin imagen");
-      setSlides((s) => [
-        ...s,
-        { id: crypto.randomUUID(), url, caption: briefing, source: "ai" },
-      ]);
+      setSlides((s) => [...s, { id: crypto.randomUUID(), url, caption: briefing, source: "ai" }]);
       toast.success("Imagen generada");
     } catch (e: any) {
       toast.error(e?.message || "No se pudo generar la imagen");
@@ -114,9 +112,12 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
     setBusyCopy(true);
     try {
       const ctx = buildContext();
-      const { data: copyData, error: copyErr } = await supabase.functions.invoke("promo-image-gen", {
-        body: { prompt: briefing, mode: "copy", context: ctx },
-      });
+      const { data: copyData, error: copyErr } = await supabase.functions.invoke(
+        "promo-image-gen",
+        {
+          body: { prompt: briefing, mode: "copy", context: ctx },
+        },
+      );
       if (copyErr) throw copyErr;
       const copy: AdCopy = copyData?.copy ?? {};
       const imgPrompt = copy.image_prompt || briefing;
@@ -127,10 +128,7 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
       const url: string | undefined = imgData?.image;
       if (!url) throw new Error("Sin imagen");
       const caption = [copy.headline, copy.subheadline].filter(Boolean).join(" — ") || briefing;
-      setSlides((s) => [
-        ...s,
-        { id: crypto.randomUUID(), url, caption, source: "ai", copy },
-      ]);
+      setSlides((s) => [...s, { id: crypto.randomUUID(), url, caption, source: "ai", copy }]);
       toast.success("Pieza publicitaria lista (copy + imagen)");
     } catch (e: any) {
       toast.error(e?.message || "No se pudo generar la pieza");
@@ -151,7 +149,9 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
       c.cta,
       "",
       (c.hashtags ?? []).join(" "),
-    ].filter(Boolean).join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
     navigator.clipboard.writeText(text);
     toast.success("Copy publicitario copiado");
   };
@@ -183,7 +183,10 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
   const remove = (id: string) => setSlides((s) => s.filter((x) => x.id !== id));
 
   const isVertical = orientation === "vertical";
-  const hasContext = !!(context && (context.institutionName || context.offersCount || context.city));
+  const hasContext = !!(
+    context &&
+    (context.institutionName || context.offersCount || context.city)
+  );
 
   return (
     <Card className="p-4 sm:p-6 space-y-4">
@@ -194,21 +197,30 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
             Carrusel promocional
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Genera copy + imagen con IA usando el contexto de tus ofertas, o sube tus propias piezas.
+            Genera copy + imagen con IA usando el contexto de tus ofertas, o sube tus propias
+            piezas.
           </p>
           {hasContext && (
             <div className="mt-2 flex flex-wrap gap-1">
               {context?.institutionName && (
-                <Badge variant="outline" className="text-[10px]">{context.institutionName}</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {context.institutionName}
+                </Badge>
               )}
               {context?.city && (
-                <Badge variant="outline" className="text-[10px]">{context.city}</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {context.city}
+                </Badge>
               )}
               {typeof context?.offersCount === "number" && context.offersCount > 0 && (
-                <Badge variant="outline" className="text-[10px]">{context.offersCount} vacantes</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {context.offersCount} vacantes
+                </Badge>
               )}
               {(context?.specialties ?? []).slice(0, 3).map((s) => (
-                <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>
+                <Badge key={s} variant="outline" className="text-[10px]">
+                  {s}
+                </Badge>
               ))}
             </div>
           )}
@@ -235,9 +247,11 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
         <div className="md:col-span-2 space-y-2">
           <Textarea
             className="min-h-[64px]"
-            placeholder={hasContext
-              ? "Briefing (opcional). Si lo dejas vacío, la IA usa el contexto de la institución y ofertas."
-              : "Describe la pieza: ej. 'Promoción cuidadores 24/7 en Bogotá, estilo cálido y profesional'"}
+            placeholder={
+              hasContext
+                ? "Briefing (opcional). Si lo dejas vacío, la IA usa el contexto de la institución y ofertas."
+                : "Describe la pieza: ej. 'Promoción cuidadores 24/7 en Bogotá, estilo cálido y profesional'"
+            }
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
@@ -320,9 +334,7 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
                   src={s.url}
                   alt={s.caption || "Promo"}
                   className={
-                    isVertical
-                      ? "w-full max-h-[360px] object-cover"
-                      : "w-full h-44 object-cover"
+                    isVertical ? "w-full max-h-[360px] object-cover" : "w-full h-44 object-cover"
                   }
                   loading="lazy"
                 />
@@ -344,16 +356,24 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
                 {s.copy ? (
                   <div className="space-y-1">
                     {s.copy.headline && (
-                      <p className="text-sm font-semibold leading-tight line-clamp-2">{s.copy.headline}</p>
+                      <p className="text-sm font-semibold leading-tight line-clamp-2">
+                        {s.copy.headline}
+                      </p>
                     )}
                     {s.copy.subheadline && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">{s.copy.subheadline}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {s.copy.subheadline}
+                      </p>
                     )}
                     {s.copy.body && (
-                      <p className="text-[11px] text-muted-foreground line-clamp-3">{s.copy.body}</p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-3">
+                        {s.copy.body}
+                      </p>
                     )}
                     {s.copy.hashtags && s.copy.hashtags.length > 0 && (
-                      <p className="text-[10px] text-primary line-clamp-1">{s.copy.hashtags.join(" ")}</p>
+                      <p className="text-[10px] text-primary line-clamp-1">
+                        {s.copy.hashtags.join(" ")}
+                      </p>
                     )}
                   </div>
                 ) : (

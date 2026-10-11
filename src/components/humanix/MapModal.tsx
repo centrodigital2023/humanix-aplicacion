@@ -28,9 +28,7 @@ export function MapModal({
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
-        <div className="w-full h-[calc(90vh-80px)] overflow-hidden">
-          {children}
-        </div>
+        <div className="w-full h-[calc(90vh-80px)] overflow-hidden">{children}</div>
       </DialogContent>
     </Dialog>
   );

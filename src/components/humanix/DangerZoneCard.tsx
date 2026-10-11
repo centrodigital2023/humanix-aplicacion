@@ -59,7 +59,9 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
       await supabase.auth.signOut();
       navigate({ to: "/" });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo eliminar la cuenta. Intenta de nuevo.");
+      toast.error(
+        e instanceof Error ? e.message : "No se pudo eliminar la cuenta. Intenta de nuevo.",
+      );
     } finally {
       setBusy(false);
       setOpen(false);
@@ -67,7 +69,8 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
     }
   }
 
-  const kind = role === "family" ? "familiar" : role === "institution" ? "institucional" : "profesional";
+  const kind =
+    role === "family" ? "familiar" : role === "institution" ? "institucional" : "profesional";
 
   return (
     <>
@@ -88,7 +91,10 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
         {pendingPayments ? (
           <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
             <Ban className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>No puedes eliminar tu perfil mientras tengas <strong>pagos pendientes</strong> a profesionales. Salda los servicios primero.</span>
+            <span>
+              No puedes eliminar tu perfil mientras tengas <strong>pagos pendientes</strong> a
+              profesionales. Salda los servicios primero.
+            </span>
           </div>
         ) : (
           <Button

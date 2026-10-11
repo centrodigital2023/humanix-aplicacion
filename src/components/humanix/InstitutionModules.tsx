@@ -23,7 +23,11 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 const COP = (n: number) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
 
 type BulkRow = {
   id: string;
@@ -49,8 +53,18 @@ const newRow = (city = ""): BulkRow => ({
 // ============================================================
 // 1. Bulk Offers + AI Matching
 // ============================================================
-export function BulkOffersModule({ userId, defaultCity }: { userId: string; defaultCity?: string }) {
-  const [rows, setRows] = useState<BulkRow[]>([newRow(defaultCity), newRow(defaultCity), newRow(defaultCity)]);
+export function BulkOffersModule({
+  userId,
+  defaultCity,
+}: {
+  userId: string;
+  defaultCity?: string;
+}) {
+  const [rows, setRows] = useState<BulkRow[]>([
+    newRow(defaultCity),
+    newRow(defaultCity),
+    newRow(defaultCity),
+  ]);
   const [busy, setBusy] = useState(false);
   const [published, setPublished] = useState(0);
 
@@ -127,7 +141,8 @@ export function BulkOffersModule({ userId, defaultCity }: { userId: string; defa
             Publicación masiva con matching IA
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Carga múltiples vacantes y deja que la IA estime cuántos profesionales encajan antes de publicar.
+            Carga múltiples vacantes y deja que la IA estime cuántos profesionales encajan antes de
+            publicar.
           </p>
         </div>
         {published > 0 && (
@@ -168,7 +183,9 @@ export function BulkOffersModule({ userId, defaultCity }: { userId: string; defa
               <select
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                 value={r.modality}
-                onChange={(e) => updateRow(r.id, { modality: e.target.value as BulkRow["modality"] })}
+                onChange={(e) =>
+                  updateRow(r.id, { modality: e.target.value as BulkRow["modality"] })
+                }
               >
                 <option value="hour">Por hora</option>
                 <option value="shift">Turno</option>
@@ -211,11 +228,19 @@ export function BulkOffersModule({ userId, defaultCity }: { userId: string; defa
           <Plus className="h-4 w-4 mr-1.5" /> Agregar fila
         </Button>
         <Button variant="outline" onClick={matchAll} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+          {busy ? (
+            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4 mr-1.5" />
+          )}
           Calcular matches IA
         </Button>
         <Button variant="hero" onClick={publishAll} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
+          {busy ? (
+            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4 mr-1.5" />
+          )}
           Publicar todas (gratis)
         </Button>
       </div>
@@ -331,7 +356,8 @@ export function PatientsModule({ userId }: { userId: string }) {
               <div>
                 <p className="font-semibold text-sm">{p.offer_title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {p.city} · Profesional asignado: <span className="text-foreground">{proNames[p.professional_id] ?? "—"}</span>
+                  {p.city} · Profesional asignado:{" "}
+                  <span className="text-foreground">{proNames[p.professional_id] ?? "—"}</span>
                 </p>
               </div>
               <Badge
@@ -462,7 +488,8 @@ export function AgendaModule({ userId }: { userId: string }) {
                         key={it.id}
                         className="text-[11px] px-1.5 py-1 rounded bg-fuchsia-neural/10 text-fuchsia-neural truncate"
                       >
-                        Turno · {new Date(it.created_at).toLocaleTimeString("es-CO", {
+                        Turno ·{" "}
+                        {new Date(it.created_at).toLocaleTimeString("es-CO", {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -495,7 +522,9 @@ export function ReportsModule({ userId }: { userId: string }) {
     rethusRate: 0,
     acceptedPros: 0,
   });
-  const [rows, setRows] = useState<Array<{ title: string; city: string; amount: number; status: string; created_at: string }>>([]);
+  const [rows, setRows] = useState<
+    Array<{ title: string; city: string; amount: number; status: string; created_at: string }>
+  >([]);
 
   useEffect(() => {
     let active = true;
@@ -513,7 +542,10 @@ export function ReportsModule({ userId }: { userId: string }) {
         const { data: apps } = await supabase
           .from("applications")
           .select("professional_id, status")
-          .in("job_offer_id", list.map((o) => o.id))
+          .in(
+            "job_offer_id",
+            list.map((o) => o.id),
+          )
           .eq("status", "accepted");
         const proIds = Array.from(new Set((apps ?? []).map((a) => a.professional_id)));
         let rethus = 0;
@@ -572,7 +604,12 @@ export function ReportsModule({ userId }: { userId: string }) {
           <BarChart3 className="h-5 w-5 text-fuchsia-neural" />
           Reportes, facturación y compliance
         </h3>
-        <Button variant="outline" size="sm" onClick={downloadCSV} disabled={loading || rows.length === 0}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={downloadCSV}
+          disabled={loading || rows.length === 0}
+        >
           <Download className="h-4 w-4 mr-1.5" /> Exportar CSV
         </Button>
       </div>
@@ -595,7 +632,9 @@ export function ReportsModule({ userId }: { userId: string }) {
                 <ShieldCheck className="h-4 w-4" />
                 <p className="text-xs font-semibold uppercase tracking-wider">Compliance RETHUS</p>
               </div>
-              <p className="text-2xl font-display font-bold mt-2 text-emerald-800">{stats.rethusRate}%</p>
+              <p className="text-2xl font-display font-bold mt-2 text-emerald-800">
+                {stats.rethusRate}%
+              </p>
               <p className="text-xs text-emerald-700/80 mt-1">
                 {stats.acceptedPros} profesional(es) aceptado(s) verificados ante RETHUS.
               </p>

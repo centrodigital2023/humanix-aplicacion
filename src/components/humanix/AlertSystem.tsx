@@ -157,32 +157,32 @@ const VITAL_CONFIGS: Record<string, VitalConfig> = {
 // ─── Severity badge ───────────────────────────────────────────────────────────
 
 const SEVERITY_CLS: Record<string, string> = {
-  low:      "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  medium:   "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  high:     "bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  low: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  high: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
   critical: "bg-red-500/10 text-red-700 dark:text-red-400",
 };
 
 const STATUS_CLS: Record<string, string> = {
-  active:         "text-red-500",
-  acknowledged:   "text-amber-500",
-  resolved:       "text-emerald-500",
+  active: "text-red-500",
+  acknowledged: "text-amber-500",
+  resolved: "text-emerald-500",
   false_positive: "text-muted-foreground",
 };
 
 const ALERT_LABELS: Record<string, string> = {
-  high_heart_rate:     "FC elevada",
-  low_heart_rate:      "FC baja",
-  low_spo2:            "SpO₂ baja",
-  high_temperature:    "Fiebre",
-  low_temperature:     "Hipotermia",
+  high_heart_rate: "FC elevada",
+  low_heart_rate: "FC baja",
+  low_spo2: "SpO₂ baja",
+  high_temperature: "Fiebre",
+  low_temperature: "Hipotermia",
   high_blood_pressure: "Hipertensión arterial",
-  low_blood_pressure:  "Hipotensión",
-  fall_detected:       "Caída detectada",
-  inactivity:          "Inactividad prolongada",
-  high_respiration:    "Taquipnea",
-  abnormal_glucose:    "Glucosa alterada",
-  sos_manual:          "SOS · Botón de pánico",
+  low_blood_pressure: "Hipotensión",
+  fall_detected: "Caída detectada",
+  inactivity: "Inactividad prolongada",
+  high_respiration: "Taquipnea",
+  abnormal_glucose: "Glucosa alterada",
+  sos_manual: "SOS · Botón de pánico",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -207,7 +207,11 @@ export function AlertSystem({ patientId }: Props) {
     try {
       // 1. Load thresholds from localStorage
       let saved: Record<string, AlertThreshold> = {};
-      try { saved = JSON.parse(localStorage.getItem(THRESH_KEY) ?? "{}"); } catch { /* empty */ }
+      try {
+        saved = JSON.parse(localStorage.getItem(THRESH_KEY) ?? "{}");
+      } catch {
+        /* empty */
+      }
       const map: Record<string, AlertThreshold> = {};
       for (const [key, cfg] of Object.entries(VITAL_CONFIGS)) {
         map[key] = saved[key] ?? {
@@ -225,15 +229,19 @@ export function AlertSystem({ patientId }: Props) {
 
       // 2. Derive alert history from vital_signs_readings where severity != 'normal'
       const THRESH_MAP: Record<string, { min?: number; max?: number; unit: string }> = {
-        heart_rate:         { min: 50,   max: 110, unit: "lpm" },
-        spo2:               { min: 92,             unit: "%" },
-        temperature:        { min: 35.5, max: 37.5, unit: "°C" },
-        blood_pressure_sys: { min: 90,   max: 140, unit: "mmHg" },
-        blood_pressure_dia: { min: 60,   max: 90,  unit: "mmHg" },
-        respiration_rate:   { min: 10,   max: 25,  unit: "resp/min" },
+        heart_rate: { min: 50, max: 110, unit: "lpm" },
+        spo2: { min: 92, unit: "%" },
+        temperature: { min: 35.5, max: 37.5, unit: "°C" },
+        blood_pressure_sys: { min: 90, max: 140, unit: "mmHg" },
+        blood_pressure_dia: { min: 60, max: 90, unit: "mmHg" },
+        respiration_rate: { min: 10, max: 25, unit: "resp/min" },
       };
       const SEV_MAP: Record<string, ClinicalAlert["severity"]> = {
-        critical: "critical", high: "high", warning: "high", low: "low", medium: "medium",
+        critical: "critical",
+        high: "high",
+        warning: "high",
+        low: "low",
+        medium: "medium",
       };
       const { data } = await sb
         .from("vital_signs_readings")
@@ -244,10 +252,16 @@ export function AlertSystem({ patientId }: Props) {
         .limit(50);
 
       if (data) {
-        const history: ClinicalAlert[] = (data as {
-          id: string; reading_type: string; value: number;
-          unit: string | null; severity: string; recorded_at: string;
-        }[]).map((r) => {
+        const history: ClinicalAlert[] = (
+          data as {
+            id: string;
+            reading_type: string;
+            value: number;
+            unit: string | null;
+            severity: string;
+            recorded_at: string;
+          }[]
+        ).map((r) => {
           const t = THRESH_MAP[r.reading_type];
           const isHigh = t?.max !== undefined && r.value > t.max;
           const alertType = isHigh ? `high_${r.reading_type}` : `low_${r.reading_type}`;
@@ -270,7 +284,7 @@ export function AlertSystem({ patientId }: Props) {
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
 
   useEffect(() => {
@@ -284,7 +298,11 @@ export function AlertSystem({ patientId }: Props) {
     try {
       // Persist all thresholds to localStorage
       const saved: Record<string, AlertThreshold> = {};
-      try { Object.assign(saved, JSON.parse(localStorage.getItem(THRESH_KEY) ?? "{}")); } catch { /* empty */ }
+      try {
+        Object.assign(saved, JSON.parse(localStorage.getItem(THRESH_KEY) ?? "{}"));
+      } catch {
+        /* empty */
+      }
       saved[vitalType] = t;
       localStorage.setItem(THRESH_KEY, JSON.stringify(saved));
       toast.success("Umbral guardado");
@@ -449,7 +467,9 @@ export function AlertSystem({ patientId }: Props) {
                         <label className="flex items-center gap-1.5 cursor-pointer">
                           <Switch
                             checked={t.notify_whatsapp}
-                            onCheckedChange={(v) => updateThreshold(vitalType, { notify_whatsapp: v })}
+                            onCheckedChange={(v) =>
+                              updateThreshold(vitalType, { notify_whatsapp: v })
+                            }
                             className="scale-75"
                           />
                           <span className="text-xs flex items-center gap-1">
@@ -543,14 +563,12 @@ export function AlertSystem({ patientId }: Props) {
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {alert.actual_value} {alert.unit} ·{" "}
-                      {formatDistanceToNow(new Date(alert.created_at), { locale: es, addSuffix: true })}
+                      {formatDistanceToNow(new Date(alert.created_at), {
+                        locale: es,
+                        addSuffix: true,
+                      })}
                     </p>
-                    <p
-                      className={cn(
-                        "text-[10px] font-medium mt-0.5",
-                        STATUS_CLS[alert.status],
-                      )}
-                    >
+                    <p className={cn("text-[10px] font-medium mt-0.5", STATUS_CLS[alert.status])}>
                       {alert.status === "active" && "● Activa"}
                       {alert.status === "acknowledged" && "● Reconocida"}
                       {alert.status === "resolved" && "● Resuelta"}

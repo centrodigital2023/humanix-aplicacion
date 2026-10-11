@@ -39,17 +39,31 @@ export function RethusAutoVerification({ initialStatus }: { initialStatus?: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [final]);
 
-  const status = result?.ok ? result.status : result?.code === "already_verified" ? result.status ?? final : final;
+  const status = result?.ok
+    ? result.status
+    : result?.code === "already_verified"
+      ? (result.status ?? final)
+      : final;
 
   if (status === "verified") {
-    return <Box icon={<ShieldCheck className="h-5 w-5 text-primary" />} title="ReTHUS verificado" text="Tu registro profesional fue confirmado." />;
+    return (
+      <Box
+        icon={<ShieldCheck className="h-5 w-5 text-primary" />}
+        title="ReTHUS verificado"
+        text="Tu registro profesional fue confirmado."
+      />
+    );
   }
   if (status === "not_found" || status === "name_mismatch") {
     return (
       <Box
         icon={<ShieldAlert className="h-5 w-5 text-destructive" />}
         title="ReTHUS no confirmado"
-        text={status === "not_found" ? "No encontramos tu registro en ReTHUS. El equipo de Humanix revisará tu caso." : "El nombre en ReTHUS no coincide con tu perfil. El equipo de Humanix revisará tu caso."}
+        text={
+          status === "not_found"
+            ? "No encontramos tu registro en ReTHUS. El equipo de Humanix revisará tu caso."
+            : "El nombre en ReTHUS no coincide con tu perfil. El equipo de Humanix revisará tu caso."
+        }
       />
     );
   }
@@ -61,11 +75,18 @@ export function RethusAutoVerification({ initialStatus }: { initialStatus?: stri
     const valid = /^\d{5,12}$/.test(doc.replace(/\D/g, ""));
     return (
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <div className="flex items-center gap-2 font-medium"><ShieldQuestion className="h-5 w-5 text-primary" /> Verificación ReTHUS</div>
+        <div className="flex items-center gap-2 font-medium">
+          <ShieldQuestion className="h-5 w-5 text-primary" /> Verificación ReTHUS
+        </div>
         {needsDoc && (
           <div className="space-y-1">
             <Label htmlFor="rethus-doc">Número de cédula</Label>
-            <Input id="rethus-doc" inputMode="numeric" value={doc} onChange={(e) => setDoc(e.target.value)} />
+            <Input
+              id="rethus-doc"
+              inputMode="numeric"
+              value={doc}
+              onChange={(e) => setDoc(e.target.value)}
+            />
           </div>
         )}
         {needsConsent && (
@@ -76,7 +97,12 @@ export function RethusAutoVerification({ initialStatus }: { initialStatus?: stri
         )}
         <Button
           disabled={busy || (needsConsent && !consent) || (needsDoc && !valid)}
-          onClick={() => call({ consent: needsConsent ? consent : undefined, documentNumber: needsDoc ? doc : undefined })}
+          onClick={() =>
+            call({
+              consent: needsConsent ? consent : undefined,
+              documentNumber: needsDoc ? doc : undefined,
+            })
+          }
         >
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} Continuar
         </Button>
@@ -84,17 +110,31 @@ export function RethusAutoVerification({ initialStatus }: { initialStatus?: stri
     );
   }
 
-  const text = busy || !result
-    ? "Verificando tu registro profesional…"
-    : !result.ok ? result.message : "";
-  return <Box icon={busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldQuestion className="h-5 w-5 text-muted-foreground" />} title="Verificación ReTHUS" text={text} />;
+  const text =
+    busy || !result ? "Verificando tu registro profesional…" : !result.ok ? result.message : "";
+  return (
+    <Box
+      icon={
+        busy ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <ShieldQuestion className="h-5 w-5 text-muted-foreground" />
+        )
+      }
+      title="Verificación ReTHUS"
+      text={text}
+    />
+  );
 }
 
 function Box({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 flex items-start gap-3">
       {icon}
-      <div><p className="font-medium">{title}</p><p className="text-sm text-muted-foreground">{text}</p></div>
+      <div>
+        <p className="font-medium">{title}</p>
+        <p className="text-sm text-muted-foreground">{text}</p>
+      </div>
     </div>
   );
 }

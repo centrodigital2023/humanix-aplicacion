@@ -35,25 +35,34 @@ export const Route = createFileRoute("/dashboard/eps")({
   head: () => ({
     meta: [
       { title: "Portal EPS · Humanix" },
-      { name: "description", content: "Dashboard ejecutivo EPS/IPS con KPIs clínicos, riesgo poblacional y monitoreo en tiempo real." },
+      {
+        name: "description",
+        content:
+          "Dashboard ejecutivo EPS/IPS con KPIs clínicos, riesgo poblacional y monitoreo en tiempo real.",
+      },
     ],
   }),
   component: EPSPortalPage,
 });
 
 const NAV: NavItem[] = [
-  { label: "KPIs",        to: "/dashboard/eps",          icon: LayoutDashboard },
-  { label: "Monitoreo",   to: "/dashboard/monitoreo",    icon: Heart },
-  { label: "Profesionales", to: "/buscar",               icon: Users },
-  { label: "Institución", to: "/dashboard/institucion",  icon: Building2 },
-  { label: "Configuración", to: "/institution/profile",  icon: Settings },
+  { label: "KPIs", to: "/dashboard/eps", icon: LayoutDashboard },
+  { label: "Monitoreo", to: "/dashboard/monitoreo", icon: Heart },
+  { label: "Profesionales", to: "/buscar", icon: Users },
+  { label: "Institución", to: "/dashboard/institucion", icon: Building2 },
+  { label: "Configuración", to: "/institution/profile", icon: Settings },
 ];
 
 type EpsTab = "overview" | "patients" | "alerts" | "reports" | "compliance";
 
 // ─── Compliance card ──────────────────────────────────────────────────────────
 
-function ComplianceCard({ label, value, target, icon }: {
+function ComplianceCard({
+  label,
+  value,
+  target,
+  icon,
+}: {
   label: string;
   value: number;
   target: number;
@@ -69,7 +78,9 @@ function ComplianceCard({ label, value, target, icon }: {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium truncate">{label}</span>
-          <span className="text-xs font-bold tabular-nums ml-2">{value}/{target}</span>
+          <span className="text-xs font-bold tabular-nums ml-2">
+            {value}/{target}
+          </span>
         </div>
         <div className="h-1.5 w-full rounded-full bg-muted/50 overflow-hidden">
           <div
@@ -77,9 +88,12 @@ function ComplianceCard({ label, value, target, icon }: {
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className={cn("text-[10px] mt-0.5 block font-medium",
-          pct >= 90 ? "text-emerald-600" : pct >= 70 ? "text-amber-600" : "text-red-600"
-        )}>
+        <span
+          className={cn(
+            "text-[10px] mt-0.5 block font-medium",
+            pct >= 90 ? "text-emerald-600" : pct >= 70 ? "text-amber-600" : "text-red-600",
+          )}
+        >
           {pct}% cumplimiento
         </span>
       </div>
@@ -89,7 +103,13 @@ function ComplianceCard({ label, value, target, icon }: {
 
 // ─── Patient row ──────────────────────────────────────────────────────────────
 
-function PatientRow({ name, riskLevel, riskScore, lastService, onClick }: {
+function PatientRow({
+  name,
+  riskLevel,
+  riskScore,
+  lastService,
+  onClick,
+}: {
   name: string;
   riskLevel: string;
   riskScore: number;
@@ -98,12 +118,15 @@ function PatientRow({ name, riskLevel, riskScore, lastService, onClick }: {
 }) {
   const riskColor: Record<string, string> = {
     critical: "bg-red-500/10 text-red-600 dark:text-red-400",
-    high:     "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-    medium:   "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    low:      "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    high: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    low: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   };
   const riskLabel: Record<string, string> = {
-    critical: "Crítico", high: "Alto", medium: "Moderado", low: "Bajo",
+    critical: "Crítico",
+    high: "Alto",
+    medium: "Moderado",
+    low: "Bajo",
   };
   return (
     <div
@@ -121,7 +144,12 @@ function PatientRow({ name, riskLevel, riskScore, lastService, onClick }: {
         <p className="text-[10px] text-muted-foreground">{lastService}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", riskColor[riskLevel] ?? riskColor.low)}>
+        <span
+          className={cn(
+            "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+            riskColor[riskLevel] ?? riskColor.low,
+          )}
+        >
           {riskLabel[riskLevel] ?? riskLevel}
         </span>
         <span className="text-xs font-bold tabular-nums text-muted-foreground w-8 text-right">
@@ -153,11 +181,11 @@ function EPSPortalPage() {
   }
 
   const TABS: Array<{ id: EpsTab; label: string; icon: React.ReactNode }> = [
-    { id: "overview",    label: "Resumen",      icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
-    { id: "patients",   label: "Pacientes",    icon: <Users className="h-3.5 w-3.5" /> },
-    { id: "alerts",     label: "Alertas",      icon: <AlertTriangle className="h-3.5 w-3.5" /> },
+    { id: "overview", label: "Resumen", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
+    { id: "patients", label: "Pacientes", icon: <Users className="h-3.5 w-3.5" /> },
+    { id: "alerts", label: "Alertas", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
     { id: "compliance", label: "Cumplimiento", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
-    { id: "reports",    label: "Reportes IA",  icon: <FileBarChart2 className="h-3.5 w-3.5" /> },
+    { id: "reports", label: "Reportes IA", icon: <FileBarChart2 className="h-3.5 w-3.5" /> },
   ];
 
   return (
@@ -180,7 +208,9 @@ function EPSPortalPage() {
               </div>
               <div>
                 <p className="text-base font-bold font-display leading-tight">{user.fullName}</p>
-                <p className="text-xs text-muted-foreground">Centro de mando clínico · Multi-tenant</p>
+                <p className="text-xs text-muted-foreground">
+                  Centro de mando clínico · Multi-tenant
+                </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -217,11 +247,7 @@ function EPSPortalPage() {
         </div>
 
         {/* Overview */}
-        {tab === "overview" && (
-          <EPSDashboard
-            title={`Dashboard EPS · ${user.fullName}`}
-          />
-        )}
+        {tab === "overview" && <EPSDashboard title={`Dashboard EPS · ${user.fullName}`} />}
 
         {/* Patients tab */}
         {tab === "patients" && (
@@ -252,15 +278,8 @@ function EPSPortalPage() {
                   </Button>
                 </div>
                 <div className="grid lg:grid-cols-2 gap-4">
-                  <ClinicalMonitor
-                    patientId={selectedPatientId}
-                    showDeviceGuide={false}
-                    compact
-                  />
-                  <PatientRiskCard
-                    patientId={selectedPatientId}
-                    compact
-                  />
+                  <ClinicalMonitor patientId={selectedPatientId} showDeviceGuide={false} compact />
+                  <PatientRiskCard patientId={selectedPatientId} compact />
                 </div>
               </div>
             )}
@@ -272,15 +291,30 @@ function EPSPortalPage() {
                   <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm font-medium">Lista de pacientes EPS</p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Los pacientes vinculados a tu EPS/IPS aparecerán aquí.
-                    Haz clic en un paciente para ver su monitoreo clínico y score de riesgo.
+                    Los pacientes vinculados a tu EPS/IPS aparecerán aquí. Haz clic en un paciente
+                    para ver su monitoreo clínico y score de riesgo.
                   </p>
                   <div className="mt-4 space-y-2 text-left max-w-sm mx-auto">
                     {[
-                      { name: "Carlos Rodríguez M.", level: "critical", score: 78, svc: "Visita hace 2 h" },
-                      { name: "María González P.",   level: "high",     score: 62, svc: "Visita ayer" },
-                      { name: "Juan Pablo Soto L.",  level: "medium",   score: 44, svc: "Visita hace 3 días" },
-                      { name: "Ana Martínez R.",     level: "low",      score: 18, svc: "Visita hace 1 semana" },
+                      {
+                        name: "Carlos Rodríguez M.",
+                        level: "critical",
+                        score: 78,
+                        svc: "Visita hace 2 h",
+                      },
+                      { name: "María González P.", level: "high", score: 62, svc: "Visita ayer" },
+                      {
+                        name: "Juan Pablo Soto L.",
+                        level: "medium",
+                        score: 44,
+                        svc: "Visita hace 3 días",
+                      },
+                      {
+                        name: "Ana Martínez R.",
+                        level: "low",
+                        score: 18,
+                        svc: "Visita hace 1 semana",
+                      },
                     ].map((p) => (
                       <PatientRow
                         key={p.name}
@@ -402,15 +436,37 @@ function EPSPortalPage() {
             </p>
             <div className="grid sm:grid-cols-2 gap-3">
               {[
-                { title: "Reporte semanal de signos vitales", date: "Lun 02 Jun 2026", status: "ready", pages: 4 },
-                { title: "Análisis de riesgo poblacional",    date: "Dom 01 Jun 2026", status: "ready", pages: 7 },
-                { title: "Resumen de alertas críticas",       date: "Sáb 31 May 2026", status: "ready", pages: 2 },
-                { title: "Cumplimiento operativo mensual",    date: "Vie 30 May 2026", status: "ready", pages: 5 },
+                {
+                  title: "Reporte semanal de signos vitales",
+                  date: "Lun 02 Jun 2026",
+                  status: "ready",
+                  pages: 4,
+                },
+                {
+                  title: "Análisis de riesgo poblacional",
+                  date: "Dom 01 Jun 2026",
+                  status: "ready",
+                  pages: 7,
+                },
+                {
+                  title: "Resumen de alertas críticas",
+                  date: "Sáb 31 May 2026",
+                  status: "ready",
+                  pages: 2,
+                },
+                {
+                  title: "Cumplimiento operativo mensual",
+                  date: "Vie 30 May 2026",
+                  status: "ready",
+                  pages: 5,
+                },
               ].map((report) => (
                 <Card key={report.title} className="p-4 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold truncate">{report.title}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{report.date} · {report.pages} páginas</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {report.date} · {report.pages} páginas
+                    </p>
                   </div>
                   <Button size="sm" variant="outline" className="h-7 text-xs flex-shrink-0">
                     Ver PDF
@@ -423,7 +479,8 @@ function EPSPortalPage() {
               <FileBarChart2 className="h-6 w-6 text-muted-foreground mx-auto" />
               <p className="text-sm font-medium">Generar reporte IA personalizado</p>
               <p className="text-xs text-muted-foreground">
-                Selecciona el período y tipo de análisis. El motor Humanix AI genera el reporte en menos de 30 segundos.
+                Selecciona el período y tipo de análisis. El motor Humanix AI genera el reporte en
+                menos de 30 segundos.
               </p>
               <Button size="sm" className="gap-1">
                 <Stethoscope className="h-3.5 w-3.5" />

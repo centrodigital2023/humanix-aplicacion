@@ -668,7 +668,8 @@ function PlansPage() {
             </a>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            El WhatsApp es solo para resolver dudas. Los pagos se realizan únicamente en esta página.
+            El WhatsApp es solo para resolver dudas. Los pagos se realizan únicamente en esta
+            página.
           </p>
           <Link
             to="/"

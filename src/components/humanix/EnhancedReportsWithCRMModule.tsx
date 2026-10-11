@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * ENHANCED REPORTS + CRM MODULE
- * 
+ *
  * Features:
  * - Dashboards de métricas operativas
  * - CRM integrado con contactos y segmentación IA
@@ -178,13 +178,9 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
         setCampaigns((campaignsData ?? []) as Campaign[]);
 
         // Calcular estadísticas
-        const activeCount = (contactsData ?? []).filter(
-          (c) => c.status === "active"
-        ).length;
+        const activeCount = (contactsData ?? []).filter((c) => c.status === "active").length;
         const segments = new Set((contactsData ?? []).map((c) => c.segment)).size;
-        const sentCampaigns = (campaignsData ?? []).filter(
-          (c) => c.status === "sent"
-        ).length;
+        const sentCampaigns = (campaignsData ?? []).filter((c) => c.status === "sent").length;
         const avgOpen =
           sentCampaigns > 0
             ? (campaignsData ?? [])
@@ -275,10 +271,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
 
   const deleteContact = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("crm_contacts")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("crm_contacts").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -297,9 +290,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
     }
 
     try {
-      const selectedContacts = filteredContacts.filter(
-        (c) => c.segment === campaignForm.segment
-      );
+      const selectedContacts = filteredContacts.filter((c) => c.segment === campaignForm.segment);
 
       if (selectedContacts.length === 0) {
         toast.error("No hay contactos en este segmento");
@@ -323,7 +314,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
       if (error) throw error;
 
       toast.success(
-        `Campaña guardada como borrador para ${selectedContacts.length} contactos. El envío masivo aún no está habilitado.`
+        `Campaña guardada como borrador para ${selectedContacts.length} contactos. El envío masivo aún no está habilitado.`,
       );
       setShowNewCampaign(false);
       setCampaignForm({
@@ -385,21 +376,15 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                 <p className="text-xs text-muted-foreground">Contactos totales</p>
               </Card>
               <Card className="p-3 text-center bg-emerald-50">
-                <p className="text-2xl font-bold text-emerald-700">
-                  {stats.active_contacts}
-                </p>
+                <p className="text-2xl font-bold text-emerald-700">{stats.active_contacts}</p>
                 <p className="text-xs text-emerald-600">Activos</p>
               </Card>
               <Card className="p-3 text-center bg-blue-50">
-                <p className="text-2xl font-bold text-blue-700">
-                  {stats.total_segments}
-                </p>
+                <p className="text-2xl font-bold text-blue-700">{stats.total_segments}</p>
                 <p className="text-xs text-blue-600">Segmentos</p>
               </Card>
               <Card className="p-3 text-center bg-fuchsia-50">
-                <p className="text-2xl font-bold text-fuchsia-700">
-                  {stats.campaigns_sent}
-                </p>
+                <p className="text-2xl font-bold text-fuchsia-700">{stats.campaigns_sent}</p>
                 <p className="text-xs text-fuchsia-600">Campañas</p>
               </Card>
               <Card className="p-3 text-center bg-amber-50">
@@ -410,7 +395,9 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
               </Card>
               <Card className="p-3 text-center bg-cyan-50">
                 <p className="text-2xl font-bold text-cyan-700">
-                  {stats.avg_conversion_rate > 0 ? `${stats.avg_conversion_rate}%` : "Datos insuficientes"}
+                  {stats.avg_conversion_rate > 0
+                    ? `${stats.avg_conversion_rate}%`
+                    : "Datos insuficientes"}
                 </p>
                 <p className="text-xs text-cyan-600">Conversión</p>
               </Card>
@@ -445,9 +432,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                   </div>
                 );
               })()}
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Últimos 12 meses
-              </p>
+              <p className="text-xs text-muted-foreground mt-2 text-center">Últimos 12 meses</p>
             </Card>
           </TabsContent>
 
@@ -485,7 +470,10 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                 </Card>
               ) : (
                 filteredContacts.map((contact) => (
-                  <Card key={contact.id} className="p-3 flex items-center justify-between gap-3 flex-wrap">
+                  <Card
+                    key={contact.id}
+                    className="p-3 flex items-center justify-between gap-3 flex-wrap"
+                  >
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm">{contact.contact_name}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
@@ -522,11 +510,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                       >
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => deleteContact(contact.id)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => deleteContact(contact.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -565,27 +549,19 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                     <div className="grid grid-cols-4 gap-2 text-xs">
                       <div>
                         <p className="text-muted-foreground">Destinatarios</p>
-                        <p className="font-semibold">
-                          {campaign.total_recipients}
-                        </p>
+                        <p className="font-semibold">{campaign.total_recipients}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Aperturas</p>
-                        <p className="font-semibold">
-                          {formatRate(campaign.open_rate)}
-                        </p>
+                        <p className="font-semibold">{formatRate(campaign.open_rate)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Clics</p>
-                        <p className="font-semibold">
-                          {formatRate(campaign.click_rate)}
-                        </p>
+                        <p className="font-semibold">{formatRate(campaign.click_rate)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Conversión</p>
-                        <p className="font-semibold">
-                          {formatRate(campaign.conversion_rate)}
-                        </p>
+                        <p className="font-semibold">{formatRate(campaign.conversion_rate)}</p>
                       </div>
                     </div>
                   </Card>
@@ -647,9 +623,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
               <label className="text-sm font-medium">Tipo de contacto</label>
               <Select
                 value={contactForm.contact_type}
-                onValueChange={(v) =>
-                  setContactForm({ ...contactForm, contact_type: v })
-                }
+                onValueChange={(v) => setContactForm({ ...contactForm, contact_type: v })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -667,9 +641,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
               <label className="text-sm font-medium">Segmento IA</label>
               <Select
                 value={contactForm.segment}
-                onValueChange={(v) =>
-                  setContactForm({ ...contactForm, segment: v })
-                }
+                onValueChange={(v) => setContactForm({ ...contactForm, segment: v })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -719,9 +691,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
               <label className="text-sm font-medium">Segmento *</label>
               <Select
                 value={campaignForm.segment}
-                onValueChange={(v) =>
-                  setCampaignForm({ ...campaignForm, segment: v })
-                }
+                onValueChange={(v) => setCampaignForm({ ...campaignForm, segment: v })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -739,9 +709,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
               <label className="text-sm font-medium">Tipo</label>
               <Select
                 value={campaignForm.campaign_type}
-                onValueChange={(v) =>
-                  setCampaignForm({ ...campaignForm, campaign_type: v })
-                }
+                onValueChange={(v) => setCampaignForm({ ...campaignForm, campaign_type: v })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -759,9 +727,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
                 placeholder="Contenido de la campaña..."
                 rows={4}
                 value={campaignForm.message}
-                onChange={(e) =>
-                  setCampaignForm({ ...campaignForm, message: e.target.value })
-                }
+                onChange={(e) => setCampaignForm({ ...campaignForm, message: e.target.value })}
               />
             </div>
           </div>

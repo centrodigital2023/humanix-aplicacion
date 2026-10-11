@@ -39,7 +39,7 @@ export type RiskLevel = "low" | "medium" | "high" | "critical";
 
 interface RiskFactor {
   name: string;
-  weight: number;        // 0-100
+  weight: number; // 0-100
   value: string | number;
   description?: string;
   direction?: "increase" | "decrease" | "neutral";
@@ -60,14 +60,17 @@ interface RiskScore {
 
 // ─── Risk level config ─────────────────────────────────────────────────────────
 
-const RISK_CONFIG: Record<RiskLevel, {
-  label: string;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  icon: React.ReactNode;
-  textColor: string;
-}> = {
+const RISK_CONFIG: Record<
+  RiskLevel,
+  {
+    label: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    icon: React.ReactNode;
+    textColor: string;
+  }
+> = {
   low: {
     label: "Riesgo Bajo",
     color: "text-emerald-600 dark:text-emerald-400",
@@ -103,10 +106,10 @@ const RISK_CONFIG: Record<RiskLevel, {
 };
 
 const PRIORITY_BADGE: Record<string, string> = {
-  urgent:  "bg-red-500/10 text-red-600 dark:text-red-400",
-  high:    "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  medium:  "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  low:     "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  urgent: "bg-red-500/10 text-red-600 dark:text-red-400",
+  high: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+  medium: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  low: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
 };
 
 // ─── Score gauge ──────────────────────────────────────────────────────────────
@@ -149,7 +152,15 @@ function ScoreGauge({ score, level }: { score: number; level: RiskLevel }) {
           />
           {/* Needle */}
           <g transform={`rotate(${rotation}, 50, 55)`}>
-            <line x1="50" y1="55" x2="50" y2="20" stroke={arcColor} strokeWidth="2.5" strokeLinecap="round" />
+            <line
+              x1="50"
+              y1="55"
+              x2="50"
+              y2="20"
+              stroke={arcColor}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
             <circle cx="50" cy="55" r="3" fill={arcColor} />
           </g>
           {/* Score text */}
@@ -268,7 +279,8 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
         <div>
           <p className="text-sm font-semibold">Sin alertas calculadas</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Calcula alertas con reglas sobre las mediciones de los últimos 7 días. Es una ayuda de seguimiento, no un diagnóstico.
+            Calcula alertas con reglas sobre las mediciones de los últimos 7 días. Es una ayuda de
+            seguimiento, no un diagnóstico.
           </p>
         </div>
         <Button size="sm" onClick={generateRiskScore} disabled={generating} className="gap-1">
@@ -284,9 +296,10 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
   }
 
   const cfg = RISK_CONFIG[riskData.level];
-  const scoreDelta = riskData.previous_score !== undefined && riskData.previous_score !== null
-    ? riskData.score - riskData.previous_score
-    : null;
+  const scoreDelta =
+    riskData.previous_score !== undefined && riskData.previous_score !== null
+      ? riskData.score - riskData.previous_score
+      : null;
 
   return (
     <Card className={cn("border overflow-hidden", cfg.borderColor)}>
@@ -321,13 +334,26 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
                   </div>
                 )}
                 {scoreDelta !== null && (
-                  <p className={cn("text-xs font-medium", scoreDelta < 0 ? "text-emerald-500" : scoreDelta > 0 ? "text-red-500" : "text-muted-foreground")}>
-                    {scoreDelta > 0 ? "+" : ""}{scoreDelta.toFixed(0)} pts vs. anterior
+                  <p
+                    className={cn(
+                      "text-xs font-medium",
+                      scoreDelta < 0
+                        ? "text-emerald-500"
+                        : scoreDelta > 0
+                          ? "text-red-500"
+                          : "text-muted-foreground",
+                    )}
+                  >
+                    {scoreDelta > 0 ? "+" : ""}
+                    {scoreDelta.toFixed(0)} pts vs. anterior
                   </p>
                 )}
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(riskData.calculated_at), { locale: es, addSuffix: true })}
+                  {formatDistanceToNow(new Date(riskData.calculated_at), {
+                    locale: es,
+                    addSuffix: true,
+                  })}
                 </p>
               </div>
             </div>
@@ -402,10 +428,7 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
                       </span>
                       <span className="text-muted-foreground tabular-nums">{factor.value}</span>
                     </div>
-                    <Progress
-                      value={factor.weight}
-                      className="h-1.5"
-                    />
+                    <Progress value={factor.weight} className="h-1.5" />
                   </div>
                 ))}
               </div>
@@ -434,7 +457,10 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
             {showRecommendations && (
               <div className="space-y-2">
                 {riskData.recommendations.map((rec, i) => (
-                  <div key={i} className="flex items-start gap-2 p-2 rounded-xl bg-muted/30 border border-border/50">
+                  <div
+                    key={i}
+                    className="flex items-start gap-2 p-2 rounded-xl bg-muted/30 border border-border/50"
+                  >
                     <span
                       className={cn(
                         "text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5",

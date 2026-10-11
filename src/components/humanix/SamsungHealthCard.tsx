@@ -95,14 +95,13 @@ function genCode(patientId: string): string {
   let n = h;
   for (let i = 0; i < 8; i++) {
     code += chars[n % chars.length];
-    n = (n >>> 5) || ((h >> i) & 0xff);
+    n = n >>> 5 || (h >> i) & 0xff;
   }
   return code;
 }
 
 function buildPairingUrl(code: string, patientId: string): string {
-  const base =
-    typeof window !== "undefined" ? window.location.origin : "https://humanix.lat";
+  const base = typeof window !== "undefined" ? window.location.origin : "https://humanix.lat";
   const params = new URLSearchParams({ c: code, pv: PROVIDER, u: patientId });
   return `${base}/pair?${params.toString()}`;
 }
@@ -113,10 +112,7 @@ function QrFullscreen({ url, onClose }: { url: string; onClose: () => void }) {
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div
-        className="rounded-3xl bg-white p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <QRCode value={url} size={300} bgColor="#ffffff" fgColor="#0f0a2e" level="H" />
       </div>
       <button
@@ -186,9 +182,7 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
           const row = payload.new as { source?: string };
           if (row.source && row.source !== "manual") {
             setConn((prev) =>
-              prev
-                ? { ...prev, lastSyncAt: new Date().toISOString(), syncing: true }
-                : prev,
+              prev ? { ...prev, lastSyncAt: new Date().toISOString(), syncing: true } : prev,
             );
             toast.success("¡Samsung Health conectado!", {
               description: "Galaxy Watch enviando datos en tiempo real",
@@ -210,17 +204,15 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
     setBusy(true);
     try {
       const code = genCode(patientId);
-      const { error } = await (supabase as any)
-        .from("wearable_connections")
-        .upsert(
-          {
-            patient_id: patientId,
-            provider: PROVIDER,
-            external_user_id: code,
-            status: "active",
-          },
-          { onConflict: "patient_id,provider" },
-        );
+      const { error } = await (supabase as any).from("wearable_connections").upsert(
+        {
+          patient_id: patientId,
+          provider: PROVIDER,
+          external_user_id: code,
+          status: "active",
+        },
+        { onConflict: "patient_id,provider" },
+      );
       if (error) {
         toast.error("No se pudo iniciar la vinculación. Intenta de nuevo.");
         return;
@@ -280,18 +272,16 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
         { reading_type: "spo2", value: 98, unit: "%" },
         { reading_type: "steps", value: 8450, unit: "steps" },
       ];
-      const { error } = await (supabase as any)
-        .from("vital_signs_readings")
-        .insert(
-          samples.map((s) => ({
-            family_user_id: patientId,
-            recorded_by: patientId,
-            ...s,
-            source: "wearable",
-            severity: "normal",
-            recorded_at: now,
-          })),
-        );
+      const { error } = await (supabase as any).from("vital_signs_readings").insert(
+        samples.map((s) => ({
+          family_user_id: patientId,
+          recorded_by: patientId,
+          ...s,
+          source: "wearable",
+          severity: "normal",
+          recorded_at: now,
+        })),
+      );
       if (error) {
         toast.error("No se pudo simular la sincronización", {
           description: error.message,
@@ -321,9 +311,7 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
       {/* QR Modal */}
       {qrOpen && conn && (
         <>
-          {fullscreen && (
-            <QrFullscreen url={url} onClose={() => setFullscreen(false)} />
-          )}
+          {fullscreen && <QrFullscreen url={url} onClose={() => setFullscreen(false)} />}
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="relative bg-background border border-border rounded-2xl shadow-2xl max-w-sm w-full overflow-y-auto max-h-[92vh]">
               {/* Header */}
@@ -368,13 +356,7 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
                   onClick={() => setFullscreen(true)}
                   className="w-full rounded-2xl border-4 border-blue-500/20 bg-white p-4 shadow-inner flex items-center justify-center hover:border-blue-500/50 focus:outline-none"
                 >
-                  <QRCode
-                    value={url}
-                    size={200}
-                    bgColor="#ffffff"
-                    fgColor="#0f0a2e"
-                    level="H"
-                  />
+                  <QRCode value={url} size={200} bgColor="#ffffff" fgColor="#0f0a2e" level="H" />
                 </button>
                 <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px] text-muted-foreground">
                   <ScanLine className="h-3 w-3 text-blue-500" />
@@ -493,7 +475,10 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
                       Vinculado
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] gap-1 border-rose-500/30 text-rose-600 dark:text-rose-400">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] gap-1 border-rose-500/30 text-rose-600 dark:text-rose-400"
+                    >
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                       No vinculado
                     </Badge>
@@ -503,8 +488,8 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
                   {isActive && conn?.lastSyncAt
                     ? `Última sincronización ${formatDistanceToNow(new Date(conn.lastSyncAt), { addSuffix: true, locale: es })}`
                     : isActive
-                    ? "Esperando primer dato…"
-                    : "Galaxy Watch · Health Connect · Tiempo real"}
+                      ? "Esperando primer dato…"
+                      : "Galaxy Watch · Health Connect · Tiempo real"}
                 </p>
               </div>
             </div>
@@ -528,7 +513,11 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
                     onClick={disconnect}
                     disabled={busy}
                   >
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
+                    {busy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Unlink className="h-3.5 w-3.5" />
+                    )}
                   </Button>
                 </>
               ) : (
@@ -538,7 +527,11 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
                   onClick={connect}
                   disabled={busy || loading}
                 >
-                  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                  {busy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="h-3.5 w-3.5" />
+                  )}
                   {busy ? "Generando…" : "Vincular"}
                 </Button>
               )}
@@ -625,10 +618,18 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
                 <p className="text-[11px] font-semibold">Alertas inteligentes</p>
               </div>
               <ul className="text-[10px] text-muted-foreground space-y-0.5 leading-snug">
-                <li className="flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Caídas detectadas</li>
-                <li className="flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Vitales anormales</li>
-                <li className="flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Deterioro progresivo</li>
-                <li className="flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Posibles emergencias</li>
+                <li className="flex items-center gap-1">
+                  <AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Caídas detectadas
+                </li>
+                <li className="flex items-center gap-1">
+                  <AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Vitales anormales
+                </li>
+                <li className="flex items-center gap-1">
+                  <AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Deterioro progresivo
+                </li>
+                <li className="flex items-center gap-1">
+                  <AlertTriangle className="h-2.5 w-2.5 text-amber-500" /> Posibles emergencias
+                </li>
               </ul>
             </div>
           </div>
@@ -639,18 +640,20 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
               Arquitectura recomendada (Samsung Health Data SDK 2026)
             </p>
             <div className="flex items-center justify-between gap-1 text-[9px] font-medium overflow-x-auto">
-              {["Galaxy Watch", "Samsung Health", "Health Connect", "Humanix Care", "Humanix SaaS"].map(
-                (label, i, arr) => (
-                  <div key={label} className="flex items-center gap-1 whitespace-nowrap">
-                    <span className="px-1.5 py-1 rounded-md bg-background border border-border text-foreground/80">
-                      {label}
-                    </span>
-                    {i < arr.length - 1 && (
-                      <span className="text-muted-foreground">→</span>
-                    )}
-                  </div>
-                ),
-              )}
+              {[
+                "Galaxy Watch",
+                "Samsung Health",
+                "Health Connect",
+                "Humanix Care",
+                "Humanix SaaS",
+              ].map((label, i, arr) => (
+                <div key={label} className="flex items-center gap-1 whitespace-nowrap">
+                  <span className="px-1.5 py-1 rounded-md bg-background border border-border text-foreground/80">
+                    {label}
+                  </span>
+                  {i < arr.length - 1 && <span className="text-muted-foreground">→</span>}
+                </div>
+              ))}
             </div>
           </div>
 

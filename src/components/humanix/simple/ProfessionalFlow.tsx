@@ -7,7 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AppUser } from "@/hooks/use-app-user";
 import { TINTS, primaryBtn } from "./ui";
 import { useSpeakOnChange, useVoice } from "./voice";
-import { ProfessionalShareCard, type ProCardData } from "@/components/humanix/ProfessionalShareCard";
+import {
+  ProfessionalShareCard,
+  type ProCardData,
+} from "@/components/humanix/ProfessionalShareCard";
 
 type Offer = {
   id: string;
@@ -59,22 +62,32 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from("professional_profiles")
-        .select("available, home_city, full_name, avatar_url, specialty, years_experience, avg_rating, verified, rethus_verified")
+        .select(
+          "available, home_city, full_name, avatar_url, specialty, years_experience, avg_rating, verified, rethus_verified",
+        )
         .eq("user_id", user.id)
         .maybeSingle();
       if (!active || !data) return;
       const d = data as {
-        available?: boolean | null; home_city?: string | null;
-        full_name?: string | null; avatar_url?: string | null; specialty?: string | null;
-        years_experience?: number | null; avg_rating?: number | null;
-        verified?: boolean | null; rethus_verified?: boolean | null;
+        available?: boolean | null;
+        home_city?: string | null;
+        full_name?: string | null;
+        avatar_url?: string | null;
+        specialty?: string | null;
+        years_experience?: number | null;
+        avg_rating?: number | null;
+        verified?: boolean | null;
+        rethus_verified?: boolean | null;
       };
       setAvailable(Boolean(d.available));
       setProCity(d.home_city ?? null);
       if (d.full_name) {
         const slug = d.full_name
-          .toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-          .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
         setProCardData({
           name: d.full_name,
           username: slug || user.id,

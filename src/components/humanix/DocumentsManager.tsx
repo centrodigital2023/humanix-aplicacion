@@ -280,11 +280,16 @@ export function DocumentsManager({
         .order("created_at", { ascending: false });
       if (active && data) setDocs(data as unknown as Doc[]);
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [userId]);
 
   const upload = async (type: DocType, file: File) => {
-    if (file.size > 15 * 1024 * 1024) { toast.error("Máximo 15MB"); return; }
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Máximo 15MB");
+      return;
+    }
     setBusyType(type);
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -357,7 +362,8 @@ export function DocumentsManager({
           .eq("id", newDoc.id)
           .select()
           .single();
-        if (upd) setDocs((prev) => prev.map((d) => (d.id === newDoc.id ? (upd as unknown as Doc) : d)));
+        if (upd)
+          setDocs((prev) => prev.map((d) => (d.id === newDoc.id ? (upd as unknown as Doc) : d)));
         if (isValid) {
           toast.success(`✅ Documento verificado por IA (${Math.round(v.confidence)}%)`);
         } else {
@@ -365,7 +371,9 @@ export function DocumentsManager({
         }
       } catch (e) {
         console.warn("[verify]", e);
-        toast.warning("Documento subido. La verificación IA no estuvo disponible; quedó pendiente.");
+        toast.warning(
+          "Documento subido. La verificación IA no estuvo disponible; quedó pendiente.",
+        );
       } finally {
         setVerifyingId(null);
       }
@@ -380,7 +388,9 @@ export function DocumentsManager({
     try {
       const path = extractPath(doc.file_url);
       if (!path) throw new Error("Ruta no válida");
-      const { data, error } = await supabase.storage.from("professional-docs").createSignedUrl(path, 60);
+      const { data, error } = await supabase.storage
+        .from("professional-docs")
+        .createSignedUrl(path, 60);
       if (error || !data?.signedUrl) throw error ?? new Error("No se pudo abrir");
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch (e) {
@@ -419,7 +429,10 @@ export function DocumentsManager({
           <p className="text-amber-700 dark:text-amber-400">
             Te faltan <strong>{totalMissing}</strong> documento(s) obligatorio(s).
             {credencialMissing && (
-              <> Sube <strong>RETHUS</strong> o <strong>diploma</strong> (al menos uno).</>
+              <>
+                {" "}
+                Sube <strong>RETHUS</strong> o <strong>diploma</strong> (al menos uno).
+              </>
             )}
           </p>
         </div>
@@ -434,7 +447,9 @@ export function DocumentsManager({
             items={docsByType(t.value)}
             busy={busyType === t.value || (!!t.cvParse && extractingCv)}
             verifyingId={verifyingId}
-            inputRef={(el) => { inputRefs.current[t.value] = el; }}
+            inputRef={(el) => {
+              inputRefs.current[t.value] = el;
+            }}
             onUpload={(f) => void upload(t.value, f)}
             onOpen={openDoc}
             onRemove={remove}
@@ -457,14 +472,17 @@ export function DocumentsManager({
               <p className="text-sm font-semibold">Para instituciones públicas</p>
               <p className="text-xs text-muted-foreground">
                 Solo cuando te postulas a entidades del Estado.
-                {publicUploaded > 0 && <span className="ml-1 text-biosensor font-medium">{publicUploaded} subidos</span>}
+                {publicUploaded > 0 && (
+                  <span className="ml-1 text-biosensor font-medium">{publicUploaded} subidos</span>
+                )}
               </p>
             </div>
           </div>
-          {showPublic
-            ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-            : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-          }
+          {showPublic ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          )}
         </button>
 
         {showPublic && (
@@ -477,7 +495,9 @@ export function DocumentsManager({
                   items={docsByType(t.value)}
                   busy={busyType === t.value}
                   verifyingId={verifyingId}
-                  inputRef={(el) => { inputRefs.current[t.value] = el; }}
+                  inputRef={(el) => {
+                    inputRefs.current[t.value] = el;
+                  }}
                   onUpload={(f) => void upload(t.value, f)}
                   onOpen={openDoc}
                   onRemove={remove}
@@ -536,7 +556,11 @@ function DocCard({
           }}
           className="shrink-0"
         >
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="h-3.5 w-3.5" />}
+          {busy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <UploadCloud className="h-3.5 w-3.5" />
+          )}
           <span className="ml-1.5 text-xs">Subir</span>
         </Button>
         <input
@@ -584,8 +608,14 @@ function DocCard({
                 </button>
               </div>
               {d.ai_notes && (
-                <p className={cn("mt-1 text-[10.5px]", d.status === "rejected" ? "text-rose-600" : "text-muted-foreground")}>
-                  {d.status === "rejected" ? "❌ " : "🤖 "}{d.ai_notes}
+                <p
+                  className={cn(
+                    "mt-1 text-[10.5px]",
+                    d.status === "rejected" ? "text-rose-600" : "text-muted-foreground",
+                  )}
+                >
+                  {d.status === "rejected" ? "❌ " : "🤖 "}
+                  {d.ai_notes}
                 </p>
               )}
             </li>
@@ -616,7 +646,12 @@ function StatusBadge({ status, aiVerified }: { status: DocStatus; aiVerified: bo
   } as const;
   const s = map[status];
   return (
-    <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap", s.cls)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap",
+        s.cls,
+      )}
+    >
       {s.icon} {s.label}
     </span>
   );

@@ -62,14 +62,12 @@ export function SmartProfileCard({ userId, fullName, avatarUrl }: Props) {
           .eq("user_id", userId),
       ]);
       if (!active) return;
-      const fam = famRes.data as
-        | {
-            id_number: string | null;
-            default_address: string | null;
-            emergency_contact_phone: string | null;
-            habeas_data_accepted: boolean | null;
-          }
-        | null;
+      const fam = famRes.data as {
+        id_number: string | null;
+        default_address: string | null;
+        emergency_contact_phone: string | null;
+        habeas_data_accepted: boolean | null;
+      } | null;
       const docs = ((docsRes.data ?? []) as Array<{ doc_type: string; status: string }>).filter(
         (d) => d.status !== "rejected",
       );
@@ -162,10 +160,25 @@ export function SmartProfileCard({ userId, fullName, avatarUrl }: Props) {
 
   // Tono cromático segun progreso
   const tone = complete
-    ? { ring: "stroke-biosensor", text: "text-biosensor", soft: "bg-biosensor/10", border: "border-biosensor/30" }
+    ? {
+        ring: "stroke-biosensor",
+        text: "text-biosensor",
+        soft: "bg-biosensor/10",
+        border: "border-biosensor/30",
+      }
     : percent >= 50
-      ? { ring: "stroke-copper", text: "text-copper", soft: "bg-copper/10", border: "border-copper/30" }
-      : { ring: "stroke-fuchsia-neural", text: "text-fuchsia-neural", soft: "bg-fuchsia-neural/10", border: "border-fuchsia-neural/30" };
+      ? {
+          ring: "stroke-copper",
+          text: "text-copper",
+          soft: "bg-copper/10",
+          border: "border-copper/30",
+        }
+      : {
+          ring: "stroke-fuchsia-neural",
+          text: "text-fuchsia-neural",
+          soft: "bg-fuchsia-neural/10",
+          border: "border-fuchsia-neural/30",
+        };
 
   const circumference = 2 * Math.PI * 28;
   const dash = (percent / 100) * circumference;
@@ -182,7 +195,14 @@ export function SmartProfileCard({ userId, fullName, avatarUrl }: Props) {
           {/* Anillo SVG */}
           <div className="relative shrink-0">
             <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
-              <circle cx="36" cy="36" r="28" className="stroke-muted/40" strokeWidth="6" fill="none" />
+              <circle
+                cx="36"
+                cy="36"
+                r="28"
+                className="stroke-muted/40"
+                strokeWidth="6"
+                fill="none"
+              />
               <circle
                 cx="36"
                 cy="36"

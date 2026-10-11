@@ -69,12 +69,14 @@ const DOC_LABEL: Record<string, string> = {
 
 function initialsFrom(name: string | null | undefined): string {
   if (!name) return "··";
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("") || "··";
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("") || "··"
+  );
 }
 
 function StarRow({ rating, jobs }: { rating: number | null; jobs: number | null }) {
@@ -115,7 +117,7 @@ function MapPreview({
     const d = 0.006;
     const bbox = `${lng - d}%2C${lat - d}%2C${lng + d}%2C${lat + d}`;
     const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
-    
+
     return (
       <>
         <div
@@ -138,11 +140,7 @@ function MapPreview({
           </div>
         </div>
 
-        <MapModal
-          open={expanded}
-          onOpenChange={setExpanded}
-          title="Ubicación del servicio"
-        >
+        <MapModal open={expanded} onOpenChange={setExpanded} title="Ubicación del servicio">
           <iframe
             title="Ubicación del servicio - expandido"
             src={src}
@@ -154,7 +152,7 @@ function MapPreview({
       </>
     );
   }
-  
+
   return (
     <div className="rounded-xl border border-dashed border-border bg-muted/40 h-28 flex flex-col items-center justify-center p-3 text-center">
       <MapPin className="h-5 w-5 text-muted-foreground mb-1" />
@@ -227,10 +225,7 @@ export function TrustProfileCard({
         .select("id, doc_type, status, ai_verified, ai_score")
         .eq("user_id", userId);
 
-      const ratingsP = sb
-        .from("service_ratings")
-        .select("stars")
-        .eq("rated_id", userId);
+      const ratingsP = sb.from("service_ratings").select("stars").eq("rated_id", userId);
 
       const bookingsP = sb
         .from("service_bookings")
@@ -311,21 +306,24 @@ export function TrustProfileCard({
     setAiLoading(true);
     const snapshot = {
       role,
-      name_masked: base?.full_name ? base.full_name.split(" ").map((p, i) => (i === 0 ? p : (p[0] ?? "") + "."))
-        .join(" ") : null,
+      name_masked: base?.full_name
+        ? base.full_name
+            .split(" ")
+            .map((p, i) => (i === 0 ? p : (p[0] ?? "") + "."))
+            .join(" ")
+        : null,
       city: base?.city ?? null,
-      has_address: Boolean(
-        role === "professional" ? pro?.home_city : fam?.default_address,
-      ),
-      rating_avg: rating.count > 0 ? Number(rating.avg.toFixed(2)) : pro?.avg_rating ?? null,
+      has_address: Boolean(role === "professional" ? pro?.home_city : fam?.default_address),
+      rating_avg: rating.count > 0 ? Number(rating.avg.toFixed(2)) : (pro?.avg_rating ?? null),
       rating_count: rating.count,
       completed_bookings: bookings,
-      specialty: role === "professional" ? pro?.specialty ?? null : null,
-      years_experience: role === "professional" ? pro?.years_experience ?? null : null,
+      specialty: role === "professional" ? (pro?.specialty ?? null) : null,
+      years_experience: role === "professional" ? (pro?.years_experience ?? null) : null,
       rethus_verified: role === "professional" ? pro?.rethus_verified === true : null,
       verified: role === "professional" ? pro?.verified === true : null,
-      trust_score: role === "professional" ? pro?.trust_score ?? null : null,
-      docs_approved: docs.filter((d) => d.status === "approved" || d.ai_verified === true)
+      trust_score: role === "professional" ? (pro?.trust_score ?? null) : null,
+      docs_approved: docs
+        .filter((d) => d.status === "approved" || d.ai_verified === true)
         .map((d) => d.doc_type),
       docs_pending: docs.filter((d) => d.status === "pending" || d.status === "review").length,
       docs_avg_ai_score:
@@ -376,9 +374,7 @@ export function TrustProfileCard({
     const approvedCount = approvedDocs.length;
     const totalDocs = docs.length;
     const avgAi =
-      docs.length > 0
-        ? docs.reduce((s, d) => s + (d.ai_score ?? 0), 0) / docs.length
-        : 0;
+      docs.length > 0 ? docs.reduce((s, d) => s + (d.ai_score ?? 0), 0) / docs.length : 0;
     const rethus = role === "professional" ? pro?.rethus_verified === true : true;
 
     if (approvedCount >= 3 && avgAi >= 75 && rethus) {
@@ -409,12 +405,15 @@ export function TrustProfileCard({
     };
   }, [loading, approvedDocs.length, docs, pro, role]);
 
-  const fullName = base?.full_name ?? (role === "professional" ? "Profesional Humanix" : "Familia Humanix");
-  const locLat = role === "professional" ? pro?.lat ?? null : fam?.default_lat ?? null;
-  const locLng = role === "professional" ? pro?.lng ?? null : fam?.default_lng ?? null;
+  const fullName =
+    base?.full_name ?? (role === "professional" ? "Profesional Humanix" : "Familia Humanix");
+  const locLat = role === "professional" ? (pro?.lat ?? null) : (fam?.default_lat ?? null);
+  const locLng = role === "professional" ? (pro?.lng ?? null) : (fam?.default_lng ?? null);
   const locAddr =
     highlightAddress ??
-    (role === "professional" ? pro?.home_city ?? base?.city ?? null : fam?.default_address ?? base?.city ?? null);
+    (role === "professional"
+      ? (pro?.home_city ?? base?.city ?? null)
+      : (fam?.default_address ?? base?.city ?? null));
 
   const VerdictIcon = verdict.icon;
 
@@ -456,7 +455,7 @@ export function TrustProfileCard({
             </p>
             <div className="mt-1.5">
               <StarRow
-                rating={rating.count > 0 ? rating.avg : pro?.avg_rating ?? null}
+                rating={rating.count > 0 ? rating.avg : (pro?.avg_rating ?? null)}
                 jobs={bookings || pro?.total_jobs || rating.count}
               />
             </div>

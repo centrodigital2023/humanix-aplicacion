@@ -156,9 +156,7 @@ export function HiringCopilot({ defaultCity }: { defaultCity?: string }) {
               <header className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-biosensor" />
-                  <h2 className="font-display text-lg font-semibold">
-                    Publicar oferta — gratis
-                  </h2>
+                  <h2 className="font-display text-lg font-semibold">Publicar oferta — gratis</h2>
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
                     <Gift className="h-3 w-3" /> Sin costo
                   </span>

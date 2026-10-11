@@ -12,9 +12,7 @@ import { Link } from "@tanstack/react-router";
 function maskName(name: string | null, fallback: string): string {
   if (!name) return fallback;
   const parts = name.trim().split(/\s+/);
-  return parts
-    .map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + "••••" : "••••"))
-    .join(" ");
+  return parts.map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + "••••" : "••••")).join(" ");
 }
 
 type PlanNameGateProps = {

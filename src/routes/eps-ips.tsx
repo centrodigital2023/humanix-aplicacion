@@ -141,7 +141,12 @@ function EpsIpsLanding() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Button size="lg" variant="hero" onClick={goRegister} className="gap-2 w-full sm:w-auto">
+            <Button
+              size="lg"
+              variant="hero"
+              onClick={goRegister}
+              className="gap-2 w-full sm:w-auto"
+            >
               <Building2 className="h-5 w-5" />
               Crear cuenta gratis
             </Button>
@@ -185,9 +190,7 @@ function EpsIpsLanding() {
       {/* ── Cómo funciona ── */}
       <section className="px-5 py-16">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-display text-2xl font-bold text-center mb-10">
-            Empieza en 4 pasos
-          </h2>
+          <h2 className="font-display text-2xl font-bold text-center mb-10">Empieza en 4 pasos</h2>
           <div className="space-y-4">
             {STEPS.map((s, i) => (
               <div
@@ -204,9 +207,7 @@ function EpsIpsLanding() {
                 {i < STEPS.length - 1 && (
                   <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0" />
                 )}
-                {i === STEPS.length - 1 && (
-                  <Sparkles className="h-5 w-5 text-primary shrink-0" />
-                )}
+                {i === STEPS.length - 1 && <Sparkles className="h-5 w-5 text-primary shrink-0" />}
               </div>
             ))}
           </div>
@@ -221,15 +222,9 @@ function EpsIpsLanding() {
             Tu institución merece el mejor talento
           </h2>
           <p className="opacity-80">
-            Únete a las instituciones que ya confían en Humanix para gestionar su personal de
-            salud.
+            Únete a las instituciones que ya confían en Humanix para gestionar su personal de salud.
           </p>
-          <Button
-            size="lg"
-            variant="secondary"
-            onClick={goRegister}
-            className="gap-2 font-bold"
-          >
+          <Button size="lg" variant="secondary" onClick={goRegister} className="gap-2 font-bold">
             Empezar ahora <ArrowRight className="h-5 w-5" />
           </Button>
         </div>

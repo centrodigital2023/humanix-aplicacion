@@ -58,45 +58,45 @@ export function Pricing() {
             });
             const href = hrefFor(d.key, cta.action);
             return (
-            <div
-              key={p.key}
-              className={`relative rounded-3xl border p-8 flex flex-col ${
-                p.highlight
-                  ? "border-biosensor/40 bg-card shadow-[var(--shadow-glow-bio)]"
-                  : "border-border bg-card shadow-[var(--shadow-card)]"
-              }`}
-            >
-              {p.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-biosensor text-biosensor-foreground text-xs font-semibold">
-                  Más elegido
-                </div>
-              )}
-              <h3 className="font-display text-xl font-bold">{p.label}</h3>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="font-display text-4xl font-bold">{p.priceLabel}</span>
-                <span className="text-sm text-muted-foreground">{p.priceNote}</span>
-              </div>
-              <p className="mt-3 text-sm text-muted-foreground">{p.audience}</p>
-
-              <ul className="mt-6 space-y-3 flex-1">
-                {p.featuresLabel.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm">
-                    <Check className="h-4 w-4 text-biosensor mt-0.5 shrink-0" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                variant={d.variant}
-                size="lg"
-                className="mt-8 w-full"
-                disabled={cta.disabled}
-                asChild={!cta.disabled}
+              <div
+                key={p.key}
+                className={`relative rounded-3xl border p-8 flex flex-col ${
+                  p.highlight
+                    ? "border-biosensor/40 bg-card shadow-[var(--shadow-glow-bio)]"
+                    : "border-border bg-card shadow-[var(--shadow-card)]"
+                }`}
               >
-                {cta.disabled ? <span>{cta.label}</span> : <a href={href}>{cta.label}</a>}
-              </Button>
-            </div>
+                {p.highlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-biosensor text-biosensor-foreground text-xs font-semibold">
+                    Más elegido
+                  </div>
+                )}
+                <h3 className="font-display text-xl font-bold">{p.label}</h3>
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="font-display text-4xl font-bold">{p.priceLabel}</span>
+                  <span className="text-sm text-muted-foreground">{p.priceNote}</span>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">{p.audience}</p>
+
+                <ul className="mt-6 space-y-3 flex-1">
+                  {p.featuresLabel.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm">
+                      <Check className="h-4 w-4 text-biosensor mt-0.5 shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  variant={d.variant}
+                  size="lg"
+                  className="mt-8 w-full"
+                  disabled={cta.disabled}
+                  asChild={!cta.disabled}
+                >
+                  {cta.disabled ? <span>{cta.label}</span> : <a href={href}>{cta.label}</a>}
+                </Button>
+              </div>
             );
           })}
         </div>

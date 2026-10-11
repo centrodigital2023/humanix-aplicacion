@@ -46,12 +46,7 @@ export function LiveMapSection({
         <h2 className="font-semibold">{copy.title}</h2>
         <p className="text-sm text-muted-foreground">{copy.desc}</p>
       </div>
-      <LiveMarketplaceMap
-        role={role}
-        userId={userId}
-        height={height}
-        pickLocation={pickLocation}
-      />
+      <LiveMarketplaceMap role={role} userId={userId} height={height} pickLocation={pickLocation} />
     </section>
   );
 }

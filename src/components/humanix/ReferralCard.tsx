@@ -21,7 +21,12 @@ type Props = {
 
 export function ReferralCard({ userId }: Props) {
   const [code, setCode] = useState<string | null>(null);
-  const [stats, setStats] = useState<ReferralStats>({ pending: 0, registered: 0, rewarded: 0, months_earned: 0 });
+  const [stats, setStats] = useState<ReferralStats>({
+    pending: 0,
+    registered: 0,
+    rewarded: 0,
+    months_earned: 0,
+  });
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -42,10 +47,7 @@ export function ReferralCard({ userId }: Props) {
       setCode(codeData as string);
 
       // Estadísticas del referidor
-      const { data: rows } = await sb
-        .from("referrals")
-        .select("status")
-        .eq("referrer_id", userId);
+      const { data: rows } = await sb.from("referrals").select("status").eq("referrer_id", userId);
 
       if (rows) {
         const rewarded = rows.filter((r: { status: string }) => r.status === "rewarded").length;
@@ -63,7 +65,9 @@ export function ReferralCard({ userId }: Props) {
     }
   }, [userId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const copyLink = async () => {
     if (!referralLink) return;
@@ -85,7 +89,8 @@ export function ReferralCard({ userId }: Props) {
         <div>
           <h3 className="font-semibold text-foreground">Invita colegas · Gana meses gratis</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Por cada colega que se suscriba con tu enlace, ganas <strong>1 mes del Plan Esencial gratis</strong>.
+            Por cada colega que se suscriba con tu enlace, ganas{" "}
+            <strong>1 mes del Plan Esencial gratis</strong>.
           </p>
         </div>
       </div>
@@ -97,11 +102,7 @@ export function ReferralCard({ userId }: Props) {
             humanix.lat/auth?ref={code}
           </div>
           <Button size="sm" variant="outline" onClick={copyLink} className="shrink-0">
-            {copied ? (
-              <Check className="h-4 w-4 text-biosensor" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
+            {copied ? <Check className="h-4 w-4 text-biosensor" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
       )}

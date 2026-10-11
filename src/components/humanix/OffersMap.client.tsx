@@ -184,7 +184,9 @@ export function OffersMap({
       })}
 
       {clusteredPoints.length > 1 && (
-        <FitBounds points={points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))} />
+        <FitBounds
+          points={points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))}
+        />
       )}
     </MapContainer>
   );

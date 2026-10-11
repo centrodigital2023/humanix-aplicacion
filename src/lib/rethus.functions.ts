@@ -10,15 +10,24 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  adminRemaining, hasConsumedSingleAttempt, isActiveSubscription, isValidDocumentNumber,
-  missingPrerequisite, namesMatch, RETHUS_ADMIN_WINDOW_MS, type RethusFinalStatus,
+  adminRemaining,
+  hasConsumedSingleAttempt,
+  isActiveSubscription,
+  isValidDocumentNumber,
+  missingPrerequisite,
+  namesMatch,
+  RETHUS_ADMIN_WINDOW_MS,
+  type RethusFinalStatus,
 } from "./rethusVerification";
 
 const VERIFIK_URL = "https://api.verifik.co/v2/co/rethus";
 const DOC_TYPES = ["CC", "CE", "PA", "TI", "PPT"] as const;
 type DocType = (typeof DOC_TYPES)[number];
 
-const docNumber = z.string().transform((s) => s.replace(/\D/g, "")).refine(isValidDocumentNumber, "Documento inválido");
+const docNumber = z
+  .string()
+  .transform((s) => s.replace(/\D/g, ""))
+  .refine(isValidDocumentNumber, "Documento inválido");
 
 const proInput = z.object({
   documentNumber: docNumber.optional(),
@@ -32,22 +41,44 @@ const adminInput = z.object({
 });
 
 export type RethusErrorCode =
-  | "already_verified" | "consent_required" | "plan_required" | "document_required"
-  | "not_professional" | "not_configured" | "provider_error" | "forbidden" | "rate_limited";
+  | "already_verified"
+  | "consent_required"
+  | "plan_required"
+  | "document_required"
+  | "not_professional"
+  | "not_configured"
+  | "provider_error"
+  | "forbidden"
+  | "rate_limited";
 
 export type RethusResult =
   | { ok: true; status: RethusFinalStatus; checkedAt: string }
-  | { ok: false; code: RethusErrorCode; message: string; status?: string | null; remaining?: number };
+  | {
+      ok: false;
+      code: RethusErrorCode;
+      message: string;
+      status?: string | null;
+      remaining?: number;
+    };
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
 const enc = new TextEncoder();
-const toHex = (b: ArrayBuffer) => Array.from(new Uint8Array(b)).map((x) => x.toString(16).padStart(2, "0")).join("");
+const toHex = (b: ArrayBuffer) =>
+  Array.from(new Uint8Array(b))
+    .map((x) => x.toString(16).padStart(2, "0"))
+    .join("");
 const toB64 = (b: Uint8Array) => btoa(String.fromCharCode(...b));
 const fromB64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 async function hmacHex(key: string, msg: string) {
-  const k = await crypto.subtle.importKey("raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const k = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(key),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
   return toHex(await crypto.subtle.sign("HMAC", k, enc.encode(msg)));
 }
 async function aesKey(key: string) {
@@ -56,29 +87,53 @@ async function aesKey(key: string) {
 }
 async function encryptDoc(key: string, plain: string) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(key), enc.encode(plain)));
+  const ct = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(key), enc.encode(plain)),
+  );
   return `${toB64(iv)}.${toB64(ct)}`;
 }
 async function decryptDoc(key: string, payload: string) {
   const [iv, ct] = payload.split(".");
-  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(iv) }, await aesKey(key), fromB64(ct));
+  const pt = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: fromB64(iv) },
+    await aesKey(key),
+    fromB64(ct),
+  );
   return new TextDecoder().decode(pt);
 }
 
-async function storeDocument(admin: Admin, hashKey: string, userId: string, type: DocType, number: string) {
+async function storeDocument(
+  admin: Admin,
+  hashKey: string,
+  userId: string,
+  type: DocType,
+  number: string,
+) {
   await admin.from("professional_identity_documents").upsert({
-    user_id: userId, document_type: type,
+    user_id: userId,
+    document_type: type,
     document_enc: await encryptDoc(hashKey, number),
     document_hash: await hmacHex(hashKey, `${type}:${number}`),
     updated_at: new Date().toISOString(),
   });
 }
 
-async function loadDocument(admin: Admin, hashKey: string, userId: string): Promise<{ type: DocType; number: string } | null> {
-  const { data } = await admin.from("professional_identity_documents").select("document_type, document_enc").eq("user_id", userId).maybeSingle();
+async function loadDocument(
+  admin: Admin,
+  hashKey: string,
+  userId: string,
+): Promise<{ type: DocType; number: string } | null> {
+  const { data } = await admin
+    .from("professional_identity_documents")
+    .select("document_type, document_enc")
+    .eq("user_id", userId)
+    .maybeSingle();
   if (!data) return null;
   try {
-    return { type: data.document_type as DocType, number: await decryptDoc(hashKey, data.document_enc) };
+    return {
+      type: data.document_type as DocType,
+      number: await decryptDoc(hashKey, data.document_enc),
+    };
   } catch {
     return null;
   }
@@ -86,10 +141,17 @@ async function loadDocument(admin: Admin, hashKey: string, userId: string): Prom
 
 /** Consulta Verifik, registra el intento y sincroniza el perfil si el resultado es final. */
 async function runCheck(
-  admin: Admin, env: { token: string; hashKey: string }, userId: string,
-  doc: { type: DocType; number: string }, meta: { requestedBy: string; reverified: boolean },
+  admin: Admin,
+  env: { token: string; hashKey: string },
+  userId: string,
+  doc: { type: DocType; number: string },
+  meta: { requestedBy: string; reverified: boolean },
 ): Promise<RethusResult> {
-  const { data: profile } = await admin.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("user_id", userId)
+    .maybeSingle();
   let status: RethusFinalStatus | "error" = "error";
   let titles: { program: string | null; type: string | null }[] = [];
   let httpStatus: number | null = null;
@@ -97,7 +159,9 @@ async function runCheck(
     const base = process.env.VERIFIK_API_BASE?.replace(/\/$/, "");
     const endpoint = base ? `${base}/v2/co/rethus` : VERIFIK_URL;
     const url = `${endpoint}?documentType=${doc.type}&documentNumber=${doc.number}`;
-    const r = await fetch(url, { headers: { Authorization: `JWT ${env.token}`, Accept: "application/json" } });
+    const r = await fetch(url, {
+      headers: { Authorization: `JWT ${env.token}`, Accept: "application/json" },
+    });
     httpStatus = r.status;
     if (r.status === 404) status = "not_found";
     else if (r.ok) {
@@ -109,7 +173,11 @@ async function runCheck(
         program: (t.programName ?? t.program ?? null) as string | null,
         type: (t.titleType ?? t.type ?? null) as string | null,
       }));
-      status = !official.trim() ? "not_found" : namesMatch(profile?.full_name ?? "", official) ? "verified" : "name_mismatch";
+      status = !official.trim()
+        ? "not_found"
+        : namesMatch(profile?.full_name ?? "", official)
+          ? "verified"
+          : "name_mismatch";
     } else {
       console.error("[rethus] Verifik status", r.status);
     }
@@ -118,24 +186,42 @@ async function runCheck(
   }
 
   const { error: insErr } = await admin.from("professional_verifications").insert({
-    user_id: userId, provider: "verifik", check_type: "rethus",
-    document_hash: await hmacHex(env.hashKey, `${doc.type}:${doc.number}`), status,
-    requested_by: meta.requestedBy, reverified: meta.reverified,
-    result: status === "error"
-      ? { http_status: httpStatus, reverified: meta.reverified }
-      : { titles_count: titles.length, titles, reverified: meta.reverified },
+    user_id: userId,
+    provider: "verifik",
+    check_type: "rethus",
+    document_hash: await hmacHex(env.hashKey, `${doc.type}:${doc.number}`),
+    status,
+    requested_by: meta.requestedBy,
+    reverified: meta.reverified,
+    result:
+      status === "error"
+        ? { http_status: httpStatus, reverified: meta.reverified }
+        : { titles_count: titles.length, titles, reverified: meta.reverified },
   });
   // Índice único parcial: una carrera concurrente del profesional termina aquí.
   if (insErr && !meta.reverified && insErr.code === "23505") {
-    return { ok: false, code: "already_verified", message: "Tu verificación ReTHUS ya fue realizada." };
+    return {
+      ok: false,
+      code: "already_verified",
+      message: "Tu verificación ReTHUS ya fue realizada.",
+    };
   }
   if (status === "error") {
-    return { ok: false, code: "provider_error", message: "No pudimos consultar ReTHUS. Se reintentará automáticamente más tarde." };
+    return {
+      ok: false,
+      code: "provider_error",
+      message: "No pudimos consultar ReTHUS. Se reintentará automáticamente más tarde.",
+    };
   }
   const checkedAt = new Date().toISOString();
-  await admin.from("professional_profiles").update({
-    verification_status: status, rethus_verified: status === "verified", rethus_checked_at: checkedAt,
-  }).eq("user_id", userId);
+  await admin
+    .from("professional_profiles")
+    .update({
+      verification_status: status,
+      rethus_verified: status === "verified",
+      rethus_checked_at: checkedAt,
+    })
+    .eq("user_id", userId);
   return { ok: true, status, checkedAt };
 }
 
@@ -152,30 +238,71 @@ export const verifyRethus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<RethusResult> => {
     const userId = context.userId;
     const env = readEnv();
-    if (!env) return { ok: false, code: "not_configured", message: "La verificación aún no está configurada." };
+    if (!env)
+      return {
+        ok: false,
+        code: "not_configured",
+        message: "La verificación aún no está configurada.",
+      };
     const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
 
-    const { data: role } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "professional").maybeSingle();
-    const { data: pro } = await admin.from("professional_profiles").select("data_consent_at, verification_status").eq("user_id", userId).maybeSingle();
-    if (!role || !pro) return { ok: false, code: "not_professional", message: "Solo profesionales pueden verificarse." };
+    const { data: role } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "professional")
+      .maybeSingle();
+    const { data: pro } = await admin
+      .from("professional_profiles")
+      .select("data_consent_at, verification_status")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!role || !pro)
+      return {
+        ok: false,
+        code: "not_professional",
+        message: "Solo profesionales pueden verificarse.",
+      };
 
-    const { data: prior } = await admin.from("professional_verifications").select("status, reverified")
-      .eq("user_id", userId).eq("check_type", "rethus");
+    const { data: prior } = await admin
+      .from("professional_verifications")
+      .select("status, reverified")
+      .eq("user_id", userId)
+      .eq("check_type", "rethus");
     if (hasConsumedSingleAttempt(prior ?? [])) {
-      return { ok: false, code: "already_verified", message: "Tu verificación ReTHUS ya fue realizada.", status: pro.verification_status };
+      return {
+        ok: false,
+        code: "already_verified",
+        message: "Tu verificación ReTHUS ya fue realizada.",
+        status: pro.verification_status,
+      };
     }
 
     let hasConsent = !!pro.data_consent_at;
     if (!hasConsent && data.consent) {
-      await admin.from("user_consents").insert({ user_id: userId, consent_type: "rethus_verifik_ley_1581_v1", granted: true });
-      await admin.from("professional_profiles").update({ data_consent_at: new Date().toISOString() }).eq("user_id", userId);
+      await admin
+        .from("user_consents")
+        .insert({ user_id: userId, consent_type: "rethus_verifik_ley_1581_v1", granted: true });
+      await admin
+        .from("professional_profiles")
+        .update({ data_consent_at: new Date().toISOString() })
+        .eq("user_id", userId);
       hasConsent = true;
     }
-    if (data.documentNumber) await storeDocument(admin, env.hashKey, userId, data.documentType, data.documentNumber);
+    if (data.documentNumber)
+      await storeDocument(admin, env.hashKey, userId, data.documentType, data.documentNumber);
 
     const doc = await loadDocument(admin, env.hashKey, userId);
-    const { data: sub } = await admin.from("mp_subscriptions").select("status, current_period_end").eq("user_id", userId).maybeSingle();
-    const missing = missingPrerequisite({ hasConsent, hasActivePlan: isActiveSubscription(sub), hasDocument: !!doc });
+    const { data: sub } = await admin
+      .from("mp_subscriptions")
+      .select("status, current_period_end")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const missing = missingPrerequisite({
+      hasConsent,
+      hasActivePlan: isActiveSubscription(sub),
+      hasDocument: !!doc,
+    });
     if (missing) {
       const msg = {
         consent_required: "Debes aceptar el tratamiento de datos (Ley 1581).",
@@ -200,21 +327,47 @@ export const adminReverifyRethus = createServerFn({ method: "POST" })
     if (!staff && !superadmin) return { ok: false, code: "forbidden", message: "No autorizado." };
 
     const env = readEnv();
-    if (!env) return { ok: false, code: "not_configured", message: "La verificación aún no está configurada." };
+    if (!env)
+      return {
+        ok: false,
+        code: "not_configured",
+        message: "La verificación aún no está configurada.",
+      };
     const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
 
     const since = new Date(Date.now() - RETHUS_ADMIN_WINDOW_MS).toISOString();
-    const { data: recent } = await admin.from("professional_verifications").select("created_at")
-      .eq("requested_by", adminId).eq("reverified", true).gte("created_at", since);
+    const { data: recent } = await admin
+      .from("professional_verifications")
+      .select("created_at")
+      .eq("requested_by", adminId)
+      .eq("reverified", true)
+      .gte("created_at", since);
     const remaining = adminRemaining((recent ?? []).map((r) => r.created_at));
-    if (remaining <= 0) return { ok: false, code: "rate_limited", message: "Límite de 20 re-verificaciones por hora alcanzado.", remaining: 0 };
+    if (remaining <= 0)
+      return {
+        ok: false,
+        code: "rate_limited",
+        message: "Límite de 20 re-verificaciones por hora alcanzado.",
+        remaining: 0,
+      };
 
-    const { data: pro } = await admin.from("professional_profiles").select("user_id").eq("user_id", data.userId).maybeSingle();
-    if (!pro) return { ok: false, code: "not_professional", message: "Perfil profesional no encontrado." };
+    const { data: pro } = await admin
+      .from("professional_profiles")
+      .select("user_id")
+      .eq("user_id", data.userId)
+      .maybeSingle();
+    if (!pro)
+      return { ok: false, code: "not_professional", message: "Perfil profesional no encontrado." };
 
-    if (data.documentNumber) await storeDocument(admin, env.hashKey, data.userId, data.documentType, data.documentNumber);
+    if (data.documentNumber)
+      await storeDocument(admin, env.hashKey, data.userId, data.documentType, data.documentNumber);
     const doc = await loadDocument(admin, env.hashKey, data.userId);
-    if (!doc) return { ok: false, code: "document_required", message: "El profesional no tiene documento registrado." };
+    if (!doc)
+      return {
+        ok: false,
+        code: "document_required",
+        message: "El profesional no tiene documento registrado.",
+      };
 
     return runCheck(admin, env, data.userId, doc, { requestedBy: adminId, reverified: true });
   });

@@ -113,8 +113,7 @@ function InstitutionOnboarding() {
       });
   }, [user]);
 
-  const set = (k: keyof typeof form, v: string | boolean) =>
-    setForm((p) => ({ ...p, [k]: v }));
+  const set = (k: keyof typeof form, v: string | boolean) => setForm((p) => ({ ...p, [k]: v }));
 
   // ── subir cámara de comercio ─────────────────────────────────────────────
 
@@ -142,13 +141,36 @@ function InstitutionOnboarding() {
 
   const savePartial = async () => {
     if (!user) return;
-    await supabase
-      .from("institution_profiles" as never)
-      .upsert(
+    await supabase.from("institution_profiles" as never).upsert(
+      {
+        user_id: user.id,
+        institution_type: form.institution_type || null,
+        institution_name: form.institution_name || null,
+        nit: form.nit || null,
+        chamber_of_commerce_number: form.chamber_of_commerce_number || null,
+        legal_representative_name: form.legal_representative_name || null,
+        legal_representative_email: form.legal_representative_email || null,
+        legal_representative_phone: form.legal_representative_phone || null,
+        city: form.city || null,
+        address: form.address || null,
+        chamber_of_commerce_doc_url: docUrl,
+        habeas_data_accepted: form.habeas_data,
+        onboarding_complete: false,
+      } as never,
+      { onConflict: "user_id" },
+    );
+  };
+
+  const finish = async () => {
+    if (!user) return;
+    if (!form.habeas_data) return toast.error("Acepta el tratamiento de datos para continuar");
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("institution_profiles" as never).upsert(
         {
           user_id: user.id,
           institution_type: form.institution_type || null,
-          institution_name: form.institution_name || null,
+          institution_name: form.institution_name,
           nit: form.nit || null,
           chamber_of_commerce_number: form.chamber_of_commerce_number || null,
           legal_representative_name: form.legal_representative_name || null,
@@ -157,38 +179,11 @@ function InstitutionOnboarding() {
           city: form.city || null,
           address: form.address || null,
           chamber_of_commerce_doc_url: docUrl,
-          habeas_data_accepted: form.habeas_data,
-          onboarding_complete: false,
+          habeas_data_accepted: true,
+          onboarding_complete: true,
         } as never,
         { onConflict: "user_id" },
       );
-  };
-
-  const finish = async () => {
-    if (!user) return;
-    if (!form.habeas_data) return toast.error("Acepta el tratamiento de datos para continuar");
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("institution_profiles" as never)
-        .upsert(
-          {
-            user_id: user.id,
-            institution_type: form.institution_type || null,
-            institution_name: form.institution_name,
-            nit: form.nit || null,
-            chamber_of_commerce_number: form.chamber_of_commerce_number || null,
-            legal_representative_name: form.legal_representative_name || null,
-            legal_representative_email: form.legal_representative_email || null,
-            legal_representative_phone: form.legal_representative_phone || null,
-            city: form.city || null,
-            address: form.address || null,
-            chamber_of_commerce_doc_url: docUrl,
-            habeas_data_accepted: true,
-            onboarding_complete: true,
-          } as never,
-          { onConflict: "user_id" },
-        );
       if (error) throw error;
       setStep(TOTAL_STEPS + 1); // pantalla de éxito
     } catch (e) {
@@ -232,7 +227,9 @@ function InstitutionOnboarding() {
         </div>
         <div>
           <h1 className="font-display text-3xl font-bold">¡Listo, {form.institution_name}!</h1>
-          <p className="text-muted-foreground mt-2">Tu perfil está configurado. Humanix lo revisará en 24 h.</p>
+          <p className="text-muted-foreground mt-2">
+            Tu perfil está configurado. Humanix lo revisará en 24 h.
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button variant="hero" onClick={() => navigate({ to: "/dashboard/institucion" })}>
@@ -266,7 +263,9 @@ function InstitutionOnboarding() {
       <div className="px-5 pt-5">
         <div className="max-w-xl mx-auto space-y-1.5">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Paso {step} de {TOTAL_STEPS}</span>
+            <span>
+              Paso {step} de {TOTAL_STEPS}
+            </span>
             <span>{progress}% completado</span>
           </div>
           <Progress value={progress} className="h-1.5" />
@@ -276,7 +275,6 @@ function InstitutionOnboarding() {
       {/* Step content */}
       <main className="flex-1 flex items-start justify-center px-5 py-10">
         <div className="w-full max-w-xl space-y-8">
-
           {/* ── PASO 1: Tipo de institución ── */}
           {step === 1 && (
             <StepShell
@@ -346,7 +344,12 @@ function InstitutionOnboarding() {
                 <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Upload className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-semibold">Cámara de comercio <span className="text-[11px] text-muted-foreground font-normal ml-1">PDF o foto · máx. 15 MB</span></p>
+                    <p className="text-sm font-semibold">
+                      Cámara de comercio{" "}
+                      <span className="text-[11px] text-muted-foreground font-normal ml-1">
+                        PDF o foto · máx. 15 MB
+                      </span>
+                    </p>
                     {docUrl && <CheckCircle2 className="h-4 w-4 text-emerald-500 ml-auto" />}
                   </div>
                   <Button
@@ -356,7 +359,11 @@ function InstitutionOnboarding() {
                     disabled={uploading}
                     onClick={() => fileRef.current?.click()}
                   >
-                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                    {uploading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    )}
                     {docUrl ? "Cambiar archivo" : "Subir archivo"}
                   </Button>
                   <input
@@ -455,7 +462,12 @@ function InstitutionOnboarding() {
             >
               {/* Resumen */}
               <div className="rounded-2xl border border-border bg-muted/30 p-5 space-y-2 text-sm">
-                <SummaryRow label="Tipo" value={INSTITUTION_TYPES.find((t) => t.key === form.institution_type)?.label ?? "—"} />
+                <SummaryRow
+                  label="Tipo"
+                  value={
+                    INSTITUTION_TYPES.find((t) => t.key === form.institution_type)?.label ?? "—"
+                  }
+                />
                 <SummaryRow label="Nombre" value={form.institution_name || "—"} />
                 <SummaryRow label="NIT" value={form.nit || "—"} />
                 <SummaryRow label="Representante" value={form.legal_representative_name || "—"} />
@@ -472,7 +484,13 @@ function InstitutionOnboarding() {
                 />
                 <span className="text-sm text-muted-foreground leading-relaxed">
                   Autorizo el tratamiento de datos personales e institucionales conforme a la{" "}
-                  <a href="/politica-privacidad" target="_blank" className="underline text-foreground">Política de Privacidad</a>{" "}
+                  <a
+                    href="/politica-privacidad"
+                    target="_blank"
+                    className="underline text-foreground"
+                  >
+                    Política de Privacidad
+                  </a>{" "}
                   de Humanix (Ley 1581/2012).
                 </span>
               </label>

@@ -118,7 +118,6 @@ function SobrePage() {
         description="La plataforma premium que conecta profesionales de salud verificados con familias y clínicas en Colombia — potenciada con IA en tiempo real."
       >
         <div className="space-y-10">
-
           {/* MÉTRICAS ---------------------------------------------------- */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 not-prose">
             {STATS.map((s) => (
@@ -159,10 +158,7 @@ function SobrePage() {
             <h2 className="text-2xl font-bold text-foreground mb-4">Nuestros Valores</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 not-prose">
               {VALUES.map((v) => (
-                <div
-                  key={v.title}
-                  className={`rounded-2xl border p-5 ${v.bg}`}
-                >
+                <div key={v.title} className={`rounded-2xl border p-5 ${v.bg}`}>
                   <v.icon className={`h-6 w-6 mb-3 ${v.color}`} />
                   <h3 className={`font-display text-lg font-semibold ${v.color} mb-1`}>
                     {v.title}
@@ -215,8 +211,13 @@ function SobrePage() {
             <h2 className="text-2xl font-bold text-foreground mb-3">Cobertura en Colombia</h2>
             <div className="flex flex-wrap gap-2 not-prose">
               {[
-                "Bogotá", "Medellín", "Cali", "Barranquilla",
-                "Cartagena", "Bucaramanga", "Pereira",
+                "Bogotá",
+                "Medellín",
+                "Cali",
+                "Barranquilla",
+                "Cartagena",
+                "Bucaramanga",
+                "Pereira",
               ].map((city) => (
                 <span
                   key={city}

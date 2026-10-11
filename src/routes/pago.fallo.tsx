@@ -7,7 +7,8 @@ export const Route = createFileRoute("/pago/fallo")({
   component: PagoFallo,
 });
 
-const WA_SUPPORT = "https://wa.me/573147444715?text=Hola%2C+tuve+un+problema+con+mi+pago+en+Humanix";
+const WA_SUPPORT =
+  "https://wa.me/573147444715?text=Hola%2C+tuve+un+problema+con+mi+pago+en+Humanix";
 
 function PagoFallo() {
   const search = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -26,7 +27,11 @@ function PagoFallo() {
         <div>
           <h1 className="text-2xl font-bold mb-2">Pago no procesado</h1>
           <p className="text-muted-foreground">
-            Mercado Pago no pudo procesar tu pago{plan ? ` del plan ${plan.replace("_monthly", "").replace("institution", "Institución")}` : ""}. No se realizó ningún cargo.
+            Mercado Pago no pudo procesar tu pago
+            {plan
+              ? ` del plan ${plan.replace("_monthly", "").replace("institution", "Institución")}`
+              : ""}
+            . No se realizó ningún cargo.
           </p>
         </div>
 

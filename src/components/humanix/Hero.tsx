@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { ArrowRight, Sparkles, MapPin, Activity, Zap, TrendingUp, Wifi, Users, Building2, HeartPulse, CheckCircle2 } from "lucide-react";
+import {
+  ArrowRight,
+  Sparkles,
+  MapPin,
+  Activity,
+  Zap,
+  TrendingUp,
+  Wifi,
+  Users,
+  Building2,
+  HeartPulse,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveUsersCount } from "@/hooks/use-active-users-count";
 import { AnimatedCounter } from "./AnimatedCounter";
@@ -34,12 +46,13 @@ export function Hero() {
             </div>
 
             <h1 className="mt-6 font-display text-[clamp(2rem,6vw,3.75rem)] font-bold leading-[1.05] tracking-tight">
-              <span className="text-gradient-bio">Talento en salud</span>,{" "}
-              conectado al instante.
+              <span className="text-gradient-bio">Talento en salud</span>, conectado al instante.
             </h1>
 
             <p className="mt-6 text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Tres actores. Un sistema. Profesionales activan su disponibilidad como en Uber. Familias e IPS buscan y contratan en tiempo real. Matching automático en &lt;5km. Pagos directos.
+              Tres actores. Un sistema. Profesionales activan su disponibilidad como en Uber.
+              Familias e IPS buscan y contratan en tiempo real. Matching automático en &lt;5km.
+              Pagos directos.
             </p>
 
             {/* Key Stats — Uber-style, datos reales desde Supabase en tiempo real */}
@@ -112,7 +125,12 @@ export function Hero() {
             </div>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Button variant="hero" size="xl" className="w-full sm:w-auto" onClick={() => setGateOpen(true)}>
+              <Button
+                variant="hero"
+                size="xl"
+                className="w-full sm:w-auto"
+                onClick={() => setGateOpen(true)}
+              >
                 Explorar plataforma <ArrowRight className="ml-1 h-5 w-5" />
               </Button>
               <Button variant="glass" size="xl" className="w-full sm:w-auto" asChild>

@@ -39,9 +39,14 @@ export interface CompassBriefing {
 }
 
 export function greetingFor(now: Date, name?: string | null): string {
-  const h = Number(
-    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/Bogota" }).format(now),
-  ) % 24;
+  const h =
+    Number(
+      new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        hour12: false,
+        timeZone: "America/Bogota",
+      }).format(now),
+    ) % 24;
   const base = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
   const first = name?.trim().split(/\s+/)[0];
   return first ? `${base}, ${first}` : base;
@@ -63,7 +68,10 @@ export function buildBriefing(s: CompassSignals): CompassBriefing {
   if (alerts > 0) {
     actions.push({
       id: "alerts",
-      title: s.role === "professional" ? "Revisa las alertas de tu paciente" : "Hay alertas en un turno en vivo",
+      title:
+        s.role === "professional"
+          ? "Revisa las alertas de tu paciente"
+          : "Hay alertas en un turno en vivo",
       reason: `${plural(alerts, "alerta registrada", "alertas registradas")} en el parte de cuidado.`,
       priority: 100,
       tone: "urgent",
@@ -73,7 +81,10 @@ export function buildBriefing(s: CompassSignals): CompassBriefing {
   if (soon.length > 0) {
     actions.push({
       id: "soon",
-      title: s.role === "professional" ? "Prepárate para tu próximo servicio" : "Un servicio empieza pronto",
+      title:
+        s.role === "professional"
+          ? "Prepárate para tu próximo servicio"
+          : "Un servicio empieza pronto",
       reason: `${plural(soon.length, "servicio empieza", "servicios empiezan")} en las próximas 3 horas.`,
       priority: 80,
       tone: "attention",
@@ -93,7 +104,8 @@ export function buildBriefing(s: CompassSignals): CompassBriefing {
   if (s.pendingApplications > 0) {
     actions.push({
       id: "applications",
-      title: s.role === "institution" ? "Revisa a tus candidatos" : "Tienes contraofertas por responder",
+      title:
+        s.role === "institution" ? "Revisa a tus candidatos" : "Tienes contraofertas por responder",
       reason:
         s.role === "institution"
           ? `${plural(s.pendingApplications, "profesional se postuló", "profesionales se postularon")} y espera${s.pendingApplications === 1 ? "" : "n"} tu decisión.`
@@ -167,7 +179,10 @@ export function buildBriefing(s: CompassSignals): CompassBriefing {
     family: {
       urgent: "Tu ser querido necesita atención: revisa el parte ahora.",
       attention: "Hay algunas cosas por decidir, te ayudamos a priorizarlas.",
-      calm: live.length > 0 ? "Tu ser querido está acompañado y todo va bien." : "Todo en orden. Estamos contigo.",
+      calm:
+        live.length > 0
+          ? "Tu ser querido está acompañado y todo va bien."
+          : "Todo en orden. Estamos contigo.",
     },
     professional: {
       urgent: "Un paciente tuyo tiene una alerta. Tu cuidado hace la diferencia.",

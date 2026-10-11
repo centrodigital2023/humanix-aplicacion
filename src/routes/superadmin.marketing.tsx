@@ -93,7 +93,9 @@ type OfferCard = {
 const COP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
 function utm(path: string, source: Channel, campaign: string) {
-  const base = path.startsWith("http") ? path : `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const base = path.startsWith("http")
+    ? path
+    : `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
   const params = new URLSearchParams({
     utm_source: source,
     utm_medium: "social",
@@ -117,10 +119,7 @@ function shareHref(channel: Channel, url: string, text: string) {
   }
 }
 
-const CHANNEL_META: Record<
-  Channel,
-  { label: string; color: string; icon: typeof Share2 }
-> = {
+const CHANNEL_META: Record<Channel, { label: string; color: string; icon: typeof Share2 }> = {
   facebook: { label: "Facebook", color: "#1877F2", icon: Share2 },
   whatsapp: { label: "WhatsApp", color: "#25D366", icon: MessageSquare },
   linkedin: { label: "LinkedIn", color: "#0A66C2", icon: Share2 },
@@ -199,12 +198,7 @@ const TEMPLATES: Template[] = [
     tone: "B2B",
     path: "/talento-humano",
     campaign: "institucion-turnos",
-    hashtags: [
-      "#TalentoHumanoEnSalud",
-      "#GestiónClínica",
-      "#Humanix",
-      "#TurnosMédicos",
-    ],
+    hashtags: ["#TalentoHumanoEnSalud", "#GestiónClínica", "#Humanix", "#TurnosMédicos"],
     copy: {
       facebook:
         "Clínicas, IPS y centros médicos 🏥\n\n¿Problemas para cubrir turnos o encontrar talento verificado? Humanix te da acceso a miles de profesionales con RETHUS al día, scoring por IA y cobertura en minutos.",
@@ -240,13 +234,7 @@ const TEMPLATES: Template[] = [
     tone: "Institucional",
     path: "/cumplimiento",
     campaign: "confianza-habeasdata",
-    hashtags: [
-      "#HabeasData",
-      "#Cumplimiento",
-      "#SaludSegura",
-      "#Humanix",
-      "#PrivacidadEnSalud",
-    ],
+    hashtags: ["#HabeasData", "#Cumplimiento", "#SaludSegura", "#Humanix", "#PrivacidadEnSalud"],
     copy: {
       facebook:
         "Tu salud y tus datos están protegidos 🛡️\n\nHumanix cumple con la Ley 1581 de Habeas Data, la Resolución 3100 del MinSalud y estándares internacionales de ciberseguridad. Tu familia y tu información clínica, seguras.",
@@ -264,12 +252,7 @@ const TEMPLATES: Template[] = [
     tone: "Urgencia",
     path: "/buscar",
     campaign: "reserva-rapida",
-    hashtags: [
-      "#CuidadoUrgente",
-      "#SaludADomicilio",
-      "#Humanix",
-      "#ReservaYa",
-    ],
+    hashtags: ["#CuidadoUrgente", "#SaludADomicilio", "#Humanix", "#ReservaYa"],
     copy: {
       facebook:
         "¿Una emergencia? ⚡\nEn menos de 15 minutos tienes un profesional de salud verificado camino a tu casa. Humanix: la forma más rápida y segura de conseguir cuidado en Colombia.",
@@ -287,12 +270,7 @@ const TEMPLATES: Template[] = [
     tone: "Promocional",
     path: "/planes",
     campaign: "referidos-familia",
-    hashtags: [
-      "#PlanFamiliar",
-      "#Referidos",
-      "#Humanix",
-      "#SaludColombia",
-    ],
+    hashtags: ["#PlanFamiliar", "#Referidos", "#Humanix", "#SaludColombia"],
     copy: {
       facebook:
         "Invita a tu familia y gana 🎁\n\nCon el Plan Familiar de Humanix tu primer mes es GRATIS y ganas créditos por cada amigo que se registre. Cuidado de calidad para toda la familia, sin complicaciones.",
@@ -310,12 +288,7 @@ const TEMPLATES: Template[] = [
     tone: "Branding",
     path: "/",
     campaign: "lanzamiento",
-    hashtags: [
-      "#Humanix",
-      "#SaludColombia",
-      "#HealthTechCO",
-      "#TalentoHumanoEnSalud",
-    ],
+    hashtags: ["#Humanix", "#SaludColombia", "#HealthTechCO", "#TalentoHumanoEnSalud"],
     copy: {
       facebook:
         "🚀 Bienvenidos a Humanix — la plataforma que está cambiando el talento humano en salud de Colombia.\n\nProfesionales verificados · IA en tiempo real · Pagos inmediatos · Cuidado con corazón.\n\nÚnete a la revolución.",
@@ -355,9 +328,7 @@ function MarketingPage() {
             .limit(24),
           supabase
             .from("job_offers")
-            .select(
-              "id, title, city, amount, modality, specialty_required, created_at, status",
-            )
+            .select("id, title, city, amount, modality, specialty_required, created_at, status")
             .eq("status", "open")
             .order("created_at", { ascending: false })
             .limit(24),

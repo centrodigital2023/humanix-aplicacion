@@ -120,8 +120,7 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
 
   const save = async () => {
     if (!form.full_name.trim()) return toast.error("Nombre completo requerido");
-    if (!/^\d{6,15}$/.test(form.id_number.trim()))
-      return toast.error("Número de cédula inválido");
+    if (!/^\d{6,15}$/.test(form.id_number.trim())) return toast.error("Número de cédula inválido");
     if (!/^\+?\d{7,15}$/.test(form.phone.trim())) return toast.error("Celular inválido");
     setSaving(true);
     try {
@@ -286,15 +285,17 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
       </div>
 
       <div className="flex flex-wrap justify-between gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={resetPassword} className="text-muted-foreground">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={resetPassword}
+          className="text-muted-foreground"
+        >
           <KeyRound className="h-3.5 w-3.5 mr-1.5" /> Cambiar contraseña
         </Button>
         <Button onClick={save} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           <span className="ml-1.5">Guardar</span>
         </Button>
       </div>

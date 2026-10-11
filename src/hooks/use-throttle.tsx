@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect } from "react";
 
 /**
  * Hook para throttlear una función - ejecuta a lo máximo una vez por `delay` ms
@@ -6,7 +6,7 @@ import { useCallback, useRef, useEffect } from 'react';
  */
 export function useThrottle<T extends (...args: any[]) => void>(
   callback: T,
-  delay: number = 200
+  delay: number = 200,
 ): T {
   const lastCallRef = useRef<number>(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,7 +33,7 @@ export function useThrottle<T extends (...args: any[]) => void>(
         }, delay - timeSinceLastCall);
       }
     },
-    [callback, delay]
+    [callback, delay],
   );
 
   // Cleanup on unmount

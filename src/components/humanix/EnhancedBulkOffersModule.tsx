@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * ENHANCED BULK OFFERS MODULE CON REQUISITOS INTELIGENTES
- * 
+ *
  * Features:
  * - Publicación masiva de ofertas
  * - Requisitos inteligentes (antecedentes, policía, procuraduría, fiscalía)
@@ -47,7 +47,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PromoCarousel, type PromoContext } from "@/components/humanix/PromoCarousel";
 
 const COP = (n: number) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
 
 // Requisitos inteligentes disponibles
 const REQUIREMENT_OPTIONS = [
@@ -58,7 +62,11 @@ const REQUIREMENT_OPTIONS = [
   { id: "retus", label: "Anexo Retus pdf", icon: "📋" },
   { id: "comptroller", label: "Anexo. Controloría.pdf", icon: "⚖️" },
   { id: "prosecutor_check", label: "Anexo Procuraduria.pdf", icon: "⚖️" },
-  { id: "background_check", label: "Anexo Antecedentes Penales y Requerimientos Judiciales.pdf", icon: "🚔" },
+  {
+    id: "background_check",
+    label: "Anexo Antecedentes Penales y Requerimientos Judiciales.pdf",
+    icon: "🚔",
+  },
   { id: "disciplinary_measures", label: "Anexo Antecedentes Medidas Correctivas.pdf", icon: "⚠️" },
   { id: "health_affiliation", label: "Anexo Afiliación Salud.pdf", icon: "🏥" },
   { id: "pension_affiliation", label: "Anexo Afiliación pensión.pdf", icon: "💰" },
@@ -175,7 +183,9 @@ export function EnhancedBulkOffersModule({
         .maybeSingle();
       if (active && data?.institution_name) setInstitutionName(data.institution_name);
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [userId]);
 
   const promoContext: PromoContext = useMemo(() => {
@@ -183,11 +193,13 @@ export function EnhancedBulkOffersModule({
     const specialties = Array.from(
       new Set(validRows.map((r) => r.specialty_required).filter(Boolean)),
     );
-    const reqIds = Array.from(
-      new Set(validRows.flatMap((r) => r.requirements.map((q) => q.type))),
-    );
+    const reqIds = Array.from(new Set(validRows.flatMap((r) => r.requirements.map((q) => q.type))));
     const reqLabels = reqIds
-      .map((id) => REQUIREMENT_OPTIONS.find((o) => o.id === id)?.label.replace(/^Anexo\s*/i, "").replace(/\.pdf$/i, ""))
+      .map((id) =>
+        REQUIREMENT_OPTIONS.find((o) => o.id === id)
+          ?.label.replace(/^Anexo\s*/i, "")
+          .replace(/\.pdf$/i, ""),
+      )
       .filter(Boolean) as string[];
     return {
       institutionName: institutionName || undefined,
@@ -289,7 +301,8 @@ export function EnhancedBulkOffersModule({
               requirementPayload.push({
                 job_offer_id: offerId,
                 requirement_type: req.type,
-                description: req.description || REQUIREMENT_OPTIONS.find((o) => o.id === req.type)?.label,
+                description:
+                  req.description || REQUIREMENT_OPTIONS.find((o) => o.id === req.type)?.label,
                 is_mandatory: req.is_mandatory,
                 priority: reqIdx,
               });
@@ -338,10 +351,7 @@ export function EnhancedBulkOffersModule({
         .select("*")
         .in(
           "application_id",
-          supabase
-            .from("applications")
-            .select("id")
-            .in("job_offer_id", offerIds),
+          supabase.from("applications").select("id").in("job_offer_id", offerIds),
         );
 
       if (!docs) {
@@ -370,9 +380,7 @@ export function EnhancedBulkOffersModule({
       toast.loading("Preparando descarga...");
 
       // Simular descarga (en producción, usar librería de ZIP como JSZip)
-      const docLinks = folderDocs
-        .map((d) => `${d.document_name}: ${d.file_url}`)
-        .join("\n");
+      const docLinks = folderDocs.map((d) => `${d.document_name}: ${d.file_url}`).join("\n");
 
       const csvContent = [
         "CARPETA DOCUMENTAL - HUMANIX CARE CONNECT",
@@ -382,8 +390,7 @@ export function EnhancedBulkOffersModule({
         "CUMPLIMIENTO FUID (Archivo Documental Colombia):",
         "---",
         ...folderDocs.map(
-          (d) =>
-            `${d.document_name} | Retención hasta: ${d.retention_until} | Estado: ${d.status}`,
+          (d) => `${d.document_name} | Retención hasta: ${d.retention_until} | Estado: ${d.status}`,
         ),
         "",
         "NOTAS DE CUMPLIMIENTO:",
@@ -422,8 +429,8 @@ export function EnhancedBulkOffersModule({
               Publicación masiva inteligente + Requisitos avanzados
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Carga múltiples vacantes con requisitos específicos (antecedentes, policía, procuraduría,
-              etc.) y descarga la carpeta documental completa.
+              Carga múltiples vacantes con requisitos específicos (antecedentes, policía,
+              procuraduría, etc.) y descarga la carpeta documental completa.
             </p>
           </div>
           {published > 0 && (
@@ -439,8 +446,9 @@ export function EnhancedBulkOffersModule({
           <div className="text-sm text-cyan-800">
             <p className="font-medium">Cumplimiento FUID (Colombia)</p>
             <p className="text-xs mt-1 opacity-90">
-              Los documentos recolectados se retienen según normativa: antecedentes/policía/procuraduría
-              (5 años), exámenes médicos (3 años), referencias (2 años).
+              Los documentos recolectados se retienen según normativa:
+              antecedentes/policía/procuraduría (5 años), exámenes médicos (3 años), referencias (2
+              años).
             </p>
           </div>
         </div>
@@ -476,7 +484,9 @@ export function EnhancedBulkOffersModule({
                 <select
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                   value={r.modality}
-                  onChange={(e) => updateRow(r.id, { modality: e.target.value as BulkRow["modality"] })}
+                  onChange={(e) =>
+                    updateRow(r.id, { modality: e.target.value as BulkRow["modality"] })
+                  }
                 >
                   <option value="hour">Por hora</option>
                   <option value="shift">Turno</option>
@@ -515,7 +525,9 @@ export function EnhancedBulkOffersModule({
               {/* Requisitos */}
               <div className="md:col-span-12">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium">Requisitos documentales inteligentes</label>
+                  <label className="text-sm font-medium">
+                    Requisitos documentales inteligentes
+                  </label>
                   <Button
                     size="sm"
                     variant="outline"
@@ -557,7 +569,11 @@ export function EnhancedBulkOffersModule({
             Calcular matches IA
           </Button>
           <Button variant="hero" onClick={publishAll} disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
+            {busy ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-1.5" />
+            )}
             Publicar todas
           </Button>
           <Button variant="outline" onClick={downloadFolderDocuments} disabled={folderLoading}>
@@ -571,13 +587,13 @@ export function EnhancedBulkOffersModule({
         </div>
       </Card>
 
-      <PromoCarousel
-        shareTitle="Ofertas Humanix · Talento en salud"
-        context={promoContext}
-      />
+      <PromoCarousel shareTitle="Ofertas Humanix · Talento en salud" context={promoContext} />
 
       {/* Dialog Requisitos */}
-      <Dialog open={showRequirementsDialog !== null} onOpenChange={() => setShowRequirementsDialog(null)}>
+      <Dialog
+        open={showRequirementsDialog !== null}
+        onOpenChange={() => setShowRequirementsDialog(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Agregar requisitos documentales</DialogTitle>
@@ -647,7 +663,9 @@ export function EnhancedBulkOffersModule({
                     <tr key={doc.id} className="border-b border-border hover:bg-muted/50">
                       <td className="p-2 font-medium truncate">{doc.document_name}</td>
                       <td className="p-2 text-xs">{doc.requirement_type}</td>
-                      <td className="p-2 text-xs">{new Date(doc.retention_until).toLocaleDateString("es-CO")}</td>
+                      <td className="p-2 text-xs">
+                        {new Date(doc.retention_until).toLocaleDateString("es-CO")}
+                      </td>
                       <td className="p-2">
                         <Badge
                           variant={doc.status === "submitted" ? "outline" : "default"}
@@ -657,11 +675,7 @@ export function EnhancedBulkOffersModule({
                         </Badge>
                       </td>
                       <td className="p-2 text-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          asChild
-                        >
+                        <Button size="sm" variant="ghost" asChild>
                           <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                             <Eye className="h-3.5 w-3.5" />
                           </a>

@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Handshake, ShieldCheck, X, Send, Info, Sparkles, Zap } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Handshake,
+  ShieldCheck,
+  X,
+  Send,
+  Info,
+  Sparkles,
+  Zap,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
@@ -68,7 +79,10 @@ export function AgendaViewer({
   const [showInfo, setShowInfo] = useState(false);
 
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart],
+  );
 
   useEffect(() => {
     let active = true;
@@ -147,7 +161,10 @@ export function AgendaViewer({
           event: "*",
           schema: "public",
           table: targetRole === "professional" ? "availability_slots" : "family_needs",
-          filter: targetRole === "professional" ? `user_id=eq.${targetUserId}` : `family_user_id=eq.${targetUserId}`,
+          filter:
+            targetRole === "professional"
+              ? `user_id=eq.${targetUserId}`
+              : `family_user_id=eq.${targetUserId}`,
         },
         (payload) => {
           const row = (payload.new ?? payload.old) as { id: string; starts_at: string } | undefined;
@@ -176,12 +193,16 @@ export function AgendaViewer({
   const slotAt = (day: Date, hour: number): Slot | undefined =>
     slots.find((s) => {
       const t = new Date(s.starts_at);
-      return t.getDate() === day.getDate() && t.getMonth() === day.getMonth() && t.getHours() === hour;
+      return (
+        t.getDate() === day.getDate() && t.getMonth() === day.getMonth() && t.getHours() === hour
+      );
     });
   const needAt = (day: Date, hour: number): Need | undefined =>
     needs.find((n) => {
       const t = new Date(n.starts_at);
-      return t.getDate() === day.getDate() && t.getMonth() === day.getMonth() && t.getHours() === hour;
+      return (
+        t.getDate() === day.getDate() && t.getMonth() === day.getMonth() && t.getHours() === hour
+      );
     });
   const wasProposed = (day: Date, hour: number): boolean =>
     busyCells.has(`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}-${hour}`);
@@ -196,7 +217,8 @@ export function AgendaViewer({
       return;
     }
     const key = `${day.toDateString()}-${hour}`;
-    setSending(key);    try {
+    setSending(key);
+    try {
       const start = new Date(day);
       start.setHours(hour, 0, 0, 0);
       const end = new Date(start);
@@ -304,10 +326,7 @@ export function AgendaViewer({
               `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}-${start.getHours()}`,
             ),
         )
-        .sort(
-          (a, b) =>
-            b.contiguous - a.contiguous || a.start.getTime() - b.start.getTime(),
-        )
+        .sort((a, b) => b.contiguous - a.contiguous || a.start.getTime() - b.start.getTime())
         .slice(0, 3);
       return free.map(({ start, contiguous }) => ({
         day: new Date(start.getFullYear(), start.getMonth(), start.getDate()),
@@ -382,199 +401,215 @@ export function AgendaViewer({
         </div>
       </div>
 
-      <div className={`grid ${showInfo || pendingCell ? "lg:grid-cols-[1fr_360px]" : "grid-cols-1"}`}>
+      <div
+        className={`grid ${showInfo || pendingCell ? "lg:grid-cols-[1fr_360px]" : "grid-cols-1"}`}
+      >
         <div>
-      {/* Smart picks IA: un tap para contratar/postularse en el mejor horario */}
-      {!loading && smartPicks.length > 0 && (
-        <div className="px-3 pt-3 pb-2 border-b border-border/60 bg-gradient-to-br from-biosensor/5 via-fuchsia-neural/5 to-transparent">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-3.5 w-3.5 text-fuchsia-neural" />
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-fuchsia-neural">
-              Sugerencias IA
-            </p>
-            <span className="text-[10px] text-muted-foreground">
-              {targetRole === "professional"
-                ? "Mejores horarios libres próximos"
-                : "Necesidades abiertas más cercanas"}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {smartPicks.map((p, i) => {
-              const isBest = i === 0;
-              return (
-                <button
-                  key={`${p.day.toISOString()}-${p.hour}`}
-                  type="button"
-                  disabled={!canAct}
-                  onClick={() => {
-                    setPendingCell({ day: p.day, hour: p.hour });
-                    // Scroll agenda week to that day
-                    setWeekStart(startOfWeek(p.day));
-                  }}
-                  className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-all ${
-                    isBest
-                      ? "border-biosensor bg-biosensor/10 text-biosensor hover:bg-biosensor/20"
-                      : "border-border bg-card hover:border-biosensor/50 hover:bg-biosensor/5"
-                  } ${!canAct ? "opacity-60 cursor-not-allowed" : ""}`}
-                  title={
-                    !canAct
-                      ? currentRole === targetRole
-                        ? "Solo la otra parte puede agendar aquí"
-                        : "Inicia sesión para agendar"
-                      : "Toca para preparar la propuesta"
-                  }
-                >
-                  {isBest && <Zap className="h-3 w-3" />}
-                  <span className="font-semibold">{p.label}</span>
-                  <span className="text-muted-foreground">
-                    · {p.hour.toString().padStart(2, "0")}:00
-                  </span>
-                  {p.rate ? (
-                    <span className="text-[10px] text-muted-foreground">
-                      · ${p.rate.toLocaleString("es-CO")}/h
-                    </span>
-                  ) : null}
-                  {targetRole === "professional" && p.contiguous > 1 ? (
-                    <span className="text-[10px] rounded-full bg-fuchsia-neural/15 text-fuchsia-neural px-1.5">
-                      {p.contiguous}h seguidas
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-          {!canAct && !currentUserId ? (
-            <p className="mt-2 text-[10px] text-muted-foreground">
-              Inicia sesión como {targetRole === "professional" ? "familia" : "profesional"} para
-              agendar con un toque.
-            </p>
-          ) : null}
-        </div>
-      )}
-      {loading ? (
-        <div className="p-12 text-center text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando…
-        </div>
-      ) : (
-        <div className="overflow-x-auto max-h-[520px]">
-          <table className="w-full text-xs min-w-[640px]">
-            <thead className="sticky top-0 bg-card z-10">
-              <tr className="border-b border-border">
-                <th className="p-2 w-12 text-left font-medium text-muted-foreground"></th>
-                {days.map((d) => {
-                  const isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
+          {/* Smart picks IA: un tap para contratar/postularse en el mejor horario */}
+          {!loading && smartPicks.length > 0 && (
+            <div className="px-3 pt-3 pb-2 border-b border-border/60 bg-gradient-to-br from-biosensor/5 via-fuchsia-neural/5 to-transparent">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-3.5 w-3.5 text-fuchsia-neural" />
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-fuchsia-neural">
+                  Sugerencias IA
+                </p>
+                <span className="text-[10px] text-muted-foreground">
+                  {targetRole === "professional"
+                    ? "Mejores horarios libres próximos"
+                    : "Necesidades abiertas más cercanas"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {smartPicks.map((p, i) => {
+                  const isBest = i === 0;
                   return (
-                    <th
-                      key={d.toISOString()}
-                      className={`p-2 text-center font-medium ${isToday ? "text-biosensor" : "text-muted-foreground"}`}
+                    <button
+                      key={`${p.day.toISOString()}-${p.hour}`}
+                      type="button"
+                      disabled={!canAct}
+                      onClick={() => {
+                        setPendingCell({ day: p.day, hour: p.hour });
+                        // Scroll agenda week to that day
+                        setWeekStart(startOfWeek(p.day));
+                      }}
+                      className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-all ${
+                        isBest
+                          ? "border-biosensor bg-biosensor/10 text-biosensor hover:bg-biosensor/20"
+                          : "border-border bg-card hover:border-biosensor/50 hover:bg-biosensor/5"
+                      } ${!canAct ? "opacity-60 cursor-not-allowed" : ""}`}
+                      title={
+                        !canAct
+                          ? currentRole === targetRole
+                            ? "Solo la otra parte puede agendar aquí"
+                            : "Inicia sesión para agendar"
+                          : "Toca para preparar la propuesta"
+                      }
                     >
-                      <div>{DAY_LABEL[(d.getDay() + 6) % 7]}</div>
-                      <div className={`text-[10px] ${isToday ? "font-bold" : ""}`}>{d.getDate()}</div>
-                    </th>
+                      {isBest && <Zap className="h-3 w-3" />}
+                      <span className="font-semibold">{p.label}</span>
+                      <span className="text-muted-foreground">
+                        · {p.hour.toString().padStart(2, "0")}:00
+                      </span>
+                      {p.rate ? (
+                        <span className="text-[10px] text-muted-foreground">
+                          · ${p.rate.toLocaleString("es-CO")}/h
+                        </span>
+                      ) : null}
+                      {targetRole === "professional" && p.contiguous > 1 ? (
+                        <span className="text-[10px] rounded-full bg-fuchsia-neural/15 text-fuchsia-neural px-1.5">
+                          {p.contiguous}h seguidas
+                        </span>
+                      ) : null}
+                    </button>
                   );
                 })}
-              </tr>
-            </thead>
-            <tbody>
-              {HOURS.map((h) => (
-                <tr key={h} className="border-b border-border/50">
-                  <td className="p-2 text-muted-foreground text-[10px] font-medium">
-                    {h.toString().padStart(2, "0")}:00
-                  </td>
-                  {days.map((d) => {
-                    const key = `${d.toDateString()}-${h}`;
-                    const isSending = sending === key;
-                    const already = wasProposed(d, h);
-                    if (targetRole === "professional") {
-                      const slot = slotAt(d, h);
-                      const state =
-                        !slot ? "empty" : slot.status === "free" ? "free" : slot.status === "reserved" ? "reserved" : "busy";
-                      const cls =
-                        state === "free"
-                          ? "bg-green-400/70 hover:bg-green-500 border-green-500 cursor-pointer"
-                          : state === "reserved"
-                            ? "bg-yellow-400/70 border-yellow-500 cursor-not-allowed"
-                            : state === "busy"
-                              ? "bg-muted border-border cursor-not-allowed"
-                              : "border-transparent cursor-not-allowed";
+              </div>
+              {!canAct && !currentUserId ? (
+                <p className="mt-2 text-[10px] text-muted-foreground">
+                  Inicia sesión como {targetRole === "professional" ? "familia" : "profesional"}{" "}
+                  para agendar con un toque.
+                </p>
+              ) : null}
+            </div>
+          )}
+          {loading ? (
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando…
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-[520px]">
+              <table className="w-full text-xs min-w-[640px]">
+                <thead className="sticky top-0 bg-card z-10">
+                  <tr className="border-b border-border">
+                    <th className="p-2 w-12 text-left font-medium text-muted-foreground"></th>
+                    {days.map((d) => {
+                      const isToday =
+                        d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
                       return (
-                        <td key={d.toISOString() + h} className="p-0.5">
-                          <button
-                            type="button"
-                            disabled={state !== "free" || isSending || already || !currentUserId}
-                            onClick={() => setPendingCell({ day: d, hour: h })}
-                            className={`w-full h-8 rounded-md border ${cls} transition-colors flex items-center justify-center ${already ? "opacity-70 ring-2 ring-fuchsia-neural" : ""}`}
-                            title={
-                              already
-                                ? "Ya enviaste una solicitud"
-                                : state === "free"
-                                  ? "Libre — toca para contratar"
-                                  : state === "reserved"
-                                    ? "Reservado parcialmente"
-                                    : state === "busy"
-                                      ? "Ocupado"
-                                      : "Sin disponibilidad"
-                            }
-                          >
-                            {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                            {already ? <Handshake className="h-3 w-3 text-fuchsia-neural" /> : null}
-                          </button>
-                        </td>
-                      );
-                    }
-                    const need = needAt(d, h);
-                    const isOpen = need?.status === "open";
-                    const isMatched = need?.status === "matched";
-                    const cls = isMatched
-                      ? "bg-green-600/80 border-green-700 cursor-not-allowed"
-                      : isOpen
-                        ? "bg-blue-500/80 hover:bg-blue-600 border-blue-600 cursor-pointer"
-                        : "border-transparent cursor-not-allowed";
-                    return (
-                      <td key={d.toISOString() + h} className="p-0.5">
-                        <button
-                          type="button"
-                          disabled={!isOpen || isSending || already || !currentUserId}
-                          onClick={() => setPendingCell({ day: d, hour: h })}
-                          className={`w-full h-8 rounded-md border ${cls} transition-colors flex items-center justify-center ${already ? "opacity-70 ring-2 ring-fuchsia-neural" : ""}`}
-                          title={
-                            already
-                              ? "Ya te postulaste"
-                              : isOpen
-                                ? `Necesita ayuda — $${need?.hourly_rate?.toLocaleString("es-CO")}/h`
-                                : isMatched
-                                  ? "Ya cubierto"
-                                  : "Sin necesidad"
-                          }
+                        <th
+                          key={d.toISOString()}
+                          className={`p-2 text-center font-medium ${isToday ? "text-biosensor" : "text-muted-foreground"}`}
                         >
-                          {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                          {already ? <Handshake className="h-3 w-3 text-fuchsia-neural" /> : null}
-                        </button>
+                          <div>{DAY_LABEL[(d.getDay() + 6) % 7]}</div>
+                          <div className={`text-[10px] ${isToday ? "font-bold" : ""}`}>
+                            {d.getDate()}
+                          </div>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {HOURS.map((h) => (
+                    <tr key={h} className="border-b border-border/50">
+                      <td className="p-2 text-muted-foreground text-[10px] font-medium">
+                        {h.toString().padStart(2, "0")}:00
                       </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      {days.map((d) => {
+                        const key = `${d.toDateString()}-${h}`;
+                        const isSending = sending === key;
+                        const already = wasProposed(d, h);
+                        if (targetRole === "professional") {
+                          const slot = slotAt(d, h);
+                          const state = !slot
+                            ? "empty"
+                            : slot.status === "free"
+                              ? "free"
+                              : slot.status === "reserved"
+                                ? "reserved"
+                                : "busy";
+                          const cls =
+                            state === "free"
+                              ? "bg-green-400/70 hover:bg-green-500 border-green-500 cursor-pointer"
+                              : state === "reserved"
+                                ? "bg-yellow-400/70 border-yellow-500 cursor-not-allowed"
+                                : state === "busy"
+                                  ? "bg-muted border-border cursor-not-allowed"
+                                  : "border-transparent cursor-not-allowed";
+                          return (
+                            <td key={d.toISOString() + h} className="p-0.5">
+                              <button
+                                type="button"
+                                disabled={
+                                  state !== "free" || isSending || already || !currentUserId
+                                }
+                                onClick={() => setPendingCell({ day: d, hour: h })}
+                                className={`w-full h-8 rounded-md border ${cls} transition-colors flex items-center justify-center ${already ? "opacity-70 ring-2 ring-fuchsia-neural" : ""}`}
+                                title={
+                                  already
+                                    ? "Ya enviaste una solicitud"
+                                    : state === "free"
+                                      ? "Libre — toca para contratar"
+                                      : state === "reserved"
+                                        ? "Reservado parcialmente"
+                                        : state === "busy"
+                                          ? "Ocupado"
+                                          : "Sin disponibilidad"
+                                }
+                              >
+                                {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                                {already ? (
+                                  <Handshake className="h-3 w-3 text-fuchsia-neural" />
+                                ) : null}
+                              </button>
+                            </td>
+                          );
+                        }
+                        const need = needAt(d, h);
+                        const isOpen = need?.status === "open";
+                        const isMatched = need?.status === "matched";
+                        const cls = isMatched
+                          ? "bg-green-600/80 border-green-700 cursor-not-allowed"
+                          : isOpen
+                            ? "bg-blue-500/80 hover:bg-blue-600 border-blue-600 cursor-pointer"
+                            : "border-transparent cursor-not-allowed";
+                        return (
+                          <td key={d.toISOString() + h} className="p-0.5">
+                            <button
+                              type="button"
+                              disabled={!isOpen || isSending || already || !currentUserId}
+                              onClick={() => setPendingCell({ day: d, hour: h })}
+                              className={`w-full h-8 rounded-md border ${cls} transition-colors flex items-center justify-center ${already ? "opacity-70 ring-2 ring-fuchsia-neural" : ""}`}
+                              title={
+                                already
+                                  ? "Ya te postulaste"
+                                  : isOpen
+                                    ? `Necesita ayuda — $${need?.hourly_rate?.toLocaleString("es-CO")}/h`
+                                    : isMatched
+                                      ? "Ya cubierto"
+                                      : "Sin necesidad"
+                              }
+                            >
+                              {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                              {already ? (
+                                <Handshake className="h-3 w-3 text-fuchsia-neural" />
+                              ) : null}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-      <div className="p-3 border-t border-border flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
-        {targetRole === "professional" ? (
-          <>
-            <Legend color="bg-green-400 border-green-500" label="Libre" />
-            <Legend color="bg-yellow-400 border-yellow-500" label="Parcial" />
-            <Legend color="bg-muted border-border" label="Ocupado" />
-          </>
-        ) : (
-          <>
-            <Legend color="bg-blue-500 border-blue-600" label="Necesidad abierta" />
-            <Legend color="bg-green-600 border-green-700" label="Cubierto" />
-          </>
-        )}
-        <Legend color="ring-2 ring-fuchsia-neural bg-transparent" label="Propuesta enviada" />
-      </div>
+          <div className="p-3 border-t border-border flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+            {targetRole === "professional" ? (
+              <>
+                <Legend color="bg-green-400 border-green-500" label="Libre" />
+                <Legend color="bg-yellow-400 border-yellow-500" label="Parcial" />
+                <Legend color="bg-muted border-border" label="Ocupado" />
+              </>
+            ) : (
+              <>
+                <Legend color="bg-blue-500 border-blue-600" label="Necesidad abierta" />
+                <Legend color="bg-green-600 border-green-700" label="Cubierto" />
+              </>
+            )}
+            <Legend color="ring-2 ring-fuchsia-neural bg-transparent" label="Propuesta enviada" />
+          </div>
         </div>
 
         {showInfo || pendingCell ? (

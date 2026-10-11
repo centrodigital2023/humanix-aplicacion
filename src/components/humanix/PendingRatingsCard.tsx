@@ -46,11 +46,13 @@ export function PendingRatingsCard({ userId, role }: Props) {
         .order("completed_at", { ascending: false })
         .limit(20);
       if (!active) return;
-      const list = (bookings ?? []) as Array<{
-        id: string;
-        scheduled_at: string;
-        completed_at: string | null;
-      } & Record<string, string>>;
+      const list = (bookings ?? []) as Array<
+        {
+          id: string;
+          scheduled_at: string;
+          completed_at: string | null;
+        } & Record<string, string>
+      >;
       if (list.length === 0) {
         setPending([]);
         setLoading(false);
@@ -100,16 +102,8 @@ export function PendingRatingsCard({ userId, role }: Props) {
 
     const channel = supabase
       .channel(`pending-ratings-${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "service_bookings" },
-        load,
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "service_ratings" },
-        load,
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "service_bookings" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "service_ratings" }, load)
       .subscribe();
 
     return () => {
@@ -120,8 +114,7 @@ export function PendingRatingsCard({ userId, role }: Props) {
 
   if (loading || pending.length === 0) return null;
 
-  const title =
-    role === "family" ? "Califica a tu profesional" : "Califica a quien te contrató";
+  const title = role === "family" ? "Califica a tu profesional" : "Califica a quien te contrató";
   const hint =
     role === "family"
       ? "Cuéntanos cómo te fue con el profesional. Tu valoración mejora la confianza de toda la red."

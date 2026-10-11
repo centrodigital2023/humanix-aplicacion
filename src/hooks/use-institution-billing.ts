@@ -36,9 +36,7 @@ export function useInstitutionBilling(
     breakdown,
     totalFormatted: COP(breakdown.totalCOP),
     monthlyEquivalentFormatted: COP(
-      cycle === "annual"
-        ? Math.round(breakdown.totalCOP / 12)
-        : breakdown.totalCOP,
+      cycle === "annual" ? Math.round(breakdown.totalCOP / 12) : breakdown.totalCOP,
     ),
     trialDays,
     graceDays,

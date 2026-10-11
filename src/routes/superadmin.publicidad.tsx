@@ -174,8 +174,7 @@ const SMART_BANNERS: Array<
     audience: "institution",
     position: "institucion_hero",
     active: false,
-    ai_recommendation:
-      "Mensaje B2B con foco en velocidad de cobertura y cumplimiento regulatorio.",
+    ai_recommendation: "Mensaje B2B con foco en velocidad de cobertura y cumplimiento regulatorio.",
     ai_score: 0.78,
   },
   {
@@ -188,7 +187,8 @@ const SMART_BANNERS: Array<
     audience: "all",
     position: "tecnologia_hero",
     active: false,
-    ai_recommendation: "Banner de producto para usuarios curiosos por la tecnología. Cross-audience.",
+    ai_recommendation:
+      "Banner de producto para usuarios curiosos por la tecnología. Cross-audience.",
     ai_score: 0.74,
   },
   {
@@ -410,12 +410,10 @@ function PublicidadPage() {
       const ext = r.source === "ai" ? "png" : "jpg";
       const prefix = r.source === "ai" ? "cosmic-ai" : "nasa";
       const path = `${user.id}/${prefix}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("ad-banners")
-        .upload(path, blob, {
-          contentType: blob.type || (r.source === "ai" ? "image/png" : "image/jpeg"),
-          upsert: false,
-        });
+      const { error: upErr } = await supabase.storage.from("ad-banners").upload(path, blob, {
+        contentType: blob.type || (r.source === "ai" ? "image/png" : "image/jpeg"),
+        upsert: false,
+      });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("ad-banners").getPublicUrl(path);
       setEditing({ ...editing, image_url: pub.publicUrl });
@@ -969,133 +967,139 @@ function PublicidadPage() {
                         : "relative overflow-hidden bg-gradient-to-br from-copper/20 via-background to-biosensor/20 min-h-[200px] flex flex-col"
                     }
                   >
-                  {isMobile ? (
-                    <div className="relative w-[260px] h-[440px] rounded-[2rem] border-[8px] border-foreground/80 bg-background shadow-xl overflow-hidden flex flex-col">
-                      {current.image_url && (
-                        <img
-                          src={current.image_url}
-                          alt={current.title}
-                          className="absolute inset-0 w-full h-full object-cover opacity-50"
-                        />
-                      )}
-                      <div className="relative flex-1 flex flex-col justify-end p-4">
-                        <div className="flex items-center gap-1 mb-2 flex-wrap">
-                          <Badge variant={current.active ? "default" : "secondary"} className="text-[9px]">
-                            {current.active ? "Activo" : "Inactivo"}
-                          </Badge>
-                          <Badge variant="outline" className="text-[9px] capitalize bg-background/70">
-                            {current.audience}
-                          </Badge>
-                        </div>
-                        <h3 className="font-display text-lg font-bold leading-tight drop-shadow-sm">
-                          {current.title}
-                        </h3>
-                        {current.description && (
-                          <p className="mt-1 text-xs text-foreground/80 line-clamp-3 leading-relaxed">
-                            {current.description}
-                          </p>
+                    {isMobile ? (
+                      <div className="relative w-[260px] h-[440px] rounded-[2rem] border-[8px] border-foreground/80 bg-background shadow-xl overflow-hidden flex flex-col">
+                        {current.image_url && (
+                          <img
+                            src={current.image_url}
+                            alt={current.title}
+                            className="absolute inset-0 w-full h-full object-cover opacity-50"
+                          />
                         )}
-                        {current.cta_label && (
-                          <div className="mt-2">
-                            {ctaHref ? (
-                              <a
-                                href={ctaHref}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 rounded-lg bg-biosensor text-biosensor-foreground px-3 py-1.5 text-xs font-semibold hover:bg-biosensor/90 transition-colors"
-                              >
-                                {current.cta_label} <ExternalLink className="h-3 w-3" />
-                              </a>
-                            ) : (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-lg bg-muted text-muted-foreground px-3 py-1.5 text-xs font-semibold cursor-not-allowed"
-                                title="Sin URL destino"
-                              >
-                                {current.cta_label}
-                              </span>
+                        <div className="relative flex-1 flex flex-col justify-end p-4">
+                          <div className="flex items-center gap-1 mb-2 flex-wrap">
+                            <Badge
+                              variant={current.active ? "default" : "secondary"}
+                              className="text-[9px]"
+                            >
+                              {current.active ? "Activo" : "Inactivo"}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] capitalize bg-background/70"
+                            >
+                              {current.audience}
+                            </Badge>
+                          </div>
+                          <h3 className="font-display text-lg font-bold leading-tight drop-shadow-sm">
+                            {current.title}
+                          </h3>
+                          {current.description && (
+                            <p className="mt-1 text-xs text-foreground/80 line-clamp-3 leading-relaxed">
+                              {current.description}
+                            </p>
+                          )}
+                          {current.cta_label && (
+                            <div className="mt-2">
+                              {ctaHref ? (
+                                <a
+                                  href={ctaHref}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-lg bg-biosensor text-biosensor-foreground px-3 py-1.5 text-xs font-semibold hover:bg-biosensor/90 transition-colors"
+                                >
+                                  {current.cta_label} <ExternalLink className="h-3 w-3" />
+                                </a>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-lg bg-muted text-muted-foreground px-3 py-1.5 text-xs font-semibold cursor-not-allowed"
+                                  title="Sin URL destino"
+                                >
+                                  {current.cta_label}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {current.image_url && (
+                          <img
+                            src={current.image_url}
+                            alt={current.title}
+                            className="absolute inset-0 w-full h-full object-cover opacity-40"
+                          />
+                        )}
+                        <div className="relative flex-1 flex flex-col justify-end p-6">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <Badge
+                              variant={current.active ? "default" : "secondary"}
+                              className="text-[10px]"
+                            >
+                              {current.active ? (
+                                <>
+                                  <CircleDot className="h-2.5 w-2.5 mr-1 animate-pulse" />
+                                  Activo
+                                </>
+                              ) : (
+                                "Inactivo"
+                              )}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] capitalize bg-background/70"
+                            >
+                              {current.audience}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px] bg-background/70">
+                              {current.position.replace("_", " ")}
+                            </Badge>
+                            {current.ai_score !== null && (
+                              <Badge className="bg-biosensor text-biosensor-foreground text-[10px] gap-1">
+                                <Sparkles className="h-2.5 w-2.5" />
+                                {current.ai_score}/100 IA
+                              </Badge>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                  <>
-                    {current.image_url && (
-                      <img
-                        src={current.image_url}
-                        alt={current.title}
-                        className="absolute inset-0 w-full h-full object-cover opacity-40"
-                      />
-                    )}
-                    <div className="relative flex-1 flex flex-col justify-end p-6">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <Badge
-                          variant={current.active ? "default" : "secondary"}
-                          className="text-[10px]"
-                        >
-                          {current.active ? (
-                            <>
-                              <CircleDot className="h-2.5 w-2.5 mr-1 animate-pulse" />
-                              Activo
-                            </>
-                          ) : (
-                            "Inactivo"
+                          <h3 className="font-display text-2xl font-bold leading-tight drop-shadow-sm">
+                            {current.title}
+                          </h3>
+                          {current.description && (
+                            <p className="mt-1.5 text-sm text-foreground/80 line-clamp-2 leading-relaxed">
+                              {current.description}
+                            </p>
                           )}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] capitalize bg-background/70"
-                        >
-                          {current.audience}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] bg-background/70">
-                          {current.position.replace("_", " ")}
-                        </Badge>
-                        {current.ai_score !== null && (
-                          <Badge className="bg-biosensor text-biosensor-foreground text-[10px] gap-1">
-                            <Sparkles className="h-2.5 w-2.5" />
-                            {current.ai_score}/100 IA
-                          </Badge>
-                        )}
-                      </div>
-                      <h3 className="font-display text-2xl font-bold leading-tight drop-shadow-sm">
-                        {current.title}
-                      </h3>
-                      {current.description && (
-                        <p className="mt-1.5 text-sm text-foreground/80 line-clamp-2 leading-relaxed">
-                          {current.description}
-                        </p>
-                      )}
-                      {current.ai_recommendation && (
-                        <p className="mt-2 text-xs text-biosensor/90 italic border-l-2 border-biosensor/40 pl-2 line-clamp-2">
-                          <Sparkles className="h-2.5 w-2.5 inline mr-1" />
-                          {current.ai_recommendation}
-                        </p>
-                      )}
-                      {current.cta_label && (
-                        <div className="mt-3">
-                          {ctaHref ? (
-                            <a
-                              href={ctaHref}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-biosensor text-biosensor-foreground px-4 py-2 text-sm font-semibold hover:bg-biosensor/90 transition-colors"
-                            >
-                              {current.cta_label} <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
-                          ) : (
-                            <span
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-muted text-muted-foreground px-4 py-2 text-sm font-semibold cursor-not-allowed"
-                              title="Sin URL destino — agrégala para habilitar el CTA"
-                            >
-                              {current.cta_label}
-                            </span>
+                          {current.ai_recommendation && (
+                            <p className="mt-2 text-xs text-biosensor/90 italic border-l-2 border-biosensor/40 pl-2 line-clamp-2">
+                              <Sparkles className="h-2.5 w-2.5 inline mr-1" />
+                              {current.ai_recommendation}
+                            </p>
+                          )}
+                          {current.cta_label && (
+                            <div className="mt-3">
+                              {ctaHref ? (
+                                <a
+                                  href={ctaHref}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-biosensor text-biosensor-foreground px-4 py-2 text-sm font-semibold hover:bg-biosensor/90 transition-colors"
+                                >
+                                  {current.cta_label} <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-muted text-muted-foreground px-4 py-2 text-sm font-semibold cursor-not-allowed"
+                                  title="Sin URL destino — agrégala para habilitar el CTA"
+                                >
+                                  {current.cta_label}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  </>
-                  )}
+                      </>
+                    )}
                   </div>
 
                   {/* Right panel: stats + share */}
@@ -1244,8 +1248,8 @@ function PublicidadPage() {
               <p className="font-semibold text-foreground">Sin banners todavía</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Crea el primero con{" "}
-                <span className="font-medium text-foreground">"Nuevo banner"</span> o deja que la
-                IA prepare 5 propuestas listas para lanzar.
+                <span className="font-medium text-foreground">"Nuevo banner"</span> o deja que la IA
+                prepare 5 propuestas listas para lanzar.
               </p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 <Button

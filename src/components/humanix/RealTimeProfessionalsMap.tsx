@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * REAL TIME PROFESSIONALS MAP
- * 
+ *
  * Mapa en tiempo real de profesionales disponibles (estilo Uber)
  * - Vista en tiempo real de profesionales por ciudad
  * - Filtro por especialidad
@@ -10,15 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
-import {
-  Loader2,
-  MapPin,
-  Users,
-  Star,
-  Filter,
-  Zap,
-  Activity,
-} from "lucide-react";
+import { Loader2, MapPin, Users, Star, Filter, Zap, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,12 +61,18 @@ export function RealTimeProfessionalsMap({
     const suffix = Math.random().toString(36).slice(2, 7);
     const ch = supabase
       .channel(`rt_pros_map_${institutionCity}_${suffix}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "professional_profiles" },
-        () => setTick((n) => n + 1))
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_locations" },
-        () => setTick((n) => n + 1))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "professional_profiles" },
+        () => setTick((n) => n + 1),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_locations" }, () =>
+        setTick((n) => n + 1),
+      )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [institutionCity]);
 
   // ── Carga de datos (se re-ejecuta cuando cambia tick o filtros) ───────────
@@ -85,7 +83,9 @@ export function RealTimeProfessionalsMap({
         // La vista public_professionals_safe ya incluye full_name, avatar_url, phone
         let query = supabase
           .from("public_professionals_safe")
-          .select("user_id, specialty, avg_rating, hourly_rate, availability_status, available, home_city, full_name, avatar_url, phone")
+          .select(
+            "user_id, specialty, avg_rating, hourly_rate, availability_status, available, home_city, full_name, avatar_url, phone",
+          )
           .eq("home_city", institutionCity);
 
         if (statusFilter === "available") {
@@ -97,10 +97,7 @@ export function RealTimeProfessionalsMap({
         // Cargar IDs con GPS en vivo en paralelo
         const [{ data, error }, { data: liveData }] = await Promise.all([
           query.order("avg_rating", { ascending: false }),
-          (supabase as any)
-            .from("user_locations")
-            .select("user_id")
-            .eq("is_online", true),
+          (supabase as any).from("user_locations").select("user_id").eq("is_online", true),
         ]);
 
         if (error) throw error;
@@ -132,15 +129,16 @@ export function RealTimeProfessionalsMap({
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [institutionCity, statusFilter, tick]);
 
   // Filtrar profesionales
   const filtered = professionals.filter((p) => {
     const matchesSpecialty = !specialtyFilter || p.specialty === specialtyFilter;
     const matchesSearch =
-      !searchTerm ||
-      p.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      !searchTerm || p.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSpecialty && matchesSearch;
   });
 
@@ -149,17 +147,13 @@ export function RealTimeProfessionalsMap({
   const liveCount = filtered.filter((p) => p.is_live).length;
   const averageRating =
     filtered.length > 0
-      ? (
-          filtered.reduce((sum, p) => sum + (p.avg_rating || 0), 0) /
-          filtered.length
-        ).toFixed(1)
+      ? (filtered.reduce((sum, p) => sum + (p.avg_rating || 0), 0) / filtered.length).toFixed(1)
       : "0";
 
   if (loading) {
     return (
       <Card className="p-8 text-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando
-        profesionales…
+        <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando profesionales…
       </Card>
     );
   }
@@ -198,9 +192,7 @@ export function RealTimeProfessionalsMap({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Promedio rating</p>
-              <p className="text-2xl font-bold text-amber-600">
-                {averageRating}⭐
-              </p>
+              <p className="text-2xl font-bold text-amber-600">{averageRating}⭐</p>
             </div>
             <Star className="h-5 w-5 text-amber-600 opacity-30" />
           </div>
@@ -210,9 +202,7 @@ export function RealTimeProfessionalsMap({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-2xl font-bold text-fuchsia-600">
-                {filtered.length}
-              </p>
+              <p className="text-2xl font-bold text-fuchsia-600">{filtered.length}</p>
             </div>
             <Users className="h-5 w-5 text-fuchsia-600 opacity-30" />
           </div>
@@ -265,8 +255,7 @@ export function RealTimeProfessionalsMap({
           <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
           <p className="font-semibold">Sin profesionales disponibles</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Intenta cambiar los filtros o espera a que se conecten más
-            profesionales.
+            Intenta cambiar los filtros o espera a que se conecten más profesionales.
           </p>
         </Card>
       ) : (
@@ -333,7 +322,6 @@ export function RealTimeProfessionalsMap({
                         ${pro.hourly_rate.toLocaleString("es-CO")}/h
                       </span>
                     )}
-
                   </div>
                 </div>
               </div>

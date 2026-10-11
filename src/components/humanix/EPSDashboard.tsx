@@ -59,8 +59,8 @@ interface EPSMetrics {
   lowRiskPatients: number;
   activeAlerts: number;
   criticalAlerts: number;
-  compliance: number;  // 0-100
-  readmissionRate: number;  // %
+  compliance: number; // 0-100
+  readmissionRate: number; // %
 }
 
 interface TrendPoint {
@@ -72,7 +72,7 @@ interface TrendPoint {
 }
 
 interface Props {
-  tenantId?: string;  // EPS/IPS tenant id; null = superadmin view (all)
+  tenantId?: string; // EPS/IPS tenant id; null = superadmin view (all)
   title?: string;
 }
 
@@ -99,17 +99,17 @@ function KpiCard({
 }) {
   const colorMap: Record<string, string> = {
     default: "bg-muted/30 text-foreground",
-    green:   "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    amber:   "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    red:     "bg-red-500/10 text-red-700 dark:text-red-400",
-    violet:  "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+    green: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    amber: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    red: "bg-red-500/10 text-red-700 dark:text-red-400",
+    violet: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
   };
   const iconBg: Record<string, string> = {
     default: "bg-muted/50",
-    green:   "bg-emerald-500/15",
-    amber:   "bg-amber-500/15",
-    red:     "bg-red-500/15",
-    violet:  "bg-violet-500/15",
+    green: "bg-emerald-500/15",
+    amber: "bg-amber-500/15",
+    red: "bg-red-500/15",
+    violet: "bg-violet-500/15",
   };
 
   return (
@@ -119,10 +119,21 @@ function KpiCard({
           {icon}
         </div>
         {trend && trendValue && (
-          <div className={cn("flex items-center gap-0.5 text-xs font-medium",
-            trend === "up" ? "text-emerald-600" : trend === "down" ? "text-red-600" : "text-muted-foreground"
-          )}>
-            {trend === "up" ? <TrendingUp className="h-3 w-3" /> : trend === "down" ? <TrendingDown className="h-3 w-3" /> : null}
+          <div
+            className={cn(
+              "flex items-center gap-0.5 text-xs font-medium",
+              trend === "up"
+                ? "text-emerald-600"
+                : trend === "down"
+                  ? "text-red-600"
+                  : "text-muted-foreground",
+            )}
+          >
+            {trend === "up" ? (
+              <TrendingUp className="h-3 w-3" />
+            ) : trend === "down" ? (
+              <TrendingDown className="h-3 w-3" />
+            ) : null}
             {trendValue}
           </div>
         )}
@@ -147,9 +158,9 @@ function KpiCard({
 
 const RISK_COLORS: Record<string, string> = {
   Crítico: "#ef4444",
-  Alto:    "#f97316",
+  Alto: "#f97316",
   Moderado: "#f59e0b",
-  Bajo:    "#10b981",
+  Bajo: "#10b981",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -174,12 +185,7 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
       };
 
       // Parallel data fetch
-      const [
-        riskRes,
-        alertsRes,
-        bookingsRes,
-        completedRes,
-      ] = await Promise.all([
+      const [riskRes, alertsRes, bookingsRes, completedRes] = await Promise.all([
         sb
           .from("patient_risk_scores")
           .select("patient_id, score, level")
@@ -204,9 +210,17 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
       ]);
 
       // Compute metrics from data
-      const riskRows = (riskRes.data ?? []) as Array<{ patient_id: string; score: number; level: string }>;
+      const riskRows = (riskRes.data ?? []) as Array<{
+        patient_id: string;
+        score: number;
+        level: string;
+      }>;
       const alertRows = (alertsRes.data ?? []) as Array<{ severity: string; status: string }>;
-      const checkinRows = (bookingsRes.data ?? []) as Array<{ status: string; checkin_at: string | null; duration_minutes: number | null }>;
+      const checkinRows = (bookingsRes.data ?? []) as Array<{
+        status: string;
+        checkin_at: string | null;
+        duration_minutes: number | null;
+      }>;
 
       // Deduplicate patients (latest score per patient)
       const patientMap = new Map<string, { score: number; level: string }>();
@@ -217,20 +231,25 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
       }
       const patients = Array.from(patientMap.values());
 
-      const avgScore = patients.length > 0
-        ? patients.reduce((s, p) => s + p.score, 0) / patients.length
-        : 0;
+      const avgScore =
+        patients.length > 0 ? patients.reduce((s, p) => s + p.score, 0) / patients.length : 0;
 
       const countByLevel = (level: string) => patients.filter((p) => p.level === level).length;
       const activeAlerts = alertRows.filter((a) => a.status === "active").length;
-      const criticalAlerts = alertRows.filter((a) => a.severity === "critical" && a.status === "active").length;
+      const criticalAlerts = alertRows.filter(
+        (a) => a.severity === "critical" && a.status === "active",
+      ).length;
       const activeServices = checkinRows.filter((c) => c.status === "checked_in").length;
       const completedServices = checkinRows.filter((c) => c.status === "completed").length;
 
       // Compliance: % of services with evidence (simplified)
-      const compliance = completedServices > 0
-        ? Math.min(100, Math.round((completedServices / (completedServices + activeServices + 1)) * 100) + 20)
-        : 88;
+      const compliance =
+        completedServices > 0
+          ? Math.min(
+              100,
+              Math.round((completedServices / (completedServices + activeServices + 1)) * 100) + 20,
+            )
+          : 88;
 
       setMetrics({
         totalPatients: patients.length,
@@ -296,10 +315,10 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
 
   const riskPieData = metrics
     ? [
-        { name: "Crítico",  value: metrics.criticalPatients },
-        { name: "Alto",     value: metrics.highRiskPatients },
+        { name: "Crítico", value: metrics.criticalPatients },
+        { name: "Alto", value: metrics.highRiskPatients },
         { name: "Moderado", value: metrics.mediumRiskPatients },
-        { name: "Bajo",     value: metrics.lowRiskPatients },
+        { name: "Bajo", value: metrics.lowRiskPatients },
       ].filter((d) => d.value > 0)
     : [];
 
@@ -360,7 +379,9 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
           value={metrics?.totalPatients ?? 0}
           sub={`${metrics?.criticalPatients ?? 0} críticos`}
           trend={metrics?.criticalPatients && metrics.criticalPatients > 0 ? "down" : "neutral"}
-          trendValue={metrics?.criticalPatients ? `${metrics.criticalPatients} críticos` : undefined}
+          trendValue={
+            metrics?.criticalPatients ? `${metrics.criticalPatients} críticos` : undefined
+          }
           color="violet"
           loading={loading}
         />
@@ -377,11 +398,7 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
         <KpiCard
           icon={<DollarSign className="h-4 w-4 text-amber-600" />}
           label="Facturación (COP)"
-          value={
-            metrics
-              ? `$${(metrics.totalRevenue / 1_000_000).toFixed(1)}M`
-              : "$0"
-          }
+          value={metrics ? `$${(metrics.totalRevenue / 1_000_000).toFixed(1)}M` : "$0"}
           sub={`${period} · ${metrics?.completedServices ?? 0} servicios`}
           trend="up"
           trendValue="+12%"
@@ -416,10 +433,13 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
               : "–"
           }
           color={
-            !metrics ? "default"
-              : metrics.avgRiskScore < 25 ? "green"
-              : metrics.avgRiskScore < 50 ? "amber"
-              : "red"
+            !metrics
+              ? "default"
+              : metrics.avgRiskScore < 25
+                ? "green"
+                : metrics.avgRiskScore < 50
+                  ? "amber"
+                  : "red"
           }
           loading={loading}
         />
@@ -535,10 +555,7 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
                     dataKey="value"
                   >
                     {riskPieData.map((entry) => (
-                      <Cell
-                        key={entry.name}
-                        fill={RISK_COLORS[entry.name] ?? "#6b7280"}
-                      />
+                      <Cell key={entry.name} fill={RISK_COLORS[entry.name] ?? "#6b7280"} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -579,8 +596,15 @@ export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
           <ResponsiveContainer width="100%" height={120}>
             <BarChart data={trends.slice(-14)}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-              <XAxis dataKey="date" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} interval="preserveStartEnd" />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+              />
               <Tooltip
                 contentStyle={{
                   background: "hsl(var(--card))",

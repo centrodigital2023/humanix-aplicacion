@@ -87,7 +87,8 @@ function ResourcesLayout() {
               Guías prácticas para familias y cuidadores
             </h1>
             <p className="mt-5 max-w-3xl text-base sm:text-lg text-cyber-foreground/75 leading-relaxed">
-              Información clara, verificada por profesionales de la salud, para tomar mejores decisiones cuando alguien que amas necesita cuidado en casa.
+              Información clara, verificada por profesionales de la salud, para tomar mejores
+              decisiones cuando alguien que amas necesita cuidado en casa.
             </p>
           </div>
         </section>

@@ -45,11 +45,7 @@ export function ProfessionalShareCard({
 
   const shareWa = () => {
     const text = `*${pro.name}* | ${pro.specialty} en ${pro.city}\nVerificado en Humanix ✅\nMira mi perfil: ${profileUrl}`;
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(text)}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
   const initials = pro.name
@@ -95,12 +91,14 @@ export function ProfessionalShareCard({
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <h2 className="text-xl font-bold">{pro.name}</h2>
             {pro.rethusBadge && (
-              <BadgeCheck size={18} className="text-trust shrink-0" aria-label="RETHUS verificado" />
+              <BadgeCheck
+                size={18}
+                className="text-trust shrink-0"
+                aria-label="RETHUS verificado"
+              />
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {pro.specialty}
-          </p>
+          <p className="text-sm text-muted-foreground mt-0.5">{pro.specialty}</p>
           <div className="flex items-center justify-center gap-1 mt-1 text-xs text-muted-foreground">
             <MapPin size={12} />
             <span>{pro.city}</span>
@@ -115,9 +113,7 @@ export function ProfessionalShareCard({
             <Star size={14} className="fill-amber-400 text-amber-400" />
             <span className="text-sm font-bold">{pro.rating.toFixed(1)}</span>
             {pro.reviewCount !== undefined && (
-              <span className="text-xs text-muted-foreground">
-                ({pro.reviewCount} reseñas)
-              </span>
+              <span className="text-xs text-muted-foreground">({pro.reviewCount} reseñas)</span>
             )}
           </div>
         )}
@@ -179,9 +175,7 @@ export function ProfessionalShareCard({
         </div>
 
         {/* profile URL hint */}
-        <p className="text-[0.68rem] text-muted-foreground truncate">
-          {profileUrl}
-        </p>
+        <p className="text-[0.68rem] text-muted-foreground truncate">{profileUrl}</p>
       </div>
     </div>
   );

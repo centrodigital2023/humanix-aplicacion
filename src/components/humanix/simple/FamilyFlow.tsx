@@ -2,14 +2,7 @@
 //   1. ¿Para quién?  2. ¿Cuándo?  3. ¿Dónde?
 // Autoguardado; la cuenta se pide solo al tocar "Pedir".
 import { useCallback, useEffect, useState } from "react";
-import {
-  ArrowLeft,
-  Loader2,
-  MapPin,
-  MessageCircle,
-  RotateCcw,
-  Star,
-} from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, MessageCircle, RotateCcw, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { COLOMBIA_CITIES, distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
 import { CONTACT } from "@/lib/social";
@@ -452,9 +445,7 @@ export function FamilyFlow() {
                       <div className="mt-3 flex flex-wrap justify-center gap-2">
                         {isVerified(pro) ? (
                           <>
-                            <span className="badge-rethus">
-                              RETHUS verificado
-                            </span>
+                            <span className="badge-rethus">RETHUS verificado</span>
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-trust/10 px-3 py-1.5 text-xs font-bold text-trust">
                               🛡️ Puerta Segura incluida
                             </span>

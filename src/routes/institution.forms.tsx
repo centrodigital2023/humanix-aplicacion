@@ -33,11 +33,7 @@ function InstitutionForms() {
       nav={getNav()}
       title="Formularios Dinámicos"
       subtitle="Crea formularios personalizados con validación IA automática para recopilar información de candidatos."
-      crumbs={[
-        { label: "Inicio", to: "/" },
-        { label: "Institución" },
-        { label: "Formularios" },
-      ]}
+      crumbs={[{ label: "Inicio", to: "/" }, { label: "Institución" }, { label: "Formularios" }]}
       badge={{ label: "Formularios", tone: "copper" }}
     >
       <div className="max-w-4xl mx-auto space-y-8">

@@ -51,8 +51,7 @@ export const Route = createFileRoute("/b/$bannerId")({
     const canonical = `${SITE_URL}/b/${params.bannerId}`;
     const title = b ? `${b.title} · ${SITE_NAME}` : `${SITE_NAME}`;
     const description =
-      b?.description?.trim() ||
-      "Talento humano en salud verificado con IA en Colombia.";
+      b?.description?.trim() || "Talento humano en salud verificado con IA en Colombia.";
     const image = absoluteImage(b?.image_url);
     return {
       meta: [
@@ -146,9 +145,7 @@ function BannerSharePage() {
           />
         )}
         <h1 className="text-2xl font-bold mb-3">{banner.title}</h1>
-        {banner.description && (
-          <p className="text-muted-foreground mb-6">{banner.description}</p>
-        )}
+        {banner.description && <p className="text-muted-foreground mb-6">{banner.description}</p>}
         <a
           href={target}
           className="inline-flex items-center justify-center rounded-md bg-biosensor text-biosensor-foreground px-6 py-3 font-semibold hover:opacity-90 transition"

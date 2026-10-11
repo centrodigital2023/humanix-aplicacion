@@ -53,7 +53,10 @@ function Page() {
       relatedLinks={[
         { label: "Auxiliar de enfermería", to: "/auxiliar-enfermeria" },
         { label: "Cuidado adulto mayor", to: "/cuidado-adulto-mayor" },
-        { label: "Cómo contratar cuidador de confianza", to: "/recursos/contratar-cuidador-confianza" },
+        {
+          label: "Cómo contratar cuidador de confianza",
+          to: "/recursos/contratar-cuidador-confianza",
+        },
       ]}
     />
   );

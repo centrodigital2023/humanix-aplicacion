@@ -41,11 +41,17 @@ export function usePublicStats() {
     const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
       .channel(`public_stats_${suffix}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "professional_profiles" }, fetch)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "professional_profiles" },
+        fetch,
+      )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, fetch)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetch]);
 
   return { stats, loading };

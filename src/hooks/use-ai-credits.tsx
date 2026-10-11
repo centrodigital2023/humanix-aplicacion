@@ -31,7 +31,10 @@ export function useAiCredits(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!userId) { setLoading(false); return; }
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,7 +43,9 @@ export function useAiCredits(userId: string | undefined) {
         anyClient.rpc("get_total_ai_credits_balance", { p_user_id: userId }),
         anyClient
           .from("ai_credit_packs_catalog")
-          .select("id, name, description, credits, price_cop, bonus_pct, validity_days, active, sort_order")
+          .select(
+            "id, name, description, credits, price_cop, bonus_pct, validity_days, active, sort_order",
+          )
           .eq("active", true)
           .order("sort_order"),
       ]);
@@ -65,15 +70,26 @@ export function useAiCredits(userId: string | undefined) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "ai_credit_topups", filter: `user_id=eq.${userId}` },
-        () => { refresh(); },
+        () => {
+          refresh();
+        },
       )
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "ai_credits_ledger", filter: `user_id=eq.${userId}` },
-        () => { refresh(); },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "ai_credits_ledger",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          refresh();
+        },
       )
       .subscribe();
-    return () => { supabase.removeChannel(sub); };
+    return () => {
+      supabase.removeChannel(sub);
+    };
   }, [userId, refresh]);
 
   return { balance, packs, loading, refresh };

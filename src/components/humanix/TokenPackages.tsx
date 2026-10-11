@@ -35,14 +35,14 @@ function PackCard({
   const icon = PACK_ICONS[pack.id] ?? "💡";
 
   return (
-    <div className={`rounded-2xl bg-gradient-to-br ${gradient} border p-5 flex flex-col gap-3 relative`}>
+    <div
+      className={`rounded-2xl bg-gradient-to-br ${gradient} border p-5 flex flex-col gap-3 relative`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div>
           <span className="text-2xl">{icon}</span>
           <h3 className="font-semibold text-base mt-1">{pack.name}</h3>
-          {pack.description && (
-            <p className="text-xs text-muted-foreground">{pack.description}</p>
-          )}
+          {pack.description && <p className="text-xs text-muted-foreground">{pack.description}</p>}
         </div>
         <div className="text-right shrink-0">
           <p className="text-2xl font-bold">{COP(pack.price_cop)}</p>
@@ -76,9 +76,13 @@ function PackCard({
         onClick={() => onBuy(pack.id)}
       >
         {isBuying ? (
-          <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Procesando…</>
+          <>
+            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Procesando…
+          </>
         ) : (
-          <><Zap className="h-4 w-4 mr-1.5" /> Comprar</>
+          <>
+            <Zap className="h-4 w-4 mr-1.5" /> Comprar
+          </>
         )}
       </Button>
     </div>
@@ -94,7 +98,10 @@ export function TokenPackages({ userId, userEmail }: { userId: string; userEmail
     try {
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
-      if (!token) { toast.error("Inicia sesión para comprar"); return; }
+      if (!token) {
+        toast.error("Inicia sesión para comprar");
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke("mp-create-credits-checkout", {
         body: { pack_id: packId, email: userEmail ?? "" },
@@ -105,7 +112,9 @@ export function TokenPackages({ userId, userEmail }: { userId: string; userEmail
       if (!url) throw new Error("No se recibió URL de pago");
 
       window.open(url, "_blank", "noopener,noreferrer");
-      toast.success("Abriendo Mercado Pago… completa el pago y los créditos se acreditarán automáticamente.");
+      toast.success(
+        "Abriendo Mercado Pago… completa el pago y los créditos se acreditarán automáticamente.",
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al iniciar el pago");
     } finally {
@@ -125,30 +134,41 @@ export function TokenPackages({ userId, userEmail }: { userId: string; userEmail
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="text-center rounded-xl bg-background/60 p-3">
-              <p className="text-2xl font-bold text-biosensor">{balance.grand_total.toLocaleString("es-CO")}</p>
+              <p className="text-2xl font-bold text-biosensor">
+                {balance.grand_total.toLocaleString("es-CO")}
+              </p>
               <p className="text-xs text-muted-foreground">disponibles</p>
             </div>
             <div className="text-center rounded-xl bg-background/60 p-3">
-              <p className="text-2xl font-bold">{balance.monthly_remaining.toLocaleString("es-CO")}</p>
+              <p className="text-2xl font-bold">
+                {balance.monthly_remaining.toLocaleString("es-CO")}
+              </p>
               <p className="text-xs text-muted-foreground">del plan</p>
             </div>
             <div className="text-center rounded-xl bg-background/60 p-3">
-              <p className="text-2xl font-bold text-emerald-500">{balance.extra_remaining.toLocaleString("es-CO")}</p>
+              <p className="text-2xl font-bold text-emerald-500">
+                {balance.extra_remaining.toLocaleString("es-CO")}
+              </p>
               <p className="text-xs text-muted-foreground">comprados</p>
             </div>
             <div className="text-center rounded-xl bg-background/60 p-3">
-              <p className="text-2xl font-bold text-muted-foreground">{(balance.monthly_used + balance.extra_used).toLocaleString("es-CO")}</p>
+              <p className="text-2xl font-bold text-muted-foreground">
+                {(balance.monthly_used + balance.extra_used).toLocaleString("es-CO")}
+              </p>
               <p className="text-xs text-muted-foreground">usados</p>
             </div>
           </div>
           <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-biosensor to-fuchsia-500 transition-all"
-              style={{ width: `${Math.min(100, ((balance.monthly_used + balance.extra_used) / Math.max(1, balance.monthly_allowance + balance.extra_total)) * 100)}%` }}
+              style={{
+                width: `${Math.min(100, ((balance.monthly_used + balance.extra_used) / Math.max(1, balance.monthly_allowance + balance.extra_total)) * 100)}%`,
+              }}
             />
           </div>
           <p className="text-xs text-muted-foreground mt-1.5">
-            Período del plan: {new Date(balance.period_start).toLocaleDateString("es-CO")} – {new Date(balance.period_end).toLocaleDateString("es-CO")}
+            Período del plan: {new Date(balance.period_start).toLocaleDateString("es-CO")} –{" "}
+            {new Date(balance.period_end).toLocaleDateString("es-CO")}
           </p>
         </div>
       )}
@@ -160,7 +180,8 @@ export function TokenPackages({ userId, userEmail }: { userId: string; userEmail
           <h3 className="font-semibold">Paquetes de créditos extra</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Compra créditos extra cuando necesites más. Se suman a tu cupo mensual y se usan automáticamente.
+          Compra créditos extra cuando necesites más. Se suman a tu cupo mensual y se usan
+          automáticamente.
         </p>
         {loading ? (
           <div className="flex justify-center py-8">
@@ -179,10 +200,17 @@ export function TokenPackages({ userId, userEmail }: { userId: string; userEmail
       <div className="rounded-xl bg-muted/30 border border-border p-4 flex gap-3">
         <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-xs text-muted-foreground space-y-1">
-          <p><strong>1 crédito = 1 invocación de IA</strong>: análisis de documentos, sugerencias de mensajes, validación de perfil, SOAP de enfermería, scoring de candidatos, etc.</p>
-          <p>Los créditos del plan mensual se renuevan cada mes. Los créditos comprados tienen vigencia según el paquete y <strong>no expiran en ciclos mensuales</strong>.</p>
+          <p>
+            <strong>1 crédito = 1 invocación de IA</strong>: análisis de documentos, sugerencias de
+            mensajes, validación de perfil, SOAP de enfermería, scoring de candidatos, etc.
+          </p>
+          <p>
+            Los créditos del plan mensual se renuevan cada mes. Los créditos comprados tienen
+            vigencia según el paquete y <strong>no expiran en ciclos mensuales</strong>.
+          </p>
           <p className="flex items-center gap-1">
-            <ShieldCheck className="h-3 w-3" /> Pago 100 % seguro vía Mercado Pago · se acreditan automáticamente tras el pago.
+            <ShieldCheck className="h-3 w-3" /> Pago 100 % seguro vía Mercado Pago · se acreditan
+            automáticamente tras el pago.
           </p>
         </div>
       </div>

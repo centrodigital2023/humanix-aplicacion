@@ -110,7 +110,14 @@ export function useAppUser(options: { requireAuth?: boolean; allow?: AppRole[] }
         } else {
           const { data: authData } = await supabase.auth.getUser();
           const metaRole = authData?.user?.user_metadata?.role as AppRole | undefined;
-          const ALL_ROLES: AppRole[] = ["professional", "family", "institution", "superadmin", "hr_staff", "evaluator"];
+          const ALL_ROLES: AppRole[] = [
+            "professional",
+            "family",
+            "institution",
+            "superadmin",
+            "hr_staff",
+            "evaluator",
+          ];
           if (metaRole && ALL_ROLES.includes(metaRole)) {
             finalRoles = [metaRole];
           } else {

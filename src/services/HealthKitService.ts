@@ -43,25 +43,25 @@
 
 export interface VitalSample {
   value: number;
-  date: string;        // ISO 8601
+  date: string; // ISO 8601
 }
 
 export interface PatientVitalSigns {
-  heartRate:         VitalSample[];
-  oxygenSaturation:  VitalSample[];
-  steps:             number;
-  timestamp:         string;
+  heartRate: VitalSample[];
+  oxygenSaturation: VitalSample[];
+  steps: number;
+  timestamp: string;
 }
 
 /** Payload normalizado para el endpoint wearable-ingest de Humanix */
 export interface WearableIngestPayload {
-  provider:          string;
-  external_user_id:  string;   // código de emparejamiento generado en la web
-  device_name?:      string;
+  provider: string;
+  external_user_id: string; // código de emparejamiento generado en la web
+  device_name?: string;
   readings: Array<{
-    type:        string;
-    value:       number;
-    unit:        string;
+    type: string;
+    value: number;
+    unit: string;
     recorded_at: string;
   }>;
 }
@@ -124,7 +124,7 @@ export async function requestHealthPermissions(): Promise<boolean> {
   // En el entorno móvil, este método se reemplaza por la implementación nativa anterior.
   console.warn(
     "[HealthKitService] requestHealthPermissions: ejecutando en entorno web. " +
-    "Usar la versión React Native para acceso nativo a HealthKit / Health Connect."
+      "Usar la versión React Native para acceso nativo a HealthKit / Health Connect.",
   );
   return false;
 }
@@ -187,10 +187,10 @@ export async function requestHealthPermissions(): Promise<boolean> {
  */
 export async function fetchPatientVitalSigns(): Promise<PatientVitalSigns> {
   return {
-    heartRate:        [],
+    heartRate: [],
     oxygenSaturation: [],
-    steps:            0,
-    timestamp:        new Date().toISOString(),
+    steps: 0,
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -201,8 +201,8 @@ export async function fetchPatientVitalSigns(): Promise<PatientVitalSigns> {
  * Compatible tanto con datos de HealthKit/Health Connect como con lecturas manuales.
  */
 export function buildIngestPayload(
-  vitals:     PatientVitalSigns,
-  provider:   string,
+  vitals: PatientVitalSigns,
+  provider: string,
   pairingCode: string,
   deviceName?: string,
 ): WearableIngestPayload {
@@ -212,9 +212,9 @@ export function buildIngestPayload(
   const lastHR = vitals.heartRate.at(-1);
   if (lastHR) {
     readings.push({
-      type:        "heart_rate",
-      value:       Math.round(lastHR.value),
-      unit:        "lpm",
+      type: "heart_rate",
+      value: Math.round(lastHR.value),
+      unit: "lpm",
       recorded_at: lastHR.date,
     });
   }
@@ -223,9 +223,9 @@ export function buildIngestPayload(
   const lastSPO2 = vitals.oxygenSaturation.at(-1);
   if (lastSPO2) {
     readings.push({
-      type:        "spo2",
-      value:       Math.round(lastSPO2.value * 10) / 10,
-      unit:        "%",
+      type: "spo2",
+      value: Math.round(lastSPO2.value * 10) / 10,
+      unit: "%",
       recorded_at: lastSPO2.date,
     });
   }
@@ -233,9 +233,9 @@ export function buildIngestPayload(
   // Pasos diarios
   if (vitals.steps > 0) {
     readings.push({
-      type:        "steps",
-      value:       vitals.steps,
-      unit:        "pasos",
+      type: "steps",
+      value: vitals.steps,
+      unit: "pasos",
       recorded_at: vitals.timestamp,
     });
   }
@@ -272,11 +272,11 @@ export async function syncVitalsToHumanix({
   ingestSecret,
   deviceName,
 }: {
-  pairingCode:   string;
-  provider:      string;
-  apiUrl:        string;
-  ingestSecret:  string;
-  deviceName?:   string;
+  pairingCode: string;
+  provider: string;
+  apiUrl: string;
+  ingestSecret: string;
+  deviceName?: string;
 }): Promise<{ ok: boolean; inserted?: number; error?: string }> {
   try {
     const hasPermission = await requestHealthPermissions();
@@ -284,7 +284,7 @@ export async function syncVitalsToHumanix({
       return { ok: false, error: "Permisos de salud no otorgados" };
     }
 
-    const vitals  = await fetchPatientVitalSigns();
+    const vitals = await fetchPatientVitalSigns();
     const payload = buildIngestPayload(vitals, provider, pairingCode, deviceName);
 
     if (payload.readings.length === 0) {
@@ -292,10 +292,10 @@ export async function syncVitalsToHumanix({
     }
 
     const response = await fetch(apiUrl, {
-      method:  "POST",
+      method: "POST",
       headers: {
-        "Content-Type":       "application/json",
-        "x-wearable-secret":  ingestSecret,
+        "Content-Type": "application/json",
+        "x-wearable-secret": ingestSecret,
       },
       body: JSON.stringify(payload),
     });

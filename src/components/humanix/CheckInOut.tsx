@@ -74,7 +74,10 @@ function SignaturePad({ onSave }: { onSave: (dataUrl: string) => void }) {
       const touch = e.touches[0];
       return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
     }
-    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+    return {
+      x: (e as React.MouseEvent).clientX - rect.left,
+      y: (e as React.MouseEvent).clientY - rect.top,
+    };
   };
 
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
@@ -269,11 +272,7 @@ export function CheckInOut({
         if (error) throw error;
         setRecord(data as CheckinRecord);
       } else {
-        const { data, error } = await sb
-          .from("service_checkins")
-          .insert(payload)
-          .select()
-          .single();
+        const { data, error } = await sb.from("service_checkins").insert(payload).select().single();
         if (error) throw error;
         setRecord(data as CheckinRecord);
       }
@@ -405,32 +404,43 @@ export function CheckInOut({
 
       {/* Timeline */}
       <div className="flex items-center gap-2 text-xs">
-        <div className={cn(
-          "h-7 w-7 rounded-full flex items-center justify-center border-2 flex-shrink-0",
-          status !== "not_started"
-            ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
-            : "border-border text-muted-foreground",
-        )}>
+        <div
+          className={cn(
+            "h-7 w-7 rounded-full flex items-center justify-center border-2 flex-shrink-0",
+            status !== "not_started"
+              ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
+              : "border-border text-muted-foreground",
+          )}
+        >
           {status !== "not_started" ? <CheckCircle2 className="h-4 w-4" /> : <span>1</span>}
         </div>
-        <div className={cn("flex-1 h-0.5", isCheckedIn || isCompleted ? "bg-emerald-500" : "bg-border")} />
-        <div className={cn(
-          "h-7 w-7 rounded-full flex items-center justify-center border-2 flex-shrink-0",
-          isCompleted
-            ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
-            : isCheckedIn
-              ? "border-primary bg-primary/10 text-primary animate-pulse"
-              : "border-border text-muted-foreground",
-        )}>
+        <div
+          className={cn(
+            "flex-1 h-0.5",
+            isCheckedIn || isCompleted ? "bg-emerald-500" : "bg-border",
+          )}
+        />
+        <div
+          className={cn(
+            "h-7 w-7 rounded-full flex items-center justify-center border-2 flex-shrink-0",
+            isCompleted
+              ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
+              : isCheckedIn
+                ? "border-primary bg-primary/10 text-primary animate-pulse"
+                : "border-border text-muted-foreground",
+          )}
+        >
           {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : <span>2</span>}
         </div>
         <div className={cn("flex-1 h-0.5", isCompleted ? "bg-emerald-500" : "bg-border")} />
-        <div className={cn(
-          "h-7 w-7 rounded-full flex items-center justify-center border-2 flex-shrink-0",
-          isCompleted
-            ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
-            : "border-border text-muted-foreground",
-        )}>
+        <div
+          className={cn(
+            "h-7 w-7 rounded-full flex items-center justify-center border-2 flex-shrink-0",
+            isCompleted
+              ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
+              : "border-border text-muted-foreground",
+          )}
+        >
           {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : <span>3</span>}
         </div>
       </div>
@@ -449,7 +459,8 @@ export function CheckInOut({
           </p>
           <p className="text-[10px] text-muted-foreground mt-0.5">
             {format(new Date(record.checkin_at), "d MMM · HH:mm", { locale: es })}
-            {record.checkin_lat && ` · ${record.checkin_lat.toFixed(4)}, ${record.checkin_lng?.toFixed(4)}`}
+            {record.checkin_lat &&
+              ` · ${record.checkin_lat.toFixed(4)}, ${record.checkin_lng?.toFixed(4)}`}
           </p>
           {isCheckedIn && elapsed && (
             <p className="text-xs font-bold text-primary mt-1 flex items-center gap-1">
@@ -484,12 +495,7 @@ export function CheckInOut({
         <div className="space-y-3">
           {/* Check-in button */}
           {status === "not_started" && (
-            <Button
-              className="w-full gap-2"
-              size="lg"
-              onClick={handleCheckIn}
-              disabled={busy}
-            >
+            <Button className="w-full gap-2" size="lg" onClick={handleCheckIn} disabled={busy}>
               {busy ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -511,8 +517,15 @@ export function CheckInOut({
                 {evidencePreviews.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
                     {evidencePreviews.map((url, i) => (
-                      <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border">
-                        <img src={url} alt={`Evidencia ${i + 1}`} className="w-full h-full object-cover" />
+                      <div
+                        key={i}
+                        className="relative group aspect-square rounded-lg overflow-hidden border"
+                      >
+                        <img
+                          src={url}
+                          alt={`Evidencia ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
                         <button
                           onClick={() => removeEvidence(i)}
                           className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"

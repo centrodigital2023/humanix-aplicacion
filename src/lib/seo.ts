@@ -324,11 +324,7 @@ export function jobPostingLd(opts: {
 }
 
 /** MedicalClinic schema — para IPS/clínicas en la plataforma */
-export function medicalClinicLd(opts: {
-  name: string;
-  city: string;
-  specialty?: string;
-}) {
+export function medicalClinicLd(opts: { name: string; city: string; specialty?: string }) {
   return {
     "@context": "https://schema.org",
     "@type": "MedicalClinic",

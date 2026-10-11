@@ -35,22 +35,38 @@ function useCompassCounts(role: CompassRole, userId: string) {
       let openOffers = Promise.resolve(0);
       if (role === "family") {
         proposals = count(
-          sb.from("slot_proposals").select("id", head).eq("family_user_id", userId)
-            .eq("status", "pending").eq("proposed_by", "professional"),
+          sb
+            .from("slot_proposals")
+            .select("id", head)
+            .eq("family_user_id", userId)
+            .eq("status", "pending")
+            .eq("proposed_by", "professional"),
         );
       } else if (role === "professional") {
         proposals = count(
-          sb.from("slot_proposals").select("id", head).eq("professional_id", userId)
-            .eq("status", "pending").eq("proposed_by", "family"),
+          sb
+            .from("slot_proposals")
+            .select("id", head)
+            .eq("professional_id", userId)
+            .eq("status", "pending")
+            .eq("proposed_by", "family"),
         );
         applications = count(
-          sb.from("applications").select("id", head).eq("professional_id", userId)
-            .eq("status", "pending").eq("awaiting", "professional"),
+          sb
+            .from("applications")
+            .select("id", head)
+            .eq("professional_id", userId)
+            .eq("status", "pending")
+            .eq("awaiting", "professional"),
         );
       } else {
         applications = count(
-          sb.from("applications").select("id, job_offers!inner(posted_by)", head)
-            .eq("job_offers.posted_by", userId).eq("status", "pending").eq("awaiting", "institution"),
+          sb
+            .from("applications")
+            .select("id, job_offers!inner(posted_by)", head)
+            .eq("job_offers.posted_by", userId)
+            .eq("status", "pending")
+            .eq("awaiting", "institution"),
         );
         openOffers = count(
           sb.from("job_offers").select("id", head).eq("posted_by", userId).eq("status", "open"),
@@ -65,7 +81,11 @@ function useCompassCounts(role: CompassRole, userId: string) {
 const TONE: Record<CompassTone, { ring: string; chip: string; label: string }> = {
   calm: { ring: "ring-ok/30", chip: "bg-ok/15 text-ok", label: "Todo en orden" },
   attention: { ring: "ring-warn/40", chip: "bg-warn/15 text-warn", label: "Requiere atención" },
-  urgent: { ring: "ring-destructive/40", chip: "bg-destructive/15 text-destructive", label: "Urgente" },
+  urgent: {
+    ring: "ring-destructive/40",
+    chip: "bg-destructive/15 text-destructive",
+    label: "Urgente",
+  },
 };
 
 export function CareCompassCard({
@@ -120,7 +140,11 @@ export function CareCompassCard({
               strokeDashoffset={circ * (1 - b.calm / 100)}
               className={cn(
                 "fill-none transition-all duration-700",
-                b.tone === "urgent" ? "stroke-destructive" : b.tone === "attention" ? "stroke-warn" : "stroke-ok",
+                b.tone === "urgent"
+                  ? "stroke-destructive"
+                  : b.tone === "attention"
+                    ? "stroke-warn"
+                    : "stroke-ok",
               )}
             />
           </svg>
@@ -135,13 +159,18 @@ export function CareCompassCard({
             <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <Compass className="h-3.5 w-3.5" aria-hidden="true" /> Brújula del día
             </span>
-            <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", tone.chip)}>{tone.label}</span>
+            <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", tone.chip)}>
+              {tone.label}
+            </span>
           </div>
           <h2 className="mt-1 font-display text-2xl font-bold">{b.greeting}</h2>
           <p className="mt-1 text-base text-muted-foreground">{b.headline}</p>
           <dl className="mt-3 grid grid-cols-3 gap-2">
             {b.stats.map((st) => (
-              <div key={st.label} className="rounded-2xl bg-background/70 px-3 py-2 text-center ring-1 ring-border">
+              <div
+                key={st.label}
+                className="rounded-2xl bg-background/70 px-3 py-2 text-center ring-1 ring-border"
+              >
                 <dd className="font-display text-xl font-bold">{st.value}</dd>
                 <dt className="text-xs text-muted-foreground">{st.label}</dt>
               </div>
@@ -171,20 +200,28 @@ export function CareCompassCard({
                         : "bg-primary/10 text-primary",
                   )}
                 >
-                  {a.tone === "urgent" ? <AlertTriangle className="h-4 w-4" aria-hidden="true" /> : i + 1}
+                  {a.tone === "urgent" ? (
+                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    i + 1
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{a.title}</span>
                   <span className="block text-sm text-muted-foreground">{a.reason}</span>
                 </span>
-                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
+                <ArrowRight
+                  className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary"
+                  aria-hidden="true"
+                />
               </Link>
             </li>
           ))}
         </ol>
       </div>
       <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <HeartHandshake className="h-3.5 w-3.5" aria-hidden="true" /> Sugerencias automáticas: tú decides siempre.
+        <HeartHandshake className="h-3.5 w-3.5" aria-hidden="true" /> Sugerencias automáticas: tú
+        decides siempre.
       </p>
     </Card>
   );

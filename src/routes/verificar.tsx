@@ -53,7 +53,10 @@ type ProResult = {
   profiles: { full_name: string | null; avatar_url: string | null; phone: string | null } | null;
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle2; bg: string }> = {
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; icon: typeof CheckCircle2; bg: string }
+> = {
   approved: {
     label: "Verificado ✓ RETHUS",
     color: "text-emerald-600",
@@ -82,19 +85,27 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
 
 function ProCard({ pro }: { pro: ProResult }) {
   const name = pro.profiles?.full_name ?? "Profesional";
-  const initials = name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-  const statusKey = pro.rethus_verified === true || pro.verified === true
-    ? "approved"
-    : pro.rethus_verified === false
-    ? "rejected"
-    : "unverified";
+  const initials = name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+  const statusKey =
+    pro.rethus_verified === true || pro.verified === true
+      ? "approved"
+      : pro.rethus_verified === false
+        ? "rejected"
+        : "unverified";
   const status = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.unverified;
   const StatusIcon = status.icon;
   const isActive = pro.published && !pro.blocked;
   const isAvailable = isActive && pro.available;
 
   return (
-    <Card className={`p-5 border transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-elegant)] ${!isActive ? "opacity-60" : ""}`}>
+    <Card
+      className={`p-5 border transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-elegant)] ${!isActive ? "opacity-60" : ""}`}
+    >
       <div className="flex items-start gap-4">
         {pro.profiles?.avatar_url ? (
           <img
@@ -116,7 +127,9 @@ function ProCard({ pro }: { pro: ProResult }) {
                 <p className="text-sm text-muted-foreground mt-0.5">{pro.specialty}</p>
               )}
             </div>
-            <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${status.bg} ${status.color}`}>
+            <div
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${status.bg} ${status.color}`}
+            >
               <StatusIcon className="h-3.5 w-3.5" />
               {status.label}
             </div>
@@ -165,11 +178,17 @@ function ProCard({ pro }: { pro: ProResult }) {
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button variant="hero" size="sm" className="flex-1 sm:flex-none" asChild>
-          <Link to="/buscar">Contratar en Humanix <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+          <Link to="/buscar">
+            Contratar en Humanix <ArrowRight className="h-3.5 w-3.5 ml-1" />
+          </Link>
         </Button>
         {pro.profiles?.phone && (
           <Button variant="outline" size="sm" className="flex-1 sm:flex-none" asChild>
-            <a href={`https://wa.me/${String(pro.profiles.phone).replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+            <a
+              href={`https://wa.me/${String(pro.profiles.phone).replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noreferrer"
+            >
               <Phone className="h-3.5 w-3.5 mr-1" />
               WhatsApp
             </a>
@@ -252,7 +271,8 @@ function VerificarPage() {
             Verifica un <span className="text-gradient-bio">profesional de salud</span>
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
-            Busca por nombre y comprueba si está verificado con RETHUS, habilitado en Humanix y disponible ahora mismo. Completamente gratis.
+            Busca por nombre y comprueba si está verificado con RETHUS, habilitado en Humanix y
+            disponible ahora mismo. Completamente gratis.
           </p>
         </div>
 
@@ -297,7 +317,8 @@ function VerificarPage() {
         {!loading && results.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground px-1">
-              {results.length} resultado{results.length !== 1 ? "s" : ""} encontrado{results.length !== 1 ? "s" : ""}
+              {results.length} resultado{results.length !== 1 ? "s" : ""} encontrado
+              {results.length !== 1 ? "s" : ""}
             </p>
             {results.map((pro) => (
               <ProCard key={pro.user_id} pro={pro} />
@@ -332,7 +353,9 @@ function VerificarPage() {
               },
             ].map(({ icon: Icon, color, bg, title, desc }) => (
               <Card key={title} className="p-4 text-center space-y-2">
-                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}>
+                <div
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}
+                >
                   <Icon className={`h-5 w-5 ${color}`} />
                 </div>
                 <p className="font-semibold text-sm">{title}</p>
@@ -353,21 +376,20 @@ function VerificarPage() {
               rel="noreferrer noopener"
               className="underline text-biosensor hover:text-biosensor/80 inline-flex items-center gap-0.5"
             >
-              Registro RETHUS del Ministerio de Salud{" "}
-              <ExternalLink className="h-3 w-3" />
+              Registro RETHUS del Ministerio de Salud <ExternalLink className="h-3 w-3" />
             </a>
-            . Humanix complementa esta verificación con calificaciones de usuarios, disponibilidad en tiempo real y contacto directo.
+            . Humanix complementa esta verificación con calificaciones de usuarios, disponibilidad
+            en tiempo real y contacto directo.
           </p>
         </div>
 
         {/* CTA box */}
         <Card className="mt-8 p-6 sm:p-8 text-center bg-gradient-to-br from-biosensor/5 via-card to-fuchsia-neural/5 border-biosensor/20">
           <ShieldCheck className="h-10 w-10 text-biosensor mx-auto mb-3" />
-          <h2 className="font-display text-xl font-bold mb-2">
-            ¿Eres profesional de salud?
-          </h2>
+          <h2 className="font-display text-xl font-bold mb-2">¿Eres profesional de salud?</h2>
           <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-            Registra tu perfil gratis en Humanix, valida tu RETHUS y aparece en este verificador para que familias e instituciones confíen en ti.
+            Registra tu perfil gratis en Humanix, valida tu RETHUS y aparece en este verificador
+            para que familias e instituciones confíen en ti.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button variant="hero" size="lg" asChild>

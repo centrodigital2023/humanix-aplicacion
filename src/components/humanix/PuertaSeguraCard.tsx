@@ -110,8 +110,7 @@ export function PuertaSeguraCard({
             <Clock size={18} className="text-ok shrink-0" />
             <div>
               <p className="text-sm font-semibold text-ok">
-                {professional.etaText ??
-                  `Llega en aprox. ${professional.etaMinutes} minutos`}
+                {professional.etaText ?? `Llega en aprox. ${professional.etaMinutes} minutos`}
               </p>
               <p className="text-xs text-muted-foreground">GPS en tiempo real activado</p>
             </div>
@@ -140,15 +139,7 @@ export function PuertaSeguraCard({
   );
 }
 
-function VerificationRow({
-  ok,
-  label,
-  sub,
-}: {
-  ok: boolean;
-  label: string;
-  sub?: string;
-}) {
+function VerificationRow({ ok, label, sub }: { ok: boolean; label: string; sub?: string }) {
   return (
     <div className="flex items-start gap-2.5">
       <CheckCircle2
@@ -156,7 +147,9 @@ function VerificationRow({
         className={`mt-0.5 shrink-0 ${ok ? "text-ok" : "text-muted-foreground/40"}`}
       />
       <div>
-        <p className={`text-sm font-semibold ${ok ? "text-foreground" : "text-muted-foreground/60"}`}>
+        <p
+          className={`text-sm font-semibold ${ok ? "text-foreground" : "text-muted-foreground/60"}`}
+        >
           {label}
         </p>
         {sub && <p className="text-xs text-muted-foreground">{sub}</p>}

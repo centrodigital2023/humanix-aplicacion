@@ -120,15 +120,7 @@ export function StarDisplay({ value, size = "sm" }: { value: number; size?: "sm"
 
 // ── DistributionBar ───────────────────────────────────────────────────────────
 
-function DistributionBar({
-  label,
-  count,
-  total,
-}: {
-  label: string;
-  count: number;
-  total: number;
-}) {
+function DistributionBar({ label, count, total }: { label: string; count: number; total: number }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
     <div className="flex items-center gap-2 text-xs">
@@ -212,8 +204,7 @@ function RatingItem({
   const [responseText, setResponseText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const canRespond =
-    currentUserId === rating.reviewed_id && !rating.response_text && onRespond;
+  const canRespond = currentUserId === rating.reviewed_id && !rating.response_text && onRespond;
 
   const handleRespond = async () => {
     if (!responseText.trim() || !onRespond) return;
@@ -245,9 +236,7 @@ function RatingItem({
             />
           ) : (
             <span className="text-sm font-semibold text-muted-foreground">
-              {rating.is_anonymous
-                ? "U"
-                : (rating.reviewer_name?.[0] ?? "U").toUpperCase()}
+              {rating.is_anonymous ? "U" : (rating.reviewer_name?.[0] ?? "U").toUpperCase()}
             </span>
           )}
         </div>
@@ -267,8 +256,8 @@ function RatingItem({
                 {rating.reviewer_role === "family"
                   ? "Familia"
                   : rating.reviewer_role === "institution"
-                  ? "Institución"
-                  : "Profesional"}
+                    ? "Institución"
+                    : "Profesional"}
               </Badge>
             )}
             <span className="text-xs text-muted-foreground ml-auto">{date}</span>
@@ -335,11 +324,7 @@ function RatingItem({
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">{responseText.length}/300</span>
                 <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setResponseOpen(false)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setResponseOpen(false)}>
                     Cancelar
                   </Button>
                   <Button
@@ -393,19 +378,17 @@ export function RatingComposer({
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      const { error } = await (sb as SupabaseClient)
-        .from("ratings")
-        .insert({
-          reviewer_id: reviewerId,
-          reviewed_id: reviewedId,
-          booking_id: bookingId ?? null,
-          stars,
-          comment: comment.trim() || null,
-          is_anonymous: anonymous,
-          punctuality_stars: punctuality || null,
-          communication_stars: communication || null,
-          professionalism_stars: professionalism || null,
-        });
+      const { error } = await (sb as SupabaseClient).from("ratings").insert({
+        reviewer_id: reviewerId,
+        reviewed_id: reviewedId,
+        booking_id: bookingId ?? null,
+        stars,
+        comment: comment.trim() || null,
+        is_anonymous: anonymous,
+        punctuality_stars: punctuality || null,
+        communication_stars: communication || null,
+        professionalism_stars: professionalism || null,
+      });
 
       if (error) throw error;
       toast.success("¡Gracias por tu calificación!", {
@@ -413,9 +396,7 @@ export function RatingComposer({
       });
       onSuccess?.();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "No se pudo enviar la calificación",
-      );
+      toast.error(err instanceof Error ? err.message : "No se pudo enviar la calificación");
     } finally {
       setSubmitting(false);
       setConfirming(false);
@@ -514,7 +495,9 @@ export function RatingComposer({
         />
         <span>
           Publicar de forma anónima{" "}
-          <span className="text-muted-foreground text-xs">(apareces como "Usuario verificado")</span>
+          <span className="text-muted-foreground text-xs">
+            (apareces como "Usuario verificado")
+          </span>
         </span>
       </label>
 

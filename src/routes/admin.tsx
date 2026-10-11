@@ -102,10 +102,9 @@ function AdminLogin() {
     setBusy(true);
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke(
-        "verify-admin-access",
-        { body: { code, adminPassword: adminPw } },
-      );
+      const { data, error: fnErr } = await supabase.functions.invoke("verify-admin-access", {
+        body: { code, adminPassword: adminPw },
+      });
       if (fnErr || !data?.ok) {
         setError(data?.error ?? "Código incorrecto.");
         if (/permisos|Sesión/.test(data?.error ?? "")) {
@@ -169,7 +168,9 @@ function AdminLogin() {
           </div>
           <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-emerald-500 border-2 border-[#030712] animate-pulse" />
         </div>
-        <p className="text-sm font-semibold text-white/60 tracking-widest uppercase">Acceso verificado</p>
+        <p className="text-sm font-semibold text-white/60 tracking-widest uppercase">
+          Acceso verificado
+        </p>
         <Loader2 className="h-5 w-5 animate-spin text-violet-400 mt-1" aria-hidden="true" />
       </div>
     );
@@ -190,12 +191,13 @@ function AdminLogin() {
             <ShieldCheck className="h-7 w-7 text-white" aria-hidden="true" />
           </div>
           <h1 className="text-xl font-bold text-white tracking-tight">Panel de Administración</h1>
-          <p className="mt-1 text-xs text-white/40 tracking-wide uppercase">Humanix · Acceso restringido</p>
+          <p className="mt-1 text-xs text-white/40 tracking-wide uppercase">
+            Humanix · Acceso restringido
+          </p>
         </div>
 
         {/* Card */}
         <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-8 shadow-2xl backdrop-blur-xl">
-
           {/* ── FASE 1: credenciales ── */}
           {phase === "credentials" && (
             <form onSubmit={submitCredentials} className="space-y-5" noValidate>
@@ -204,7 +206,10 @@ function AdminLogin() {
                   Correo electrónico
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" aria-hidden="true" />
+                  <Mail
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30"
+                    aria-hidden="true"
+                  />
                   <input
                     type="email"
                     required
@@ -222,7 +227,10 @@ function AdminLogin() {
                   Contraseña
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" aria-hidden="true" />
+                  <Lock
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30"
+                    aria-hidden="true"
+                  />
                   <input
                     type={showPw ? "text" : "password"}
                     required
@@ -239,19 +247,29 @@ function AdminLogin() {
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition"
                     aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
                   >
-                    {showPw ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                    {showPw ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
                   </button>
                 </div>
               </div>
 
               {error && (
-                <p role="alert" className="text-xs font-semibold text-red-400 bg-red-500/10 rounded-lg px-3 py-2 border border-red-500/20">
+                <p
+                  role="alert"
+                  className="text-xs font-semibold text-red-400 bg-red-500/10 rounded-lg px-3 py-2 border border-red-500/20"
+                >
                   {error}
                 </p>
               )}
 
               {notice && (
-                <p role="status" className="text-xs font-semibold text-emerald-300 bg-emerald-500/10 rounded-lg px-3 py-2 border border-emerald-500/20">
+                <p
+                  role="status"
+                  className="text-xs font-semibold text-emerald-300 bg-emerald-500/10 rounded-lg px-3 py-2 border border-emerald-500/20"
+                >
                   {notice}
                 </p>
               )}
@@ -270,7 +288,11 @@ function AdminLogin() {
                 disabled={busy || !email || !password}
                 className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Ingresar →"}
+                {busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  "Ingresar →"
+                )}
               </button>
             </form>
           )}
@@ -283,11 +305,16 @@ function AdminLogin() {
                   <Lock className="h-5 w-5 text-violet-400" aria-hidden="true" />
                 </div>
                 <p className="text-base font-bold text-white">Código de acceso</p>
-                <p className="mt-1 text-xs text-white/40">Ingresa la contraseña de administrador y el código de 6 dígitos.</p>
+                <p className="mt-1 text-xs text-white/40">
+                  Ingresa la contraseña de administrador y el código de 6 dígitos.
+                </p>
               </div>
 
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" aria-hidden="true" />
+                <Lock
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30"
+                  aria-hidden="true"
+                />
                 <input
                   type="password"
                   autoComplete="off"
@@ -309,7 +336,9 @@ function AdminLogin() {
                 {codeDigits.map((digit, idx) => (
                   <input
                     key={idx}
-                    ref={(el) => { codeRefs.current[idx] = el; }}
+                    ref={(el) => {
+                      codeRefs.current[idx] = el;
+                    }}
                     type="tel"
                     inputMode="numeric"
                     maxLength={1}
@@ -344,10 +373,16 @@ function AdminLogin() {
               )}
 
               {error && (
-                <p role="alert" className="text-xs font-semibold text-red-400 bg-red-500/10 rounded-lg px-3 py-2 border border-red-500/20 text-center">
+                <p
+                  role="alert"
+                  className="text-xs font-semibold text-red-400 bg-red-500/10 rounded-lg px-3 py-2 border border-red-500/20 text-center"
+                >
                   {error}
                   {remaining !== null && remaining > 0 && (
-                    <span className="block mt-0.5 text-white/30">{remaining} intento{remaining === 1 ? "" : "s"} restante{remaining === 1 ? "" : "s"}</span>
+                    <span className="block mt-0.5 text-white/30">
+                      {remaining} intento{remaining === 1 ? "" : "s"} restante
+                      {remaining === 1 ? "" : "s"}
+                    </span>
                   )}
                 </p>
               )}

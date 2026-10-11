@@ -42,7 +42,8 @@ function NotFoundComponent() {
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Página no encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          La página que buscas no existe o fue movida. Vuelve al inicio para seguir explorando Humanix.
+          La página que buscas no existe o fue movida. Vuelve al inicio para seguir explorando
+          Humanix.
         </p>
         <div className="mt-6">
           <Link
@@ -135,13 +136,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
         {/* Google Analytics 4 — deferred, no bloquea render */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var G='${import.meta.env.VITE_GA4_MEASUREMENT_ID||""}';if(!G||G.startsWith('G-X'))return;function load(){if(window.gtag)return;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+G;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config',G,{send_page_view:true,cookie_flags:'max-age=7200;secure;samesite=none'});}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:4000})}else{setTimeout(load,3000)}})();`,
+            __html: `(function(){var G='${import.meta.env.VITE_GA4_MEASUREMENT_ID || ""}';if(!G||G.startsWith('G-X'))return;function load(){if(window.gtag)return;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+G;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config',G,{send_page_view:true,cookie_flags:'max-age=7200;secure;samesite=none'});}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:4000})}else{setTimeout(load,3000)}})();`,
           }}
         />
         {/* Google AdSense — carga diferida para no penalizar CWV */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var P='${import.meta.env.VITE_ADSENSE_PUBLISHER_ID||""}';if(!P||P.includes('XXXX'))return;function loadAds(){if(document.querySelector('script[src*="adsbygoogle"]'))return;var s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+P;document.head.appendChild(s);}if('requestIdleCallback' in window){requestIdleCallback(loadAds,{timeout:5000})}else{setTimeout(loadAds,4000)}})();`,
+            __html: `(function(){var P='${import.meta.env.VITE_ADSENSE_PUBLISHER_ID || ""}';if(!P||P.includes('XXXX'))return;function loadAds(){if(document.querySelector('script[src*="adsbygoogle"]'))return;var s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+P;document.head.appendChild(s);}if('requestIdleCallback' in window){requestIdleCallback(loadAds,{timeout:5000})}else{setTimeout(loadAds,4000)}})();`,
           }}
         />
         {/* Defer Meta Pixel hasta idle para no bloquear el hilo principal */}

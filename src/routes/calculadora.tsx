@@ -36,35 +36,44 @@ export const Route = createFileRoute("/calculadora")({
 // domiciliario. Son estimaciones; el precio final lo fija el profesional.
 // ---------------------------------------------------------------------------
 type Role = "cuidador" | "auxiliar" | "enfermero" | "enfermero_jefe";
-type City = "bogota" | "medellin" | "cali" | "barranquilla" | "cartagena" | "bucaramanga" | "pereira" | "otra";
+type City =
+  | "bogota"
+  | "medellin"
+  | "cali"
+  | "barranquilla"
+  | "cartagena"
+  | "bucaramanga"
+  | "pereira"
+  | "otra";
 type Shift = "diurno" | "nocturno" | "24h";
 
-const ROLE_HOURLY: Record<Role, { label: string; min: number; max: number; description: string }> = {
-  cuidador: {
-    label: "Cuidador(a) básico",
-    min: 7000,
-    max: 11000,
-    description: "Acompañamiento, higiene, alimentación y movilización. Sin tareas clínicas.",
-  },
-  auxiliar: {
-    label: "Auxiliar de enfermería",
-    min: 10000,
-    max: 16000,
-    description: "Signos vitales, medicación oral, curaciones básicas. RETHUS requerido.",
-  },
-  enfermero: {
-    label: "Enfermero(a) profesional",
-    min: 18000,
-    max: 28000,
-    description: "Manejo de catéteres, sondas, medicación IV y planes de cuidado.",
-  },
-  enfermero_jefe: {
-    label: "Enfermero(a) jefe especializado",
-    min: 28000,
-    max: 45000,
-    description: "Cuidado crítico, paliativo, postoperatorio complejo o pediátrico avanzado.",
-  },
-};
+const ROLE_HOURLY: Record<Role, { label: string; min: number; max: number; description: string }> =
+  {
+    cuidador: {
+      label: "Cuidador(a) básico",
+      min: 7000,
+      max: 11000,
+      description: "Acompañamiento, higiene, alimentación y movilización. Sin tareas clínicas.",
+    },
+    auxiliar: {
+      label: "Auxiliar de enfermería",
+      min: 10000,
+      max: 16000,
+      description: "Signos vitales, medicación oral, curaciones básicas. RETHUS requerido.",
+    },
+    enfermero: {
+      label: "Enfermero(a) profesional",
+      min: 18000,
+      max: 28000,
+      description: "Manejo de catéteres, sondas, medicación IV y planes de cuidado.",
+    },
+    enfermero_jefe: {
+      label: "Enfermero(a) jefe especializado",
+      min: 28000,
+      max: 45000,
+      description: "Cuidado crítico, paliativo, postoperatorio complejo o pediátrico avanzado.",
+    },
+  };
 
 const CITY_FACTOR: Record<City, { label: string; factor: number }> = {
   bogota: { label: "Bogotá", factor: 1.0 },
@@ -77,11 +86,12 @@ const CITY_FACTOR: Record<City, { label: string; factor: number }> = {
   otra: { label: "Otra ciudad de Colombia", factor: 0.85 },
 };
 
-const SHIFT_OPTIONS: Record<Shift, { label: string; hoursPerDay: number; nightSurcharge: number }> = {
-  diurno: { label: "Diurno (12 horas, 7am – 7pm)", hoursPerDay: 12, nightSurcharge: 0 },
-  nocturno: { label: "Nocturno (12 horas, 7pm – 7am)", hoursPerDay: 12, nightSurcharge: 0.35 },
-  "24h": { label: "24 horas continuas", hoursPerDay: 24, nightSurcharge: 0.175 },
-};
+const SHIFT_OPTIONS: Record<Shift, { label: string; hoursPerDay: number; nightSurcharge: number }> =
+  {
+    diurno: { label: "Diurno (12 horas, 7am – 7pm)", hoursPerDay: 12, nightSurcharge: 0 },
+    nocturno: { label: "Nocturno (12 horas, 7pm – 7am)", hoursPerDay: 12, nightSurcharge: 0.35 },
+    "24h": { label: "24 horas continuas", hoursPerDay: 24, nightSurcharge: 0.175 },
+  };
 
 const HOLIDAY_SURCHARGE = 0.75; // recargo dominical/festivo
 
@@ -357,8 +367,8 @@ function CalculadoraPage() {
             <p className="mt-6 flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               Tarifas referenciales basadas en el mercado colombiano de cuidado domiciliario 2026.
-              El precio final lo define cada profesional según experiencia, complejidad del
-              paciente y desplazamiento. Humanix nunca cobra comisión sobre el servicio.
+              El precio final lo define cada profesional según experiencia, complejidad del paciente
+              y desplazamiento. Humanix nunca cobra comisión sobre el servicio.
             </p>
           </Card>
         </section>
@@ -418,8 +428,8 @@ function CalculadoraPage() {
 
           <h3>Diferencia por ciudad</h3>
           <p>
-            Bogotá es el mercado de referencia. Medellín, Cali, Barranquilla y Cartagena están
-            entre 5% y 8% por debajo. Bucaramanga y Pereira entre 10% y 12% por debajo. Ciudades
+            Bogotá es el mercado de referencia. Medellín, Cali, Barranquilla y Cartagena están entre
+            5% y 8% por debajo. Bucaramanga y Pereira entre 10% y 12% por debajo. Ciudades
             intermedias suelen estar 15% por debajo de la tarifa capitalina.
           </p>
 
@@ -427,8 +437,8 @@ function CalculadoraPage() {
           <p>
             El turno nocturno (entre 7pm y 7am) tiene un recargo cercano al 35%. El trabajo en
             domingo o festivo aplica recargo del 75% según el Código Sustantivo del Trabajo. Si
-            contratas un turno 24 horas en festivo, el costo puede ser hasta 60% mayor que un
-            turno diurno regular.
+            contratas un turno 24 horas en festivo, el costo puede ser hasta 60% mayor que un turno
+            diurno regular.
           </p>
         </section>
 

@@ -166,15 +166,26 @@ const STATS = [
   { value: 100, suffix: "%", label: "Certificación RETHUS" },
 ];
 
-function StatItem({ value, suffix, label, decimal, visible }: {
-  value: number; suffix: string; label: string; decimal?: boolean; visible: boolean;
+function StatItem({
+  value,
+  suffix,
+  label,
+  decimal,
+  visible,
+}: {
+  value: number;
+  suffix: string;
+  label: string;
+  decimal?: boolean;
+  visible: boolean;
 }) {
   const count = useCountUp(decimal ? value * 10 : value, 1400, visible);
   const display = decimal ? (count / 10).toFixed(1) : count.toLocaleString("es-CO");
   return (
     <div className="text-center px-4">
       <p className="font-display text-3xl sm:text-4xl font-bold text-gradient-bio tabular-nums">
-        {display}{suffix}
+        {display}
+        {suffix}
       </p>
       <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-[120px] mx-auto">{label}</p>
     </div>
@@ -191,7 +202,12 @@ export function HowItWorks() {
     const el = statsRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setStatsVisible(true); obs.disconnect(); } },
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStatsVisible(true);
+          obs.disconnect();
+        }
+      },
       { threshold: 0.3 },
     );
     obs.observe(el);

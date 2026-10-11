@@ -170,7 +170,8 @@ export function AvailabilityCalendar({
     if (!editable || suggestedHours.length === 0) return;
     setBulkBusy(true);
     try {
-      const toInsert: { user_id: string; starts_at: string; ends_at: string; status: "free" }[] = [];
+      const toInsert: { user_id: string; starts_at: string; ends_at: string; status: "free" }[] =
+        [];
       suggestedHours.forEach(({ dayIdx, hour }) => {
         const day = days[dayIdx];
         if (!day || slotAt(day, hour)) return;

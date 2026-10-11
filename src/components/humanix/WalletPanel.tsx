@@ -78,30 +78,100 @@ interface PayoutRequest {
   requested_at: string;
 }
 
-const METHODS: Array<{ value: PayoutMethod; label: string; icon: React.ReactNode; placeholder: string }> = [
-  { value: "nequi", label: "Nequi", icon: <Smartphone className="h-3.5 w-3.5" />, placeholder: "Número de celular Nequi" },
-  { value: "pse", label: "PSE", icon: <Landmark className="h-3.5 w-3.5" />, placeholder: "Banco + número de cuenta" },
-  { value: "bancolombia", label: "Bancolombia", icon: <Landmark className="h-3.5 w-3.5" />, placeholder: "Número de cuenta" },
-  { value: "daviplata", label: "Daviplata", icon: <Smartphone className="h-3.5 w-3.5" />, placeholder: "Número de celular Daviplata" },
-  { value: "rappipay", label: "RappiPay", icon: <Smartphone className="h-3.5 w-3.5" />, placeholder: "Número de celular RappiPay" },
-  { value: "bank_transfer", label: "Transferencia bancaria", icon: <Banknote className="h-3.5 w-3.5" />, placeholder: "Banco + número de cuenta" },
+const METHODS: Array<{
+  value: PayoutMethod;
+  label: string;
+  icon: React.ReactNode;
+  placeholder: string;
+}> = [
+  {
+    value: "nequi",
+    label: "Nequi",
+    icon: <Smartphone className="h-3.5 w-3.5" />,
+    placeholder: "Número de celular Nequi",
+  },
+  {
+    value: "pse",
+    label: "PSE",
+    icon: <Landmark className="h-3.5 w-3.5" />,
+    placeholder: "Banco + número de cuenta",
+  },
+  {
+    value: "bancolombia",
+    label: "Bancolombia",
+    icon: <Landmark className="h-3.5 w-3.5" />,
+    placeholder: "Número de cuenta",
+  },
+  {
+    value: "daviplata",
+    label: "Daviplata",
+    icon: <Smartphone className="h-3.5 w-3.5" />,
+    placeholder: "Número de celular Daviplata",
+  },
+  {
+    value: "rappipay",
+    label: "RappiPay",
+    icon: <Smartphone className="h-3.5 w-3.5" />,
+    placeholder: "Número de celular RappiPay",
+  },
+  {
+    value: "bank_transfer",
+    label: "Transferencia bancaria",
+    icon: <Banknote className="h-3.5 w-3.5" />,
+    placeholder: "Banco + número de cuenta",
+  },
 ];
 
 const TX_CONFIG: Record<string, { label: string; icon: React.ReactNode; tone: "in" | "out" }> = {
-  service_earning:     { label: "Pago de servicio",        icon: <ArrowDownLeft className="h-3.5 w-3.5" />, tone: "in" },
-  referral_bonus:      { label: "Bono por referido",       icon: <Sparkles className="h-3.5 w-3.5" />,      tone: "in" },
-  refund:              { label: "Reembolso",               icon: <ArrowDownLeft className="h-3.5 w-3.5" />, tone: "in" },
-  adjustment:          { label: "Ajuste",                  icon: <History className="h-3.5 w-3.5" />,       tone: "in" },
-  platform_commission: { label: "Comisión de plataforma",  icon: <ArrowUpRight className="h-3.5 w-3.5" />,  tone: "out" },
-  payout:              { label: "Retiro solicitado",       icon: <Send className="h-3.5 w-3.5" />,          tone: "out" },
+  service_earning: {
+    label: "Pago de servicio",
+    icon: <ArrowDownLeft className="h-3.5 w-3.5" />,
+    tone: "in",
+  },
+  referral_bonus: {
+    label: "Bono por referido",
+    icon: <Sparkles className="h-3.5 w-3.5" />,
+    tone: "in",
+  },
+  refund: { label: "Reembolso", icon: <ArrowDownLeft className="h-3.5 w-3.5" />, tone: "in" },
+  adjustment: { label: "Ajuste", icon: <History className="h-3.5 w-3.5" />, tone: "in" },
+  platform_commission: {
+    label: "Comisión de plataforma",
+    icon: <ArrowUpRight className="h-3.5 w-3.5" />,
+    tone: "out",
+  },
+  payout: { label: "Retiro solicitado", icon: <Send className="h-3.5 w-3.5" />, tone: "out" },
 };
 
-const STATUS_BADGE: Record<PayoutRequest["status"], { label: string; className: string; icon: React.ReactNode }> = {
-  pending:    { label: "Pendiente",  className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20", icon: <Clock className="h-3 w-3" /> },
-  processing: { label: "Procesando", className: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",         icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-  completed:  { label: "Completado", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20", icon: <CheckCircle2 className="h-3 w-3" /> },
-  failed:     { label: "Fallido",    className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",         icon: <XCircle className="h-3 w-3" /> },
-  cancelled:  { label: "Cancelado",  className: "bg-muted text-muted-foreground border-border",                            icon: <XCircle className="h-3 w-3" /> },
+const STATUS_BADGE: Record<
+  PayoutRequest["status"],
+  { label: string; className: string; icon: React.ReactNode }
+> = {
+  pending: {
+    label: "Pendiente",
+    className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    icon: <Clock className="h-3 w-3" />,
+  },
+  processing: {
+    label: "Procesando",
+    className: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+    icon: <Loader2 className="h-3 w-3 animate-spin" />,
+  },
+  completed: {
+    label: "Completado",
+    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+    icon: <CheckCircle2 className="h-3 w-3" />,
+  },
+  failed: {
+    label: "Fallido",
+    className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+    icon: <XCircle className="h-3 w-3" />,
+  },
+  cancelled: {
+    label: "Cancelado",
+    className: "bg-muted text-muted-foreground border-border",
+    icon: <XCircle className="h-3 w-3" />,
+  },
 };
 
 function formatCOP(cents: number) {
@@ -162,7 +232,12 @@ export function WalletPanel({ userId }: { userId: string }) {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "wallet_transactions", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "wallet_transactions",
+          filter: `user_id=eq.${userId}`,
+        },
         () => load(),
       )
       .on(
@@ -227,7 +302,10 @@ export function WalletPanel({ userId }: { userId: string }) {
                 <Wallet className="h-4 w-4 text-emerald-600" />
               </div>
               <p className="text-xs font-medium text-muted-foreground">Saldo disponible</p>
-              <Badge variant="outline" className="gap-1 text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
+              <Badge
+                variant="outline"
+                className="gap-1 text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+              >
                 <ShieldCheck className="h-3 w-3" /> Protegido
               </Badge>
             </div>
@@ -247,7 +325,12 @@ export function WalletPanel({ userId }: { userId: string }) {
 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="hero" size="sm" className="gap-2" disabled={!wallet || wallet.balance_cents <= 0}>
+              <Button
+                variant="hero"
+                size="sm"
+                className="gap-2"
+                disabled={!wallet || wallet.balance_cents <= 0}
+              >
                 <Send className="h-4 w-4" />
                 Retirar fondos
               </Button>
@@ -260,7 +343,10 @@ export function WalletPanel({ userId }: { userId: string }) {
               </DialogHeader>
               <div className="space-y-4 pt-1">
                 <p className="text-xs text-muted-foreground">
-                  Disponible: <span className="font-semibold text-foreground">{formatCOP(wallet?.balance_cents ?? 0)}</span>
+                  Disponible:{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatCOP(wallet?.balance_cents ?? 0)}
+                  </span>
                 </p>
 
                 <div className="space-y-1.5">
@@ -309,7 +395,11 @@ export function WalletPanel({ userId }: { userId: string }) {
               </div>
               <DialogFooter>
                 <Button onClick={submitPayout} disabled={submitting} className="w-full gap-2">
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                   Confirmar solicitud
                 </Button>
               </DialogFooter>
@@ -368,15 +458,24 @@ export function WalletPanel({ userId }: { userId: string }) {
         ) : (
           <div className="space-y-1">
             {transactions.map((tx) => {
-              const cfg = TX_CONFIG[tx.type] ?? { label: tx.type, icon: <History className="h-3.5 w-3.5" />, tone: "in" as const };
+              const cfg = TX_CONFIG[tx.type] ?? {
+                label: tx.type,
+                icon: <History className="h-3.5 w-3.5" />,
+                tone: "in" as const,
+              };
               const isIn = cfg.tone === "in";
               return (
-                <div key={tx.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0"
+                >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={cn(
-                      "h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0",
-                      isIn ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600",
-                    )}>
+                    <div
+                      className={cn(
+                        "h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0",
+                        isIn ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600",
+                      )}
+                    >
                       {cfg.icon}
                     </div>
                     <div className="min-w-0">
@@ -386,8 +485,14 @@ export function WalletPanel({ userId }: { userId: string }) {
                       </p>
                     </div>
                   </div>
-                  <span className={cn("text-xs font-semibold tabular-nums flex-shrink-0", isIn ? "text-emerald-600" : "text-red-600")}>
-                    {isIn ? "+" : ""}{formatCOP(tx.amount_cents)}
+                  <span
+                    className={cn(
+                      "text-xs font-semibold tabular-nums flex-shrink-0",
+                      isIn ? "text-emerald-600" : "text-red-600",
+                    )}
+                  >
+                    {isIn ? "+" : ""}
+                    {formatCOP(tx.amount_cents)}
                   </span>
                 </div>
               );

@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Clock, Briefcase, MapPin, Activity, Users, Building2, TrendingUp, Zap } from "lucide-react";
+import {
+  Clock,
+  Briefcase,
+  MapPin,
+  Activity,
+  Users,
+  Building2,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 
 export function HealthMarketplaceViz() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [leafletReady, setLeafletReady] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"professional" | "family" | "institution">("professional");
+  const [selectedRole, setSelectedRole] = useState<"professional" | "family" | "institution">(
+    "professional",
+  );
 
   // Load Leaflet dynamically
   useEffect(() => {
@@ -109,7 +120,7 @@ export function HealthMarketplaceViz() {
         weight: 2,
         opacity: 0.6,
         dashArray: "5, 5",
-      }
+      },
     ).addTo(mapInstance);
 
     const polyline2 = L.polyline(
@@ -122,7 +133,7 @@ export function HealthMarketplaceViz() {
         weight: 2,
         opacity: 0.6,
         dashArray: "5, 5",
-      }
+      },
     ).addTo(mapInstance);
 
     return () => {
@@ -188,7 +199,8 @@ export function HealthMarketplaceViz() {
             Uber para <span className="text-gradient-bio">talento en salud</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Tres actores. Un sistema. Match automático basado en oferta, demanda y geolocalización en vivo.
+            Tres actores. Un sistema. Match automático basado en oferta, demanda y geolocalización
+            en vivo.
           </p>
         </div>
 
@@ -236,11 +248,16 @@ export function HealthMarketplaceViz() {
 
             {/* Modalities Display */}
             <div className="bg-slate-950 rounded-2xl border border-slate-800 p-4 space-y-3">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">4 Modalidades de Pago</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                4 Modalidades de Pago
+              </p>
               {activeRole.modalities.map((mod) => {
                 const ModIcon = mod.icon;
                 return (
-                  <div key={mod.label} className="flex items-center justify-between p-2 bg-slate-900/50 rounded-lg">
+                  <div
+                    key={mod.label}
+                    className="flex items-center justify-between p-2 bg-slate-900/50 rounded-lg"
+                  >
                     <div className="flex items-center gap-2">
                       <ModIcon className="h-4 w-4 text-slate-500" />
                       <span className="text-xs font-medium text-slate-300">{mod.label}</span>
