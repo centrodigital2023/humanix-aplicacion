@@ -46,7 +46,7 @@ export function useRealtimeRefresh(
           { event, schema: "public", table, ...(filter ? { filter } : {}) } as any,
           () => refreshRef.current(),
         ),
-      supabase.channel(channelName),
+      supabase.channel(uniqueName),
     );
 
     ch.subscribe();
