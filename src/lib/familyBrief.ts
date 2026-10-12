@@ -7,6 +7,7 @@
 // de bienestar y del presupuesto; sin plan, una sola invitación a conocerlos. No contacta a nadie ni decide nada.
 
 import type { GapLevel } from "./coverageRadar";
+import type { HeroStat } from "./dayHero";
 import {
   DAY_MS,
   HOUR_MS,
@@ -171,6 +172,16 @@ function ageEs(t: number, now: number): string {
   return `hace ${Math.floor(h / 24)} días`;
 }
 
+/** Propuestas de un profesional que esperan respuesta y todavía no vencen. */
+function waitingProposals(s: FamilySnapshot): BriefProposal[] {
+  return s.proposals.filter(
+    (p) =>
+      p.status === "pending" &&
+      p.proposedBy !== "family" &&
+      (p.expiresAt === null || msOf(p.expiresAt) > s.now),
+  );
+}
+
 type Keyed = BriefItem & { sortKey: number };
 
 export function buildFamilyBrief(s: FamilySnapshot): BriefItem[] {
@@ -245,12 +256,7 @@ export function buildFamilyBrief(s: FamilySnapshot): BriefItem[] {
   }
 
   // ── Propuestas de profesionales ────────────────────────────────────────────
-  const waiting = s.proposals.filter(
-    (p) =>
-      p.status === "pending" &&
-      p.proposedBy !== "family" &&
-      (p.expiresAt === null || msOf(p.expiresAt) > now),
-  );
+  const waiting = waitingProposals(s);
   const urgent = waiting
     .filter(
       (p) => p.expiresAt !== null && msOf(p.expiresAt) - now <= PROPOSAL_URGENT_HOURS * HOUR_MS,
@@ -503,13 +509,17 @@ export function briefHeadline(items: BriefItem[]): {
   return { text: "Todo en orden por ahora", tone: "calm" };
 }
 
-/**
- * Lo que se muestra de entrada: hasta `max` ítems, pero lo crítico siempre entra aunque pase del límite.
- */
-export function splitBrief(
-  items: BriefItem[],
-  max = 4,
-): { shown: BriefItem[]; hidden: BriefItem[] } {
-  const keep = Math.max(max, items.filter((i) => i.priority === "critical").length);
-  return { shown: items.slice(0, keep), hidden: items.slice(keep) };
+/** Las tres cifras del encabezado: lo que está en curso, lo que viene y lo que espera una respuesta. */
+export function heroStats(s: FamilySnapshot): HeroStat[] {
+  const live = s.services.filter((v) => v.status === "in_progress").length;
+  const scheduled = s.services.filter(
+    (v) => v.status === "confirmed" || v.status === "in_route",
+  ).length;
+  const toAnswer =
+    waitingProposals(s).length + s.applications.filter((a) => a.status === "pending").length;
+  return [
+    { label: "En curso", value: live },
+    { label: "Programados", value: scheduled },
+    { label: "Por responder", value: toAnswer },
+  ];
 }

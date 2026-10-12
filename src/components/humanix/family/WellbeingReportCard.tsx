@@ -18,8 +18,8 @@ import {
   type WellbeingReport,
 } from "@/lib/wellbeing";
 import { cn } from "@/lib/utils";
-import { InsightList, type InsightTone } from "./InsightList";
-import { Sparkline } from "./Sparkline";
+import { InsightList, type InsightTone } from "@/components/humanix/premium/InsightList";
+import { Sparkline } from "@/components/humanix/premium/Sparkline";
 
 const TONE: Record<HighlightSeverity, InsightTone> = {
   alert: "alert",

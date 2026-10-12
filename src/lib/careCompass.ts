@@ -1,6 +1,7 @@
 // Brújula del día: resume en lenguaje humano lo que importa hoy y propone las próximas acciones,
 // ordenadas por urgencia y con su motivo. Lógica pura (sin red) para cada rol.
 import type { ActiveService } from "@/lib/careLoop";
+import { warmGreeting } from "@/lib/dayHero";
 
 export type CompassRole = "family" | "professional" | "institution";
 export type CompassTone = "calm" | "attention" | "urgent";
@@ -39,17 +40,7 @@ export interface CompassBriefing {
 }
 
 export function greetingFor(now: Date, name?: string | null): string {
-  const h =
-    Number(
-      new Intl.DateTimeFormat("en-US", {
-        hour: "numeric",
-        hour12: false,
-        timeZone: "America/Bogota",
-      }).format(now),
-    ) % 24;
-  const base = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
-  const first = name?.trim().split(/\s+/)[0];
-  return first ? `${base}, ${first}` : base;
+  return warmGreeting(now, name);
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

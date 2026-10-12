@@ -5,10 +5,11 @@ import {
   RATING_WINDOW_DAYS,
   briefHeadline,
   buildFamilyBrief,
-  splitBrief,
+  heroStats,
   whenEs,
   type BriefItem,
 } from "./familyBrief";
+import { calmScore, heroTone, splitVisible } from "./dayHero";
 import {
   DAY,
   HOUR,
@@ -580,15 +581,81 @@ describe("encabezado y lista corta", () => {
     });
   });
 
-  it("la lista corta muestra 4 por defecto, pero lo crítico nunca se esconde", () => {
-    const many = ["a", "b", "c", "d", "e", "f"].map((id) => item(id, "medium"));
-    expect(splitBrief(many).shown.map((i) => i.id)).toEqual(["a", "b", "c", "d"]);
-    expect(splitBrief(many).hidden.map((i) => i.id)).toEqual(["e", "f"]);
-    const crit = ["a", "b", "c", "d", "e", "f"].map((id) => item(id, "critical"));
-    expect(splitBrief(crit).shown).toHaveLength(6);
-    expect(splitBrief(crit).hidden).toEqual([]);
-    expect(splitBrief(many, 2).shown).toHaveLength(2);
-    expect(splitBrief([]).shown).toEqual([]);
+  it("el tono del encabezado coincide con el del héroe y con la calma", () => {
+    const cases: BriefItem["priority"][][] = [
+      [],
+      ["low"],
+      ["medium"],
+      ["high"],
+      ["critical", "low"],
+    ];
+    const map = { alert: "urgent", attention: "attention", calm: "calm" } as const;
+    for (const priorities of cases) {
+      const items = priorities.map((p, i) => item(`x${i}`, p));
+      expect(map[briefHeadline(items).tone]).toBe(heroTone(priorities));
+    }
+    expect(calmScore([])).toBe(100);
+  });
+});
+
+describe("cifras del encabezado", () => {
+  it("cuenta lo que está en curso, lo programado y lo que espera respuesta", () => {
+    const stats = heroStats(
+      snapshot({
+        services: [
+          briefService({ bookingId: "a", status: "in_progress" }),
+          briefService({ bookingId: "b", status: "confirmed" }),
+          briefService({ bookingId: "c", status: "in_route" }),
+          briefService({ bookingId: "d", status: "confirmed", side: "circle" }),
+        ],
+        proposals: [briefProposal({ id: "p1" }), briefProposal({ id: "p2", proposedBy: "family" })],
+        applications: [
+          briefApplication({ id: "x", status: "pending" }),
+          briefApplication({ id: "y", status: "accepted" }),
+        ],
+      }),
+    );
+    expect(stats).toEqual([
+      { label: "En curso", value: 1 },
+      { label: "Programados", value: 3 },
+      { label: "Por responder", value: 2 },
+    ]);
+  });
+
+  it("no cuenta propuestas vencidas, propias ni ya respondidas", () => {
+    const stats = heroStats(
+      snapshot({
+        proposals: [
+          briefProposal({ id: "vencida", expiresAt: iso(-HOUR) }),
+          briefProposal({ id: "mia", proposedBy: "family" }),
+          briefProposal({ id: "aceptada", status: "accepted" }),
+          briefProposal({ id: "sin_fecha", expiresAt: null }),
+        ],
+      }),
+    );
+    expect(stats[2]).toEqual({ label: "Por responder", value: 1 });
+  });
+
+  it("una familia sin nada muestra ceros, no huecos", () => {
+    expect(heroStats(snapshot({}))).toEqual([
+      { label: "En curso", value: 0 },
+      { label: "Programados", value: 0 },
+      { label: "Por responder", value: 0 },
+    ]);
+  });
+
+  it("las cifras de «por responder» coinciden con lo que la lista del día anuncia", () => {
+    const snap = snapshot({
+      proposals: [briefProposal({ id: "p1" }), briefProposal({ id: "p2" })],
+      applications: [briefApplication({ id: "a1" })],
+      premium: true,
+    });
+    const items = buildFamilyBrief(snap);
+    const waitingItem = items.find(
+      (i) => i.id === "proposals_waiting" || i.id === "proposal_expiring",
+    );
+    expect(waitingItem).toBeDefined();
+    expect(heroStats(snap)[2].value).toBe(3);
   });
 });
 
@@ -671,7 +738,7 @@ describe("invariantes (fotos aleatorias de la familia)", () => {
           expect(it.cta.label.length).toBeGreaterThan(0);
           expect(`${it.title} ${it.detail}`).not.toMatch(/undefined|NaN|Infinity|\[object/);
         }
-        const { shown, hidden } = splitBrief(items);
+        const { shown, hidden } = splitVisible(items);
         expect(shown.length + hidden.length).toBe(items.length);
         expect(shown.filter((i) => i.priority === "critical").length).toBe(
           items.filter((i) => i.priority === "critical").length,

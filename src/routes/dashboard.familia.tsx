@@ -39,7 +39,6 @@ import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard
 import { CareHistoryCard } from "@/components/humanix/care/CareHistoryCard";
 import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
 import { useActiveServices } from "@/hooks/use-care-loop";
-import { CareCompassCard } from "@/components/humanix/CareCompassCard";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
 import { WearableConnections } from "@/components/humanix/WearableConnections";
 import { distanceKm, formatKm } from "@/lib/geo";
@@ -536,11 +535,10 @@ function FamilyDashboard() {
         {/* Acciones rápidas */}
         <FamilyQuickActions />
 
-        {user && <CareCompassCard role="family" userId={user.id} />}
-
-        {/* Tu centro de cuidado: resumen del día y herramientas inteligentes (plan Esencial) */}
+        {/* Tu centro de cuidado: saludo, calma y resumen del día para todas las familias, y herramientas inteligentes (plan Esencial) */}
         <FamilySmartCenter
           userId={user.id}
+          name={user.fullName}
           city={familyCity}
           profile={smartProfile}
           applications={applications}

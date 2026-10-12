@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Advice, AdviceSeverity, CoverageRadar, GapLevel } from "@/lib/coverageRadar";
 import { URGENCY_LABEL, formatShiftRange } from "@/lib/opportunities";
 import { cn } from "@/lib/utils";
-import { InsightList, type InsightTone } from "./InsightList";
+import { InsightList, type InsightTone } from "@/components/humanix/premium/InsightList";
 
 export type RadarAnchor = "agenda" | "proposals" | "team";
 

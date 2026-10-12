@@ -1,10 +1,10 @@
-// Lo que ve quien aún no tiene el plan Esencial en una herramienta premium: qué es, qué recibiría y un dato real de
-// su propia cuenta (sin revelar el análisis). El botón lleva a /planes: el pago se hace solo en la página web.
+// Lo que ve quien aún no tiene el plan de una herramienta premium (Esencial, Pro o IPS Mejorado): qué es, qué recibiría y
+// un dato real de su propia cuenta (sin revelar el análisis). El botón lleva a /planes: el pago se hace solo en la web.
 import type { ReactNode } from "react";
 import { Lock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { UpgradeCta } from "@/components/humanix/PlanGate";
-import { PLAN_CATALOG } from "@/lib/plans";
+import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
 
 export function PremiumPreview({
   icon,
@@ -12,6 +12,8 @@ export function PremiumPreview({
   description,
   bullets,
   teaser,
+  min = "essential_monthly",
+  ctaNote,
 }: {
   icon: ReactNode;
   title: string;
@@ -19,15 +21,20 @@ export function PremiumPreview({
   bullets: string[];
   /** Un dato de la cuenta de la persona (por ejemplo «6 servicios en 30 días»). */
   teaser?: string | null;
+  /** Plan mínimo que la desbloquea (por defecto el Esencial). */
+  min?: PlanKey;
+  /** Frase del botón; por defecto, el precio del plan. */
+  ctaNote?: string;
 }) {
+  const def = PLAN_CATALOG[min];
   return (
-    <Card className="space-y-3 p-4 sm:p-5" aria-label={`${title} (plan Esencial)`}>
+    <Card className="space-y-3 p-4 sm:p-5" aria-label={`${title} (plan ${def.label})`}>
       <div>
         <h3 className="flex items-center gap-2 font-display text-base font-semibold">
           {icon}
           {title}
           <span className="inline-flex items-center gap-1 rounded-full border border-copper/40 bg-copper/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-copper">
-            <Lock className="h-3 w-3" aria-hidden="true" /> Esencial
+            <Lock className="h-3 w-3" aria-hidden="true" /> {def.label}
           </span>
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
@@ -49,9 +56,12 @@ export function PremiumPreview({
         ))}
       </ul>
       <UpgradeCta
-        min="essential_monthly"
-        title="Actívalo con el plan Esencial"
-        description={`${PLAN_CATALOG.essential_monthly.priceLabel}${PLAN_CATALOG.essential_monthly.priceNote}, sin permanencia. Incluye también la historia de cuidado exportable.`}
+        min={min}
+        title={`Actívalo con el plan ${def.label}`}
+        description={
+          ctaNote ??
+          `${def.priceLabel}${def.priceNote}, sin permanencia. Incluye también la historia de cuidado exportable.`
+        }
       />
     </Card>
   );

@@ -8,7 +8,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { HeartPulse, Lock, Radar, Scale, Sparkles, Wallet } from "lucide-react";
 import { PlanBadge } from "@/components/humanix/PlanGate";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTrustedTeam, useActiveServices } from "@/hooks/use-care-loop";
@@ -29,7 +28,7 @@ import { rankApplicants } from "@/lib/applicantRanking";
 import { buildApplicants, type ApplicationSource, type OfferSource } from "@/lib/applicantSources";
 import { buildBudgetReport } from "@/lib/careBudget";
 import { buildCoverageRadar } from "@/lib/coverageRadar";
-import { buildFamilyBrief, type BriefTarget } from "@/lib/familyBrief";
+import { buildFamilyBrief, heroStats, type BriefTarget } from "@/lib/familyBrief";
 import { DAY_MS, plural } from "@/lib/familyIntelShared";
 import { buildSnapshot, completedByProfessional, premiumHints } from "@/lib/familySnapshot";
 import { formatCOP } from "@/lib/pricing";
@@ -38,14 +37,16 @@ import { ApplicantsRankingCard } from "./ApplicantsRankingCard";
 import { CareBudgetCard } from "./CareBudgetCard";
 import { CoverageRadarCard, type RadarAnchor } from "./CoverageRadarCard";
 import { FamilyBriefCard } from "./FamilyBriefCard";
-import { PremiumPreview } from "./PremiumPreview";
+import { PremiumPreview } from "@/components/humanix/premium/PremiumPreview";
 import { WellbeingReportCard } from "./WellbeingReportCard";
-import { scrollToId } from "./scroll";
+import { scrollToId } from "@/components/humanix/premium/scroll";
 
 type TabKey = "bienestar" | "comparador" | "gasto" | "cobertura";
 
 export interface FamilySmartCenterProps {
   userId: string;
+  /** Nombre de la persona para el saludo (si viene un correo, se omite). */
+  name?: string | null;
   /** Ciudad de la familia, para el rango de tarifas. */
   city: string;
   profile: { complete: boolean; hasEmergencyContact: boolean };
@@ -57,6 +58,7 @@ export interface FamilySmartCenterProps {
 
 export function FamilySmartCenter({
   userId,
+  name,
   city,
   profile,
   applications,
@@ -194,25 +196,23 @@ export function FamilySmartCenter({
   const ranked = useMemo(() => rankApplicants(applicants, { market }), [applicants, market]);
 
   // ── Resumen del día ───────────────────────────────────────────────────────
-  const brief = useMemo(
+  const snapshot = useMemo(
     () =>
-      buildFamilyBrief(
-        buildSnapshot({
-          now,
-          active: activeQ.data ?? [],
-          bookings,
-          ratedBookingIds: ratedQ.data ?? [],
-          names,
-          proposals,
-          applications,
-          gaps: radar.gaps,
-          profile,
-          teamSize: team.length,
-          circleMembers: circleQ.data ?? 0,
-          premium,
-          hints: premium ? premiumHints(wellbeingForBrief, budget) : undefined,
-        }),
-      ),
+      buildSnapshot({
+        now,
+        active: activeQ.data ?? [],
+        bookings,
+        ratedBookingIds: ratedQ.data ?? [],
+        names,
+        proposals,
+        applications,
+        gaps: radar.gaps,
+        profile,
+        teamSize: team.length,
+        circleMembers: circleQ.data ?? 0,
+        premium,
+        hints: premium ? premiumHints(wellbeingForBrief, budget) : undefined,
+      }),
     [
       now,
       activeQ.data,
@@ -230,6 +230,8 @@ export function FamilySmartCenter({
       budget,
     ],
   );
+  const brief = useMemo(() => buildFamilyBrief(snapshot), [snapshot]);
+  const stats = useMemo(() => heroStats(snapshot), [snapshot]);
 
   // ── Pestañas y navegación ─────────────────────────────────────────────────
   const [tab, setTab] = useState<TabKey | null>(null);
@@ -291,26 +293,31 @@ export function FamilySmartCenter({
     !activeQ.isLoading;
 
   return (
-    <section id="centro-inteligente" aria-labelledby="smart-center-title" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2
-          id="smart-center-title"
-          className="flex items-center gap-2 font-display text-xl font-bold"
-        >
-          <Sparkles className="h-5 w-5 text-copper" aria-hidden="true" /> Tu centro de cuidado
-        </h2>
-        {!plan.loading && <PlanBadge plan={plan.plan} />}
-      </div>
-
+    <section id="centro-inteligente" aria-label="Tu centro de cuidado" className="space-y-4">
       {ready ? (
-        <FamilyBriefCard items={brief} onAction={onBriefAction} />
+        <FamilyBriefCard
+          items={brief}
+          onAction={onBriefAction}
+          now={now}
+          name={name}
+          stats={stats}
+        />
       ) : (
-        <Card className="p-4 text-sm text-muted-foreground" aria-busy="true">
-          Revisando tu día…
-        </Card>
+        <Skeleton
+          className="h-64 w-full rounded-3xl"
+          aria-busy="true"
+          aria-label="Revisando tu día"
+        />
       )}
 
-      <div id="centro-herramientas" className="scroll-mt-4">
+      <div id="centro-herramientas" className="scroll-mt-4 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 font-display text-lg font-bold">
+            <Sparkles className="h-5 w-5 text-copper" aria-hidden="true" /> Herramientas
+            inteligentes
+          </h3>
+          {!plan.loading && <PlanBadge plan={plan.plan} />}
+        </div>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as TabKey)}>
           <TabsList
             aria-label="Herramientas del plan Esencial"

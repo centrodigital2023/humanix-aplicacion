@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { BudgetReport, BudgetSeverity } from "@/lib/careBudget";
 import { formatCOP } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
-import { InsightList, type InsightTone } from "./InsightList";
+import { InsightList, type InsightTone } from "@/components/humanix/premium/InsightList";
 
 const TONE: Record<BudgetSeverity, InsightTone> = { warn: "warn", info: "info", good: "ok" };
 
