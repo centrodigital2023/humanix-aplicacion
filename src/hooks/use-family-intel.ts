@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { hubKeys } from "@/hooks/use-opportunity-feed";
 import type { ProFacts, ProposalSource } from "@/lib/applicantSources";
-import { DAY_MS } from "@/lib/familyIntelShared";
+import { DAY_MS } from "@/lib/intelShared";
 import type { RadarNeed } from "@/lib/coverageRadar";
 import type { WellbeingLog } from "@/lib/wellbeing";
 

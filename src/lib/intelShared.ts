@@ -1,7 +1,8 @@
-// Utilidades comunes de las funciones inteligentes del panel de familia (puras, sin base de datos).
+// Utilidades comunes de las funciones inteligentes de los paneles de familia, profesional e institución (puras, sin base
+// de datos).
 //
-// Las usan `wellbeing`, `careBudget`, `coverageRadar`, `applicantRanking` y `familyBrief`. Todo se calcula en el
-// navegador con datos que la familia ya puede leer; nada de esto se envía a terceros ni a ninguna IA.
+// Las usan los motores de `src/lib` (bienestar, presupuesto, cobertura, ingresos, calidad…). Todo se calcula en el
+// navegador con datos que la persona ya puede leer; nada de esto se envía a terceros ni a ninguna IA.
 
 export const HOUR_MS = 3_600_000;
 export const DAY_MS = 86_400_000;
@@ -123,4 +124,83 @@ export function countdownEs(targetMs: number, now: number): string {
   if (h < 3) return `en ${h} h${min % 60 ? ` ${min % 60} min` : ""}`;
   if (h < 48) return `en ${h} h`;
   return `en ${Math.floor(h / 24)} días`;
+}
+
+const WEEKDAY_NAMES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
+const MONTH_NAMES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+/** Día de la semana de Colombia con el lunes en 0 y el domingo en 6 (la semana laboral empieza el lunes). */
+export function bogotaWeekday(t: number): number {
+  return (new Date(t + BOGOTA_OFFSET_MS).getUTCDay() + 6) % 7;
+}
+
+/** «lunes», «martes»… para un día de la semana de 0 (lunes) a 6 (domingo). */
+export function weekdayNameEs(dow: number): string {
+  return WEEKDAY_NAMES[((Math.trunc(dow) % 7) + 7) % 7];
+}
+
+/** Medianoche (hora de Colombia) con la que empieza el día del instante, en milisegundos UTC. */
+export function startOfBogotaDay(t: number): number {
+  return bogotaDayIndex(t) * DAY_MS - BOGOTA_OFFSET_MS;
+}
+
+/**
+ * Parte un intervalo en los días de Colombia que toca. Un turno de noche (19:00 → 07:00) devuelve dos tramos.
+ * Devuelve una lista vacía si el intervalo no es válido o no tiene duración.
+ */
+export function splitByBogotaDay(
+  start: number,
+  end: number,
+): Array<{ day: number; startMs: number; endMs: number; hours: number }> {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return [];
+  const out: Array<{ day: number; startMs: number; endMs: number; hours: number }> = [];
+  let cursor = start;
+  while (cursor < end) {
+    const dayStart = startOfBogotaDay(cursor);
+    const next = Math.min(end, dayStart + DAY_MS);
+    out.push({
+      day: bogotaDayIndex(cursor),
+      startMs: cursor,
+      endMs: next,
+      hours: (next - cursor) / HOUR_MS,
+    });
+    cursor = next;
+  }
+  return out;
+}
+
+/** «domingo 18 de octubre», en hora de Colombia (para frases corridas donde «dom 18 oct» suena a abreviatura). */
+export function longDayLabelEs(t: number): string {
+  const { m, d } = bogotaYmd(t);
+  return `${weekdayNameEs(bogotaWeekday(t))} ${d} de ${MONTH_NAMES[m - 1]}`;
+}
+
+/** «hoy a las 15:00», «mañana a las 08:00», «jue 15 oct a las 08:00». */
+export function whenEs(t: number, now: number): string {
+  const days = bogotaDayIndex(t) - bogotaDayIndex(now);
+  const hour = timeLabelEs(t);
+  if (days <= 0) return `hoy a las ${hour}`;
+  if (days === 1) return `mañana a las ${hour}`;
+  return `${dayLabelEs(t)} a las ${hour}`;
+}
+
+/** «hace 3 h», «hace 2 días»: edad de algo que ya pasó. */
+export function ageEs(t: number, now: number): string {
+  const h = Math.max(0, Math.floor((now - t) / HOUR_MS));
+  if (h < 1) return "hace menos de una hora";
+  if (h < 48) return `hace ${h} h`;
+  return `hace ${Math.floor(h / 24)} días`;
 }

@@ -1,18 +1,14 @@
 // «Héroe del día» de los tres paneles (familia, profesional, institución) — lógica pura.
 //
-// Lo que comparten: cuánta calma tiene el día (0-100), el tono, un saludo cálido y una frase de acompañamiento. Cada panel
+// Lo que comparten: cuánta calma tiene el día (10-100), el tono, un saludo cálido y una frase de acompañamiento. Cada panel
 // arma su propia lista de pendientes con sus reglas; aquí solo se mide y se redacta, de forma que dos paneles con la misma
 // carga muestren la misma calma. No decide nada ni contacta a nadie.
+import { BOGOTA_OFFSET_MS, bogotaDayIndex } from "./intelShared";
 
 export type HeroPriority = "critical" | "high" | "medium" | "low";
 export type HeroTone = "calm" | "attention" | "urgent";
 export type HeroRole = "family" | "professional" | "institution";
 export type DayPart = "morning" | "afternoon" | "evening";
-
-const HOUR_MS = 3_600_000;
-const DAY_MS = 24 * HOUR_MS;
-/** Colombia no tiene horario de verano: UTC−5 todo el año. */
-const BOGOTA_OFFSET_MS = -5 * HOUR_MS;
 
 /**
  * Cuánta calma resta cada pendiente y cuántos de cada nivel cuentan. Pasado el tope, otro pendiente igual ya no cambia
@@ -145,16 +141,11 @@ const WARM: Record<HeroRole, Record<HeroTone, readonly string[]>> = {
   },
 };
 
-/** Número del día (Colombia) desde 1970: cambia a medianoche de Bogotá y no depende del huso del equipo. */
-export function bogotaDayNumber(now: Date | number): number {
-  const ms = typeof now === "number" ? now : now.getTime();
-  return Math.floor((ms + BOGOTA_OFFSET_MS) / DAY_MS);
-}
-
 /** La frase de acompañamiento del día: estable durante el día y distinta de un día a otro. */
 export function warmLine(role: HeroRole, tone: HeroTone, now: Date | number): string {
   const lines = WARM[role][tone];
-  return lines[bogotaDayNumber(now) % lines.length];
+  const day = bogotaDayIndex(typeof now === "number" ? now : now.getTime());
+  return lines[day % lines.length];
 }
 
 /** Texto para lectores de pantalla del anillo de calma. */
@@ -189,4 +180,36 @@ export function splitVisible<T extends { priority: HeroPriority }>(
     else hidden.push(item);
   });
   return { shown, hidden };
+}
+
+const PRIORITY_ORDER: Record<HeroPriority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+
+export interface Orderable {
+  /** Identificador de la regla, con un sufijo opcional tras «:» para varios ítems de una misma regla. */
+  id: string;
+  priority: HeroPriority;
+  /** Cuándo ocurre (o vence): lo que pasa antes va primero. Sin dato, al final de su grupo. */
+  sortKey?: number;
+}
+
+/**
+ * Orden del día de cualquier panel: primero la prioridad, luego lo que ocurre o vence antes, luego el lugar de la regla
+ * en `ruleRank` (lo que se actúa ya antes de lo que solo invita) y por último el id, para que el resultado no dependa
+ * del orden en que llegaron los datos. No modifica la lista original.
+ */
+export function orderBrief<T extends Orderable>(
+  items: readonly T[],
+  ruleRank: readonly string[],
+): T[] {
+  const rankOf = (id: string) => {
+    const i = ruleRank.indexOf(id.split(":")[0]);
+    return i === -1 ? ruleRank.length : i;
+  };
+  return [...items].sort(
+    (a, b) =>
+      PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] ||
+      (a.sortKey ?? Number.POSITIVE_INFINITY) - (b.sortKey ?? Number.POSITIVE_INFINITY) ||
+      rankOf(a.id) - rankOf(b.id) ||
+      a.id.localeCompare(b.id),
+  );
 }

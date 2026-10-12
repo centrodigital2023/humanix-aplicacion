@@ -14,7 +14,7 @@ import type {
   FamilySnapshot,
   PremiumHints,
 } from "./familyBrief";
-import { msOf } from "./familyIntelShared";
+import { msOf } from "./intelShared";
 import type { WellbeingReport } from "./wellbeing";
 
 export interface SnapshotBooking {

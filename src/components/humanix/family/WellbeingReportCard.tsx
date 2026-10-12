@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CARE_MOODS, MOOD_META, type CareMood } from "@/lib/careLog";
-import { dateEs, dayLabelEs, msOf, bogotaYmd } from "@/lib/familyIntelShared";
+import { dateEs, dayLabelEs, msOf, bogotaYmd } from "@/lib/intelShared";
 import {
   WELLBEING_WINDOWS,
   averageText,

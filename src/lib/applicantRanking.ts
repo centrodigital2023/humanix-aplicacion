@@ -14,7 +14,7 @@ import {
   type MarketStats,
 } from "./negotiation";
 import { formatCOP } from "./pricing";
-import { numOrNull, plural } from "./familyIntelShared";
+import { numOrNull, plural } from "./intelShared";
 
 export interface Applicant {
   /** Id de la postulación o de la propuesta. */

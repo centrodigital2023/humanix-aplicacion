@@ -8,23 +8,8 @@ import type { BriefApplication, BriefProposal, BriefService, FamilySnapshot } fr
 import type { RadarNeed, RadarProposal } from "./coverageRadar";
 import type { WellbeingBooking, WellbeingLog } from "./wellbeing";
 
-/** Miércoles 14 de octubre de 2026, 10:00 en Colombia (15:00 UTC). */
-export const NOW = Date.parse("2026-10-14T15:00:00Z");
-export const HOUR = 3_600_000;
-export const DAY = 86_400_000;
-export const iso = (offsetMs: number) => new Date(NOW + offsetMs).toISOString();
-
-// Generador pseudoaleatorio con semilla: la prueba es repetible.
-export function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+export { NOW, HOUR, DAY, iso, mulberry32 } from "./intel.fixture";
+import { DAY, HOUR, NOW, iso } from "./intel.fixture";
 
 let seq = 0;
 const nextId = (p: string) => `${p}${++seq}`;

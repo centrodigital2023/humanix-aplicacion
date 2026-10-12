@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { bogotaDayIndex } from "./intelShared";
 import {
   CALM_FLOOR,
   CALM_WEIGHT,
   TONE_LABEL,
-  bogotaDayNumber,
   bogotaHour,
   calmAriaLabel,
   calmScore,
   cleanStats,
   dayPart,
   heroTone,
+  orderBrief,
   splitVisible,
   warmGreeting,
   warmLine,
@@ -35,6 +36,7 @@ function mulberry32(seed: number) {
 }
 
 const times = <T>(n: number, v: T): T[] => Array.from({ length: n }, () => v);
+const priorities = (n: number, v: HeroPriority): HeroPriority[] => times(n, v);
 /** Instante a partir de la hora de Bogotá (UTC−5). */
 const bog = (iso: string) => new Date(`${iso}-05:00`).getTime();
 
@@ -75,9 +77,9 @@ describe("calmScore", () => {
   });
 
   it("el piso solo se alcanza con varias urgencias a la vez, no con una lista larga de tareas suaves", () => {
-    expect(calmScore(times(50, "low"))).toBeGreaterThan(CALM_FLOOR);
-    expect(calmScore(times(50, "medium"))).toBeGreaterThan(CALM_FLOOR);
-    expect(calmScore([...times(2, "critical"), ...times(3, "high")])).toBe(CALM_FLOOR);
+    expect(calmScore(priorities(50, "low"))).toBeGreaterThan(CALM_FLOOR);
+    expect(calmScore(priorities(50, "medium"))).toBeGreaterThan(CALM_FLOOR);
+    expect(calmScore([...priorities(2, "critical"), ...priorities(3, "high")])).toBe(CALM_FLOOR);
   });
 
   it("es un entero", () => {
@@ -220,12 +222,10 @@ describe("warmLine", () => {
   });
 
   it("el número del día cambia a la medianoche de Bogotá, no a la de UTC", () => {
-    expect(bogotaDayNumber(new Date("2026-10-10T04:59:59Z"))).toBe(
-      bogotaDayNumber(new Date("2026-10-09T12:00:00Z")),
-    );
-    expect(bogotaDayNumber(new Date("2026-10-10T05:00:00Z"))).toBe(
-      bogotaDayNumber(new Date("2026-10-09T12:00:00Z")) + 1,
-    );
+    const day = (iso: string) => bogotaDayIndex(Date.parse(iso));
+    expect(Number.isFinite(day("2026-10-09T12:00:00Z"))).toBe(true);
+    expect(day("2026-10-10T04:59:59Z")).toBe(day("2026-10-09T12:00:00Z"));
+    expect(day("2026-10-10T05:00:00Z")).toBe(day("2026-10-09T12:00:00Z") + 1);
   });
 
   it("ninguna frase habla de pagos, de WhatsApp ni promete resultados clínicos", () => {
@@ -338,5 +338,60 @@ describe("splitVisible", () => {
     const { shown, hidden } = splitVisible(items, 2);
     expect(shown.map((i) => i.id)).toEqual(["a", "b", "z"]);
     expect(hidden.map((i) => i.id)).toEqual(["c"]);
+  });
+});
+
+describe("orderBrief", () => {
+  const it_ = (id: string, priority: HeroPriority, sortKey?: number) => ({ id, priority, sortKey });
+  const ids = (xs: Array<{ id: string }>) => xs.map((x) => x.id);
+  const RANK = ["alerta", "vence", "responder", "perfil", "invitar"];
+
+  it("la prioridad manda sobre todo lo demás", () => {
+    const out = orderBrief(
+      [
+        it_("invitar", "low", 1),
+        it_("perfil", "medium", 1),
+        it_("vence", "high", 1),
+        it_("alerta", "critical", 99),
+      ],
+      RANK,
+    );
+    expect(ids(out)).toEqual(["alerta", "vence", "perfil", "invitar"]);
+  });
+
+  it("a igual prioridad, lo que ocurre o vence antes va primero, y lo que no tiene hora al final", () => {
+    const out = orderBrief(
+      [it_("responder", "high"), it_("vence:b", "high", 200), it_("vence:a", "high", 100)],
+      RANK,
+    );
+    expect(ids(out)).toEqual(["vence:a", "vence:b", "responder"]);
+  });
+
+  it("a igual hora, decide el lugar de la regla; sin lugar conocido, al final; y luego el id", () => {
+    const out = orderBrief(
+      [it_("desconocida", "medium", 5), it_("perfil", "medium", 5), it_("responder", "medium", 5)],
+      RANK,
+    );
+    expect(ids(out)).toEqual(["responder", "perfil", "desconocida"]);
+    const ties = orderBrief([it_("vence:z", "high", 1), it_("vence:a", "high", 1)], RANK);
+    expect(ids(ties)).toEqual(["vence:a", "vence:z"]);
+  });
+
+  it("no depende del orden de entrada ni modifica la lista original", () => {
+    const rnd = mulberry32(3);
+    const base = Array.from({ length: 12 }, (_, i) =>
+      it_(
+        `${RANK[i % RANK.length]}:${i}`,
+        LEVELS[Math.floor(rnd() * 4)],
+        rnd() < 0.3 ? undefined : Math.floor(rnd() * 5),
+      ),
+    );
+    const copy = [...base];
+    const expected = ids(orderBrief(base, RANK));
+    expect(base).toEqual(copy);
+    for (let k = 0; k < 20; k++) {
+      const shuffled = [...base].sort(() => rnd() - 0.5);
+      expect(ids(orderBrief(shuffled, RANK))).toEqual(expected);
+    }
   });
 });

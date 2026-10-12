@@ -137,7 +137,7 @@ El comparador **no acepta ni rechaza**: «Responder» lleva a la bandeja de prop
 
 | Qué | Dónde |
 |---|---|
-| Lógica pura (con pruebas colocadas) | `src/lib/familyBrief.ts`, `wellbeing.ts`, `applicantRanking.ts`, `applicantSources.ts`, `careBudget.ts`, `coverageRadar.ts`, `familySnapshot.ts`, `familyIntelShared.ts` |
+| Lógica pura (con pruebas colocadas) | `src/lib/familyBrief.ts`, `wellbeing.ts`, `applicantRanking.ts`, `applicantSources.ts`, `careBudget.ts`, `coverageRadar.ts`, `familySnapshot.ts`, `intelShared.ts` |
 | Datos de prueba compartidos | `src/lib/familyIntel.fixture.ts` |
 | Plan | `src/lib/plans.ts` (4 funciones nuevas), `src/routes/planes.tsx` (fila en la comparativa), `src/lib/familyPremium.test.ts` |
 | Datos (TanStack Query + Realtime, sin sondeo) | `src/hooks/use-family-intel.ts` |
@@ -177,5 +177,5 @@ duplicar el aviso «Nueva postulación» en modo estricto. Ambos merecen una dec
 ```bash
 bun run test src/lib/familyBrief.test.ts src/lib/wellbeing.test.ts src/lib/applicantRanking.test.ts \
   src/lib/applicantSources.test.ts src/lib/careBudget.test.ts src/lib/coverageRadar.test.ts \
-  src/lib/familySnapshot.test.ts src/lib/familyIntelShared.test.ts src/lib/familyPremium.test.ts
+  src/lib/familySnapshot.test.ts src/lib/intelShared.test.ts src/lib/familyPremium.test.ts
 ```

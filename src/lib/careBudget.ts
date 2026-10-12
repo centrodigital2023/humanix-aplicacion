@@ -7,42 +7,26 @@
 // página web de Humanix).
 
 import { marketPosition, type MarketPosition, type MarketStats } from "./negotiation";
+import { DAY_MS, pctOf, plural } from "./intelShared";
 import {
-  DAY_MS,
-  bogotaMonthKey,
-  bogotaYmd,
-  daysInMonth,
-  monthLabelEs,
-  msOf,
-  num,
-  pctOf,
-  plural,
-  prevMonthKey,
-} from "./familyIntelShared";
+  COMMITTED_STATUS,
+  DONE_STATUS,
+  FLOW_MONTHS,
+  buildMoneyFlow,
+  normalizeBooking,
+  type FlowRow,
+  type RawBooking,
+} from "./moneyFlow";
 import { formatCOP } from "./pricing";
 
-export interface BudgetBooking {
-  id: string;
-  status: string;
-  scheduled_at: string;
-  completed_at?: string | null;
-  duration_hours: number | string | null;
-  hourly_rate?: number | string | null;
-  /** Lo que paga la familia por el servicio. */
-  total_amount: number | string | null;
-}
+/** Reserva de la familia: lo que paga es `total_amount`. */
+export type BudgetBooking = RawBooking;
 
 /** Estados de un servicio que ya se prestó (se cuenta como gasto). */
-const SPENT_STATUS = ["completed"];
-/**
- * Estados de un servicio acordado que aún no termina (se cuenta como comprometido). «pending» no entra: es una
- * solicitud que el profesional todavía no confirmó, y la proyección no debe contar como segura una plata que puede
- * no gastarse.
- */
-const COMMITTED_STATUS = ["confirmed", "in_route", "in_progress"];
+const SPENT_STATUS = DONE_STATUS;
 
 /** Meses que se muestran en la gráfica (el actual incluido). */
-export const BUDGET_MONTHS = 6;
+export const BUDGET_MONTHS = FLOW_MONTHS;
 /** Días hacia atrás para calcular el costo por hora y las cancelaciones. */
 export const RATE_WINDOW_DAYS = 90;
 /** Servicios completados mínimos para hablar del costo por hora propio. */
@@ -103,40 +87,7 @@ export interface BudgetReport {
   insights: BudgetInsight[];
 }
 
-interface Normalized {
-  id: string;
-  status: string;
-  /** Fecha con la que el servicio cuenta en un mes: terminó el… o está programado para el… */
-  at: number;
-  hours: number;
-  total: number;
-}
-
-function normalize(b: BudgetBooking): Normalized | null {
-  const scheduled = msOf(b.scheduled_at);
-  const done = msOf(b.completed_at);
-  const at = SPENT_STATUS.includes(b.status) && Number.isFinite(done) ? done : scheduled;
-  if (!Number.isFinite(at)) return null;
-  const rate = num(b.hourly_rate);
-  const hours = Math.max(0, num(b.duration_hours));
-  // Si el servidor no trae el total, se reconstruye con tarifa × horas; un total negativo no existe.
-  const missing = b.total_amount === null || b.total_amount === undefined;
-  const total = Math.max(0, Math.round(missing ? rate * hours : num(b.total_amount)));
-  return { id: b.id, status: b.status, at, hours, total };
-}
-
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
-
-/** Los últimos `n` meses de Colombia terminando en el de `now`, del más viejo al más nuevo. */
-function lastMonthKeys(now: number, n: number): string[] {
-  const keys: string[] = [];
-  let key = bogotaMonthKey(now);
-  for (let i = 0; i < n; i++) {
-    keys.unshift(key);
-    key = prevMonthKey(key);
-  }
-  return keys;
-}
 
 export function buildBudgetReport(args: {
   bookings: BudgetBooking[];
@@ -144,47 +95,25 @@ export function buildBudgetReport(args: {
   now?: number;
 }): BudgetReport {
   const now = args.now ?? Date.now();
-  const rows = args.bookings.map(normalize).filter((r): r is Normalized => r !== null);
-  const spent = rows.filter((r) => SPENT_STATUS.includes(r.status));
-  const committed = rows.filter((r) => COMMITTED_STATUS.includes(r.status));
+  const rows = args.bookings
+    .map((b) => normalizeBooking(b, "paid"))
+    .filter((r): r is FlowRow => r !== null);
+  const spent = rows.filter((r) => (SPENT_STATUS as readonly string[]).includes(r.status));
+  const committed = rows.filter((r) => (COMMITTED_STATUS as readonly string[]).includes(r.status));
   const cancelled = rows.filter((r) => r.status === "cancelled");
 
-  // ── Meses ──────────────────────────────────────────────────────────────────
-  const keys = lastMonthKeys(now, BUDGET_MONTHS);
-  const currentKey = keys[keys.length - 1];
-  const months: BudgetMonth[] = keys.map((key) => {
-    const s = spent.filter((r) => bogotaMonthKey(r.at) === key);
-    const c = committed.filter((r) => bogotaMonthKey(r.at) === key);
-    return {
-      key,
-      label: monthLabelEs(key),
-      spent: sum(s.map((r) => r.total)),
-      committed: sum(c.map((r) => r.total)),
-      hours: Math.round(sum(s.map((r) => r.hours)) * 100) / 100,
-      services: s.length,
-      isCurrent: key === currentKey,
-    };
-  });
-  const cur = months[months.length - 1];
-
-  // ── Proyección del mes en curso ────────────────────────────────────────────
-  const { y, m, d } = bogotaYmd(now);
-  const daysLeft = Math.max(0, daysInMonth(y, m) - d);
-  const recent28 = spent.filter((r) => r.at <= now && r.at > now - 28 * DAY_MS);
-  const weeklyPace =
-    recent28.length >= 2 ? Math.round(sum(recent28.map((r) => r.total)) / 4) : null;
-  const projectedLow = cur.spent + cur.committed;
-  const paceRest = weeklyPace === null ? 0 : Math.round((weeklyPace * daysLeft) / 7);
-  const projectedHigh = Math.max(projectedLow, cur.spent + Math.max(cur.committed, paceRest));
-
-  // ── Contra el mes pasado, hasta el mismo día ───────────────────────────────
-  const prevKey = prevMonthKey(currentKey);
-  const lastSpan = sum(
-    spent
-      .filter((r) => bogotaMonthKey(r.at) === prevKey && bogotaYmd(r.at).d <= d)
-      .map((r) => r.total),
-  );
-  const deltaPct = lastSpan > 0 ? Math.round(((cur.spent - lastSpan) / lastSpan) * 100) : null;
+  // Meses, proyección del mes, mes pasado a la misma fecha y horas por semana: cuenta común a los tres paneles.
+  const flow = buildMoneyFlow({ rows, now, months: BUDGET_MONTHS });
+  const months: BudgetMonth[] = flow.months.map((m) => ({
+    key: m.key,
+    label: m.label,
+    spent: m.settled,
+    committed: m.committed,
+    hours: m.hours,
+    services: m.services,
+    isCurrent: m.isCurrent,
+  }));
+  const cur = flow.current;
 
   // ── Costo por hora frente al mercado ───────────────────────────────────────
   const since = now - RATE_WINDOW_DAYS * DAY_MS;
@@ -192,7 +121,7 @@ export function buildBudgetReport(args: {
   const ratedHours = sum(rated.map((r) => r.hours));
   const avgPerHour =
     rated.length >= MIN_SERVICES_FOR_RATE && ratedHours > 0
-      ? Math.round(sum(rated.map((r) => r.total)) / ratedHours)
+      ? Math.round(sum(rated.map((r) => r.amount)) / ratedHours)
       : null;
   const position: MarketPosition =
     avgPerHour === null ? "unknown" : marketPosition(avgPerHour, args.market);
@@ -212,29 +141,26 @@ export function buildBudgetReport(args: {
   const cancelPct =
     cancelTotal >= MIN_SERVICES_FOR_CANCEL ? pctOf(cancelledInWindow.length, cancelTotal) : null;
 
-  // ── Horas por semana: últimas 4 contra las 4 anteriores ────────────────────
-  const hoursIn = (from: number, to: number) =>
-    sum(spent.filter((r) => r.at > from && r.at <= to).map((r) => r.hours));
-  const last4 = Math.round((hoursIn(now - 28 * DAY_MS, now) / 4) * 10) / 10;
-  const prev4 = Math.round((hoursIn(now - 56 * DAY_MS, now - 28 * DAY_MS) / 4) * 10) / 10;
-  const hoursDelta = prev4 > 0 ? Math.round(((last4 - prev4) / prev4) * 100) : null;
-
   const hasData = spent.length + committed.length > 0;
 
   const report: BudgetReport = {
     hasData,
     months,
     current: {
-      key: currentKey,
-      label: monthLabelEs(currentKey),
-      spentToDate: cur.spent,
+      key: cur.key,
+      label: cur.label,
+      spentToDate: cur.settledToDate,
       committed: cur.committed,
-      projectedLow,
-      projectedHigh,
-      weeklyPace,
-      daysLeft,
+      projectedLow: cur.projectedLow,
+      projectedHigh: cur.projectedHigh,
+      weeklyPace: cur.weeklyPace,
+      daysLeft: cur.daysLeft,
     },
-    vsLastMonth: { spentToDate: cur.spent, lastMonthSameSpan: lastSpan, deltaPct },
+    vsLastMonth: {
+      spentToDate: flow.vsLastMonth.settledToDate,
+      lastMonthSameSpan: flow.vsLastMonth.lastMonthSameSpan,
+      deltaPct: flow.vsLastMonth.deltaPct,
+    },
     rate: {
       avgPerHour,
       services: rated.length,
@@ -248,7 +174,7 @@ export function buildBudgetReport(args: {
       total: cancelTotal,
       pct: cancelPct,
     },
-    weeklyHours: { last4, prev4, deltaPct: hoursDelta },
+    weeklyHours: flow.weeklyHours,
     insights: [],
   };
   report.insights = budgetInsights(report, rated.length);

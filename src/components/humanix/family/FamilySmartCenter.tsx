@@ -29,7 +29,7 @@ import { buildApplicants, type ApplicationSource, type OfferSource } from "@/lib
 import { buildBudgetReport } from "@/lib/careBudget";
 import { buildCoverageRadar } from "@/lib/coverageRadar";
 import { buildFamilyBrief, heroStats, type BriefTarget } from "@/lib/familyBrief";
-import { DAY_MS, plural } from "@/lib/familyIntelShared";
+import { DAY_MS, plural } from "@/lib/intelShared";
 import { buildSnapshot, completedByProfessional, premiumHints } from "@/lib/familySnapshot";
 import { formatCOP } from "@/lib/pricing";
 import { buildWellbeingReport, DEFAULT_WINDOW_DAYS } from "@/lib/wellbeing";

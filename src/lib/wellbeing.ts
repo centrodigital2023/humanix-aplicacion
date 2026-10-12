@@ -30,7 +30,7 @@ import {
   pctOf,
   plural,
   round1,
-} from "./familyIntelShared";
+} from "./intelShared";
 
 // ─── Entradas ──────────────────────────────────────────────────────────────────
 

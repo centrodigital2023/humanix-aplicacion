@@ -2,14 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
   average,
   bogotaDayIndex,
+  bogotaWeekday,
   bogotaMonthKey,
   bogotaYmd,
   countdownEs,
   dateEs,
   dayLabelEs,
+  longDayLabelEs,
   daysInMonth,
   median,
   monthLabelEs,
+  splitByBogotaDay,
+  startOfBogotaDay,
+  weekdayNameEs,
+  whenEs,
+  ageEs,
   msOf,
   num,
   numOrNull,
@@ -18,7 +25,7 @@ import {
   prevMonthKey,
   round1,
   timeLabelEs,
-} from "./familyIntelShared";
+} from "./intelShared";
 import { DAY, HOUR, NOW } from "./familyIntel.fixture";
 
 describe("números seguros", () => {
@@ -146,5 +153,99 @@ describe("cuenta regresiva", () => {
     expect(left(-5 * HOUR)).toBe("ya venció");
     expect(countdownEs(Number.NaN, NOW)).toBe("");
     expect(countdownEs(Number.POSITIVE_INFINITY, NOW)).toBe("");
+  });
+});
+
+describe("semana y días de Colombia", () => {
+  const at = (local: string) => Date.parse(`${local}-05:00`);
+
+  it("el lunes es el 0 y el domingo el 6, también cerca de la medianoche local", () => {
+    expect(bogotaWeekday(at("2026-10-12T09:00:00"))).toBe(0); // lunes
+    expect(bogotaWeekday(at("2026-10-14T09:00:00"))).toBe(2); // miércoles
+    expect(bogotaWeekday(at("2026-10-18T23:59:59"))).toBe(6); // domingo, aunque en UTC ya sea lunes
+    expect(bogotaWeekday(at("2026-10-19T00:00:00"))).toBe(0);
+  });
+
+  it("nombra los días y envuelve índices fuera de rango sin romper", () => {
+    expect(weekdayNameEs(0)).toBe("lunes");
+    expect(weekdayNameEs(2)).toBe("miércoles");
+    expect(weekdayNameEs(6)).toBe("domingo");
+    expect(weekdayNameEs(7)).toBe("lunes");
+    expect(weekdayNameEs(-1)).toBe("domingo");
+  });
+
+  it("la medianoche de Colombia es a las 05:00 UTC", () => {
+    expect(startOfBogotaDay(at("2026-10-14T15:30:00"))).toBe(at("2026-10-14T00:00:00"));
+    expect(startOfBogotaDay(at("2026-10-14T00:00:00"))).toBe(at("2026-10-14T00:00:00"));
+    expect(startOfBogotaDay(at("2026-10-14T23:59:59"))).toBe(at("2026-10-14T00:00:00"));
+  });
+
+  it("parte un turno de noche en dos tramos, uno por día", () => {
+    const parts = splitByBogotaDay(at("2026-10-14T19:00:00"), at("2026-10-15T07:00:00"));
+    expect(parts).toHaveLength(2);
+    expect(parts[0].hours).toBe(5);
+    expect(parts[1].hours).toBe(7);
+    expect(parts[1].day - parts[0].day).toBe(1);
+    expect(parts.reduce((n, p) => n + p.hours, 0)).toBe(12);
+  });
+
+  it("un turno dentro de un solo día es un solo tramo; uno de 24 h puede tocar dos días", () => {
+    expect(splitByBogotaDay(at("2026-10-14T08:00:00"), at("2026-10-14T14:00:00"))).toHaveLength(1);
+    const full = splitByBogotaDay(at("2026-10-14T08:00:00"), at("2026-10-15T08:00:00"));
+    expect(full.map((p) => p.hours)).toEqual([16, 8]);
+  });
+
+  it("un turno que termina justo a medianoche no toca el día siguiente", () => {
+    const parts = splitByBogotaDay(at("2026-10-14T18:00:00"), at("2026-10-15T00:00:00"));
+    expect(parts).toHaveLength(1);
+    expect(parts[0].hours).toBe(6);
+  });
+
+  it("intervalos inválidos no devuelven tramos", () => {
+    expect(splitByBogotaDay(Number.NaN, 5)).toEqual([]);
+    expect(splitByBogotaDay(10, 10)).toEqual([]);
+    expect(splitByBogotaDay(20, 10)).toEqual([]);
+  });
+});
+
+describe("día en frase corrida", () => {
+  const at = (local: string) => Date.parse(`${local}-05:00`);
+
+  it("nombra el día completo en hora de Colombia", () => {
+    expect(longDayLabelEs(at("2026-10-18T12:00:00"))).toBe("domingo 18 de octubre");
+    expect(longDayLabelEs(at("2026-01-01T00:30:00"))).toBe("jueves 1 de enero");
+    expect(longDayLabelEs(at("2026-12-31T23:59:00"))).toBe("jueves 31 de diciembre");
+  });
+
+  it("a las 23:30 en Colombia sigue siendo ese día aunque en UTC ya sea el siguiente", () => {
+    expect(longDayLabelEs(at("2026-10-14T23:30:00"))).toBe("miércoles 14 de octubre");
+  });
+});
+
+describe("«cuándo» y «hace cuánto»", () => {
+  const at = (local: string) => Date.parse(`${local}-05:00`);
+  const now = at("2026-10-14T10:00:00");
+
+  it("hoy, mañana y días siguientes, en hora de Colombia", () => {
+    expect(whenEs(at("2026-10-14T15:00:00"), now)).toBe("hoy a las 15:00");
+    expect(whenEs(at("2026-10-15T06:00:00"), now)).toBe("mañana a las 06:00");
+    expect(whenEs(at("2026-10-16T10:00:00"), now)).toBe("vie 16 oct a las 10:00");
+  });
+
+  it("23:30 sigue siendo «hoy» y 00:30 ya es «mañana», aunque en UTC sea otro día", () => {
+    expect(whenEs(at("2026-10-14T23:30:00"), now)).toBe("hoy a las 23:30");
+    expect(whenEs(at("2026-10-15T00:30:00"), now)).toBe("mañana a las 00:30");
+  });
+
+  it("algo que ya pasó se dice «hoy» (no inventa un ayer)", () => {
+    expect(whenEs(at("2026-10-14T08:00:00"), now)).toBe("hoy a las 08:00");
+  });
+
+  it("la edad usa horas hasta 48 h y días después, sin negativos", () => {
+    expect(ageEs(now - 10 * 60_000, now)).toBe("hace menos de una hora");
+    expect(ageEs(now - 3 * 3_600_000, now)).toBe("hace 3 h");
+    expect(ageEs(now - 47 * 3_600_000, now)).toBe("hace 47 h");
+    expect(ageEs(now - 72 * 3_600_000, now)).toBe("hace 3 días");
+    expect(ageEs(now + 3_600_000, now)).toBe("hace menos de una hora");
   });
 });

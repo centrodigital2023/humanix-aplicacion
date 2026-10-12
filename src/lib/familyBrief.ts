@@ -7,17 +7,10 @@
 // de bienestar y del presupuesto; sin plan, una sola invitación a conocerlos. No contacta a nadie ni decide nada.
 
 import type { GapLevel } from "./coverageRadar";
-import type { HeroStat } from "./dayHero";
-import {
-  DAY_MS,
-  HOUR_MS,
-  bogotaDayIndex,
-  countdownEs,
-  dayLabelEs,
-  msOf,
-  plural,
-  timeLabelEs,
-} from "./familyIntelShared";
+import { orderBrief, type HeroStat } from "./dayHero";
+import { DAY_MS, HOUR_MS, ageEs, countdownEs, msOf, plural, whenEs } from "./intelShared";
+
+export { whenEs };
 
 export type BriefPriority = "critical" | "high" | "medium" | "low";
 
@@ -112,8 +105,6 @@ export interface FamilySnapshot {
   hints?: PremiumHints;
 }
 
-const ORDER: Record<BriefPriority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-
 /**
  * Orden de las reglas cuando la prioridad y la hora empatan (primero lo que se actúa ya, al final lo que invita).
  * Los ítems de una misma regla comparten el lugar; entre ellos desempata el id.
@@ -138,10 +129,6 @@ const RULE_RANK = [
   "invite_circle",
   "upgrade",
 ];
-const rankOf = (id: string) => {
-  const i = RULE_RANK.indexOf(id.split(":")[0]);
-  return i === -1 ? RULE_RANK.length : i;
-};
 
 /** Horas antes de vencer para tratar una propuesta como urgente. */
 export const PROPOSAL_URGENT_HOURS = 6;
@@ -154,23 +141,6 @@ export const SERVICE_SOON_HOURS = 24;
 
 const name = (n: string | null | undefined, fallback: string) =>
   n && n.trim() ? n.trim() : fallback;
-
-/** «hoy a las 15:00», «mañana a las 08:00», «jue 15 oct a las 08:00». */
-export function whenEs(t: number, now: number): string {
-  const days = bogotaDayIndex(t) - bogotaDayIndex(now);
-  const hour = timeLabelEs(t);
-  if (days <= 0) return `hoy a las ${hour}`;
-  if (days === 1) return `mañana a las ${hour}`;
-  return `${dayLabelEs(t)} a las ${hour}`;
-}
-
-/** «hace 3 h», «hace 2 días»: edad de algo que ya pasó. */
-function ageEs(t: number, now: number): string {
-  const h = Math.max(0, Math.floor((now - t) / HOUR_MS));
-  if (h < 1) return "hace menos de una hora";
-  if (h < 48) return `hace ${h} h`;
-  return `hace ${Math.floor(h / 24)} días`;
-}
 
 /** Propuestas de un profesional que esperan respuesta y todavía no vencen. */
 function waitingProposals(s: FamilySnapshot): BriefProposal[] {
@@ -478,15 +448,7 @@ export function buildFamilyBrief(s: FamilySnapshot): BriefItem[] {
     });
   }
 
-  return out
-    .sort(
-      (a, b) =>
-        ORDER[a.priority] - ORDER[b.priority] ||
-        a.sortKey - b.sortKey ||
-        rankOf(a.id) - rankOf(b.id) ||
-        a.id.localeCompare(b.id),
-    )
-    .map(({ sortKey: _sortKey, ...item }) => item);
+  return orderBrief(out, RULE_RANK).map(({ sortKey: _sortKey, ...item }) => item);
 }
 
 /** Una frase para el encabezado: cuántas cosas piden atención ya. */

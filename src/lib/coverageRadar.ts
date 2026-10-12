@@ -14,7 +14,7 @@ import {
   type NeedBlock,
   type Urgency,
 } from "./opportunities";
-import { DAY_MS, HOUR_MS, msOf, numOrNull, pctOf, plural } from "./familyIntelShared";
+import { DAY_MS, HOUR_MS, msOf, numOrNull, pctOf, plural } from "./intelShared";
 import { formatCOP } from "./pricing";
 
 export interface RadarNeed {

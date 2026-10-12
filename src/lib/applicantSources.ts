@@ -3,7 +3,7 @@
 
 import type { Applicant } from "./applicantRanking";
 import { distanceKm } from "./geo";
-import { msOf, numOrNull } from "./familyIntelShared";
+import { msOf, numOrNull } from "./intelShared";
 
 export interface ProposalSource {
   id: string;
