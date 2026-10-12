@@ -4,7 +4,8 @@
  * Antes mostraba tendencias al azar, una «facturación» de servicios × $85.000 y cifras fijas (cumplimiento, reingresos,
  * «+12 %»), y leía las alertas y los puntajes de toda la plataforma. Ahora todo sale de los servicios de la propia
  * institución y de las alertas y puntajes de riesgo ligados a esos servicios (lógica en `lib/epsMetrics`). Lo que no se
- * pudo cargar se dice; nunca se muestra como cero. Informa: no mueve dinero ni contacta a nadie.
+ * pudo cargar se dice; nunca se muestra como cero. Si el monitoreo clínico aún no está habilitado en la plataforma (falta
+ * alguna de sus tablas), también se dice, en lugar de mostrar «0 alertas». Informa: no mueve dinero ni contacta a nadie.
  */
 import { useMemo, useState } from "react";
 import { Building2, RefreshCw } from "lucide-react";
@@ -41,6 +42,11 @@ const PERIODS: Array<{ key: PeriodKey; label: string }> = [
   { key: "90d", label: "90 días" },
   { key: "last_month", label: "Mes pasado" },
 ];
+
+/** Lo que se le dice a la institución mientras el monitoreo clínico no esté habilitado en la plataforma. */
+const NOT_ENABLED_HINT = "monitoreo clínico aún no disponible";
+const NOT_ENABLED_TEXT =
+  "El monitoreo clínico (alertas y riesgo de tus pacientes) todavía no está disponible. Cuando se habilite, lo verás aquí.";
 
 const LEVEL_BAR: Record<EpsLevel, string> = {
   critical: "bg-sos",
@@ -171,9 +177,11 @@ export function EPSDashboard({ institutionId, title = "Resumen de tu institució
                   ? alerts.activeCritical > 0
                     ? plural(alerts.activeCritical, "crítica", "críticas")
                     : "ninguna crítica"
-                  : clinical.alertsFailed
-                    ? "no se pudieron cargar"
-                    : "cargando"
+                  : clinical.notEnabled
+                    ? NOT_ENABLED_HINT
+                    : clinical.alertsFailed
+                      ? "no se pudieron cargar"
+                      : "cargando"
               }
               tone={
                 alerts && alerts.activeCritical > 0
@@ -199,9 +207,11 @@ export function EPSDashboard({ institutionId, title = "Resumen de tu institució
                   ? reading.text
                   : risk
                     ? "sin puntajes de riesgo todavía"
-                    : clinical.risksFailed
-                      ? "no se pudieron cargar"
-                      : "cargando"
+                    : clinical.notEnabled
+                      ? NOT_ENABLED_HINT
+                      : clinical.risksFailed
+                        ? "no se pudieron cargar"
+                        : "cargando"
               }
               tone={reading?.tone}
             />
@@ -211,7 +221,9 @@ export function EPSDashboard({ institutionId, title = "Resumen de tu institució
               hint={
                 risk
                   ? `${plural(risk.levels.critical, "crítico", "críticos")} · ${plural(risk.levels.high, "alto", "altos")}`
-                  : "último puntaje de cada uno"
+                  : clinical.notEnabled
+                    ? NOT_ENABLED_HINT
+                    : "último puntaje de cada uno"
               }
             />
             <StatTile
@@ -229,7 +241,9 @@ export function EPSDashboard({ institutionId, title = "Resumen de tu institució
               hint={
                 alerts
                   ? `${plural(alerts.bySeverity.critical, "crítica", "críticas")} · ${plural(alerts.bySeverity.high, "alta", "altas")}`
-                  : "no disponibles"
+                  : clinical.notEnabled
+                    ? NOT_ENABLED_HINT
+                    : "no disponibles"
               }
             />
           </dl>
@@ -259,7 +273,11 @@ export function EPSDashboard({ institutionId, title = "Resumen de tu institució
                 }))}
                 unit={["alerta", "alertas"]}
                 emptyText={
-                  alerts ? "No hubo alertas en este periodo." : "Las alertas no se pudieron cargar."
+                  alerts
+                    ? "No hubo alertas en este periodo."
+                    : clinical.notEnabled
+                      ? NOT_ENABLED_TEXT
+                      : "Las alertas no se pudieron cargar."
                 }
                 colorClass="sos"
                 firstColumn={metrics.bucketDays === 7 ? "Semana desde" : "Día"}
@@ -273,7 +291,9 @@ export function EPSDashboard({ institutionId, title = "Resumen de tu institució
               <p className="text-sm text-muted-foreground">
                 {risk
                   ? "Aún no hay puntajes de riesgo ligados a tus servicios."
-                  : "Los puntajes de riesgo no se pudieron cargar."}
+                  : clinical.notEnabled
+                    ? NOT_ENABLED_TEXT
+                    : "Los puntajes de riesgo no se pudieron cargar."}
               </p>
             ) : (
               <>
@@ -314,7 +334,7 @@ export function EPSDashboard({ institutionId, title = "Resumen de tu institució
 
           <p className="text-[11px] text-muted-foreground">
             Son los servicios que tu institución contrató en Humanix y las alertas y los puntajes de
-            riesgo ligados a ellos (servicios de los últimos 120 días
+            riesgo ligados a ellos que tu cuenta puede ver (servicios de los últimos 120 días
             {clinical.truncated ? "; se muestran los 300 más recientes" : ""}). La inversión es lo
             que pagaste por los servicios terminados. Los pagos se hacen únicamente en la página web
             de Humanix.

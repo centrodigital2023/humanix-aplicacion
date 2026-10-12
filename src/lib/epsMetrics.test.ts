@@ -4,6 +4,8 @@ import {
   MIN_SERVICES_FOR_DURATION,
   WEEKLY_FROM_DAYS,
   buildEpsMetrics,
+  clinicalReadStatus,
+  isMissingTable,
   recentBookingIds,
   type EpsAlertRow,
   type EpsInput,
@@ -319,5 +321,108 @@ describe("servicios de los que se piden alertas y riesgo", () => {
 
   it("sin servicios no hay ids ni aviso", () => {
     expect(recentBookingIds([], NOW, 120, 3)).toEqual({ ids: [], truncated: false });
+  });
+});
+
+describe("tabla ausente frente a fallo", () => {
+  it("reconoce el código de PostgREST aunque no traiga mensaje", () => {
+    expect(isMissingTable({ code: "PGRST205" })).toBe(true);
+  });
+
+  it("reconoce el código de PostgreSQL aunque no traiga mensaje", () => {
+    expect(isMissingTable({ code: "42P01" })).toBe(true);
+  });
+
+  it("reconoce el mensaje de PostgREST aunque no traiga código (y sin importar mayúsculas)", () => {
+    expect(
+      isMissingTable(
+        new Error("Could not find the table 'public.patient_risk_scores' in the schema cache"),
+      ),
+    ).toBe(true);
+    expect(isMissingTable({ message: "COULD NOT FIND THE TABLE 'public.x'" })).toBe(true);
+  });
+
+  it("reconoce el mensaje de PostgreSQL aunque no traiga código", () => {
+    expect(isMissingTable(new Error('relation "public.patient_risk_scores" does not exist'))).toBe(
+      true,
+    );
+  });
+
+  it("una columna que falta, un permiso negado o un corte de red son fallos, no tabla ausente", () => {
+    expect(isMissingTable({ code: "42703", message: 'column "lat" does not exist' })).toBe(false);
+    expect(
+      isMissingTable({
+        code: "PGRST204",
+        message: "Could not find the 'lat' column of 'clinical_alerts' in the schema cache",
+      }),
+    ).toBe(false);
+    expect(
+      isMissingTable({ code: "42501", message: "permission denied for table clinical_alerts" }),
+    ).toBe(false);
+    expect(
+      isMissingTable({ code: "PGRST202", message: "Could not find the function public.f" }),
+    ).toBe(false);
+    expect(isMissingTable(new TypeError("Failed to fetch"))).toBe(false);
+  });
+
+  it("lo que no es un objeto de error nunca cuenta", () => {
+    for (const v of [null, undefined, "PGRST205", 42, false]) expect(isMissingTable(v)).toBe(false);
+  });
+});
+
+describe("estado de las lecturas clínicas", () => {
+  const missing = { code: "PGRST205", message: "Could not find the table 'public.x'" };
+  const network = new TypeError("Failed to fetch");
+
+  it("sin errores todo está habilitado y nada falló", () => {
+    expect(clinicalReadStatus(null, null)).toEqual({
+      notEnabled: false,
+      alertsFailed: false,
+      risksFailed: false,
+    });
+  });
+
+  it("producción hoy: existe la tabla de alertas pero no la de puntajes → no habilitado, sin «fallos»", () => {
+    expect(clinicalReadStatus(null, missing)).toEqual({
+      notEnabled: true,
+      alertsFailed: false,
+      risksFailed: false,
+    });
+  });
+
+  it("si falta la tabla de alertas también es «no habilitado»", () => {
+    expect(clinicalReadStatus(missing, null).notEnabled).toBe(true);
+    expect(clinicalReadStatus(missing, missing).notEnabled).toBe(true);
+  });
+
+  it("un corte de red en una lectura la marca como fallida y deja la otra sana", () => {
+    expect(clinicalReadStatus(network, null)).toEqual({
+      notEnabled: false,
+      alertsFailed: true,
+      risksFailed: false,
+    });
+    expect(clinicalReadStatus(null, network)).toEqual({
+      notEnabled: false,
+      alertsFailed: false,
+      risksFailed: true,
+    });
+    expect(clinicalReadStatus(network, network)).toEqual({
+      notEnabled: false,
+      alertsFailed: true,
+      risksFailed: true,
+    });
+  });
+
+  it("si falta una tabla, el fallo de la otra lectura no se reporta aparte", () => {
+    expect(clinicalReadStatus(network, missing)).toEqual({
+      notEnabled: true,
+      alertsFailed: false,
+      risksFailed: false,
+    });
+    expect(clinicalReadStatus(missing, network)).toEqual({
+      notEnabled: true,
+      alertsFailed: false,
+      risksFailed: false,
+    });
   });
 });

@@ -1,3 +1,11 @@
+-- ⚠️ ADVERTENCIA (2026-10-12) — LEER ANTES DE APLICAR ESTE ARCHIVO EN OTRO ENTORNO
+-- Las políticas RLS de abajo dan acceso «por rol» (cualquier institución, cualquier profesional, cualquier familia) a
+-- TODOS los registros clínicos de la plataforma, no solo a los de sus propios servicios. Este archivo NO está aplicado
+-- en producción (allí solo existe `clinical_alerts`, creada por drizzle/migrations/0007 con políticas estrechas).
+-- Si lo aplicas en un entorno nuevo, aplica DESPUÉS 20261012100000_clinical_data_scope.sql, que las reemplaza por reglas
+-- ligadas al servicio de cada registro y retira privilegios sobrantes. No edites las políticas de aquí: son historia.
+-- Ver AUDIT_REPORT.md #97.
+--
 -- ═══════════════════════════════════════════════════════════════════════════
 -- HUMANIX CLINICAL MONITORING ENGINE
 -- Monitoreo clínico en tiempo real: signos vitales, alertas, checkins, riesgo

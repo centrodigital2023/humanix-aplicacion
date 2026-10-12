@@ -65,6 +65,8 @@ Los roles viven en `public.user_roles` (enum `app_role`, único por usuario+rol)
 
 Un trigger (`handle_new_user`) crea el perfil y asigna el rol por defecto (`family`) o el elegido al registrarse. El correo propietario recibe `superadmin` al crear la cuenta y, además, la función `verify-admin-access` lo asigna tras validar el código.
 
+> **Ojo (revisado en la base real el 2026-10-12):** el disparador `on_auth_user_created` **no existe en producción** (la función `handle_new_user` sí). Las cuentas registradas desde entonces no tienen perfil ni rol en la base; la pantalla usa el rol de los metadatos. Detalle y propuesta en `AUDIT_REPORT.md` #112.
+
 ## 4. Qué tiene la plataforma (módulos)
 
 ### 4.1 Sitio público
@@ -83,7 +85,7 @@ Onboarding asistido por IA (`family-onboarding-ai`), perfil del paciente, calend
 ### 4.4 Instituciones (EPS/IPS)
 Publicación masiva de ofertas con requisitos FUID (`EnhancedBulkOffersModule`), pacientes con KPIs (`EnhancedPatientsModule`), agenda de 7 días, monitoreo clínico y alertas (`InstitutionClinicalMonitoring`, `clinical-alert-notify`), signos vitales y wearables (`VitalSignsPanel`, `wearable-ingest`), facturación por sede (`IpsBranchBilling`, `use-institution-billing`), formularios dinámicos, informes con CRM.
 
-**Panel de la institución inteligente** (`InstHero`, `InstSmartCenter`, `src/components/humanix/institution/`): «Tu día» para todas las instituciones y, con el plan IPS Mejorado, centro de gestión con costos y proyección, calidad y cumplimiento, equipo, pronóstico de cobertura a 14 días e informe para la gerencia con CSV de auditoría. El **portal EPS/IPS** (`/dashboard/eps`) ya no muestra cifras inventadas: usa los datos reales de la institución. Lógica pura en `src/lib/` (`inst*`, `epsMetrics`), datos con TanStack Query y Realtime (`use-inst-intel`, `use-eps-intel`), sin migración ni Edge Functions. Reglas, permisos y límites en `docs/PANELES_PREMIUM.md`.
+**Panel de la institución inteligente** (`InstHero`, `InstSmartCenter`, `src/components/humanix/institution/`): «Tu día» para todas las instituciones y, con el plan IPS Mejorado, centro de gestión con costos y proyección, calidad y cumplimiento, equipo, pronóstico de cobertura a 14 días e informe para la gerencia con CSV de auditoría. El **portal EPS/IPS** (`/dashboard/eps`) ya no muestra cifras inventadas: usa los datos reales de la institución. Lógica pura en `src/lib/` (`inst*`, `epsMetrics`), datos con TanStack Query y Realtime (`use-inst-intel`, `use-eps-intel`), sin Edge Functions ni tablas nuevas (la única migración del lote es de seguridad de datos clínicos). Si el monitoreo clínico no está habilitado en la base (faltan `clinical_alerts` o `patient_risk_scores`), el portal lo dice en lugar de mostrar «0 alertas». Reglas, permisos y límites en `docs/PANELES_PREMIUM.md`.
 
 ### 4.5 Planes y pagos
 Catálogo canónico en `src/lib/plans.ts`: **Free** (COP 0), **Esencial** (COP 9.000/mes), **Pro Profesional** (COP 29.000/mes), **IPS Mejorado** (COP 299.000/mes, más sedes/profesionales adicionales y descuento anual del 20%). Compuertas de funcionalidad por plan (`PlanGate`, `use-plan`). Cobro por **Mercado Pago en la página web** (`mp-create-subscription`, `mp-create-credits-checkout`, webhook `mp-webhook`), con retorno en `/pago/exito` y `/pago/fallo`. Paquetes de créditos IA (`TokenPackages`, `WalletPanel`).

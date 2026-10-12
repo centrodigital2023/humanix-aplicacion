@@ -114,7 +114,7 @@ function EPSPortalPage() {
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-biosensor/10 text-biosensor border border-biosensor/20 font-medium">
-                <Heart className="h-3 w-3" aria-hidden="true" /> Monitoreo en vivo
+                <Heart className="h-3 w-3" aria-hidden="true" /> Se actualiza en vivo
               </span>
               <Link
                 to="/habeas-data"

@@ -4,9 +4,11 @@
 > priorizado del día gratis para todos** (lo que protege a la persona o mueve el mercado nunca se esconde tras un plan) y
 > **herramientas de análisis con plan**, siempre con una vista previa que muestra un dato real de la cuenta.
 >
-> **Qué no cambió.** Ningún precio, ninguna tabla ni función de la base de datos (**no hay migración**), ninguna Edge
-> Function. Todo se calcula en el navegador con datos que la propia persona o institución ya puede leer; nada se envía a una
+> **Qué no cambió.** Ningún precio, ninguna tabla ni función nuevas para las funciones premium (**no llevan migración**), ninguna
+> Edge Function. Todo se calcula en el navegador con datos que la propia persona o institución ya puede leer; nada se envía a una
 > IA ni a terceros. Los pagos siguen ocurriendo solo en la página web: los botones de «activar» llevan a `/planes`.
+> La única migración de este lote es de **cierre de seguridad** de los datos clínicos (`20261012100000_clinical_data_scope.sql`,
+> §4): solo aprieta y no añade funciones.
 
 ## 1. Principios de diseño (valen para los tres paneles)
 
@@ -171,11 +173,61 @@ El portal mostraba cifras que no salían de ningún dato. Se reemplazó por lo r
 | Cumplimiento con porcentajes fijos y sellos «HIPAA/GDPR Ready», «MFA habilitado», «TLS 1.3», «Backups», «ISO 27001» | Indicadores reales de calidad (plan IPS Mejorado) y enlaces a Habeas Data, privacidad y cumplimiento, con el aviso de que el portal **no certifica** por sí solo el cumplimiento normativo |
 | «Reportes IA» con fechas de junio de 2026 y botones sin función | El centro de gestión real (costos, calidad, equipo, pronóstico, informe) |
 
-**Seguridad (pendiente, requiere autorización):** el filtro por servicio es **de pantalla**. Las políticas de la base de datos (RLS)
-`clinical_alerts_read`, `risk_scores_read` y `checkins_patient_read` dejan leer a **cualquier** cuenta `institution` (y los puntajes
-a cualquier `professional`), y `clinical_alerts_update` deja modificar a cualquier institución o profesional. Cerrarlo es una
-migración (política por `booking_id` entre los servicios propios o por el vínculo de `institution_patient_cases`) y no se aplicó sin
-tu aprobación. Ver `AUDIT_REPORT.md`.
+### Qué muestra el portal si el monitoreo clínico no está habilitado
+
+Las cuatro cifras clínicas y las dos tarjetas dependen de dos tablas, `clinical_alerts` y `patient_risk_scores`. Si **falta alguna**
+(error `PGRST205` de PostgREST o `42P01` de PostgreSQL; `isMissingTable` en `lib/epsMetrics.ts`), el portal dice **«monitoreo clínico aún
+no disponible»** en lugar de «no se pudieron cargar» (que invita a reintentar algo que no se arregla así) o, peor, de «0 alertas»: el
+monitoreo se da por habilitado solo cuando existen las dos tablas. Una columna que falta, un permiso negado o un corte de red siguen
+siendo un fallo («no se pudieron cargar»). Las suscripciones Realtime empiezan solo cuando su lectura funcionó.
+
+### Datos clínicos: qué hay de verdad en producción (revisado el 2026-10-12)
+
+La versión anterior de este documento decía que la base dejaba leer los datos clínicos de **todos** los pacientes a cualquier institución.
+Eso salía de los archivos del repositorio, **no de producción**, y para producción era **incorrecto**:
+
+| Tabla | En producción |
+|---|---|
+| `clinical_alerts` | Existe (la creó `drizzle/migrations/0007`) y está vacía. Lee el paciente, el profesional del servicio y el staff (`is_staff()` = superadmin, HR y evaluadores); actualiza el paciente y el staff. **Sin** política de INSERT, **sin** columnas `lat`/`lng`, **sin** el tipo `sos_manual` y **sin** disparador hacia `clinical-alert-notify` |
+| `patient_risk_scores`, `service_checkins`, `vital_signs`, `alert_thresholds`, `clinical_reports`, `institution_patient_cases`, vista `eps_dashboard_metrics` | **No existen** |
+| `vital_signs_readings`, `wearable_connections` | Existen y están vacías; políticas por dueño o `is_staff()` |
+
+**Qué se hizo.** `supabase/migrations/20261012100000_clinical_data_scope.sql` reemplaza las políticas «por rol» de los archivos
+del repositorio por reglas «por servicio» (el paciente, el profesional del servicio, quien contrató, el superadmin), pone la vista
+en `security_invoker`, retira privilegios que nadie usa y **falla sin cambiar nada** si encuentra una política «por rol» que no
+conoce. Donde la tabla no existe no hace nada, y una política que ya es estrecha no se toca: **nunca añade lectores**. Probada
+sobre la réplica de producción y la cadena del repositorio (`supabase/e2e/clinical_scope`). **Aplicada en producción el 2026-10-12**
+tras dos simulacros que se deshicieron solos; su efecto real fue quitar de `clinical_alerts` los privilegios de `anon` y
+`TRUNCATE`/`REFERENCES`/`TRIGGER`/`MAINTAIN` de `authenticated`. **Ninguna política cambió** (la huella de las políticas de todo el
+esquema `public` fue idéntica antes y después). Un archivo viejo (`20260606100000_clinical_monitoring.sql`) lleva ahora una
+advertencia: si alguien lo aplica en un entorno nuevo debe aplicar después esta migración.
+
+**Decisiones pendientes** (aflojan o cambian producción; **nada de esto se aplicó**):
+
+1. **¿Que quien contrató el servicio lea sus alertas?** Hoy ni la familia ni la institución pueden leer las alertas de sus propios
+   servicios (la política de lectura no las incluye), así que el portal EPS no podría mostrarlas aunque existieran. Propuesta mínima
+   (política adicional; las permisivas se suman):
+
+   ```sql
+   CREATE POLICY clinical_alerts_read_contractor ON public.clinical_alerts FOR SELECT TO authenticated
+     USING (EXISTS (SELECT 1 FROM public.service_bookings sb
+                    WHERE sb.id = clinical_alerts.booking_id AND sb.client_id = auth.uid()));
+   ```
+
+   El portal sigue diciendo «aún no disponible» hasta que además exista `patient_risk_scores` (se exigen las dos tablas, ver arriba).
+2. **¿HR y evaluadores fuera de los datos de salud?** `is_staff()` los incluye en `clinical_alerts_read`/`_ack`, `vital_signs_readings`
+   y `wearable_connections` (con el código de emparejamiento). `care_logs` ya se corrigió con este criterio. Hoy no hay cuentas de esos
+   roles. Por política, cambiar `is_staff(auth.uid())` por `public.has_role(auth.uid(), 'superadmin'::public.app_role)`.
+3. **SOS Familiar.** El botón de «Salud en vivo» no puede enviar nada en producción: faltan las columnas `lat`/`lng`, el tipo
+   `sos_manual` y la política de inserción del propio paciente (`20260606220000_sos_familiar_alert.sql`), el disparador y la función de
+   aviso hacia `clinical-alert-notify` (`20261007170000_wire_webhooks_and_fix_cron.sql`) y los secretos de WhatsApp del servidor. Mientras
+   tanto el botón dice que no se pudo enviar y manda a llamar al **123**. Lo mismo ocurre con el check-in/out del profesional
+   (`service_checkins`), la tarjeta de riesgo (`patient_risk_scores`, `vital_signs`) y los pacientes que agrega la institución
+   (`institution_patient_cases`): sus tablas no existen.
+4. **`anon` conserva `ALL` sobre `vital_signs_readings` y `wearable_connections`** (privilegios por defecto; solo las protege RLS):
+   `REVOKE ALL ON public.vital_signs_readings, public.wearable_connections FROM anon;` y lo mismo que se hizo con `clinical_alerts` para
+   `authenticated`.
+5. **El registro de usuarios** (`on_auth_user_created`, que crea perfil y rol) **no existe en producción**: ver `AUDIT_REPORT.md` #112.
 
 ## 5. Datos, permisos y límites de lectura
 
@@ -188,7 +240,7 @@ tu aprobación. Ver `AUDIT_REPORT.md`.
 | Ofertas propias | `job_offers` (RLS: `posted_by`) | Cobertura sí; «en qué se va» no |
 | Mercado y reputación | RPC `market_rate_stats`, `institution_reputation` | **No** |
 | Servicios en curso, bandeja, contratos, equipo | RPC `my_active_services`, `institution_application_inbox`, `my_smart_contracts`, `my_trusted_team` | Sí |
-| Alertas y riesgo (portal EPS) | `clinical_alerts`, `patient_risk_scores` por `booking_id` | Sí (es el resumen del portal) |
+| Alertas y riesgo (portal EPS) | `clinical_alerts`, `patient_risk_scores` por `booking_id` | Sí (es el resumen del portal). **Hoy en producción**: `patient_risk_scores` no existe y la institución no puede leer las alertas de sus servicios; el portal dice «monitoreo clínico aún no disponible» |
 
 La puerta de los planes es **de interfaz**: son cuentas sobre datos que la persona o institución ya puede leer. Sin plan se evita
 pedir lo que no se va a mostrar (lo verifica la prueba de navegador).
@@ -213,6 +265,7 @@ pedir lo que no se va a mostrar (lo verifica la prueba de navegador).
 | Plan | `src/lib/plans.ts` (4 funciones de profesional + 5 de institución), `src/routes/planes.tsx`, `proPremium.test.ts`, `institutionPremium.test.ts` |
 | Datos (TanStack Query + Realtime, sin sondeo) | `src/hooks/use-pro-intel.ts`, `use-inst-intel.ts`, `use-eps-intel.ts`, `use-now.ts` |
 | Interfaz (shadcn + tokens semánticos + lucide) | `src/components/humanix/pro/`, `src/components/humanix/institution/` (`InstHero`, `InstBriefCard`, `InstSmartCenter`, `CostCard`, `QualityCard`, `TeamCard`, `ForecastCard`, `ReportCard`, `EpsCompliance`), `src/components/humanix/premium/` (`DayHero`, `StatTile`, `MonthBars`, `BarSeries`, `InsightList`, `PremiumPreview`, `download.ts`), `EPSDashboard.tsx` |
+| Datos clínicos (seguridad) | `supabase/migrations/20261012100000_clinical_data_scope.sql` (aplicada), pruebas en `supabase/e2e/clinical_scope/` (`run.sh`: réplica de producción; escenarios A cadena del repositorio, B base sin tablas, C como producción hoy) |
 | Integración | `dashboard.profesional.tsx` (pestaña «Crecer»), `dashboard.institucion.tsx` (héroe, anclas `cobertura`, `turnos-en-vivo`, `postulaciones`, `contratos`, `calificar`, `centro-gestion`; barra inferior desplazable), `dashboard.eps.tsx` |
 
 `CareCompassCard` y `careCompass.ts` quedaron sin uso (el héroe de «Tu día» los sustituye en los tres paneles): se pueden borrar con su
@@ -222,10 +275,11 @@ prueba.
 
 | Qué | Resultado |
 |---|---|
-| Pruebas unitarias | Profesional **214** (6 archivos) · institución **376** (9 archivos) · portal EPS **26** · compartidas (héroe, periodos, cancelación, cobertura) **134**; **1 801 / 1 801** en toda la plataforma (65 archivos) |
+| Pruebas unitarias | Profesional **214** (6 archivos) · institución **376** (9 archivos) · portal EPS **37** · compartidas (héroe, periodos, cancelación, cobertura) **134**; **1 812 / 1 812** en toda la plataforma (65 archivos) |
 | Pruebas de mutación (cambios deliberados de umbrales, reglas y formatos) | Profesional, institución, EPS y ayudantes compartidos; en institución, EPS y ayudantes, **0 sobrevivientes** al cerrar. Los huecos que aparecieron se cubrieron con pruebas o simplificando código redundante |
-| Chromium real (datos simulados; 320, 360, 390, 430, 768, 1 000 y 1 280 px) | Institución y portal EPS **60 / 60** pasos; profesional **25 / 25**; familia **27 / 27** (regresión tras tocar los componentes compartidos) |
+| Chromium real (datos simulados; 320, 360, 390, 430, 768, 1 000 y 1 280 px) | Institución y portal EPS **64 / 64** pasos (incluye la tabla ausente, el fallo real y las suscripciones Realtime); profesional **25 / 25**; familia **27 / 27** (regresión tras tocar los componentes compartidos) |
 | Renderizado en servidor sin `window` | Institución **20 / 20** · profesional **14 / 14** · familia **11 / 11** |
+| PostgreSQL 16 con la estructura real de producción (`supabase/e2e/clinical_scope`) | Escenario A (cadena del repositorio, antes y después, idempotencia) **59 / 59** · B (sin tablas) **7 / 7** · C (como producción hoy) **22 / 22** · política «por rol» desconocida (3 roles) falla sin cambiar nada · **23 mutantes de SQL, todos detectados**. La réplica completa con la migración en la cadena: lazo de cuidado 264 / 264, hub de instituciones 252 / 252, deriva 37 / 37, validación de mercado 57 / 57 |
 | `tsc`, ESLint y Prettier en los archivos nuevos y tocados | Limpios (quedan 2 avisos previos de `react-hooks/exhaustive-deps` en `dashboard.institucion.tsx`) |
 
 La prueba de navegador cubre, entre otras cosas: el orden y el texto de «Tu día», que sin plan **no se lean** el parte, los contratos, los
@@ -241,4 +295,10 @@ bun run test src/lib/proBrief.test.ts src/lib/proEarnings.test.ts src/lib/proWor
   src/lib/instData.test.ts src/lib/instBrief.test.ts src/lib/instCost.test.ts src/lib/instQuality.test.ts \
   src/lib/instTeam.test.ts src/lib/instEmployer.test.ts src/lib/instForecast.test.ts src/lib/instReport.test.ts \
   src/lib/institutionPremium.test.ts src/lib/epsMetrics.test.ts src/lib/dayHero.test.ts src/lib/intelShared.test.ts
+```
+
+La migración de datos clínicos, sobre una base **desechable** (borra y crea bases `hx_clin_*`; nunca contra Lovable Cloud):
+
+```bash
+HX_TEST_CONFIRM=desechable PGHOST=localhost PGPORT=5432 PGUSER=postgres supabase/e2e/clinical_scope/run.sh
 ```

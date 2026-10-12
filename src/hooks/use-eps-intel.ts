@@ -5,8 +5,10 @@
 // largo de la dirección. No hay tablas ni funciones nuevas en la base de datos. Las actualizaciones llegan por Realtime;
 // no hay sondeo. Lo que no se pudo leer llega como `undefined` y la pantalla lo dice: nunca se confunde con un cero.
 //
-// Nota de seguridad: este filtro es de la pantalla. Las reglas de la base de datos (RLS) de `clinical_alerts` y
-// `patient_risk_scores` dejan leer a cualquier institución; cerrarlo exige una migración (ver AUDIT_REPORT.md).
+// Lo que la institución puede leer lo decide RLS, no este filtro (que solo acota lo que se pide). Revisado en producción
+// el 2026-10-12: `patient_risk_scores` todavía no existe y `clinical_alerts` solo la leen el paciente, el profesional del
+// servicio y el staff, así que una institución no ve esas alertas. Por eso, si falta alguna de las dos tablas, el portal
+// dice que el monitoreo clínico aún no está habilitado en lugar de mostrar «0 alertas» (ver docs/PANELES_PREMIUM.md).
 
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +16,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { hashIds } from "@/hooks/use-family-intel";
-import { recentBookingIds, type EpsAlertRow, type EpsRiskRow } from "@/lib/epsMetrics";
+import {
+  clinicalReadStatus,
+  recentBookingIds,
+  type EpsAlertRow,
+  type EpsRiskRow,
+} from "@/lib/epsMetrics";
 import type { InstBooking } from "@/lib/instData";
 import { chunk } from "@/lib/intelShared";
 
@@ -124,25 +131,36 @@ export function useEpsClinical(
       ),
   });
 
+  // Una tabla que no existe tumbaría el canal entero: cada suscripción empieza solo cuando su lectura ya funcionó.
+  const status = clinicalReadStatus(alerts.error, risks.error);
   useRealtimeRefresh(
-    `eps-intel-clinical-${userId ?? "anon"}`,
-    [{ table: "clinical_alerts" }, { table: "patient_risk_scores", event: "INSERT" }],
+    `eps-intel-alerts-${userId ?? "anon"}`,
+    [{ table: "clinical_alerts" }],
     () => {
-      if (!userId) return;
-      void qc.invalidateQueries({ queryKey: epsKeys.alerts(userId, key) });
-      void qc.invalidateQueries({ queryKey: epsKeys.risks(userId, key) });
+      if (userId) void qc.invalidateQueries({ queryKey: epsKeys.alerts(userId, key) });
     },
-    enabled,
+    enabled && alerts.isSuccess && !status.notEnabled,
+  );
+  useRealtimeRefresh(
+    `eps-intel-risks-${userId ?? "anon"}`,
+    [{ table: "patient_risk_scores", event: "INSERT" }],
+    () => {
+      if (userId) void qc.invalidateQueries({ queryKey: epsKeys.risks(userId, key) });
+    },
+    enabled && risks.isSuccess,
   );
 
-  // Sin servicios que consultar no hay alertas ni puntajes: eso es «ninguno», no «no se cargó».
+  // Sin servicios que consultar no hay alertas ni puntajes: eso es «ninguno», no «no se cargó». Con el monitoreo clínico
+  // sin habilitar tampoco se muestran como «ninguno»: se dice que aún no está disponible.
   const none = !!userId && bookings !== undefined && ids.length === 0;
   return {
-    alerts: alerts.data ?? (none ? [] : null),
-    risks: risks.data ?? (none ? [] : null),
+    alerts: status.notEnabled ? null : (alerts.data ?? (none ? [] : null)),
+    risks: status.notEnabled ? null : (risks.data ?? (none ? [] : null)),
     loading: enabled && (alerts.isLoading || risks.isLoading),
-    alertsFailed: alerts.isError,
-    risksFailed: risks.isError,
+    /** Falta una de las tablas del monitoreo clínico: la función aún no está habilitada en esta base. */
+    notEnabled: status.notEnabled,
+    alertsFailed: status.alertsFailed,
+    risksFailed: status.risksFailed,
     truncated,
     updatedAt: Math.max(alerts.dataUpdatedAt, risks.dataUpdatedAt),
     refresh: () => {

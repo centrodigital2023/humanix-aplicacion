@@ -36,6 +36,7 @@ CHAIN=(
   20261010110000_realtime_core_tables.sql
   20261010120000_new_tables_least_privilege.sql
   20261011100000_market_validation_v2.sql
+  20261012100000_clinical_data_scope.sql
 )
 
 ERRF=$(mktemp)

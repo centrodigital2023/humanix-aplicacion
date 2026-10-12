@@ -60,7 +60,14 @@ export function SosFamiliarButton({
             : "Tu familia y tu profesional fueron notificados por WhatsApp.",
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo enviar el SOS");
+      // El detalle técnico va a la consola: en una emergencia la persona necesita saber qué hacer, no leer un error de la
+      // base de datos (y menos en inglés).
+      console.error("[SosFamiliarButton]", e);
+      toast.error("No se pudo enviar el SOS", {
+        description:
+          "Si es una emergencia, llama ya a la línea de emergencias 123 y avisa a tu familia por teléfono.",
+        duration: 15000,
+      });
     } finally {
       setBusy(false);
     }

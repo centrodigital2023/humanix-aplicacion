@@ -1,0 +1,27 @@
+# Datos clínicos «por servicio»: pruebas de `20261012100000_clinical_data_scope.sql`
+
+Prueba la migración que cierra el hallazgo #97 de `AUDIT_REPORT.md` sobre PostgreSQL 16, partiendo de la **estructura real de
+producción** (`../prod_replica`, sin datos) desde tres puntos de partida:
+
+| Escenario                  | Parte de…                                                                                                                           | Comprueba                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A** `scenario_chain.sql` | La cadena de archivos del repositorio (`20260606100000`, `…130000`, `…180000`, `…220000`), con políticas «por rol»                  | **Antes**: la fuga existe (una institución ve y modifica lo de todas; un profesional lee todos los puntajes e informes). **Después**: cada cuenta ve solo lo de sus servicios (paciente, profesional del servicio, quien contrató, superadmin); HR y evaluadores nada; las escrituras se acotan; el SOS propio y los signos vitales del profesional siguen funcionando; `anon` sin privilegios; la vista del portal EPS respeta RLS; no se añade ningún privilegio de datos donde había menos; segunda pasada idempotente |
+| **B** `scenario_fresh.sql` | Una base **sin** tablas clínicas                                                                                                    | No crea ni cambia nada (relaciones, funciones, políticas, privilegios)                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **C** `scenario_prod.sql`  | **Producción hoy**: solo `clinical_alerts` tal como la creó `drizzle/migrations/0007`                                               | No toca las políticas (no añade ni quita lectores; HR y evaluadores siguen leyendo, y queda documentado) y solo retira privilegios que nadie usa                                                                                                                                                                                                                                                                                                                                                                          |
+| **A2** (en `run.sh`)       | La cadena con una política «por rol» que la migración no conoce (con cada uno de los roles `institution`, `professional`, `family`) | La migración **falla** y no deja cambios a medias; retirada la política, se aplica                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+```bash
+# Solo contra un PostgreSQL DESECHABLE: borra y crea las bases hx_clin_*.
+HX_TEST_CONFIRM=desechable PGHOST=localhost PGPORT=5432 PGUSER=postgres supabase/e2e/clinical_scope/run.sh
+```
+
+Resultado esperado: `59|0|59` (A), `7|0|7` (B), `22|0|22` (C), tres veces «falló con el aviso esperado» (A2) y `TODO BIEN`.
+
+`HX_MIGRATION=/ruta/otra.sql` sustituye el archivo probado: sirve para comprobar que un cambio deliberado («mutante») de la migración
+hace fallar alguna comprobación. Con 23 mutantes (quitar una política, olvidar un `REVOKE`, devolver privilegios de más, quitar
+`security_invoker`, no encender RLS, no fallar ante una política desconocida…) todos fueron detectados.
+
+**Límites.** No replica Supabase Auth, Realtime ni PostgREST; los roles `anon`/`authenticated` se simulan con `SET ROLE` y
+`request.jwt.claim.sub`. La vista y la función `create_default_thresholds` se prueban sobre la cadena del repositorio, no sobre
+producción (allí no existen). El privilegio `MAINTAIN` es de PostgreSQL 17 (producción): esta suite corre en 16, y su retirada se
+comprobó en el simulacro contra la base real (que se deshizo solo) y en la verificación posterior.

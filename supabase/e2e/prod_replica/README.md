@@ -16,6 +16,8 @@ HX_TEST_CONFIRM=desechable PGHOST=localhost PGPORT=5432 PGUSER=postgres supabase
 
 Resultado esperado: `264|0|264` (lazo de cuidado), `252|0|252` (hub de instituciones) y `37|0|37` (este escenario).
 
+(Desde el 2026-10-12 la cadena incluye `20261012100000_clinical_data_scope.sql`: en esta réplica no hay tablas clínicas, así que no hace nada. Su prueba de fondo está en `../clinical_scope/`.)
+
 ## Qué encontró (y por qué existe)
 
 Con el esquema aproximado las suites pasaban; contra la estructura real aparecieron **diferencias entre el repositorio y

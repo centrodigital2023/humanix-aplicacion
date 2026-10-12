@@ -208,3 +208,39 @@ export function recentBookingIds(
     .sort((a, b) => msOf(b.scheduled_at) - msOf(a.scheduled_at) || a.id.localeCompare(b.id));
   return { ids: recent.slice(0, max).map((b) => b.id), truncated: recent.length > max };
 }
+
+/**
+ * ¿El error dice que la TABLA no existe en esta base, o sea que la función aún no se habilitó? PostgREST responde
+ * `PGRST205` («Could not find the table … in the schema cache») y PostgreSQL `42P01` («relation … does not exist»).
+ * Una columna que falta (`42703`), un permiso negado (`42501`) o un corte de red NO son «tabla ausente»: son fallos.
+ */
+export function isMissingTable(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, message } = error as { code?: unknown; message?: unknown };
+  if (code === "PGRST205" || code === "42P01") return true;
+  return (
+    typeof message === "string" &&
+    /could not find the table|relation "[^"]*" does not exist/i.test(message)
+  );
+}
+
+export interface ClinicalReadStatus {
+  /** Falta alguna de las dos tablas: el monitoreo clínico aún no está habilitado en esta base. */
+  notEnabled: boolean;
+  alertsFailed: boolean;
+  risksFailed: boolean;
+}
+
+/**
+ * Qué se le dice a la institución según cómo salieron las dos lecturas clínicas. Una tabla que no existe no es un fallo
+ * para reintentar: el monitoreo clínico aún no está habilitado, y entonces ni las alertas ni el riesgo se presentan como
+ * «cero» (aunque una de las dos tablas exista, sin el resto del monitoreo no se puede dar por buena una cuenta en cero).
+ */
+export function clinicalReadStatus(alertsError: unknown, risksError: unknown): ClinicalReadStatus {
+  const notEnabled = isMissingTable(alertsError) || isMissingTable(risksError);
+  return {
+    notEnabled,
+    alertsFailed: !notEnabled && !!alertsError,
+    risksFailed: !notEnabled && !!risksError,
+  };
+}
