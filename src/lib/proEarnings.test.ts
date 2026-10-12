@@ -6,6 +6,7 @@ import {
   MIN_SERVICES_FOR_RATE_ADVICE,
   MIN_SERVICES_FOR_WEEKDAY,
   buildEarningsReport,
+  earningsHeadline,
   type EarningsBooking,
   type EarningsInsight,
 } from "./proEarnings";
@@ -552,5 +553,65 @@ describe("fechas de Colombia", () => {
     const oct = r.flow.months.find((m) => m.key === "2026-10")!;
     expect(oct.settled).toBe(100_000);
     expect(r.flow.current.settledToDate).toBe(0);
+  });
+});
+
+describe("la frase que abre el informe", () => {
+  const headline = (bookings: EarningsBooking[]) => earningsHeadline(report(bookings));
+
+  it("sin servicios invita a terminar el primero", () => {
+    expect(headline([])).toBe("Cuando termines tu primer servicio, aquí verás cuánto ganas.");
+  });
+
+  it("sin nada terminado este mes habla de lo acordado o de que aún no hay nada", () => {
+    expect(headline([aheadOn(2)])).toBe(
+      "Este mes todavía no cierras ningún servicio, pero tienes $\u00a0150.000 acordados por hacer.",
+    );
+    expect(headline([doneOn(40)])).toBe(
+      "Este mes aún no tienes servicios terminados ni acordados.",
+    );
+  });
+
+  it("cuenta lo ganado este mes en singular y plural", () => {
+    expect(headline([doneOn(2)])).toBe("Este mes llevas $\u00a0150.000 netos en 1 servicio.");
+    expect(headline([doneOn(2), doneOn(4)])).toBe(
+      "Este mes llevas $\u00a0300.000 netos en 2 servicios.",
+    );
+  });
+
+  it("si va 15 % o más arriba del mes pasado, lo celebra", () => {
+    const last = (d: string) =>
+      raw({
+        scheduled_at: `2026-09-${d}T08:00:00-05:00`,
+        completed_at: `2026-09-${d}T14:00:00-05:00`,
+      });
+    const h = headline([doneOn(1), doneOn(2), doneOn(3), last("05"), last("06")]);
+    expect(
+      h.startsWith("¡Buen ritmo! Este mes llevas $\u00a0450.000 netos en 3 servicios, 50 % más"),
+    ).toBe(true);
+  });
+
+  it("si va 25 % o más abajo, lo dice sin dramatismo y con los días que quedan", () => {
+    const last = (d: string) =>
+      raw({
+        scheduled_at: `2026-09-${d}T08:00:00-05:00`,
+        completed_at: `2026-09-${d}T14:00:00-05:00`,
+      });
+    const h = headline([doneOn(1), last("02"), last("03"), last("04")]);
+    expect(h).toBe(
+      "Este mes llevas $\u00a0150.000 netos en 1 servicio. Va más lento que el mes pasado, pero todavía quedan 17 días.",
+    );
+    expect(h).not.toMatch(/mal|preocup|alarma/i);
+  });
+
+  it("ni «buen ritmo» ni «más lento» cuando el mes pasado fue muy poco", () => {
+    const tiny = raw({
+      scheduled_at: "2026-09-02T08:00:00-05:00",
+      completed_at: "2026-09-02T09:00:00-05:00",
+      duration_hours: 1,
+      total_amount: 25_000,
+      professional_payout: 25_000,
+    });
+    expect(headline([doneOn(1), tiny])).toBe("Este mes llevas $\u00a0150.000 netos en 1 servicio.");
   });
 });

@@ -6,7 +6,7 @@
 // y nada se envía a terceros: las cuentas las hacen las funciones puras de `src/lib`. Las actualizaciones llegan por
 // Realtime; no hay sondeo.
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,15 +58,7 @@ export interface FamilyBookingRow {
   professional_id: string;
 }
 
-/** Reloj que se actualiza cada minuto: refresca cuentas regresivas y «hoy/mañana» sin pedir datos otra vez. */
-export function useNow(intervalMs = 60_000): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(t);
-  }, [intervalMs]);
-  return now;
-}
+export { useNow } from "@/hooks/use-now";
 
 // ─── Reservas de la familia ──────────────────────────────────────────────────
 

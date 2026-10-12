@@ -34,7 +34,11 @@ export type PlanFeature =
   | "family_wellbeing_report"
   | "smart_applicant_ranking"
   | "care_budget_forecast"
-  | "coverage_radar";
+  | "coverage_radar"
+  | "pro_income_pulse"
+  | "pro_rest_guard"
+  | "pro_week_planner"
+  | "pro_reputation_lab";
 
 export type PlanDef = {
   key: PlanKey;
@@ -88,6 +92,8 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "smart_applicant_ranking",
       "care_budget_forecast",
       "coverage_radar",
+      "pro_income_pulse",
+      "pro_rest_guard",
     ],
     featuresLabel: [
       "Match IA en menos de 150 ms",
@@ -99,6 +105,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "Sin comisión: el profesional cobra directo al cliente",
       "Historia de cuidado exportable (Excel/CSV) con el parte de cada servicio",
       "Panel de familia inteligente: informe de bienestar para el médico, comparador de postulaciones con tarifa justa, presupuesto de cuidado y radar de cobertura",
+      "Panel del profesional inteligente: tus ingresos reales (neto, comisión y mejor día), tu tarifa frente al mercado y tu carga de trabajo con descanso sugerido",
     ],
   },
   pro_monthly: {
@@ -115,6 +122,8 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "ai_message_suggestions",
       "priority_antifraud",
       "career_passport",
+      "pro_week_planner",
+      "pro_reputation_lab",
     ],
     featuresLabel: [
       "Todo lo del Esencial",
@@ -123,6 +132,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "Sugerencias IA en cada mensaje",
       "Validación anti-fraude IA prioritaria",
       "Pasaporte profesional verificable con código QR (imprimible)",
+      "«Mi semana»: turnos compatibles que encajan en tu agenda sin cruces, y reputación en detalle con consejos para crecer",
     ],
   },
   institution_monthly: {
@@ -181,12 +191,16 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, PlanKey> = {
   smart_applicant_ranking: "essential_monthly",
   care_budget_forecast: "essential_monthly",
   coverage_radar: "essential_monthly",
+  pro_income_pulse: "essential_monthly",
+  pro_rest_guard: "essential_monthly",
   // Pro+
   visibility_boost: "pro_monthly",
   career_coach: "pro_monthly",
   ai_message_suggestions: "pro_monthly",
   priority_antifraud: "pro_monthly",
   career_passport: "pro_monthly",
+  pro_week_planner: "pro_monthly",
+  pro_reputation_lab: "pro_monthly",
   // Institution
   ai_credits: "institution_monthly",
   multi_user_roles: "institution_monthly",

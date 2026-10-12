@@ -43,7 +43,6 @@ import { AvatarUploader } from "@/components/humanix/AvatarUploader";
 import { DocumentsManager } from "@/components/humanix/DocumentsManager";
 import { RethusAutoVerification } from "@/components/humanix/RethusAutoVerification";
 import { HealthComplianceCard } from "@/components/humanix/HealthComplianceCard";
-import { CareCompassCard } from "@/components/humanix/CareCompassCard";
 import { AvailabilityCalendar } from "@/components/humanix/AvailabilityCalendar";
 import { OnboardingTour } from "@/components/humanix/OnboardingTour";
 import { AiFingerprintCard } from "@/components/humanix/AiFingerprintCard";
@@ -64,6 +63,10 @@ import { OfferApplicationsPanel } from "@/components/humanix/hub/OfferApplicatio
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
 import { CareerCard } from "@/components/humanix/care/CareerCard";
+import { ProHero } from "@/components/humanix/pro/ProHero";
+import { ProSmartCenter, type GrowKey } from "@/components/humanix/pro/ProSmartCenter";
+import { scrollToId } from "@/components/humanix/premium/scroll";
+import type { ProBriefTarget } from "@/lib/proBrief";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { applyToPublishedOffer } from "@/hooks/use-institution-hub";
 import { classifyHubError, type ServerError } from "@/lib/opportunities";
@@ -86,7 +89,7 @@ export const Route = createFileRoute("/dashboard/profesional")({
   component: ProDashboard,
 });
 
-type Tab = "inicio" | "perfil" | "documentos" | "ofertas" | "agenda";
+type Tab = "inicio" | "crecer" | "perfil" | "documentos" | "ofertas" | "agenda";
 
 type WorkExp = {
   role: string;
@@ -175,6 +178,7 @@ const COP = (n: number | null | undefined) =>
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "inicio", label: "Inicio", icon: <Home className="h-5 w-5" /> },
+  { id: "crecer", label: "Crecer", icon: <TrendingUp className="h-5 w-5" /> },
   { id: "perfil", label: "Perfil", icon: <User className="h-5 w-5" /> },
   { id: "documentos", label: "Docs", icon: <FileText className="h-5 w-5" /> },
   { id: "ofertas", label: "Ofertas", icon: <ListChecks className="h-5 w-5" /> },
@@ -189,6 +193,7 @@ function ProDashboard() {
   } = useAppUser({ allow: ["professional", "superadmin"] });
 
   const [tab, setTab] = useState<Tab>("inicio");
+  const [growSection, setGrowSection] = useState<GrowKey>("ingresos");
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>("");
@@ -621,6 +626,39 @@ function ProDashboard() {
     if (offersData) setOffers(offersData as unknown as Offer[]);
   };
 
+  // Los botones del resumen del día: cambian de pestaña y bajan a la sección (los servicios y los planes son enlaces).
+  const goTo = (target: ProBriefTarget) => {
+    const go = (t: Tab, anchor?: string) => {
+      setTab(t);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Deja que la pestaña pinte antes de bajar a la sección.
+      if (anchor) setTimeout(() => scrollToId(anchor), 120);
+    };
+    switch (target.kind) {
+      case "proposals":
+        return go("ofertas", "propuestas");
+      case "counters":
+        return go("ofertas", "contraofertas");
+      case "opportunities":
+        return go("ofertas");
+      case "agenda":
+        return go("agenda");
+      case "profile":
+        return go("perfil");
+      case "documents":
+        return go("documentos");
+      case "ratings":
+        return go("ofertas", "calificar");
+      case "career":
+        return scrollToId("trayectoria");
+      case "rest":
+        setGrowSection("descanso");
+        return go("crecer");
+      default:
+        return; // service y plans son enlaces con ruta propia: no pasan por aquí
+    }
+  };
+
   const logout = async () => {
     await appLogout();
   };
@@ -722,7 +760,19 @@ function ProDashboard() {
         {/* ══ TAB: INICIO ══ */}
         {tab === "inicio" && (
           <div className="space-y-4">
-            {userId && <CareCompassCard role="professional" userId={userId} name={fullName} />}
+            {userId && (
+              <ProHero
+                userId={userId}
+                name={fullName}
+                profile={{
+                  completionPct,
+                  verified: profile ? (profile.verified ?? false) : null,
+                  hasRate: !!profile?.hourly_rate,
+                  totalJobs: profile?.total_jobs ?? null,
+                }}
+                onNavigate={goTo}
+              />
+            )}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
 
             {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
@@ -1003,19 +1053,16 @@ function ProDashboard() {
               )}
             </div>
 
-            {/* Planificador de ingresos: neto real por hora y si conviene un plan de pago */}
-            {userId && (
-              <IncomePlannerCard userId={userId} defaultRate={profile?.hourly_rate ?? null} />
-            )}
-
             {/* Trayectoria: nivel, sellos, gracias recibidos y cómo compartirla */}
             {userId && (
-              <CareerCard
-                userId={userId}
-                fullName={fullName || greetingName}
-                specialty={specialty || null}
-                verified={!!profile?.verified}
-              />
+              <div id="trayectoria" className="scroll-mt-4 empty:hidden">
+                <CareerCard
+                  userId={userId}
+                  fullName={fullName || greetingName}
+                  specialty={specialty || null}
+                  verified={!!profile?.verified}
+                />
+              </div>
             )}
 
             {/* Quick actions */}
@@ -1094,6 +1141,32 @@ function ProDashboard() {
               <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
                 <MercadoPagoSubscription userId={userId} />
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ TAB: CRECER ══ */}
+        {tab === "crecer" && (
+          <div className="space-y-4">
+            {userId && (
+              <ProSmartCenter
+                userId={userId}
+                city={profile?.home_city ?? profile?.service_cities?.[0] ?? null}
+                profile={{
+                  hourlyRate: profile?.hourly_rate ?? null,
+                  verified: profile ? (profile.verified ?? false) : null,
+                  rethusVerified: profile ? (profile.rethus_verified ?? false) : null,
+                  completionPct,
+                  avgRating: profile?.avg_rating ?? null,
+                  totalJobs: profile?.total_jobs ?? null,
+                }}
+                section={growSection}
+                onSectionChange={setGrowSection}
+                onOpenOpportunities={() => goTo({ kind: "opportunities" })}
+              />
+            )}
+            {userId && (
+              <IncomePlannerCard userId={userId} defaultRate={profile?.hourly_rate ?? null} />
             )}
           </div>
         )}
@@ -1570,11 +1643,13 @@ function ProDashboard() {
             {/* Postulaciones a instituciones (responder, negociar, firmar) y contratos inteligentes */}
             {userId && (
               <>
-                <OfferApplicationsPanel
-                  userId={userId}
-                  proName={fullName || null}
-                  onChanged={() => void loadAll(userId)}
-                />
+                <div id="contraofertas" className="scroll-mt-4 empty:hidden">
+                  <OfferApplicationsPanel
+                    userId={userId}
+                    proName={fullName || null}
+                    onChanged={() => void loadAll(userId)}
+                  />
+                </div>
                 <ContractsPanel userId={userId} title="Mis contratos inteligentes" />
               </>
             )}
@@ -1582,8 +1657,12 @@ function ProDashboard() {
             {/* Propuestas y negociación + calificar a la familia */}
             {userId && (
               <>
-                <ProposalsInbox userId={userId} role="professional" />
-                <PendingRatingsCard userId={userId} role="professional" />
+                <div id="propuestas" className="scroll-mt-4 empty:hidden">
+                  <ProposalsInbox userId={userId} role="professional" />
+                </div>
+                <div id="calificar" className="scroll-mt-4 empty:hidden">
+                  <PendingRatingsCard userId={userId} role="professional" />
+                </div>
               </>
             )}
 
@@ -1758,7 +1837,7 @@ function ProDashboard() {
 
       {/* ── Bottom nav (mobile only) ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {TABS.map((t) => (
             <button
               key={t.id}

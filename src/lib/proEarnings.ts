@@ -413,3 +413,27 @@ export function earningsInsights(r: EarningsReport): EarningsInsight[] {
     .sort((a, b) => order[a.x.severity] - order[b.x.severity] || a.i - b.i)
     .map(({ x }) => x);
 }
+
+/**
+ * La frase que abre el informe: lo importante del mes en lenguaje de persona, con un poco de calor cuando va bien y sin
+ * dramatismo cuando va más lento.
+ */
+export function earningsHeadline(r: EarningsReport): string {
+  const c = r.flow.current;
+  const month = r.flow.months[r.flow.months.length - 1];
+  if (!r.hasData) return "Cuando termines tu primer servicio, aquí verás cuánto ganas.";
+  if (c.settledToDate === 0) {
+    return c.committed > 0
+      ? `Este mes todavía no cierras ningún servicio, pero tienes ${money(c.committed)} acordados por hacer.`
+      : "Este mes aún no tienes servicios terminados ni acordados.";
+  }
+  const base = `Este mes llevas ${money(c.settledToDate)} netos en ${plural(month.services, "servicio", "servicios")}`;
+  const { deltaPct, lastMonthSameSpan } = r.flow.vsLastMonth;
+  if (deltaPct !== null && lastMonthSameSpan >= 100_000) {
+    if (deltaPct >= 15)
+      return `¡Buen ritmo! ${base}, ${deltaPct} % más que a esta altura del mes pasado.`;
+    if (deltaPct <= -25)
+      return `${base}. Va más lento que el mes pasado, pero todavía quedan ${plural(c.daysLeft, "día", "días")}.`;
+  }
+  return `${base}.`;
+}

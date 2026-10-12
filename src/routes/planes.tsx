@@ -258,6 +258,20 @@ const COMPARE_ROWS: CompareRow[] = [
     institution: true,
   },
   {
+    label: "Panel del profesional inteligente (ingresos reales, tarifa y descanso)",
+    free: false,
+    essential: true,
+    pro: true,
+    institution: true,
+  },
+  {
+    label: "«Mi semana» y reputación en detalle",
+    free: false,
+    essential: false,
+    pro: true,
+    institution: true,
+  },
+  {
     label: "Boost de visibilidad en búsquedas",
     free: false,
     essential: false,
