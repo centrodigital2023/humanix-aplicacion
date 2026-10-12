@@ -194,3 +194,34 @@ Detalle de reglas, permisos y límites en `docs/PANEL_FAMILIA_PREMIUM.md`. Verif
 (1 057 en total, 46 archivos; ≈ 60 mutaciones deliberadas de umbrales, todas detectadas), Chromium (27/27 pasos a 1 000 y
 390 px, con Realtime, cuenta vacía y consulta caída), renderizado en servidor (11/11) y ESLint/`tsc` limpios en lo nuevo. No
 se pudo probar: Realtime real y navegadores móviles reales.
+
+## Undécima pasada: paneles del profesional y de la institución, y portal EPS/IPS
+
+Se añadieron los resúmenes «Tu día» (gratis) y las herramientas premium del profesional y de la institución, y se revisó lo que
+esos paneles y el portal EPS/IPS ya hacían. **No hay migración, ni Edge Function, ni cambio de precios**: todo son cuentas en el
+navegador sobre datos que la persona o la institución ya puede leer.
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 91 | Inicio del profesional y el de la institución traían una «brújula» genérica (`CareCompassCard`) que contaba solo notificaciones, propuestas y ofertas: no sabía de alertas del servicio, quien no llegó, turnos por quedar sin cubrir ni contratos sin firma | Sustituida por «Tu día» (`ProHero`, `InstHero`) con calma, saludo cálido y lo urgente primero; cada botón lleva a su sección. `CareCompassCard` y `careCompass.ts` quedan sin uso (se pueden borrar con su prueba) |
+| 92 | El planificador de ingresos del profesional estaba suelto en Inicio, lejos de donde se miran los ingresos | Se mueve a la pestaña «Crecer», junto a «Ingresos reales» |
+| 93 | **Portal EPS/IPS (`/dashboard/eps`): las gráficas de tendencia usaban `Math.random()`**, la «facturación» era servicios terminados × $85.000, el cumplimiento salía de una fórmula arbitraria (más 20 puntos), y los reingresos (4,2 %), «+12 %», «+3 %», «−1,2 %» y «3,2 h por visita» eran constantes | Reemplazado por datos reales (`lib/epsMetrics.ts`): servicios y alertas por día, inversión realmente pagada, riesgo clínico promedio, duración promedio con mínimo de muestra. Lo que no se puede calcular se dice («sin datos», «no se pudieron cargar»), no se inventa |
+| 94 | **El resumen del portal EPS leía alertas, puntajes de riesgo y registros de entrada de TODA la plataforma**: el filtro por `tenant_id` se declaraba y nunca se aplicaba | Ahora se piden solo por los ids de los servicios de la institución (últimos 120 días, de a 100). Una prueba de navegador comprueba que una alerta crítica de otra institución **no** aparece |
+| 95 | La pestaña de pacientes mostraba cuatro pacientes de ejemplo que, al tocarlos, abrían el monitoreo clínico con **el id de la propia institución** como si fuera el paciente; la de alertas hacía lo mismo | Se usan los módulos reales: `EnhancedPatientsModule` (pacientes) e `InstitutionClinicalMonitoring` (monitoreo y alertas) |
+| 96 | La pestaña «Cumplimiento» mostraba porcentajes fijos (87 %, 74 %, 92 %…) y una lista de sellos que la aplicación no puede comprobar: «HIPAA Ready», «GDPR Ready», «MFA habilitado», «Encriptación TLS 1.3», «Backups automáticos», «ISO 27001»; el encabezado decía «Multi-tenant» y «HIPAA · GDPR ready». Los «Reportes IA» tenían fechas de junio de 2026 y botones sin función | Indicadores reales de calidad y cumplimiento (plan IPS Mejorado), enlaces a Habeas Data, privacidad y cumplimiento normativo, con el aviso de que el portal **no certifica** por sí solo el cumplimiento; los reportes son el centro de gestión real |
+| 97 | **RLS demasiado amplia en datos clínicos (no se tocó: requiere migración y autorización):** `clinical_alerts_read`, `risk_scores_read` y `checkins_patient_read` dejan leer los datos de **todos** los pacientes a cualquier cuenta `institution` (y los puntajes de riesgo, a cualquier `professional`); `clinical_alerts_update` deja a cualquier institución o profesional modificar **cualquier** alerta | El filtro por servicio del portal es de pantalla y no es una barrera. Recomendado: políticas por `booking_id` (partes del servicio) o por el vínculo de `institution_patient_cases`, y `UPDATE` solo para las partes del servicio. **Pendiente de aprobación** |
+| 98 | La barra inferior del panel de la institución tenía 8 pestañas en una rejilla de 7: la octava caía a una segunda fila | Barra desplazable con la pestaña activa siempre a la vista; probada de 320 a 430 px |
+| 99 | `MonthBars` (gráfica compartida): la tabla oculta para lector de pantalla ensanchaba la página en pantallas angostas con montos de siete cifras (27 px de desborde a 320 px) | La tabla va dentro de un contenedor `sr-only`; la prueba de navegador lo cubre |
+| 100 | El saludo del héroe tomaba la primera palabra del nombre: «Clínica del Norte» recibía «Buenos días, Clínica» | Las instituciones se saludan por su nombre completo |
+| 101 | La cabecera del panel de la institución decía «2 postulaciónes nuevas» | Corregido |
+| 102 | (Lógica propia, antes de publicar) El informe de gestión nombraba a profesionales en «para atender» y «lo que va bien», y calculaba «+1100 %» contra un periodo anterior de un solo servicio | El informe no nombra a nadie (el CSV de auditoría sí lleva el profesional) y solo compara con porcentaje si el periodo anterior tuvo ≥ 3 servicios |
+| 103 | (Lógica propia) Las horas salían con punto decimal («70.7 h») entre cifras con separador de miles colombiano | `hoursEs`: coma decimal en todas las pantallas, informes y CSV |
+| 104 | La base **no guarda quién canceló** un servicio | Se infiere por la etiqueta del motivo de la lista; «Otro motivo» queda «sin dato» y no se atribuye a nadie (límite documentado) |
+| 105 | **Observación, sin tocar:** `dashboard.institucion.tsx` conserva dos avisos previos de `react-hooks/exhaustive-deps` (`navigate` y `user`) | Pendiente de una limpieza aparte |
+
+Detalle de reglas, permisos y límites en `docs/PANELES_PREMIUM.md`. Verificado con 1 801 pruebas unitarias (65 archivos; las del
+lote: profesional 214, institución 376, portal EPS 26), pruebas de mutación de la lógica de institución, EPS y ayudantes
+compartidos (0 sobrevivientes al cerrar), Chromium (institución y portal EPS 60/60 pasos de 320 a 1 280 px; profesional 25/25;
+familia 27/27 como regresión), renderizado en servidor sin `window` (institución 20/20, profesional 14/14, familia 11/11) y
+`tsc`/ESLint/Prettier limpios en lo nuevo. No se pudo probar: Realtime real, PostgREST con JWT reales y navegadores móviles reales.
+
