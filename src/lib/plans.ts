@@ -30,7 +30,11 @@ export type PlanFeature =
   | "priority_support"
   | "branch_billing"
   | "care_history_export"
-  | "career_passport";
+  | "career_passport"
+  | "family_wellbeing_report"
+  | "smart_applicant_ranking"
+  | "care_budget_forecast"
+  | "coverage_radar";
 
 export type PlanDef = {
   key: PlanKey;
@@ -80,6 +84,10 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "rethus_antifraud",
       "no_commission",
       "care_history_export",
+      "family_wellbeing_report",
+      "smart_applicant_ranking",
+      "care_budget_forecast",
+      "coverage_radar",
     ],
     featuresLabel: [
       "Match IA en menos de 150 ms",
@@ -90,6 +98,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "Verificación RETHUS y anti-fraude IA incluida",
       "Sin comisión: el profesional cobra directo al cliente",
       "Historia de cuidado exportable (Excel/CSV) con el parte de cada servicio",
+      "Panel de familia inteligente: informe de bienestar para el médico, comparador de postulaciones con tarifa justa, presupuesto de cuidado y radar de cobertura",
     ],
   },
   pro_monthly: {
@@ -168,6 +177,10 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, PlanKey> = {
   rethus_antifraud: "essential_monthly",
   no_commission: "essential_monthly",
   care_history_export: "essential_monthly",
+  family_wellbeing_report: "essential_monthly",
+  smart_applicant_ranking: "essential_monthly",
+  care_budget_forecast: "essential_monthly",
+  coverage_radar: "essential_monthly",
   // Pro+
   visibility_boost: "pro_monthly",
   career_coach: "pro_monthly",

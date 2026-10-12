@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Loader2,
@@ -52,6 +52,7 @@ import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { usePlan } from "@/hooks/use-plan";
 import { PlanNameGate } from "@/components/humanix/PlanNameGate";
+import { FamilySmartCenter } from "@/components/humanix/family/FamilySmartCenter";
 
 export const Route = createFileRoute("/dashboard/familia")({
   head: () => ({ meta: [{ title: "Familia · Humanix" }] }),
@@ -142,6 +143,7 @@ function FamilyDashboard() {
   const [nearby, setNearby] = useState<NearbyOffer[]>([]);
   const [familyCity, setFamilyCity] = useState<string>("Bogotá");
   const [onboardingComplete, setOnboardingComplete] = useState(true);
+  const [hasEmergencyContact, setHasEmergencyContact] = useState(true);
   const [familyCoords, setFamilyCoords] = useState<{ lat: number | null; lng: number | null }>({
     lat: null,
     lng: null,
@@ -249,6 +251,7 @@ function FamilyDashboard() {
             fam?.habeas_data_accepted
           ),
         );
+        setHasEmergencyContact(!!fam?.emergency_contact_phone);
         setFamilyCoords({
           lat: fam?.default_lat ?? null,
           lng: fam?.default_lng ?? null,
@@ -458,6 +461,11 @@ function FamilyDashboard() {
     };
   }, [user]);
 
+  const smartProfile = useMemo(
+    () => ({ complete: onboardingComplete, hasEmergencyContact }),
+    [onboardingComplete, hasEmergencyContact],
+  );
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
@@ -530,6 +538,16 @@ function FamilyDashboard() {
 
         {user && <CareCompassCard role="family" userId={user.id} />}
 
+        {/* Tu centro de cuidado: resumen del día y herramientas inteligentes (plan Esencial) */}
+        <FamilySmartCenter
+          userId={user.id}
+          city={familyCity}
+          profile={smartProfile}
+          applications={applications}
+          offers={offers}
+          coords={familyCoords}
+        />
+
         {/* Mis servicios activos */}
         {user && <MyBookings userId={user.id} />}
 
@@ -546,7 +564,11 @@ function FamilyDashboard() {
         {user?.id && <ActiveCareFeedSection clientId={user.id} />}
 
         {/* Valoraciones pendientes */}
-        {user?.id && <PendingRatingsCard userId={user.id} role="family" />}
+        {user?.id && (
+          <div id="calificar" className="scroll-mt-4 empty:hidden">
+            <PendingRatingsCard userId={user.id} role="family" />
+          </div>
+        )}
 
         {/* Mapa en vivo */}
         <section aria-labelledby="fam-map" className="space-y-3">
@@ -558,21 +580,27 @@ function FamilyDashboard() {
 
         {/* ── AGENDA ─────────────────────────────────────── */}
         {user?.id && (
-          <section className="space-y-4">
+          <section id="agenda" className="scroll-mt-4 space-y-4">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-biosensor" />
               <h2 className="font-display text-xl font-bold">Mi agenda</h2>
             </div>
             <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
-            <ProposalsInbox userId={user.id} role="family" />
-            <CareCirclePanel userId={user.id} userEmail={user.email} />
+            <div id="propuestas" className="scroll-mt-4 empty:hidden">
+              <ProposalsInbox userId={user.id} role="family" />
+            </div>
+            <div id="circulo" className="scroll-mt-4 empty:hidden">
+              <CareCirclePanel userId={user.id} userEmail={user.email} />
+            </div>
           </section>
         )}
 
         {/* ── EQUIPO DE CONFIANZA + HISTORIA DE CUIDADO ───── */}
         {user?.id && (
           <section className="space-y-4" aria-label="Equipo de confianza e historia de cuidado">
-            <TrustedTeamCard userId={user.id} role="family" />
+            <div id="equipo" className="scroll-mt-4 empty:hidden">
+              <TrustedTeamCard userId={user.id} role="family" />
+            </div>
             <CareHistoryCard userId={user.id} kind="family" />
           </section>
         )}
@@ -683,7 +711,7 @@ function FamilyDashboard() {
             </section>
 
             {/* Buzón de postulaciones */}
-            <section>
+            <section id="postulaciones" className="scroll-mt-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-display text-base font-semibold flex items-center gap-2">
                   <Inbox className="h-4 w-4 text-fuchsia-neural" />

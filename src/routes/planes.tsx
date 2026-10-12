@@ -244,6 +244,20 @@ const COMPARE_ROWS: CompareRow[] = [
     institution: true,
   },
   {
+    label: "Historia de cuidado exportable (Excel/CSV)",
+    free: false,
+    essential: true,
+    pro: true,
+    institution: true,
+  },
+  {
+    label: "Panel de familia inteligente (bienestar, comparador, presupuesto, cobertura)",
+    free: false,
+    essential: true,
+    pro: true,
+    institution: true,
+  },
+  {
     label: "Boost de visibilidad en búsquedas",
     free: false,
     essential: false,

@@ -172,3 +172,25 @@ Detalle de reglas, operación y límites en `docs/VALIDACION_MERCADO.md` (§4, �
 módulo (783 en total en 37 archivos), PostgreSQL 16 sobre la réplica de producción (regresión completa 264 + 252 + 37 +
 57, sin fallos), render en servidor (11/11) y Chromium (53/53 pasos, sin errores de consola). No se pudo probar: Realtime
 real, envío real por WhatsApp/Resend y navegadores móviles reales.
+
+## Décima pasada: panel de familia inteligente y premium
+
+Se añadió el «centro de cuidado» del panel de familia (resumen priorizado del día para todas y, con el plan Esencial,
+informe de bienestar, comparador de postulaciones, presupuesto y radar de cobertura) y se revisó lo que el panel ya hacía.
+**No hay migración, ni Edge Function, ni cambio de precios**: todo son cuentas en el navegador sobre datos que la familia ya
+puede leer.
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 84 | `onboardingComplete` (documento, dirección, contacto de emergencia y consentimiento) se calculaba al cargar el panel de familia pero **ninguna pantalla lo leía**: una familia sin contacto de emergencia no recibía ningún aviso, aunque ya tuviera servicios | El resumen del día lo vuelve acción (prioridad alta si ya hay servicios) con su propio dato de «contacto de emergencia» |
+| 85 | La historia de cuidado exportable (plan Esencial) estaba en la tarjeta de precios pero no en la tabla comparativa de `/planes` | Fila añadida, junto con la del panel de familia inteligente |
+| 86 | Una solicitud de servicio **pendiente** (que el profesional aún no confirmó) habría contado como «gasto programado» y habría inflado el piso de la proyección | Solo cuentan los servicios confirmados, en camino o en curso (prueba nueva) |
+| 87 | Revisión de la propia lógica nueva: el lector de números aceptaba `[]`, `true` o `"  "` como un cero escondido; mientras se leía el plan, quien ya paga veía por un instante los candados y la invitación a pagar | Solo se aceptan números y texto numérico; el centro muestra un esqueleto hasta conocer el plan (prueba de navegador con la lectura retrasada) |
+| 88 | **Observación, sin tocar:** la función de plan `whatsapp_contact` está declarada pero ninguna pantalla la consulta; el botón de WhatsApp de las postulaciones del panel depende solo de que el teléfono sea legible | Pendiente de decisión del negocio (¿se cierra por plan o por servidor?) |
+| 89 | **Observación, sin tocar:** el manejador de Realtime de postulaciones del panel llama a `setApplications` y a un aviso dentro de la función de actualización de `setOffers`; en modo estricto puede duplicar el aviso «Nueva postulación» | Pendiente: moverlo a una referencia con los ids de las ofertas |
+| 90 | **Observación, sin tocar:** `plans.ts` (5), `planes.tsx` (1) y `dashboard.familia.tsx` (26) ya traían errores de formato de Prettier antes de esta ronda; los cambios nuevos no añaden ninguno | Pendiente de un `prettier --write` aparte |
+
+Detalle de reglas, permisos y límites en `docs/PANEL_FAMILIA_PREMIUM.md`. Verificado con 274 pruebas unitarias nuevas
+(1 057 en total, 46 archivos; ≈ 60 mutaciones deliberadas de umbrales, todas detectadas), Chromium (27/27 pasos a 1 000 y
+390 px, con Realtime, cuenta vacía y consulta caída), renderizado en servidor (11/11) y ESLint/`tsc` limpios en lo nuevo. No
+se pudo probar: Realtime real y navegadores móviles reales.

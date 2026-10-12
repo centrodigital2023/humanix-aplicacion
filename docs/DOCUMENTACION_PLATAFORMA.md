@@ -76,6 +76,8 @@ Perfil con extracción de hoja de vida por IA (`cv-extractor`, `onboarding-extra
 ### 4.3 Familias
 Onboarding asistido por IA (`family-onboarding-ai`), perfil del paciente, calendario de necesidades, asistente de contratación (`hiring-copilot`), mapa de profesionales en vivo, reserva y chat (`BookingChat`, `chat-copilot`), check-in/check-out con geolocalización, bitácora de cuidado (`CareFeed`), botón SOS, valoración por voz (`VoiceRating`, `analyze-rating-voice`).
 
+**Centro de cuidado inteligente** (`FamilySmartCenter`, `src/components/humanix/family/`): resumen priorizado del día para todas las familias y, con el plan Esencial, informe de bienestar con resumen para el médico, comparador de postulaciones con tarifa justa, presupuesto de cuidado y radar de cobertura. Lógica pura en `src/lib/` (`familyBrief`, `wellbeing`, `applicantRanking`, `careBudget`, `coverageRadar`), datos con TanStack Query y Realtime (`use-family-intel`), sin migración ni Edge Functions. Reglas, permisos y límites en `docs/PANEL_FAMILIA_PREMIUM.md`.
+
 ### 4.4 Instituciones (EPS/IPS)
 Publicación masiva de ofertas con requisitos FUID (`EnhancedBulkOffersModule`), pacientes con KPIs (`EnhancedPatientsModule`), agenda de 7 días, monitoreo clínico y alertas (`InstitutionClinicalMonitoring`, `clinical-alert-notify`), signos vitales y wearables (`VitalSignsPanel`, `wearable-ingest`), facturación por sede (`IpsBranchBilling`, `use-institution-billing`), formularios dinámicos, informes con CRM.
 
