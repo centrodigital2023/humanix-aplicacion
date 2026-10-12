@@ -7,6 +7,7 @@ import {
   cancelConsequence,
   cancelFormSchema,
   cancelReasonLabel,
+  inferCancelParty,
 } from "./serviceCancel";
 
 describe("motivos", () => {
@@ -100,5 +101,58 @@ describe("consecuencia visible antes de confirmar", () => {
     expect(cancelConsequence("client", "offer")).toBe(
       "Se avisa de inmediato al profesional y se libera su horario.",
     );
+  });
+});
+
+describe("quién canceló, según el motivo guiado", () => {
+  it("reconoce cada motivo de la lista, solo o con detalle, sin importar mayúsculas ni espacios", () => {
+    for (const party of ["client", "professional"] as const) {
+      for (const r of CANCEL_REASONS[party].filter((x) => x.id !== "other")) {
+        expect(inferCancelParty(r.label)).toBe(party);
+        expect(inferCancelParty(`${r.label}: mi mamá se puso mal`)).toBe(party);
+        expect(inferCancelParty(`  ${r.label.toUpperCase()}  `)).toBe(party);
+      }
+    }
+  });
+
+  it("lo que guarda el formulario se lee de vuelta con la parte correcta", () => {
+    for (const party of ["client", "professional"] as const) {
+      for (const r of CANCEL_REASONS[party].filter((x) => x.id !== "other")) {
+        const values = { reason: r.id, detail: "Detalle" };
+        expect(inferCancelParty(buildCancelReason(party, values))).toBe(party);
+        expect(inferCancelParty(buildCancelReason(party, { reason: r.id }))).toBe(party);
+      }
+    }
+  });
+
+  it("«Otro motivo» guarda solo el detalle: no se adivina quién fue", () => {
+    for (const party of ["client", "professional"] as const) {
+      expect(
+        inferCancelParty(buildCancelReason(party, { reason: "other", detail: "Me salió algo" })),
+      ).toBe("unknown");
+    }
+  });
+
+  it("una etiqueta que está en las dos listas («Otro motivo») no dice quién fue", () => {
+    expect(inferCancelParty("Otro motivo")).toBe("unknown");
+    expect(inferCancelParty("otro motivo: algo pasó")).toBe("unknown");
+  });
+
+  it("sin motivo, o con texto que no es de la lista, es desconocido", () => {
+    for (const bad of [
+      null,
+      undefined,
+      "",
+      "   ",
+      "Cancelado por el sistema",
+      "cambió el horario del turno",
+    ]) {
+      expect(inferCancelParty(bad)).toBe("unknown");
+    }
+  });
+
+  it("solo cuenta la etiqueta completa al principio, no una parte suelta", () => {
+    expect(inferCancelParty("Ya no necesito el servicio, gracias")).toBe("unknown");
+    expect(inferCancelParty("Se canceló: Cambió el horario")).toBe("unknown");
   });
 });

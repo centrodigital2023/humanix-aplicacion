@@ -73,6 +73,25 @@ export function cancelFormSchema(party: CancelParty) {
 
 export type CancelFormValues = z.output<ReturnType<typeof cancelFormSchema>>;
 
+/**
+ * Quién canceló, leído del texto de `cancel_reason`. La base de datos no guarda la parte, pero el motivo guiado empieza
+ * con la etiqueta de la lista de cada una («Se me cruzó el horario: …»). «Otro motivo» guarda solo el detalle que
+ * escribió la persona: ahí no se puede saber y se devuelve «unknown» (nunca se adivina).
+ */
+export function inferCancelParty(reason: string | null | undefined): CancelParty | "unknown" {
+  const text = (reason ?? "").trim().toLowerCase();
+  const matches = (party: CancelParty) =>
+    CANCEL_REASONS[party].some((r) => {
+      const label = r.label.toLowerCase();
+      return text === label || text.startsWith(`${label}:`);
+    });
+  const client = matches("client");
+  const professional = matches("professional");
+  if (client && !professional) return "client";
+  if (professional && !client) return "professional";
+  return "unknown";
+}
+
 /** Texto que se guarda en `cancel_reason`: «Motivo: detalle» o solo el motivo. */
 export function buildCancelReason(party: CancelParty, values: CancelFormValues): string {
   const label = cancelReasonLabel(party, values.reason);

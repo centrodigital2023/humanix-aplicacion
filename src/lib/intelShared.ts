@@ -39,6 +39,25 @@ export function plural(n: number, one: string, many: string): string {
 
 export const round1 = (n: number): number => Math.round(n * 10) / 10;
 
+/** Parte una lista en grupos de a lo sumo `size` (para pedir muchos ids sin pasarse del largo de la dirección). */
+export function chunk<T>(items: readonly T[], size: number): T[][] {
+  const step = Math.max(1, Math.floor(size) || 1);
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += step) out.push(items.slice(i, i + step));
+  return out;
+}
+
+/** «70,7»: las horas con coma decimal, como se escriben en Colombia, con a lo sumo dos decimales («72», no «72,00»). */
+export function hoursEs(n: number): string {
+  return String(Math.round(n * 100) / 100).replace(".", ",");
+}
+
+/** «a, b y c»: une frases con comas y una «y» antes de la última. */
+export function joinEs(parts: readonly string[]): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} y ${parts[parts.length - 1]}`;
+}
+
 /** Porcentaje entero; `null` si no hay con qué dividir. */
 export function pctOf(part: number, whole: number): number | null {
   return whole > 0 ? Math.round((part / whole) * 100) : null;
@@ -203,4 +222,73 @@ export function ageEs(t: number, now: number): string {
   if (h < 1) return "hace menos de una hora";
   if (h < 48) return `hace ${h} h`;
   return `hace ${Math.floor(h / 24)} días`;
+}
+
+// ─── Periodos de informe ─────────────────────────────────────────────────────
+
+/** Periodos que ofrecen los informes de la institución: dos ventanas móviles y el mes anterior completo. */
+export type PeriodKey = "30d" | "90d" | "last_month";
+
+export interface Period {
+  key: PeriodKey;
+  /** Inicio, incluido (ms UTC). */
+  from: number;
+  /** Fin, excluido (ms UTC). */
+  to: number;
+  label: string;
+}
+
+/** Medianoche de Colombia con la que empieza un mes («2026-10»), en ms UTC. */
+export function monthStartMs(key: string): number {
+  const [y, m] = key.split("-").map(Number);
+  return Date.UTC(y, (m ?? 1) - 1, 1) - BOGOTA_OFFSET_MS;
+}
+
+/** Periodo pedido, visto desde `now`. El mes anterior se corta en los límites del calendario de Colombia. */
+export function resolvePeriod(key: PeriodKey, now: number): Period {
+  if (key === "last_month") {
+    const current = bogotaMonthKey(now);
+    const previous = prevMonthKey(current);
+    return {
+      key,
+      from: monthStartMs(previous),
+      to: monthStartMs(current),
+      label: `Mes pasado (${monthLabelEs(previous)})`,
+    };
+  }
+  const days = key === "90d" ? 90 : 30;
+  return { key, from: now - days * DAY_MS, to: now, label: `Últimos ${days} días` };
+}
+
+/** El periodo inmediatamente anterior y de la misma duración (o el mes completo anterior), para comparar. */
+export function previousPeriod(p: Period): Period {
+  if (p.key === "last_month") {
+    const previous = prevMonthKey(bogotaMonthKey(p.from));
+    return {
+      key: p.key,
+      from: monthStartMs(previous),
+      to: p.from,
+      label: `Mes anterior (${monthLabelEs(previous)})`,
+    };
+  }
+  const length = p.to - p.from;
+  return {
+    key: p.key,
+    from: p.from - length,
+    to: p.from,
+    label: `Los ${Math.round(length / DAY_MS)} días anteriores`,
+  };
+}
+
+const lowerFirst = (t: string) => `${t.charAt(0).toLowerCase()}${t.slice(1)}`;
+
+/** «los últimos 30 días», «el mes pasado (sep 2026)»: el periodo dentro de una frase corrida. */
+export function periodPhrase(p: Period): string {
+  return `${p.key === "last_month" ? "el" : "los"} ${lowerFirst(p.label)}`;
+}
+
+/** ¿El instante cae dentro del periodo? El inicio cuenta; el fin no. Un instante dañado nunca cuenta. */
+export function inPeriod(t: number, p: Period): boolean {
+  // NaN e infinitos hacen falsa la comparación: un instante dañado nunca cae dentro.
+  return t >= p.from && t < p.to;
 }

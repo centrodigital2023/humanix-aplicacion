@@ -1,5 +1,6 @@
 // Barras por mes (lo hecho y lo acordado) con descripción completa para lector de pantalla y tabla oculta. La usan el
 // presupuesto de la familia, los ingresos del profesional y los costos de la institución.
+import { hoursEs } from "@/lib/intelShared";
 import { formatCOP } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
@@ -89,27 +90,30 @@ export function MonthBars({
               {committedLabel}
             </span>
           </p>
-          <table className="sr-only">
-            <caption>{title}</caption>
-            <thead>
-              <tr>
-                <th>Mes</th>
-                <th>{settledLabel}</th>
-                <th>{committedLabel}</th>
-                <th>Horas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {months.map((m) => (
-                <tr key={m.key}>
-                  <td>{m.label}</td>
-                  <td>{formatCOP(m.settled)}</td>
-                  <td>{formatCOP(m.committed)}</td>
-                  <td>{m.hours}</td>
+          {/* La tabla va dentro de un div «sr-only»: sola, una tabla no se recorta y ensancha la página en pantallas angostas. */}
+          <div className="sr-only">
+            <table>
+              <caption>{title}</caption>
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>{settledLabel}</th>
+                  <th>{committedLabel}</th>
+                  <th>Horas</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {months.map((m) => (
+                  <tr key={m.key}>
+                    <td>{m.label}</td>
+                    <td>{formatCOP(m.settled)}</td>
+                    <td>{formatCOP(m.committed)}</td>
+                    <td>{hoursEs(m.hours)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>

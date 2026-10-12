@@ -334,6 +334,14 @@ const COMPARE_ROWS: CompareRow[] = [
     pro: false,
     institution: true,
   },
+  {
+    label:
+      "Centro de gestión para instituciones (costos, calidad y cumplimiento, equipo, pronóstico e informe)",
+    free: false,
+    essential: false,
+    pro: false,
+    institution: true,
+  },
 ];
 
 function CellIcon({ value }: { value: boolean | string }) {

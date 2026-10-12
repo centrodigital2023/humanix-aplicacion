@@ -5,9 +5,11 @@ import {
   bogotaWeekday,
   bogotaMonthKey,
   bogotaYmd,
+  chunk,
   countdownEs,
   dateEs,
   dayLabelEs,
+  hoursEs,
   longDayLabelEs,
   daysInMonth,
   median,
@@ -17,6 +19,12 @@ import {
   weekdayNameEs,
   whenEs,
   ageEs,
+  inPeriod,
+  joinEs,
+  monthStartMs,
+  periodPhrase,
+  previousPeriod,
+  resolvePeriod,
   msOf,
   num,
   numOrNull,
@@ -247,5 +255,164 @@ describe("«cuándo» y «hace cuánto»", () => {
     expect(ageEs(now - 47 * 3_600_000, now)).toBe("hace 47 h");
     expect(ageEs(now - 72 * 3_600_000, now)).toBe("hace 3 días");
     expect(ageEs(now + 3_600_000, now)).toBe("hace menos de una hora");
+  });
+});
+
+describe("periodos de informe", () => {
+  const at = (local: string) => Date.parse(`${local}-05:00`);
+  const now = at("2026-10-14T10:00:00");
+
+  it("el inicio de un mes es la medianoche de Colombia, no la de UTC", () => {
+    expect(monthStartMs("2026-10")).toBe(Date.parse("2026-10-01T00:00:00-05:00"));
+    expect(monthStartMs("2026-10")).toBe(Date.parse("2026-10-01T05:00:00Z"));
+    expect(monthStartMs("2026-01")).toBe(Date.parse("2026-01-01T05:00:00Z"));
+  });
+
+  it("30 y 90 días son ventanas móviles que terminan ahora", () => {
+    expect(resolvePeriod("30d", now)).toEqual({
+      key: "30d",
+      from: now - 30 * DAY,
+      to: now,
+      label: "Últimos 30 días",
+    });
+    const p = resolvePeriod("90d", now);
+    expect(p.to - p.from).toBe(90 * DAY);
+    expect(p.label).toBe("Últimos 90 días");
+  });
+
+  it("«mes pasado» es el mes calendario anterior completo, en hora de Colombia", () => {
+    const p = resolvePeriod("last_month", now);
+    expect(p.from).toBe(Date.parse("2026-09-01T00:00:00-05:00"));
+    expect(p.to).toBe(Date.parse("2026-10-01T00:00:00-05:00"));
+    expect(p.label).toBe("Mes pasado (sep 2026)");
+    expect(p.to - p.from).toBe(30 * DAY);
+  });
+
+  it("«mes pasado» cruza el cambio de año y respeta febrero", () => {
+    const jan = resolvePeriod("last_month", at("2026-01-15T10:00:00"));
+    expect(jan.from).toBe(Date.parse("2025-12-01T00:00:00-05:00"));
+    expect(jan.to).toBe(Date.parse("2026-01-01T00:00:00-05:00"));
+    expect(jan.label).toBe("Mes pasado (dic 2025)");
+    const mar = resolvePeriod("last_month", at("2026-03-02T10:00:00"));
+    expect(mar.to - mar.from).toBe(28 * DAY);
+  });
+
+  it("a las 23:30 del último día del mes el «mes pasado» todavía es el anterior, no el recién terminado", () => {
+    const p = resolvePeriod("last_month", at("2026-10-31T23:30:00"));
+    expect(p.label).toBe("Mes pasado (sep 2026)");
+    // 00:30 del 1 de noviembre en Colombia ya es otro mes
+    expect(resolvePeriod("last_month", at("2026-11-01T00:30:00")).label).toBe(
+      "Mes pasado (oct 2026)",
+    );
+  });
+
+  it("el periodo anterior tiene la misma duración y termina donde empieza el actual", () => {
+    for (const key of ["30d", "90d"] as const) {
+      const p = resolvePeriod(key, now);
+      const prev = previousPeriod(p);
+      expect(prev.to).toBe(p.from);
+      expect(prev.to - prev.from).toBe(p.to - p.from);
+    }
+    expect(previousPeriod(resolvePeriod("30d", now)).label).toBe("Los 30 días anteriores");
+  });
+
+  it("el mes anterior al «mes pasado» es el mes calendario previo, con su propia duración", () => {
+    const prev = previousPeriod(resolvePeriod("last_month", now));
+    expect(prev.from).toBe(Date.parse("2026-08-01T00:00:00-05:00"));
+    expect(prev.to).toBe(Date.parse("2026-09-01T00:00:00-05:00"));
+    expect(prev.to - prev.from).toBe(31 * DAY);
+    expect(prev.label).toBe("Mes anterior (ago 2026)");
+    const jan = previousPeriod(resolvePeriod("last_month", at("2026-02-10T10:00:00")));
+    expect(jan.from).toBe(Date.parse("2025-12-01T00:00:00-05:00"));
+  });
+
+  it("la duración del periodo anterior se redondea a días enteros", () => {
+    const custom = { key: "30d" as const, from: now - 7.5 * DAY, to: now, label: "x" };
+    expect(previousPeriod(custom).label).toBe("Los 8 días anteriores");
+  });
+
+  it("el inicio cuenta, el fin no, y un instante dañado nunca cuenta", () => {
+    const p = resolvePeriod("last_month", now);
+    expect(inPeriod(p.from, p)).toBe(true);
+    expect(inPeriod(p.from - 1, p)).toBe(false);
+    expect(inPeriod(p.to - 1, p)).toBe(true);
+    expect(inPeriod(p.to, p)).toBe(false);
+    expect(inPeriod(Number.NaN, p)).toBe(false);
+    expect(inPeriod(Number.POSITIVE_INFINITY, p)).toBe(false);
+  });
+});
+
+describe("unir frases", () => {
+  it("una sola, dos y varias, con «y» antes de la última", () => {
+    expect(joinEs([])).toBe("");
+    expect(joinEs(["a"])).toBe("a");
+    expect(joinEs(["a", "b"])).toBe("a y b");
+    expect(joinEs(["a", "b", "c"])).toBe("a, b y c");
+    expect(joinEs(["a", "b", "c", "d"])).toBe("a, b, c y d");
+  });
+});
+
+describe("el periodo dentro de una frase", () => {
+  const now = Date.parse("2026-10-14T15:00:00Z");
+  it("las ventanas móviles son «los últimos…» y el mes pasado, «el mes pasado»", () => {
+    expect(periodPhrase(resolvePeriod("30d", now))).toBe("los últimos 30 días");
+    expect(periodPhrase(resolvePeriod("90d", now))).toBe("los últimos 90 días");
+    expect(periodPhrase(resolvePeriod("last_month", now))).toBe("el mes pasado (sep 2026)");
+  });
+});
+
+describe("horas en español", () => {
+  it("usa coma decimal, como se escribe en Colombia", () => {
+    expect(hoursEs(70.7)).toBe("70,7");
+    expect(hoursEs(5.5)).toBe("5,5");
+    expect(hoursEs(0.25)).toBe("0,25");
+  });
+
+  it("no agrega decimales que sobran", () => {
+    expect(hoursEs(72)).toBe("72");
+    expect(hoursEs(0)).toBe("0");
+    expect(hoursEs(6.0)).toBe("6");
+  });
+
+  it("redondea a dos decimales y limpia el ruido de la coma flotante", () => {
+    expect(hoursEs(5.583333333)).toBe("5,58");
+    expect(hoursEs(0.1 + 0.2)).toBe("0,3");
+    expect(hoursEs(2.005)).toBe("2,01");
+    expect(hoursEs(0.004)).toBe("0");
+  });
+
+  it("deja los miles sin separador (es una cantidad de horas, no de pesos)", () => {
+    expect(hoursEs(1234.5)).toBe("1234,5");
+  });
+});
+
+describe("grupos de una lista", () => {
+  it("parte en grupos del tamaño pedido y deja el resto en el último", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([1, 2, 3, 4], 2)).toEqual([
+      [1, 2],
+      [3, 4],
+    ]);
+    expect(chunk([1, 2, 3], 10)).toEqual([[1, 2, 3]]);
+  });
+
+  it("una lista vacía no da grupos", () => {
+    expect(chunk([], 3)).toEqual([]);
+  });
+
+  it("un tamaño absurdo no cuelga ni pierde elementos", () => {
+    expect(chunk([1, 2, 3], 0)).toEqual([[1], [2], [3]]);
+    expect(chunk([1, 2, 3], -4)).toEqual([[1], [2], [3]]);
+    expect(chunk([1, 2, 3], 1.9)).toEqual([[1], [2], [3]]);
+    expect(chunk([1, 2, 3], Number.NaN).flat()).toEqual([1, 2, 3]);
+  });
+
+  it("no cambia el orden ni modifica la lista original", () => {
+    const xs = Array.from({ length: 250 }, (_, i) => i);
+    const copy = [...xs];
+    const groups = chunk(xs, 100);
+    expect(groups.map((g) => g.length)).toEqual([100, 100, 50]);
+    expect(groups.flat()).toEqual(xs);
+    expect(xs).toEqual(copy);
   });
 });

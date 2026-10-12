@@ -74,13 +74,15 @@ const GREETING: Record<DayPart, string> = {
   evening: "Buenas noches",
 };
 
-/** «Buenos días, Ana»: solo el primer nombre; sin nombre (o con un correo en su lugar) queda el saludo solo. */
-export function warmGreeting(now: Date | number, name?: string | null): string {
+/**
+ * «Buenos días, Ana»: solo el primer nombre; sin nombre (o con un correo en su lugar) queda el saludo solo. Una
+ * institución se saluda por su nombre completo (`whole`): «Buenos días, Clínica del Norte», no «Buenos días, Clínica».
+ */
+export function warmGreeting(now: Date | number, name?: string | null, whole = false): string {
   const base = GREETING[dayPart(now)];
-  const raw = (name ?? "").trim();
+  const raw = (name ?? "").trim().replace(/\s+/g, " ");
   if (!raw || raw.includes("@")) return base;
-  const first = raw.split(/\s+/)[0];
-  return first ? `${base}, ${first}` : base;
+  return `${base}, ${whole ? raw : raw.split(" ")[0]}`;
 }
 
 /**

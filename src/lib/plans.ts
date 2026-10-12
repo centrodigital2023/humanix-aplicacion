@@ -38,7 +38,12 @@ export type PlanFeature =
   | "pro_income_pulse"
   | "pro_rest_guard"
   | "pro_week_planner"
-  | "pro_reputation_lab";
+  | "pro_reputation_lab"
+  | "inst_cost_intel"
+  | "inst_quality_compliance"
+  | "inst_team_reliability"
+  | "inst_coverage_forecast"
+  | "inst_executive_report";
 
 export type PlanDef = {
   key: PlanKey;
@@ -150,6 +155,11 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "cv_rethus_consistency",
       "priority_support",
       "branch_billing",
+      "inst_cost_intel",
+      "inst_quality_compliance",
+      "inst_team_reliability",
+      "inst_coverage_forecast",
+      "inst_executive_report",
     ],
     featuresLabel: [
       "Bolsa de créditos IA mensual",
@@ -158,6 +168,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "Detección de inconsistencias en CVs y RETHUS",
       "Soporte prioritario y onboarding asistido",
       "Cobro por sucursales: COP 299.000 base + COP 50.000 por sede adicional",
+      "Centro de gestión inteligente: costos y proyección, calidad y cumplimiento (puntualidad, parte del turno, contratos y RETHUS), equipo confiable, pronóstico de cobertura a 14 días e informe para la gerencia",
     ],
   },
 };
@@ -208,6 +219,11 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, PlanKey> = {
   cv_rethus_consistency: "institution_monthly",
   priority_support: "institution_monthly",
   branch_billing: "institution_monthly",
+  inst_cost_intel: "institution_monthly",
+  inst_quality_compliance: "institution_monthly",
+  inst_team_reliability: "institution_monthly",
+  inst_coverage_forecast: "institution_monthly",
+  inst_executive_report: "institution_monthly",
 };
 
 export function tierOf(plan: PlanKey | string | null | undefined): number {

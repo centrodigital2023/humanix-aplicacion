@@ -221,7 +221,7 @@ export function DayHero({
             {aside}
           </div>
           <h2 id={titleId} className="mt-1 font-display text-2xl font-bold leading-tight">
-            {warmGreeting(now, name)}
+            {warmGreeting(now, name, role === "institution")}
           </h2>
           <p className={cn("mt-1 text-base font-medium", t.headline)}>{headline}</p>
           <p className="mt-0.5 text-sm text-muted-foreground">{warmLine(role, tone, now)}</p>

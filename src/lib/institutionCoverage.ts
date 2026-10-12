@@ -4,12 +4,93 @@
 // sugerida cita el dato que la motiva. El servidor decide los permisos; esto solo clasifica y prioriza lo
 // que la institución ya puede leer (sus ofertas, turnos, postulaciones y contratos).
 
-import { offerBand, MODALITY_BOUNDS, type OfferModality } from "./institutionNegotiation";
+import {
+  offerBand,
+  isOfferModality,
+  MODALITY_BOUNDS,
+  type OfferModality,
+} from "./institutionNegotiation";
 import { roundToStep } from "./negotiation";
 import { formatCOP } from "./pricing";
 
 const HOUR = 3_600_000;
 const ms = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : Number.NaN);
+
+/** Oferta propia con su agenda de turnos, tal como la lee el centro de cobertura (RLS: solo las de la institución). */
+export interface CoverageRawOffer {
+  id: string;
+  title: string;
+  city: string;
+  modality: string;
+  amount: number;
+  status: string;
+  is_urgent: boolean | null;
+  specialty_required: string | null;
+  service_area: string | null;
+  job_offer_shifts: Array<{
+    id: string;
+    starts_at: string;
+    ends_at: string;
+    positions: number;
+    filled: number;
+    status: string;
+  }> | null;
+}
+
+/** Lo mínimo de cada postulación para saber quién aspira a cada turno. */
+export interface CoverageApplicantLike {
+  offerId: string;
+  status: string;
+  awaiting: string;
+  createdAt: string;
+  shifts: Array<{ id: string }>;
+}
+
+/**
+ * Un renglón por turno de las ofertas con esos estados (por defecto, las abiertas), con las postulaciones pendientes que
+ * lo cubren y cuáles esperan respuesta de la institución. Una postulación sin turnos indicados cubre todos los de su oferta.
+ * Los turnos cancelados no se cuentan.
+ */
+export function buildCoverageInputs(
+  offers: CoverageRawOffer[],
+  applicants: CoverageApplicantLike[],
+  statuses: readonly string[] = ["open"],
+): CoverageShiftInput[] {
+  const out: CoverageShiftInput[] = [];
+  for (const offer of offers) {
+    if (!statuses.includes(offer.status)) continue;
+    const modality = isOfferModality(offer.modality) ? offer.modality : "shift";
+    for (const shift of offer.job_offer_shifts ?? []) {
+      if (shift.status === "cancelled") continue;
+      const forShift = applicants.filter(
+        (a) =>
+          a.offerId === offer.id &&
+          a.status === "pending" &&
+          (a.shifts.length === 0 || a.shifts.some((s) => s.id === shift.id)),
+      );
+      const waiting = forShift.filter((a) => a.awaiting === "institution");
+      out.push({
+        offerId: offer.id,
+        title: offer.title,
+        serviceArea: offer.service_area,
+        specialty: offer.specialty_required,
+        city: offer.city,
+        modality,
+        amount: offer.amount,
+        isUrgent: Boolean(offer.is_urgent),
+        shiftId: shift.id,
+        startsAt: shift.starts_at,
+        endsAt: shift.ends_at,
+        positions: shift.positions,
+        filled: shift.filled,
+        applicants: forShift.length,
+        awaitingResponse: waiting.length,
+        oldestWaitingAt: waiting.length ? waiting.map((a) => a.createdAt).sort()[0] : null,
+      });
+    }
+  }
+  return out;
+}
 
 export type CoverageRisk = "covered" | "critical" | "high" | "watch" | "ok";
 

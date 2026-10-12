@@ -19,6 +19,7 @@ import {
 } from "@/lib/institutionApplications";
 import { parseContractTerms } from "@/lib/contractTemplate";
 import { parseReadiness } from "@/lib/contractIdentity";
+import type { CoverageRawOffer } from "@/lib/institutionCoverage";
 
 // Funciones y tablas nuevas aún no están en los tipos generados (se regeneran tras aplicar la migración).
 const sb = supabase as unknown as SupabaseClient;
@@ -236,25 +237,7 @@ export function useInstitutionInbox(userId: string | null | undefined) {
   return query;
 }
 
-export interface CoverageRawOffer {
-  id: string;
-  title: string;
-  city: string;
-  modality: string;
-  amount: number;
-  status: string;
-  is_urgent: boolean | null;
-  specialty_required: string | null;
-  service_area: string | null;
-  job_offer_shifts: Array<{
-    id: string;
-    starts_at: string;
-    ends_at: string;
-    positions: number;
-    filled: number;
-    status: string;
-  }> | null;
-}
+export type { CoverageRawOffer };
 
 /** Ofertas propias con su agenda (RLS: solo las de la institución). */
 export function useCoverageOffers(userId: string | null | undefined) {

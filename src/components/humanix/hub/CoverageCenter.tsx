@@ -41,10 +41,11 @@ import {
   useTeamCount,
 } from "@/hooks/use-institution-hub";
 import { classifyHubError, formatShiftRange, type ServerError } from "@/lib/opportunities";
-import { isOfferModality, validatePublishedAmount } from "@/lib/institutionNegotiation";
+import { validatePublishedAmount } from "@/lib/institutionNegotiation";
 import {
   RISK_LABEL,
   assessShifts,
+  buildCoverageInputs,
   coverageHeadline,
   firstRunSteps,
   nextBestActions,
@@ -52,7 +53,6 @@ import {
   type ActionSeverity,
   type CoverageAction,
   type CoverageRisk,
-  type CoverageShiftInput,
 } from "@/lib/institutionCoverage";
 import { formatCOP } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -146,42 +146,10 @@ export function CoverageCenter({ userId, profile, onPublish, onGoToInbox, onGoTo
   const now = useClock(60_000);
   const applicants = useMemo(() => inbox.data ?? [], [inbox.data]);
 
-  const inputs = useMemo<CoverageShiftInput[]>(() => {
-    const out: CoverageShiftInput[] = [];
-    for (const offer of offers.data ?? []) {
-      if (offer.status !== "open") continue;
-      const modality = isOfferModality(offer.modality) ? offer.modality : "shift";
-      for (const shift of offer.job_offer_shifts ?? []) {
-        if (shift.status === "cancelled") continue;
-        const forShift = applicants.filter(
-          (a) =>
-            a.offerId === offer.id &&
-            a.status === "pending" &&
-            (a.shifts.length === 0 || a.shifts.some((s) => s.id === shift.id)),
-        );
-        const waiting = forShift.filter((a) => a.awaiting === "institution");
-        out.push({
-          offerId: offer.id,
-          title: offer.title,
-          serviceArea: offer.service_area,
-          specialty: offer.specialty_required,
-          city: offer.city,
-          modality,
-          amount: offer.amount,
-          isUrgent: Boolean(offer.is_urgent),
-          shiftId: shift.id,
-          startsAt: shift.starts_at,
-          endsAt: shift.ends_at,
-          positions: shift.positions,
-          filled: shift.filled,
-          applicants: forShift.length,
-          awaitingResponse: waiting.length,
-          oldestWaitingAt: waiting.length ? waiting.map((a) => a.createdAt).sort()[0] : null,
-        });
-      }
-    }
-    return out;
-  }, [offers.data, applicants]);
+  const inputs = useMemo(
+    () => buildCoverageInputs(offers.data ?? [], applicants),
+    [offers.data, applicants],
+  );
 
   const shifts = useMemo(() => assessShifts(inputs, now), [inputs, now]);
   const summary = useMemo(() => summarizeCoverage(shifts), [shifts]);

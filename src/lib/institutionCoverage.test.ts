@@ -3,12 +3,15 @@ import {
   applicationSla,
   assessShift,
   assessShifts,
+  buildCoverageInputs,
   coverageHeadline,
   firstRunSteps,
   medianHours,
   nextBestActions,
   suggestRaise,
   summarizeCoverage,
+  type CoverageApplicantLike,
+  type CoverageRawOffer,
   type CoverageShiftInput,
 } from "./institutionCoverage";
 
@@ -322,5 +325,130 @@ describe("firstRunSteps", () => {
     });
     expect(r.doneCount).toBe(5);
     expect(r.next).toBeNull();
+  });
+});
+
+describe("buildCoverageInputs", () => {
+  const offer = (over: Partial<CoverageRawOffer> = {}): CoverageRawOffer => ({
+    id: "o1",
+    title: "Auxiliar UCI noches",
+    city: "Bogotá",
+    modality: "shift",
+    amount: 180_000,
+    status: "open",
+    is_urgent: null,
+    specialty_required: "Auxiliar de enfermería",
+    service_area: "UCI adultos",
+    job_offer_shifts: [
+      { id: "s1", starts_at: at(30), ends_at: at(42), positions: 2, filled: 1, status: "open" },
+      { id: "s2", starts_at: at(54), ends_at: at(66), positions: 1, filled: 0, status: "open" },
+    ],
+    ...over,
+  });
+  const applicant = (over: Partial<CoverageApplicantLike> = {}): CoverageApplicantLike => ({
+    offerId: "o1",
+    status: "pending",
+    awaiting: "institution",
+    createdAt: at(-5),
+    shifts: [{ id: "s1" }],
+    ...over,
+  });
+
+  it("un renglón por turno, con los datos de la oferta", () => {
+    const rows = buildCoverageInputs([offer()], []);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual({
+      offerId: "o1",
+      title: "Auxiliar UCI noches",
+      serviceArea: "UCI adultos",
+      specialty: "Auxiliar de enfermería",
+      city: "Bogotá",
+      modality: "shift",
+      amount: 180_000,
+      isUrgent: false,
+      shiftId: "s1",
+      startsAt: at(30),
+      endsAt: at(42),
+      positions: 2,
+      filled: 1,
+      applicants: 0,
+      awaitingResponse: 0,
+      oldestWaitingAt: null,
+    });
+  });
+
+  it("por defecto solo las ofertas abiertas; con estados explícitos, también las cubiertas", () => {
+    const filled = offer({ id: "o2", status: "filled" });
+    const closed = offer({ id: "o3", status: "closed" });
+    expect(buildCoverageInputs([offer(), filled, closed], []).map((r) => r.offerId)).toEqual([
+      "o1",
+      "o1",
+    ]);
+    const both = buildCoverageInputs([offer(), filled, closed], [], ["open", "filled"]);
+    expect([...new Set(both.map((r) => r.offerId))]).toEqual(["o1", "o2"]);
+  });
+
+  it("ignora los turnos cancelados y las ofertas sin agenda", () => {
+    const o = offer({
+      job_offer_shifts: [
+        {
+          id: "s1",
+          starts_at: at(30),
+          ends_at: at(42),
+          positions: 1,
+          filled: 0,
+          status: "cancelled",
+        },
+      ],
+    });
+    expect(buildCoverageInputs([o, offer({ job_offer_shifts: null })], [])).toEqual([]);
+  });
+
+  it("una modalidad válida se conserva (hora, mes o paquete)", () => {
+    for (const modality of ["hour", "month", "package"] as const) {
+      expect(buildCoverageInputs([offer({ modality })], [])[0].modality).toBe(modality);
+    }
+  });
+
+  it("una modalidad desconocida se trata como turno y la urgencia nula como no urgente", () => {
+    const rows = buildCoverageInputs([offer({ modality: "otra", is_urgent: true })], []);
+    expect(rows[0].modality).toBe("shift");
+    expect(rows[0].isUrgent).toBe(true);
+  });
+
+  it("cuenta las postulaciones pendientes de cada turno y las que esperan a la institución", () => {
+    const rows = buildCoverageInputs(
+      [offer()],
+      [
+        applicant({ createdAt: at(-8) }),
+        applicant({ awaiting: "professional", createdAt: at(-20) }),
+        applicant({ status: "accepted" }),
+        applicant({ shifts: [{ id: "s2" }] }),
+        applicant({ offerId: "otra" }),
+      ],
+    );
+    const s1 = rows.find((r) => r.shiftId === "s1")!;
+    expect(s1.applicants).toBe(2);
+    expect(s1.awaitingResponse).toBe(1);
+    expect(s1.oldestWaitingAt).toBe(at(-8));
+    const s2 = rows.find((r) => r.shiftId === "s2")!;
+    expect(s2.applicants).toBe(1);
+  });
+
+  it("una postulación sin turnos indicados cubre todos los de su oferta", () => {
+    const rows = buildCoverageInputs([offer()], [applicant({ shifts: [] })]);
+    expect(rows.map((r) => r.applicants)).toEqual([1, 1]);
+  });
+
+  it("la espera más antigua es la de la postulación más vieja que espera a la institución", () => {
+    const rows = buildCoverageInputs(
+      [offer()],
+      [
+        applicant({ createdAt: at(-3) }),
+        applicant({ createdAt: at(-30) }),
+        applicant({ createdAt: at(-10) }),
+      ],
+    );
+    expect(rows[0].oldestWaitingAt).toBe(at(-30));
   });
 });

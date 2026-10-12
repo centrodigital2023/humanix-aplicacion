@@ -195,6 +195,22 @@ describe("warmGreeting", () => {
     expect(warmGreeting(bog("2026-10-10T15:00:00"), "Ana")).toBe("Buenas tardes, Ana");
     expect(warmGreeting(bog("2026-10-10T21:00:00"), "Ana")).toBe("Buenas noches, Ana");
   });
+
+  it("una institución se saluda por su nombre completo, no por su primera palabra", () => {
+    expect(warmGreeting(morning, "Clínica del Norte", true)).toBe("Buenos días, Clínica del Norte");
+    expect(warmGreeting(morning, "  Hospital   San  José ", true)).toBe(
+      "Buenos días, Hospital San José",
+    );
+    // Sin la marca de institución sigue siendo el primer nombre.
+    expect(warmGreeting(morning, "Clínica del Norte")).toBe("Buenos días, Clínica");
+  });
+
+  it("el nombre completo también ignora un correo, un nombre vacío y un nombre ausente", () => {
+    expect(warmGreeting(morning, "contacto@clinica.com", true)).toBe("Buenos días");
+    expect(warmGreeting(morning, "   ", true)).toBe("Buenos días");
+    expect(warmGreeting(morning, null, true)).toBe("Buenos días");
+    expect(warmGreeting(morning, undefined, true)).toBe("Buenos días");
+  });
 });
 
 describe("warmLine", () => {

@@ -31,6 +31,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/humanix/Logo";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
 import { EnhancedBulkOffersModule } from "@/components/humanix/EnhancedBulkOffersModule";
@@ -60,7 +61,13 @@ import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard
 import { CareHistoryCard } from "@/components/humanix/care/CareHistoryCard";
 import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
-import { CareCompassCard } from "@/components/humanix/CareCompassCard";
+import { InstHero } from "@/components/humanix/institution/InstHero";
+import {
+  InstSmartCenter,
+  type InstSection,
+} from "@/components/humanix/institution/InstSmartCenter";
+import { scrollToId } from "@/components/humanix/premium/scroll";
+import type { InstBriefTarget } from "@/lib/instBrief";
 import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -237,7 +244,8 @@ function InstitutionDashboard() {
   const [instProfile, setInstProfile] = useState<InstitutionProfile | null>(null);
   const [updatingApp, setUpdatingApp] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
-  const inboxRef = useRef<HTMLDivElement>(null);
+  const [section, setSection] = useState<InstSection>("costos");
+  const navRef = useRef<HTMLDivElement>(null);
 
   // Abort guard — mutable ref shared across async callbacks
   const signal = useRef({ cancelled: false });
@@ -493,6 +501,48 @@ function InstitutionDashboard() {
     [applications],
   );
 
+  // En móvil la barra inferior se desplaza: la pestaña activa siempre queda a la vista.
+  useEffect(() => {
+    navRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [tab]);
+
+  // Cambia de pestaña y baja a la sección (la pestaña tiene que pintarse antes de poder bajar a ella).
+  const goToSection = (nextTab: Tab, anchor: string) => {
+    setTab(nextTab);
+    setTimeout(() => scrollToId(anchor), 0);
+  };
+  const openCenter = (next: InstSection) => {
+    setSection(next);
+    goToSection("operaciones", "centro-gestion");
+  };
+
+  // Los botones del resumen del día: secciones del panel, pestañas y el diálogo de publicar.
+  // «service» y «plans» son enlaces con ruta propia y no pasan por aquí.
+  const onBriefAction = (target: InstBriefTarget) => {
+    switch (target.kind) {
+      case "coverage":
+        return scrollToId("cobertura");
+      case "applications":
+        return scrollToId("postulaciones");
+      case "contracts":
+        return scrollToId("contratos");
+      case "ratings":
+        return scrollToId("calificar");
+      case "live":
+        return scrollToId("turnos-en-vivo");
+      case "publish":
+        return setPublishOpen(true);
+      case "profile":
+        return setTab("perfil");
+      case "quality":
+        return openCenter("calidad");
+      default:
+        return;
+    }
+  };
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -574,8 +624,9 @@ function InstitutionDashboard() {
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-medium hover:bg-amber-500/20 transition-colors"
             >
               <Bell className="h-3.5 w-3.5 animate-pulse" />
-              {pendingApps.length} postulación{pendingApps.length > 1 ? "es" : ""} nueva
-              {pendingApps.length > 1 ? "s" : ""}
+              {pendingApps.length > 1
+                ? `${pendingApps.length} postulaciones nuevas`
+                : "1 postulación nueva"}
             </button>
           )}
 
@@ -623,29 +674,48 @@ function InstitutionDashboard() {
         {/* ══ TAB: INICIO ══ */}
         {tab === "inicio" && (
           <div className="space-y-5">
-            <CoverageCenter
-              userId={user.id}
-              profile={
-                instProfile
-                  ? {
-                      institution_name: instProfile.institution_name,
-                      city: instProfile.city,
-                      verified: instProfile.verified,
-                      nit: instProfile.nit,
-                    }
-                  : null
-              }
-              onPublish={() => setPublishOpen(true)}
-              onGoToInbox={() =>
-                inboxRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-              }
-              onGoToTalent={() => setTab("talento")}
-            />
+            {/* Tu día: lo que hay que atender ahora, ordenado por urgencia (para todas las instituciones) */}
+            {instProfile ? (
+              <InstHero
+                userId={user.id}
+                name={instProfile.institution_name}
+                profile={{
+                  complete: Boolean(instProfile.nit && instProfile.city),
+                  verified: instProfile.verified,
+                }}
+                onNavigate={onBriefAction}
+              />
+            ) : (
+              <Skeleton
+                className="h-64 w-full rounded-3xl"
+                aria-busy="true"
+                aria-label="Revisando tu día"
+              />
+            )}
 
-            <CareCompassCard role="institution" userId={user.id} />
+            <div id="cobertura" className="scroll-mt-24">
+              <CoverageCenter
+                userId={user.id}
+                profile={
+                  instProfile
+                    ? {
+                        institution_name: instProfile.institution_name,
+                        city: instProfile.city,
+                        verified: instProfile.verified,
+                        nit: instProfile.nit,
+                      }
+                    : null
+                }
+                onPublish={() => setPublishOpen(true)}
+                onGoToInbox={() => scrollToId("postulaciones")}
+                onGoToTalent={() => setTab("talento")}
+              />
+            </div>
 
             {/* Turnos en vivo: estado, alertas, ánimo y últimos signos vitales de cada turno en curso */}
-            <ActiveServicesCard userId={user.id} title="Turnos en vivo" sides={["client"]} />
+            <div id="turnos-en-vivo" className="scroll-mt-24">
+              <ActiveServicesCard userId={user.id} title="Turnos en vivo" sides={["client"]} />
+            </div>
 
             {/* KPI row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -704,19 +774,23 @@ function InstitutionDashboard() {
             )}
 
             {/* Postulaciones: responder, negociar el valor y aceptar (reserva + contrato) */}
-            <div ref={inboxRef} className="scroll-mt-24">
+            <div id="postulaciones" className="scroll-mt-24">
               <ApplicantsInbox userId={user.id} compact onSeeAll={() => setTab("ofertas")} />
             </div>
 
             {/* Contratos inteligentes pendientes de firma o vigentes */}
-            <ContractsPanel userId={user.id} title="Contratos inteligentes" />
+            <div id="contratos" className="scroll-mt-24">
+              <ContractsPanel userId={user.id} title="Contratos inteligentes" />
+            </div>
 
             {/* Equipo de confianza (plan B automático) e historia de turnos exportable */}
             <TrustedTeamCard userId={user.id} role="institution" />
             <CareHistoryCard userId={user.id} kind="institution" />
 
             {/* Calificar a los profesionales de servicios ya cumplidos (estrellas y comentario) */}
-            <PendingRatingsCard userId={user.id} role="family" />
+            <div id="calificar" className="scroll-mt-24">
+              <PendingRatingsCard userId={user.id} role="family" />
+            </div>
 
             {/* Recent offers strip */}
             <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
@@ -785,9 +859,9 @@ function InstitutionDashboard() {
               />
               <QuickAction
                 icon={<BarChart3 className="h-5 w-5 text-biosensor" />}
-                label="Reportes"
-                sub="Métricas operativas"
-                onClick={() => setTab("operaciones")}
+                label="Gestión"
+                sub="Costos, calidad e informe"
+                onClick={() => openCenter("costos")}
               />
             </div>
           </div>
@@ -1007,6 +1081,15 @@ function InstitutionDashboard() {
         {/* ══ TAB: OPERACIONES ══ */}
         {tab === "operaciones" && (
           <div className="space-y-5">
+            {/* Centro de gestión: costos, calidad y cumplimiento, equipo, pronóstico e informe */}
+            <InstSmartCenter
+              userId={user.id}
+              institutionName={instName}
+              city={instProfile?.city ?? null}
+              section={section}
+              onSectionChange={setSection}
+              onOpenCoverage={() => goToSection("inicio", "cobertura")}
+            />
             <div className="rounded-2xl border border-border bg-card/95 p-4">
               <p className="text-sm font-semibold mb-4">Métricas operativas</p>
               <EnhancedInstitutionOperations userId={user.id} />
@@ -1133,13 +1216,14 @@ function InstitutionDashboard() {
 
       {/* ── Bottom nav (mobile/tablet) ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
-        <div className="grid grid-cols-7">
+        <div ref={navRef} className="flex overflow-x-auto">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
+              aria-current={tab === t.id ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 py-2 text-[9px] font-medium transition-colors relative",
+                "flex min-w-[4.5rem] flex-1 shrink-0 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors relative",
                 tab === t.id ? "text-fuchsia-neural" : "text-muted-foreground",
               )}
             >
