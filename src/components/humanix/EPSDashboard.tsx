@@ -1,638 +1,326 @@
 /**
- * EPSDashboard — Dashboard EPS/IPS con KPIs clínicos multi-tenant
- * Módulo 7: Dashboard EPS · Módulo 8: Multi-tenant
+ * EPSDashboard — resumen operativo del portal EPS/IPS con datos reales de la institución.
+ *
+ * Antes mostraba tendencias al azar, una «facturación» de servicios × $85.000 y cifras fijas (cumplimiento, reingresos,
+ * «+12 %»), y leía las alertas y los puntajes de toda la plataforma. Ahora todo sale de los servicios de la propia
+ * institución y de las alertas y puntajes de riesgo ligados a esos servicios (lógica en `lib/epsMetrics`). Lo que no se
+ * pudo cargar se dice; nunca se muestra como cero. Informa: no mueve dinero ni contacta a nadie.
  */
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import {
-  Users,
-  Activity,
-  DollarSign,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  ShieldCheck,
-  RefreshCw,
-  Loader2,
-  CalendarDays,
-  ClipboardList,
-  Stethoscope,
-  CheckCircle2,
-  Clock,
-  Building2,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Building2, RefreshCw } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatDistanceToNow, subDays, format } from "date-fns";
-import { es } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BarSeries } from "@/components/humanix/premium/BarSeries";
+import { StatTile } from "@/components/humanix/premium/StatTile";
+import { useEpsClinical } from "@/hooks/use-eps-intel";
+import { useInstBookings } from "@/hooks/use-inst-intel";
+import { useNow } from "@/hooks/use-now";
+import {
+  EPS_LEVELS,
+  EPS_LEVEL_LABEL,
+  MIN_SERVICES_FOR_DURATION,
+  buildEpsMetrics,
+  type EpsLevel,
+} from "@/lib/epsMetrics";
+import { buildCostReport } from "@/lib/instCost";
+import { hoursEs, plural, resolvePeriod, type PeriodKey } from "@/lib/intelShared";
+import { formatCOP } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-const sb = supabase as unknown as SupabaseClient;
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface EPSMetrics {
-  totalPatients: number;
-  activeServices: number;
-  completedServices: number;
-  totalRevenue: number;
-  avgRiskScore: number;
-  criticalPatients: number;
-  highRiskPatients: number;
-  mediumRiskPatients: number;
-  lowRiskPatients: number;
-  activeAlerts: number;
-  criticalAlerts: number;
-  compliance: number; // 0-100
-  readmissionRate: number; // %
-}
-
-interface TrendPoint {
-  date: string;
-  services: number;
-  revenue: number;
-  alerts: number;
-  riskScore: number;
-}
 
 interface Props {
-  tenantId?: string; // EPS/IPS tenant id; null = superadmin view (all)
+  /** La institución (su usuario): todo lo que se muestra es de sus servicios. */
+  institutionId: string;
   title?: string;
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
+const PERIODS: Array<{ key: PeriodKey; label: string }> = [
+  { key: "30d", label: "30 días" },
+  { key: "90d", label: "90 días" },
+  { key: "last_month", label: "Mes pasado" },
+];
 
-function KpiCard({
-  icon,
-  label,
-  value,
-  sub,
-  trend,
-  trendValue,
-  color = "default",
-  loading = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  sub?: string;
-  trend?: "up" | "down" | "neutral";
-  trendValue?: string;
-  color?: "default" | "green" | "amber" | "red" | "violet";
-  loading?: boolean;
-}) {
-  const colorMap: Record<string, string> = {
-    default: "bg-muted/30 text-foreground",
-    green: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    amber: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    red: "bg-red-500/10 text-red-700 dark:text-red-400",
-    violet: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
-  };
-  const iconBg: Record<string, string> = {
-    default: "bg-muted/50",
-    green: "bg-emerald-500/15",
-    amber: "bg-amber-500/15",
-    red: "bg-red-500/15",
-    violet: "bg-violet-500/15",
-  };
-
-  return (
-    <Card className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center", iconBg[color])}>
-          {icon}
-        </div>
-        {trend && trendValue && (
-          <div
-            className={cn(
-              "flex items-center gap-0.5 text-xs font-medium",
-              trend === "up"
-                ? "text-emerald-600"
-                : trend === "down"
-                  ? "text-red-600"
-                  : "text-muted-foreground",
-            )}
-          >
-            {trend === "up" ? (
-              <TrendingUp className="h-3 w-3" />
-            ) : trend === "down" ? (
-              <TrendingDown className="h-3 w-3" />
-            ) : null}
-            {trendValue}
-          </div>
-        )}
-      </div>
-      {loading ? (
-        <div className="space-y-1">
-          <div className="h-6 w-20 bg-muted/50 rounded animate-pulse" />
-          <div className="h-3 w-14 bg-muted/30 rounded animate-pulse" />
-        </div>
-      ) : (
-        <div>
-          <p className="text-2xl font-bold font-display tabular-nums leading-none">{value}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-          {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ─── Risk distribution donut ──────────────────────────────────────────────────
-
-const RISK_COLORS: Record<string, string> = {
-  Crítico: "#ef4444",
-  Alto: "#f97316",
-  Moderado: "#f59e0b",
-  Bajo: "#10b981",
+const LEVEL_BAR: Record<EpsLevel, string> = {
+  critical: "bg-sos",
+  high: "bg-warn",
+  medium: "bg-warn/50",
+  low: "bg-ok",
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+/** Cómo se lee el promedio de riesgo (los mismos cortes de siempre del portal). */
+function riskReading(avg: number): { text: string; tone: "ok" | "warn" | "sos" } {
+  if (avg < 25) return { text: "población estable", tone: "ok" };
+  if (avg < 50) return { text: "monitoreo moderado", tone: "warn" };
+  return { text: "alto seguimiento", tone: "sos" };
+}
 
-export function EPSDashboard({ tenantId, title = "Dashboard EPS" }: Props) {
-  const [metrics, setMetrics] = useState<EPSMetrics | null>(null);
-  const [trends, setTrends] = useState<TrendPoint[]>([]);
-  const [loading, setLoading] = useState(true);
+export function EPSDashboard({ institutionId, title = "Resumen de tu institución" }: Props) {
+  const now = useNow();
+  const [periodKey, setPeriodKey] = useState<PeriodKey>("30d");
   const [refreshing, setRefreshing] = useState(false);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [period, setPeriod] = useState<"7d" | "30d" | "90d">("30d");
+  const period = useMemo(() => resolvePeriod(periodKey, now), [periodKey, now]);
 
-  const loadMetrics = useCallback(async () => {
-    try {
-      const since = subDays(new Date(), period === "7d" ? 7 : period === "30d" ? 30 : 90);
-      const sinceIso = since.toISOString();
+  const bookingsQ = useInstBookings(institutionId);
+  const bookings = useMemo(() => bookingsQ.data ?? [], [bookingsQ.data]);
+  const clinical = useEpsClinical(institutionId, bookingsQ.data, now);
 
-      // Base query builder
-      const query = (table: string) => {
-        const q = sb.from(table).select("*", { count: "exact", head: true });
-        return tenantId ? q.eq("tenant_id", tenantId) : q;
-      };
-
-      // Parallel data fetch
-      const [riskRes, alertsRes, bookingsRes, completedRes] = await Promise.all([
-        sb
-          .from("patient_risk_scores")
-          .select("patient_id, score, level")
-          .order("calculated_at", { ascending: false })
-          .limit(1000),
-        sb
-          .from("clinical_alerts")
-          .select("severity, status")
-          .gte("created_at", sinceIso)
-          .limit(2000),
-        sb
-          .from("service_checkins")
-          .select("status, checkin_at, duration_minutes")
-          .gte("created_at", sinceIso)
-          .limit(2000),
-        sb
-          .from("service_checkins")
-          .select("duration_minutes")
-          .eq("status", "completed")
-          .gte("created_at", sinceIso)
-          .limit(2000),
-      ]);
-
-      // Compute metrics from data
-      const riskRows = (riskRes.data ?? []) as Array<{
-        patient_id: string;
-        score: number;
-        level: string;
-      }>;
-      const alertRows = (alertsRes.data ?? []) as Array<{ severity: string; status: string }>;
-      const checkinRows = (bookingsRes.data ?? []) as Array<{
-        status: string;
-        checkin_at: string | null;
-        duration_minutes: number | null;
-      }>;
-
-      // Deduplicate patients (latest score per patient)
-      const patientMap = new Map<string, { score: number; level: string }>();
-      for (const r of riskRows) {
-        if (!patientMap.has(r.patient_id)) {
-          patientMap.set(r.patient_id, { score: r.score, level: r.level });
-        }
-      }
-      const patients = Array.from(patientMap.values());
-
-      const avgScore =
-        patients.length > 0 ? patients.reduce((s, p) => s + p.score, 0) / patients.length : 0;
-
-      const countByLevel = (level: string) => patients.filter((p) => p.level === level).length;
-      const activeAlerts = alertRows.filter((a) => a.status === "active").length;
-      const criticalAlerts = alertRows.filter(
-        (a) => a.severity === "critical" && a.status === "active",
-      ).length;
-      const activeServices = checkinRows.filter((c) => c.status === "checked_in").length;
-      const completedServices = checkinRows.filter((c) => c.status === "completed").length;
-
-      // Compliance: % of services with evidence (simplified)
-      const compliance =
-        completedServices > 0
-          ? Math.min(
-              100,
-              Math.round((completedServices / (completedServices + activeServices + 1)) * 100) + 20,
-            )
-          : 88;
-
-      setMetrics({
-        totalPatients: patients.length,
-        activeServices,
-        completedServices,
-        totalRevenue: completedServices * 85000, // average COP 85,000/service
-        avgRiskScore: Math.round(avgScore),
-        criticalPatients: countByLevel("critical"),
-        highRiskPatients: countByLevel("high"),
-        mediumRiskPatients: countByLevel("medium"),
-        lowRiskPatients: countByLevel("low"),
-        activeAlerts,
-        criticalAlerts,
-        compliance,
-        readmissionRate: 4.2, // would be calculated from booking data
-      });
-
-      // Generate trend data for chart
-      const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
-      const trendData: TrendPoint[] = Array.from({ length: Math.min(days, 30) }).map((_, i) => {
-        const d = subDays(new Date(), days - 1 - Math.floor(i * (days / 30)));
-        return {
-          date: format(d, "d MMM", { locale: es }),
-          services: Math.floor(Math.random() * 15) + 5,
-          revenue: Math.floor(Math.random() * 800000) + 200000,
-          alerts: Math.floor(Math.random() * 8),
-          riskScore: Math.floor(Math.random() * 20) + 35,
-        };
-      });
-      setTrends(trendData);
-      setLastSync(new Date());
-    } catch (err) {
-      console.warn("[EPSDashboard] loadMetrics:", err);
-      // Seed demo data when tables are empty
-      setMetrics({
-        totalPatients: 0,
-        activeServices: 0,
-        completedServices: 0,
-        totalRevenue: 0,
-        avgRiskScore: 0,
-        criticalPatients: 0,
-        highRiskPatients: 0,
-        mediumRiskPatients: 0,
-        lowRiskPatients: 0,
-        activeAlerts: 0,
-        criticalAlerts: 0,
-        compliance: 0,
-        readmissionRate: 0,
-      });
-    }
-  }, [tenantId, period]);
-
-  useEffect(() => {
-    setLoading(true);
-    loadMetrics().finally(() => setLoading(false));
-  }, [loadMetrics]);
+  const metrics = useMemo(
+    () =>
+      buildEpsMetrics({ bookings, alerts: clinical.alerts, risks: clinical.risks, period, now }),
+    [bookings, clinical.alerts, clinical.risks, period, now],
+  );
+  const cost = useMemo(
+    () => buildCostReport({ bookings, offers: {}, market: null, period, now }),
+    [bookings, period, now],
+  );
 
   const refresh = async () => {
     setRefreshing(true);
-    await loadMetrics();
-    setRefreshing(false);
+    try {
+      await Promise.all([bookingsQ.refetch(), clinical.refresh()]);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  const riskPieData = metrics
-    ? [
-        { name: "Crítico", value: metrics.criticalPatients },
-        { name: "Alto", value: metrics.highRiskPatients },
-        { name: "Moderado", value: metrics.mediumRiskPatients },
-        { name: "Bajo", value: metrics.lowRiskPatients },
-      ].filter((d) => d.value > 0)
-    : [];
+  const updatedAt = Math.max(bookingsQ.dataUpdatedAt, clinical.updatedAt);
+  const { alerts, risk } = metrics;
+  const perBucket = metrics.bucketDays === 7 ? "semana" : "día";
+  const reading = risk && risk.avg !== null ? riskReading(risk.avg) : null;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
-            <Building2 className="h-4 w-4 text-violet-600" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-trust/10">
+            <Building2 className="h-4 w-4 text-trust" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="font-display font-bold text-lg leading-tight">{title}</h2>
-            {lastSync && (
+            <h2 className="font-display text-lg font-bold leading-tight">{title}</h2>
+            {updatedAt > 0 && (
               <p className="text-[10px] text-muted-foreground">
-                Actualizado {formatDistanceToNow(lastSync, { locale: es, addSuffix: true })}
+                Actualizado {formatDistanceToNow(updatedAt, { locale: es, addSuffix: true })}
               </p>
             )}
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          {/* Period selector */}
-          <div className="flex gap-1 p-0.5 bg-muted/50 rounded-lg">
-            {(["7d", "30d", "90d"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={cn(
-                  "px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors",
-                  period === p
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Periodo del resumen" className="flex gap-1">
+            {PERIODS.map((p) => (
+              <Button
+                key={p.key}
+                type="button"
+                size="sm"
+                variant={p.key === periodKey ? "default" : "outline"}
+                aria-pressed={p.key === periodKey}
+                className="h-7 px-2.5 text-xs"
+                onClick={() => setPeriodKey(p.key)}
               >
-                {p}
-              </button>
+                {p.label}
+              </Button>
             ))}
           </div>
           <Button
+            type="button"
             variant="outline"
             size="sm"
-            onClick={refresh}
+            onClick={() => void refresh()}
             disabled={refreshing}
-            className="h-7 text-xs gap-1"
+            className="h-7 gap-1 text-xs"
           >
-            <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} aria-hidden="true" />
             Actualizar
           </Button>
         </div>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard
-          icon={<Users className="h-4 w-4 text-violet-600" />}
-          label="Pacientes activos"
-          value={metrics?.totalPatients ?? 0}
-          sub={`${metrics?.criticalPatients ?? 0} críticos`}
-          trend={metrics?.criticalPatients && metrics.criticalPatients > 0 ? "down" : "neutral"}
-          trendValue={
-            metrics?.criticalPatients ? `${metrics.criticalPatients} críticos` : undefined
-          }
-          color="violet"
-          loading={loading}
-        />
-        <KpiCard
-          icon={<Stethoscope className="h-4 w-4 text-emerald-600" />}
-          label="Servicios activos"
-          value={metrics?.activeServices ?? 0}
-          sub={`${metrics?.completedServices ?? 0} completados`}
-          trend="up"
-          trendValue={`${metrics?.completedServices ?? 0} completados`}
-          color="green"
-          loading={loading}
-        />
-        <KpiCard
-          icon={<DollarSign className="h-4 w-4 text-amber-600" />}
-          label="Facturación (COP)"
-          value={metrics ? `$${(metrics.totalRevenue / 1_000_000).toFixed(1)}M` : "$0"}
-          sub={`${period} · ${metrics?.completedServices ?? 0} servicios`}
-          trend="up"
-          trendValue="+12%"
-          color="amber"
-          loading={loading}
-        />
-        <KpiCard
-          icon={<AlertTriangle className="h-4 w-4 text-red-600" />}
-          label="Alertas activas"
-          value={metrics?.activeAlerts ?? 0}
-          sub={`${metrics?.criticalAlerts ?? 0} críticas`}
-          trend={metrics?.criticalAlerts && metrics.criticalAlerts > 0 ? "down" : "neutral"}
-          trendValue={metrics?.criticalAlerts ? `${metrics.criticalAlerts} críticas` : undefined}
-          color={metrics?.criticalAlerts ? "red" : "default"}
-          loading={loading}
-        />
-      </div>
-
-      {/* Second KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard
-          icon={<Activity className="h-4 w-4 text-rose-600" />}
-          label="Riesgo clínico promedio"
-          value={metrics ? `${metrics.avgRiskScore}/100` : "–"}
-          sub={
-            metrics
-              ? metrics.avgRiskScore < 25
-                ? "Población estable"
-                : metrics.avgRiskScore < 50
-                  ? "Monitoreo moderado"
-                  : "Alto seguimiento"
-              : "–"
-          }
-          color={
-            !metrics
-              ? "default"
-              : metrics.avgRiskScore < 25
-                ? "green"
-                : metrics.avgRiskScore < 50
-                  ? "amber"
-                  : "red"
-          }
-          loading={loading}
-        />
-        <KpiCard
-          icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-          label="Cumplimiento"
-          value={metrics ? `${metrics.compliance}%` : "–"}
-          sub="Servicios documentados"
-          trend="up"
-          trendValue="+3%"
-          color="green"
-          loading={loading}
-        />
-        <KpiCard
-          icon={<ClipboardList className="h-4 w-4 text-sky-600" />}
-          label="Tasa de reingreso"
-          value={metrics ? `${metrics.readmissionRate}%` : "–"}
-          sub="Últimos 30 días"
-          trend="down"
-          trendValue="-1.2%"
-          color={metrics && metrics.readmissionRate < 5 ? "green" : "amber"}
-          loading={loading}
-        />
-        <KpiCard
-          icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-          label="Tiempo promedio"
-          value="3.2 h"
-          sub="Por visita domiciliaria"
-          trend="neutral"
-          color="default"
-          loading={loading}
-        />
-      </div>
-
-      {/* Charts row */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        {/* Service trend */}
-        <Card className="lg:col-span-2 p-4 space-y-3">
-          <p className="text-sm font-semibold">Tendencia de servicios y alertas</p>
-          {loading ? (
-            <div className="h-48 bg-muted/30 rounded-xl animate-pulse" />
-          ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={trends}>
-                <defs>
-                  <linearGradient id="gServices" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gAlerts" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                  interval="preserveStartEnd"
-                />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: 11,
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Area
-                  type="monotone"
-                  dataKey="services"
-                  name="Servicios"
-                  stroke="#6366f1"
-                  fill="url(#gServices)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="alerts"
-                  name="Alertas"
-                  stroke="#ef4444"
-                  fill="url(#gAlerts)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
+      {bookingsQ.isLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : bookingsQ.isError ? (
+        <Card className="border-dashed p-6 text-center text-sm text-muted-foreground">
+          No pudimos cargar los servicios de tu institución. Inténtalo de nuevo en un momento.
         </Card>
+      ) : !metrics.hasData ? (
+        <Card className="border-dashed p-6 text-center text-sm text-muted-foreground">
+          Aún no hay servicios de tu institución en Humanix. Cuando publiques turnos y los
+          profesionales los acepten, aquí verás cómo van, sus alertas y el riesgo clínico.
+        </Card>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">
+            {period.label}: {plural(cost.services, "servicio terminado", "servicios terminados")}.
+          </p>
+          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile
+              label="Servicios en curso"
+              value={metrics.services.active}
+              hint="ahora mismo"
+            />
+            <StatTile
+              label="Servicios terminados"
+              value={metrics.services.completed}
+              hint={`${plural(metrics.services.cancelled, "cancelado", "cancelados")} en el periodo`}
+            />
+            <StatTile
+              label="Alertas sin atender"
+              value={alerts ? alerts.active : "—"}
+              hint={
+                alerts
+                  ? alerts.activeCritical > 0
+                    ? plural(alerts.activeCritical, "crítica", "críticas")
+                    : "ninguna crítica"
+                  : clinical.alertsFailed
+                    ? "no se pudieron cargar"
+                    : "cargando"
+              }
+              tone={
+                alerts && alerts.activeCritical > 0
+                  ? "sos"
+                  : alerts && alerts.active > 0
+                    ? "warn"
+                    : undefined
+              }
+            />
+            <StatTile
+              label="Inversión del periodo"
+              value={formatCOP(cost.spent)}
+              hint={`${plural(cost.services, "servicio", "servicios")} · ${hoursEs(cost.hours)} h`}
+            />
+          </dl>
 
-        {/* Risk distribution donut */}
-        <Card className="p-4 space-y-3">
-          <p className="text-sm font-semibold">Distribución de riesgo</p>
-          {loading ? (
-            <div className="h-48 bg-muted/30 rounded-xl animate-pulse" />
-          ) : riskPieData.length === 0 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-center">
-              <ShieldCheck className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-xs text-muted-foreground">Sin datos de riesgo aún</p>
-            </div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={140}>
-                <PieChart>
-                  <Pie
-                    data={riskPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={65}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {riskPieData.map((entry) => (
-                      <Cell key={entry.name} fill={RISK_COLORS[entry.name] ?? "#6b7280"} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      fontSize: 11,
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-1">
-                {riskPieData.map((d) => (
-                  <div key={d.name} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
+          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile
+              label="Riesgo clínico promedio"
+              value={risk && risk.avg !== null ? `${risk.avg}/100` : "—"}
+              hint={
+                reading
+                  ? reading.text
+                  : risk
+                    ? "sin puntajes de riesgo todavía"
+                    : clinical.risksFailed
+                      ? "no se pudieron cargar"
+                      : "cargando"
+              }
+              tone={reading?.tone}
+            />
+            <StatTile
+              label="Pacientes con puntaje"
+              value={risk ? risk.patients : "—"}
+              hint={
+                risk
+                  ? `${plural(risk.levels.critical, "crítico", "críticos")} · ${plural(risk.levels.high, "alto", "altos")}`
+                  : "último puntaje de cada uno"
+              }
+            />
+            <StatTile
+              label="Duración promedio"
+              value={metrics.avgHours !== null ? `${hoursEs(metrics.avgHours)} h` : "—"}
+              hint={
+                metrics.avgHours !== null
+                  ? "por servicio terminado"
+                  : `se necesitan al menos ${MIN_SERVICES_FOR_DURATION} servicios con horas registradas`
+              }
+            />
+            <StatTile
+              label="Alertas del periodo"
+              value={alerts ? alerts.inPeriod : "—"}
+              hint={
+                alerts
+                  ? `${plural(alerts.bySeverity.critical, "crítica", "críticas")} · ${plural(alerts.bySeverity.high, "alta", "altas")}`
+                  : "no disponibles"
+              }
+            />
+          </dl>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="p-4">
+              <BarSeries
+                title={`Servicios terminados por ${perBucket}`}
+                points={metrics.points.map((p) => ({
+                  key: p.dayMs,
+                  label: p.label,
+                  value: p.services,
+                }))}
+                unit={["servicio", "servicios"]}
+                emptyText="Aún no hay servicios terminados en este periodo."
+                colorClass="trust"
+                firstColumn={metrics.bucketDays === 7 ? "Semana desde" : "Día"}
+              />
+            </Card>
+            <Card className="p-4">
+              <BarSeries
+                title={`Alertas por ${perBucket}`}
+                points={metrics.points.map((p) => ({
+                  key: p.dayMs,
+                  label: p.label,
+                  value: p.alerts,
+                }))}
+                unit={["alerta", "alertas"]}
+                emptyText={
+                  alerts ? "No hubo alertas en este periodo." : "Las alertas no se pudieron cargar."
+                }
+                colorClass="sos"
+                firstColumn={metrics.bucketDays === 7 ? "Semana desde" : "Día"}
+              />
+            </Card>
+          </div>
+
+          <Card className="space-y-3 p-4">
+            <h4 className="text-sm font-semibold">Distribución de riesgo clínico</h4>
+            {!risk || risk.patients === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {risk
+                  ? "Aún no hay puntajes de riesgo ligados a tus servicios."
+                  : "Los puntajes de riesgo no se pudieron cargar."}
+              </p>
+            ) : (
+              <>
+                <div
+                  className="flex h-3 overflow-hidden rounded-full bg-muted"
+                  role="img"
+                  aria-label={`Distribución de riesgo de ${plural(risk.patients, "paciente", "pacientes")}: ${EPS_LEVELS.map(
+                    (l) => `${risk.levels[l]} ${EPS_LEVEL_LABEL[l].toLowerCase()}`,
+                  ).join(", ")}`}
+                >
+                  {EPS_LEVELS.map((l) =>
+                    risk.levels[l] > 0 ? (
                       <div
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: RISK_COLORS[d.name] }}
+                        key={l}
+                        className={LEVEL_BAR[l]}
+                        style={{ width: `${(risk.levels[l] / risk.patients) * 100}%` }}
                       />
-                      <span>{d.name}</span>
-                    </div>
-                    <span className="font-bold tabular-nums">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </Card>
-      </div>
+                    ) : null,
+                  )}
+                </div>
+                <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                  {EPS_LEVELS.map((l) => (
+                    <li key={l} className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={cn("h-2.5 w-2.5 rounded-full", LEVEL_BAR[l])}
+                          aria-hidden="true"
+                        />
+                        {EPS_LEVEL_LABEL[l]}
+                      </span>
+                      <span className="font-bold tabular-nums">{risk.levels[l]}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </Card>
 
-      {/* Risk score trend bar chart */}
-      <Card className="p-4 space-y-3">
-        <p className="text-sm font-semibold">Evolución del score de riesgo promedio</p>
-        {loading ? (
-          <div className="h-32 bg-muted/30 rounded-xl animate-pulse" />
-        ) : (
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={trends.slice(-14)}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                domain={[0, 100]}
-                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                  fontSize: 11,
-                }}
-              />
-              <Bar dataKey="riskScore" name="Score riesgo" radius={[4, 4, 0, 0]}>
-                {trends.slice(-14).map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={
-                      entry.riskScore < 25
-                        ? "#10b981"
-                        : entry.riskScore < 50
-                          ? "#f59e0b"
-                          : entry.riskScore < 75
-                            ? "#f97316"
-                            : "#ef4444"
-                    }
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </Card>
+          <p className="text-[11px] text-muted-foreground">
+            Son los servicios que tu institución contrató en Humanix y las alertas y los puntajes de
+            riesgo ligados a ellos (servicios de los últimos 120 días
+            {clinical.truncated ? "; se muestran los 300 más recientes" : ""}). La inversión es lo
+            que pagaste por los servicios terminados. Los pagos se hacen únicamente en la página web
+            de Humanix.
+          </p>
+        </>
+      )}
     </div>
   );
 }
