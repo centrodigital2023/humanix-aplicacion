@@ -157,7 +157,7 @@ profesionales y 14 necesidades sin dueña. Quedaron la cuenta del superadmin y u
   coordenadas exactas heredadas. Ahora que todos los lectores usan `public_professionals()`, conviene cerrarla (queda anotado en `AUDIT_REPORT.md` #63).
 - `anon` y `authenticated` conservan privilegios amplios de tabla heredados de Supabase en muchas tablas; solo las protege RLS. Se retiraron
   en las tablas tocadas (signos vitales, dispositivos, PQRS, ubicaciones) y en las nuevas.
-- **Backend de junio que nunca llegó a producción** (cancelar suscripción, créditos IA y copiloto de chat, billetera, invitaciones,
+- **Backend de abril y junio que nunca llegó a producción** (cancelar suscripción, créditos IA y copiloto de chat, billetera, invitaciones,
   sedes, casos de pacientes…): lista completa y decisiones en `docs/MIGRACIONES.md` §5.2 y §6.
 - Los contadores en vivo dependen del aviso de difusión más un refresco por tiempo; si el aviso no llega, pueden tardar hasta ese tiempo.
 - ESLint conserva 3 errores `any` previos (`use-app-user.tsx`, `auth.tsx`) y 2 avisos de dependencias de hooks en `dashboard.institucion.tsx`;

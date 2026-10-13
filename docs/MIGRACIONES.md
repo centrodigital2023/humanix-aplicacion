@@ -75,8 +75,8 @@ falta; y en producción coincide con lo verificado a mano.
 
 ### 5.2 Cadena antigua (abril → 6 de octubre): coinciden 130 de 216 objetos del «esqueleto»
 
-El esqueleto son tablas, funciones, vistas, disparadores y Realtime (no columnas, índices ni políticas). **Faltan 86 y se concentran en el
-bloque del 5 al 11 de junio**, que el hallazgo #111 de la auditoría ya señalaba como «nunca aplicado». Esto es lo que el código **sí usa**
+El esqueleto son tablas, funciones, vistas, disparadores y Realtime (no columnas, índices ni políticas). **Faltan 86: 62 son de junio (del 5 al 18) y 24 de abril a principios de junio** (lógica de planes del 22 de abril, publicaciones de
+Realtime, disparadores de `updated_at` y casos de pacientes). El bloque de junio es el que el hallazgo #111 de la auditoría ya señalaba como «nunca aplicado». Esto es lo que el código **sí usa**
 hoy y no existe en producción:
 
 | Pantalla o función (dónde)                                                                        | Qué le falta a producción                                                                                                                             | Qué se ve hoy                                                                          |
