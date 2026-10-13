@@ -147,7 +147,9 @@ export function ProposalsInbox({ userId, role }: { userId: string; role: Negotia
   const live = (r: ProposalRow) => r.status === "pending" && !isExpired(r, now);
 
   const commissionPct = role === "professional" && !can("no_commission") ? FREE_COMMISSION_PCT : 0;
-  const canNegotiate = role === "family" || can("negotiate_rate");
+  // Contraofertar el valor es del plan Esencial en AMBOS lados (la base lo exige con `negotiate_rate_requires_plan`): la familia
+  // también ve el candado, en lugar de un botón que el servidor rechazaría.
+  const canNegotiate = can("negotiate_rate");
 
   const refreshAll = () => {
     void qc.invalidateQueries({ queryKey: key });

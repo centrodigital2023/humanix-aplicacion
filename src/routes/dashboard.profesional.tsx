@@ -63,6 +63,9 @@ import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 import { InstitutionAgenda } from "@/components/humanix/hub/InstitutionAgenda";
 import { FamilyOffersList } from "@/components/humanix/hub/FamilyOffersList";
 import { MyServiceOffers } from "@/components/humanix/service/MyServiceOffers";
+import { ProMapVisibility } from "@/components/humanix/pro/ProMapVisibility";
+import { LivePulseBar } from "@/components/humanix/LivePulseBar";
+import type { VisibilityAction } from "@/lib/proVisibility";
 import { OfferApplicationsPanel } from "@/components/humanix/hub/OfferApplicationsPanel";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
@@ -133,6 +136,10 @@ type ProProfile = {
   lng: number | null;
   home_city: string | null;
   published: boolean | null;
+  /** «Disponible» (el interruptor del encabezado y del mapa): colorea el punto y alimenta los contadores. */
+  available: boolean | null;
+  /** La cuenta está en revisión del equipo de Humanix. */
+  blocked: boolean | null;
 };
 
 type Offer = {
@@ -206,6 +213,7 @@ function ProDashboard() {
   const [apps, setApps] = useState<AppRow[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [showTour, setShowTour] = useState(false);
+  const [offersSubTab, setOffersSubTab] = useState("familias");
   const [isOnline, setIsOnline] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [docSummary, setDocSummary] = useState<Record<string, boolean>>({});
@@ -363,7 +371,7 @@ function ProDashboard() {
       if (p.data) {
         const pp = p.data as unknown as ProProfile;
         setProfile(pp);
-        setIsOnline(pp.active ?? false);
+        setIsOnline(pp.available ?? false);
         setSpecialty(pp.specialty ?? "");
         setYears(pp.years_experience ?? "");
         setRethus(pp.rethus_number ?? "");
@@ -450,24 +458,67 @@ function ProDashboard() {
     }
   };
 
+  // «Disponible» es la misma marca que usa el mapa y los contadores en vivo (`available`): no te oculta, te marca. Antes este interruptor
+  // escribía `active`, que sí oculta el perfil del mapa y del buscador, y los contadores no cambiaban.
   const toggleOnline = async () => {
     if (!userId) return;
     setTogglingOnline(true);
     const next = !isOnline;
     try {
-      await supabase
+      const { error } = await supabase
         .from("professional_profiles")
-        .update({ active: next } as never)
+        .update({ available: next } as never)
         .eq("user_id", userId);
+      if (error) throw error;
       setIsOnline(next);
-      setProfile((prev) => (prev ? { ...prev, active: next } : prev));
+      setProfile((prev) => (prev ? { ...prev, available: next } : prev));
       toast.success(
-        next ? "¡Estás disponible! Las familias pueden encontrarte." : "Cambiaste a no disponible.",
+        next
+          ? "¡Estás disponible! Las familias te ven disponible en el mapa."
+          : "Cambiaste a no disponible: sigues en el mapa, marcado como no disponible.",
       );
     } catch {
       toast.error("No se pudo actualizar tu disponibilidad.");
     } finally {
       setTogglingOnline(false);
+    }
+  };
+
+  // Quien había apagado su perfil con el interruptor antiguo (`active = false`) lo vuelve a mostrar desde «¿Me ven en el mapa?».
+  const showProfileAgain = async () => {
+    if (!userId) return;
+    setTogglingOnline(true);
+    try {
+      const { error } = await supabase
+        .from("professional_profiles")
+        .update({ active: true } as never)
+        .eq("user_id", userId);
+      if (error) throw error;
+      setProfile((prev) => (prev ? { ...prev, active: true } : prev));
+      toast.success("Tu perfil vuelve a verse en el mapa y en el buscador.");
+    } catch {
+      toast.error("No se pudo volver a mostrar tu perfil.");
+    } finally {
+      setTogglingOnline(false);
+    }
+  };
+
+  const goToTab = (t: Tab) => {
+    setTab(t);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const onVisibilityAction = (action: VisibilityAction) => {
+    switch (action) {
+      case "show":
+        return void showProfileAgain();
+      case "availability":
+        return void (!isOnline && toggleOnline());
+      case "profile":
+        return goToTab("perfil");
+      case "offer":
+        setOffersSubTab("mi-oferta");
+        return goToTab("ofertas");
     }
   };
 
@@ -851,7 +902,7 @@ function ProDashboard() {
                       {isOnline && (
                         <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          En línea
+                          Disponible
                         </span>
                       )}
                     </div>
@@ -1034,6 +1085,19 @@ function ProDashboard() {
                   ))}
                 </ul>
               </div>
+            )}
+
+            {/* ¿Me ven en el mapa? + contadores reales en vivo (familias buscando cuidado, instituciones con ofertas abiertas) */}
+            {userId && (
+              <section aria-label="Visibilidad y actividad en vivo" className="space-y-3">
+                <LivePulseBar role="professional" />
+                <ProMapVisibility
+                  userId={userId}
+                  profile={profile}
+                  busy={togglingOnline}
+                  onAction={onVisibilityAction}
+                />
+              </section>
             )}
 
             {/* Top matching offers preview */}
@@ -1632,7 +1696,7 @@ function ProDashboard() {
             {/* Agenda: familias y EPS/IPS/clínicas. Postularse, negociar el valor y desbloquear contacto */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-4">
-                <Tabs defaultValue="familias" className="space-y-4">
+                <Tabs value={offersSubTab} onValueChange={setOffersSubTab} className="space-y-4">
                   <TabsList className="h-auto flex-wrap justify-start">
                     <TabsTrigger value="familias">Turnos de familias</TabsTrigger>
                     <TabsTrigger value="ofertas-familias">Ofertas de familias</TabsTrigger>
