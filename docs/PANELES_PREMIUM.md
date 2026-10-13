@@ -181,16 +181,20 @@ no disponible»** en lugar de «no se pudieron cargar» (que invita a reintentar
 monitoreo se da por habilitado solo cuando existen las dos tablas. Una columna que falta, un permiso negado o un corte de red siguen
 siendo un fallo («no se pudieron cargar»). Las suscripciones Realtime empiezan solo cuando su lectura funcionó.
 
-### Datos clínicos: qué hay de verdad en producción (revisado el 2026-10-12)
+### Datos clínicos: qué hay de verdad en producción (revisado el 2026-10-12; actualizado el 2026-10-13)
+
+> **Actualización 2026-10-13.** Las decisiones pendientes 1 a 5 de más abajo **ya se resolvieron** con `20261012140000`, `20261012150000`,
+> `20261012160000` y `20261012170000`, aplicadas en producción con simulacro y verificadas (`docs/FLUJOS_CONECTADOS.md` §6 y `docs/MIGRACIONES.md`).
+> La tabla y la lista de abajo conservan el diagnóstico de entonces; el estado actual está en la columna «Hoy».
 
 La versión anterior de este documento decía que la base dejaba leer los datos clínicos de **todos** los pacientes a cualquier institución.
 Eso salía de los archivos del repositorio, **no de producción**, y para producción era **incorrecto**:
 
-| Tabla | En producción |
-|---|---|
-| `clinical_alerts` | Existe (la creó `drizzle/migrations/0007`) y está vacía. Lee el paciente, el profesional del servicio y el staff (`is_staff()` = superadmin, HR y evaluadores); actualiza el paciente y el staff. **Sin** política de INSERT, **sin** columnas `lat`/`lng`, **sin** el tipo `sos_manual` y **sin** disparador hacia `clinical-alert-notify` |
-| `patient_risk_scores`, `service_checkins`, `vital_signs`, `alert_thresholds`, `clinical_reports`, `institution_patient_cases`, vista `eps_dashboard_metrics` | **No existen** |
-| `vital_signs_readings`, `wearable_connections` | Existen y están vacías; políticas por dueño o `is_staff()` |
+| Tabla | En producción el 2026-10-12 | Hoy (2026-10-13) |
+|---|---|---|
+| `clinical_alerts` | Existía (la creó `drizzle/migrations/0007`) y está vacía. Lee el paciente, el profesional del servicio y el staff (`is_staff()` = superadmin, HR y evaluadores). **Sin** política de INSERT, **sin** columnas `lat`/`lng`, **sin** el tipo `sos_manual` y **sin** disparador hacia `clinical-alert-notify` | Lee el superadmin y las partes del servicio (paciente, círculo de cuidado, profesional con servicio vigente y quien contrató: `hx_can_access_alert`). Insertan el propio paciente, quien lo atiende o su círculo (SOS crítico, con guarda anti-abuso). Columnas `lat`, `lng`, `accuracy_m`, `triggered_by`, `inapp_notified`; tipo `sos_manual`; quien atiende solo cambia estado y notas. Avisos dentro de la app; WhatsApp automático sigue sin activarse |
+| `patient_risk_scores`, `service_checkins`, `vital_signs`, `alert_thresholds`, `clinical_reports`, `institution_patient_cases`, vista `eps_dashboard_metrics` | **No existen** | Siguen sin existir (ver `docs/MIGRACIONES.md` §5.2) |
+| `vital_signs_readings`, `wearable_connections` | Existen y están vacías; políticas por dueño o `is_staff()`; `anon` con `ALL` | Solo dueño, profesional con reserva vigente y superadmin; `anon` sin privilegios; `authenticated` solo con los de datos que ya tenía |
 
 **Qué se hizo.** `supabase/migrations/20261012100000_clinical_data_scope.sql` reemplaza las políticas «por rol» de los archivos
 del repositorio por reglas «por servicio» (el paciente, el profesional del servicio, quien contrató, el superadmin), pone la vista
@@ -202,9 +206,9 @@ tras dos simulacros que se deshicieron solos; su efecto real fue quitar de `clin
 esquema `public` fue idéntica antes y después). Un archivo viejo (`20260606100000_clinical_monitoring.sql`) lleva ahora una
 advertencia: si alguien lo aplica en un entorno nuevo debe aplicar después esta migración.
 
-**Decisiones pendientes** (aflojan o cambian producción; **nada de esto se aplicó**):
+**Decisiones que quedaban pendientes el 2026-10-12** (todas se resolvieron después; se conserva el razonamiento original):
 
-1. **¿Que quien contrató el servicio lea sus alertas?** Hoy ni la familia ni la institución pueden leer las alertas de sus propios
+1. ✅ **Resuelto (`20261012150000`).** **¿Que quien contrató el servicio lea sus alertas?** Hoy ni la familia ni la institución pueden leer las alertas de sus propios
    servicios (la política de lectura no las incluye), así que el portal EPS no podría mostrarlas aunque existieran. Propuesta mínima
    (política adicional; las permisivas se suman):
 
@@ -215,19 +219,19 @@ advertencia: si alguien lo aplica en un entorno nuevo debe aplicar después esta
    ```
 
    El portal sigue diciendo «aún no disponible» hasta que además exista `patient_risk_scores` (se exigen las dos tablas, ver arriba).
-2. **¿HR y evaluadores fuera de los datos de salud?** `is_staff()` los incluye en `clinical_alerts_read`/`_ack`, `vital_signs_readings`
+2. ✅ **Resuelto (`20261012150000`).** **¿HR y evaluadores fuera de los datos de salud?** `is_staff()` los incluye en `clinical_alerts_read`/`_ack`, `vital_signs_readings`
    y `wearable_connections` (con el código de emparejamiento). `care_logs` ya se corrigió con este criterio. Hoy no hay cuentas de esos
    roles. Por política, cambiar `is_staff(auth.uid())` por `public.has_role(auth.uid(), 'superadmin'::public.app_role)`.
-3. **SOS Familiar.** El botón de «Salud en vivo» no puede enviar nada en producción: faltan las columnas `lat`/`lng`, el tipo
+3. ✅ **Resuelto (`20261012160000` y `20261012170000`); queda sin activar el WhatsApp automático.** **SOS Familiar.** El botón de «Salud en vivo» no puede enviar nada en producción: faltan las columnas `lat`/`lng`, el tipo
    `sos_manual` y la política de inserción del propio paciente (`20260606220000_sos_familiar_alert.sql`), el disparador y la función de
    aviso hacia `clinical-alert-notify` (`20261007170000_wire_webhooks_and_fix_cron.sql`) y los secretos de WhatsApp del servidor. Mientras
    tanto el botón dice que no se pudo enviar y manda a llamar al **123**. Lo mismo ocurre con el check-in/out del profesional
    (`service_checkins`), la tarjeta de riesgo (`patient_risk_scores`, `vital_signs`) y los pacientes que agrega la institución
    (`institution_patient_cases`): sus tablas no existen.
-4. **`anon` conserva `ALL` sobre `vital_signs_readings` y `wearable_connections`** (privilegios por defecto; solo las protege RLS):
+4. ✅ **Resuelto (`20261012150000`).** **`anon` conservaba `ALL` sobre `vital_signs_readings` y `wearable_connections`** (privilegios por defecto; solo las protege RLS):
    `REVOKE ALL ON public.vital_signs_readings, public.wearable_connections FROM anon;` y lo mismo que se hizo con `clinical_alerts` para
    `authenticated`.
-5. **El registro de usuarios** (`on_auth_user_created`, que crea perfil y rol) **no existe en producción**: ver `AUDIT_REPORT.md` #112.
+5. ✅ **Resuelto (`20261012140000`).** **El registro de usuarios** (`on_auth_user_created`, que crea perfil y rol) **no existía en producción**: ver `AUDIT_REPORT.md` #112.
 
 ## 5. Datos, permisos y límites de lectura
 
