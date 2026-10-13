@@ -4,13 +4,14 @@
 # sin rol para el personal.
 # ⚠️  SOLO para un PostgreSQL DESECHABLE: crea y BORRA hx_replica_base (si no existe) y hx_instmem. Nunca contra Lovable Cloud.
 #   HX_TEST_CONFIRM=desechable supabase/e2e/institution_members/run.sh   (como usuario postgres del sistema o con PGHOST/PGUSER)
-# HX_MIGRATION=/ruta.sql prueba un «mutante» de la migración. HX_SKIP_BASE=1 reutiliza hx_replica_base si ya existe.
+# HX_MIGRATION=/ruta.sql y HX_MIGRATION2=/ruta.sql prueban un «mutante» de la 1.ª o de la 2.ª migración. HX_SKIP_BASE=1 reutiliza hx_replica_base si ya existe.
 set -euo pipefail
 [ "${HX_TEST_CONFIRM:-}" = "desechable" ] || { echo "Define HX_TEST_CONFIRM=desechable (solo en un Postgres de pruebas)." >&2; exit 2; }
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../../.." && pwd)
 MIGS="$REPO/supabase/migrations"
 MIG="${HX_MIGRATION:-$MIGS/20261013120000_institution_members.sql}"
+MIG2="${HX_MIGRATION2:-$MIGS/20261013130000_institution_staff_context.sql}"
 # Lo que ya está en producción cuando llega esta migración (en orden).
 PRE=("$MIGS/20261012180000_offer_moderation.sql" "$MIGS/20261012190000_offer_alerts_and_plans.sql" "$MIGS/20261012200000_pqrs_my_tickets.sql"
      "$MIGS/20261012210000_live_map.sql" "$MIGS/20261013100000_public_professionals.sql" "$MIGS/20261013110000_professional_panel.sql")
@@ -29,7 +30,7 @@ for f in "${PRE[@]}"; do
   psql -v ON_ERROR_STOP=1 -q -d hx_instmem -f "$f" >/dev/null 2>&1 || { echo "FALLÓ la migración previa $(basename "$f") sobre la réplica"; exit 1; }
 done
 echo "── Escenario «personal de la institución»"
-out=$(psql -v ON_ERROR_STOP=1 -d hx_instmem -v HELPERS="$REPO/supabase/e2e/clinical_scope/helpers.sql" -v MIG="$MIG" -v SIGNUP="$MIGS/20261012140000_restore_signup_trigger.sql" -f "$HERE/scenario.sql" 2>&1 | grep -v '^$') || { echo "$out"; FAILED=1; }
+out=$(psql -v ON_ERROR_STOP=1 -d hx_instmem -v HELPERS="$REPO/supabase/e2e/clinical_scope/helpers.sql" -v MIG="$MIG" -v MIG2="$MIG2" -v SIGNUP="$MIGS/20261012140000_restore_signup_trigger.sql" -f "$HERE/scenario.sql" 2>&1 | grep -v '^$') || { echo "$out"; FAILED=1; }
 echo "$out" | grep -v -E '^(NOTICE|psql:.*NOTICE)' || true
 line=$(echo "$out" | grep -E '^[0-9]+\|[0-9]+\|[0-9]+$' | tail -1)
 { [ -n "$line" ] && [ "$(echo "$line" | cut -d'|' -f2)" = "0" ]; } || FAILED=1

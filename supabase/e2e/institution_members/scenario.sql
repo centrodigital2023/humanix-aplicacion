@@ -1,6 +1,6 @@
 -- Escenario — Personal de la institución: cuentas propias con módulos, delegación de lectura (RLS) y de acciones (las funciones de ofertas y
 -- postulaciones), auditoría y registro sin rol. Sobre la réplica de producción con lo anterior ya aplicado, como hoy en producción.
--- Variables: MIG (20261013120000_institution_members.sql), HELPERS (../clinical_scope/helpers.sql), SIGNUP (20261012140000_restore_signup_trigger.sql)
+-- Variables: MIG (20261013120000_institution_members.sql), MIG2 (20261013130000_institution_staff_context.sql), HELPERS (../clinical_scope/helpers.sql), SIGNUP (20261012140000_restore_signup_trigger.sql)
 \i :HELPERS
 
 -- Ejecuta una sentencia SIN devolver filas (para probar escrituras «a ciegas» y ver qué pasó después).
@@ -79,6 +79,7 @@ SELECT public.t_true('0.2 antes: ninguna función de ofertas actúa por la insti
   SELECT 1 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND pg_get_functiondef(p.oid) LIKE '%hx_acting_institution%'));
 
 \i :MIG
+\i :MIG2
 
 -- ═══ A) La tabla y sus permisos ═════════════════════════════════════════════════════════════════════════════════
 SELECT public.t_true('A.1 existe con RLS', to_regclass('public.institution_members') IS NOT NULL AND (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.institution_members'::regclass));
@@ -101,6 +102,15 @@ SELECT public.t_true('A.6 las funciones auxiliares: solo con sesión; las intern
   AND has_function_privilege('authenticated', 'public.hx_member_can(uuid,text)', 'EXECUTE') AND NOT has_function_privilege('anon', 'public.hx_member_can(uuid,text)', 'EXECUTE')
   AND NOT has_function_privilege('authenticated', 'public.hx_member_guard()', 'EXECUTE') AND NOT has_function_privilege('authenticated', 'public.hx_member_clean_roles()', 'EXECUTE')
   AND NOT has_function_privilege('authenticated', 'public.hx_log_member_action()', 'EXECUTE'));
+
+SELECT public.t_true('A.7 my_staff_context: solo con sesión (nunca el visitante)',
+  has_function_privilege('authenticated', 'public.my_staff_context()', 'EXECUTE') AND NOT has_function_privilege('anon', 'public.my_staff_context()', 'EXECUTE'));
+SELECT public.t_true('A.8 la lista del equipo y su actividad se publican en Realtime',
+  (SELECT count(*) = 2 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename IN ('institution_members', 'institution_member_actions')));
+SELECT public.t_true('A.9 el personal ya no tiene política para leer el perfil de la institución (NIT, representante legal, dirección)',
+  NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'institution_profiles' AND policyname = 'inst_member_select'));
+SELECT public.t_true('A.10 «último acceso» existe y empieza vacío', EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'institution_members' AND column_name = 'last_seen_at')
+  AND NOT EXISTS (SELECT 1 FROM public.institution_members WHERE last_seen_at IS NOT NULL));
 
 -- ═══ B) Quién puede ser personal ════════════════════════════════════════════════════════════════════════════════
 INSERT INTO public.institution_members(institution_id, member_user_id, username, display_name, job_title, modules, status) VALUES
@@ -214,14 +224,16 @@ SELECT public.t_eq('D.1b un profesional o una familia no ven ofertas cerradas de
   public.t_val(:'f1', $q$SELECT COALESCE(string_agg(title, ' | ' ORDER BY title), 'ninguna') FROM public.job_offers WHERE status::text <> 'open'$q$), 'ninguna/ninguna');
 SELECT public.t_eq('D.2 ve los turnos de sus ofertas', public.t_val(:'m1', $q$SELECT count(*)::text FROM public.job_offer_shifts$q$), '2');
 SELECT public.t_eq('D.3 ve las postulaciones a sus ofertas (las dos), no las de otra', public.t_val(:'m1', $q$SELECT count(*)::text FROM public.applications$q$), '2');
-SELECT public.t_eq('D.4 ve el nombre de su institución y no la de otra', public.t_val(:'m1', $q$SELECT string_agg(institution_name, ',' ORDER BY institution_name) FROM public.institution_profiles$q$), 'Clínica Norte');
+SELECT public.t_eq('D.4 el personal NO lee la fila de la institución (NIT, representante legal, dirección); la dueña sí la suya',
+  public.t_val(:'m1', $q$SELECT count(*)::text FROM public.institution_profiles$q$) || '/' || public.t_val(:'m2', $q$SELECT count(*)::text FROM public.institution_profiles$q$) || '/' ||
+  public.t_val(:'i1', $q$SELECT count(*)::text FROM public.institution_profiles$q$), '0/0/1');
 SELECT public.t_eq('D.5 el personal de la otra institución ve las cerradas de la suya y no las de la clínica',
   public.t_val(:'m4', $q$SELECT COALESCE(string_agg(title, ' | ' ORDER BY title), 'ninguna') FROM public.job_offers WHERE status::text <> 'open'$q$), 'Oferta cerrada del hospital');
 SELECT public.t_eq('D.6 el personal suspendido no ve nada de la institución (ni cerradas, ni postulaciones, ni perfil)',
   public.t_val(:'m3', $q$SELECT (SELECT count(*) FROM public.job_offers WHERE status::text <> 'open') || '/' || (SELECT count(*) FROM public.applications) || '/' || (SELECT count(*) FROM public.institution_profiles)$q$), '0/0/0');
-SELECT public.t_eq('D.7 con solo «talento» no ve ofertas ni postulaciones (sí el nombre de la institución)',
+SELECT public.t_eq('D.7 con solo «talento» no ve ofertas ni postulaciones',
   public.t_val(:'m2', $q$SELECT (SELECT count(*) FROM public.job_offers WHERE poster_type::text = 'institution' AND status::text <> 'open') || '/' || (SELECT count(*) FROM public.applications) || '/' || (SELECT count(*) FROM public.job_offer_shifts) || '/' || (SELECT count(*) FROM public.institution_profiles)$q$),
-  '0/0/0/1');
+  '0/0/0/0');
 SELECT public.t_eq('D.8 una familia y un profesional no ven postulaciones ajenas (nada cambió para ellos)',
   public.t_val(:'f1', $q$SELECT count(*)::text FROM public.applications$q$) || '/' || public.t_val(:'p2', $q$SELECT count(*)::text FROM public.applications$q$), '0/1');
 SELECT public.t_eq('D.9 la institución dueña sigue viendo lo suyo', public.t_val(:'i1', $q$SELECT count(*)::text FROM public.applications$q$), '2');
@@ -401,18 +413,58 @@ SELECT public.t_eq('I.4 los disparadores de guarda y auditoría están una vez c
   (SELECT string_agg(tgname, ',' ORDER BY tgname) FROM pg_trigger WHERE tgname IN ('trg_member_guard','trg_member_clean_roles','trg_member_audit_offers','trg_member_audit_apps') AND NOT tgisinternal),
   'trg_member_audit_apps,trg_member_audit_offers,trg_member_clean_roles,trg_member_guard');
 
+-- ═══ M) Contexto de la persona del equipo ═══════════════════════════════════════════════════════════════════
+SELECT public.t_eq('M.1 la persona con «ofertas» recibe su contexto: institución, ciudad, usuario, módulos, estado y plan',
+  public.t_val(:'m1', format($q$SELECT institution_name || '/' || institution_city || '/' || username || '/' || modules::text || '/' || status || '/' || plan_active::text || '/' || (institution_id = %L)::text FROM public.my_staff_context()$q$, :'i1')),
+  'Clínica Norte/Bogotá/marta.coord/{ofertas}/active/true/true');
+SELECT public.t_eq('M.2 la persona suspendida recibe su fila (para avisarle) pero sin ciudad y con el plan en falso',
+  public.t_val(:'m3', $q$SELECT institution_name || '/' || COALESCE(institution_city, 'sin') || '/' || username || '/' || status || '/' || plan_active::text FROM public.my_staff_context()$q$),
+  'Clínica Norte/sin/sara.susp/suspended/false');
+SELECT public.t_eq('M.3 cada persona recibe solo su fila', public.t_val(:'m1', $q$SELECT count(*)::text FROM public.my_staff_context()$q$) || '/' || public.t_val(:'m2', $q$SELECT username FROM public.my_staff_context()$q$), '1/jorge.talento');
+SELECT public.t_eq('M.4 quien no es del equipo no recibe nada (institución, profesional, familia, personal de Humanix)',
+  public.t_val(:'i1', $q$SELECT count(*)::text FROM public.my_staff_context()$q$) || '/' || public.t_val(:'p1', $q$SELECT count(*)::text FROM public.my_staff_context()$q$) || '/' ||
+  public.t_val(:'f1', $q$SELECT count(*)::text FROM public.my_staff_context()$q$) || '/' || public.t_val(:'sa', $q$SELECT count(*)::text FROM public.my_staff_context()$q$), '0/0/0/0');
+SELECT public.t_err('M.5 el visitante no la llama', public.t_anon($q$SELECT count(*)::text FROM public.my_staff_context()$q$), 'permission denied');
+SELECT public.t_err('M.5b y una sesión sin identidad tampoco', public.t_val(NULL, $q$SELECT count(*)::text FROM public.my_staff_context()$q$), 'No autenticado');
+
+UPDATE public.mp_subscriptions SET current_period_end = now() - interval '1 day' WHERE user_id = :'i1';
+SELECT public.t_eq('M.6 sin el plan vigente de la institución, el contexto lo dice (plan_active en falso)', public.t_val(:'m1', $q$SELECT plan_active::text FROM public.my_staff_context()$q$), 'false');
+UPDATE public.mp_subscriptions SET current_period_end = now() + interval '20 days' WHERE user_id = :'i1';
+SELECT public.t_eq('M.6b al volver el plan, vuelve', public.t_val(:'m1', $q$SELECT plan_active::text FROM public.my_staff_context()$q$), 'true');
+DELETE FROM public.user_roles WHERE user_id = :'i1' AND role = 'institution';
+SELECT public.t_eq('M.7 si la cuenta ya no es una institución, tampoco', public.t_val(:'m1', $q$SELECT plan_active::text FROM public.my_staff_context()$q$), 'false');
+INSERT INTO public.user_roles(user_id, role) VALUES (:'i1', 'institution');
+
+UPDATE public.institution_profiles SET institution_name = '   ' WHERE user_id = :'i1';
+SELECT public.t_eq('M.8 sin nombre de institución, un texto neutro', public.t_val(:'m1', $q$SELECT institution_name FROM public.my_staff_context()$q$), 'Tu institución');
+UPDATE public.institution_profiles SET institution_name = 'Clínica Norte' WHERE user_id = :'i1';
+
+-- Último acceso: se anota al entrar y como mucho cada 10 minutos; la persona suspendida no lo toca.
+SELECT public.t_eq('M.9 al entrar queda anotado el último acceso (y la institución lo lee)',
+  public.t_val(:'i1', $q$SELECT (last_seen_at IS NOT NULL)::text FROM public.institution_members WHERE username = 'marta.coord'$q$), 'true');
+UPDATE public.institution_members SET last_seen_at = now() - interval '1 minute' WHERE username = 'marta.coord';
+SELECT public.t_val(:'m1', $q$SELECT count(*)::text FROM public.my_staff_context()$q$) AS touched1 \gset
+SELECT public.t_true('M.10 si entró hace menos de 10 minutos, no se vuelve a anotar', (SELECT now() - last_seen_at BETWEEN interval '50 seconds' AND interval '5 minutes' FROM public.institution_members WHERE username = 'marta.coord'));
+UPDATE public.institution_members SET last_seen_at = now() - interval '20 minutes' WHERE username = 'marta.coord';
+SELECT public.t_val(:'m1', $q$SELECT count(*)::text FROM public.my_staff_context()$q$) AS touched2 \gset
+SELECT public.t_true('M.11 si pasaron más de 10 minutos, se anota de nuevo', (SELECT now() - last_seen_at < interval '1 minute' FROM public.institution_members WHERE username = 'marta.coord'));
+SELECT public.t_eq('M.12 la persona suspendida no deja «último acceso»', (SELECT COALESCE(last_seen_at::text, 'nunca') FROM public.institution_members WHERE username = 'sara.susp'), 'nunca');
+SELECT public.t_eq('M.13 la persona con solo «talento» también lo deja y no ve el de otras',
+  public.t_val(:'m2', $q$SELECT (SELECT (last_seen_at IS NOT NULL)::text FROM public.institution_members WHERE username = 'jorge.talento') || '/' || (SELECT count(*)::text FROM public.institution_members)$q$), 'true/1');
+
 -- ═══ J) Segunda pasada ════════════════════════════════════════════════════════════════════════════════════════
 SELECT (SELECT md5(string_agg(md5(pg_get_functiondef(p.oid)) || COALESCE(p.proacl::text, ''), '|' ORDER BY p.proname, pg_get_function_identity_arguments(p.oid))) FROM pg_proc p
           WHERE p.pronamespace = 'public'::regnamespace AND (p.proname IN ('publish_institution_offer','accept_application','decline_application','counter_application','institution_application_inbox','invite_team_to_offer',
-            'handle_new_user','list_open_service_offers','hx_acting_institution','hx_member_can','hx_member_guard','hx_member_clean_roles','hx_log_member_action','hx_staff_modules'))) AS sig_fn,
+            'handle_new_user','list_open_service_offers','hx_acting_institution','hx_member_can','hx_member_guard','hx_member_clean_roles','hx_log_member_action','hx_staff_modules','my_staff_context'))) AS sig_fn,
        (SELECT md5(string_agg(tablename || policyname || cmd || COALESCE(qual, '') || COALESCE(with_check, ''), '|' ORDER BY tablename, policyname)) FROM pg_policies
           WHERE tablename IN ('institution_members','institution_member_actions') OR policyname IN ('jo_member_select','jos_member_select','apps_member_select','inst_member_select')) AS sig_pol,
        (SELECT count(*) FROM public.institution_members) AS sig_rows,
        (SELECT count(*) FROM pg_trigger WHERE tgname LIKE 'trg\_member\_%' AND NOT tgisinternal) AS sig_trg \gset
 \i :MIG
+\i :MIG2
 SELECT public.t_eq('J.1 la segunda pasada no cambia las funciones ni sus permisos', (SELECT md5(string_agg(md5(pg_get_functiondef(p.oid)) || COALESCE(p.proacl::text, ''), '|' ORDER BY p.proname, pg_get_function_identity_arguments(p.oid))) FROM pg_proc p
           WHERE p.pronamespace = 'public'::regnamespace AND (p.proname IN ('publish_institution_offer','accept_application','decline_application','counter_application','institution_application_inbox','invite_team_to_offer',
-            'handle_new_user','list_open_service_offers','hx_acting_institution','hx_member_can','hx_member_guard','hx_member_clean_roles','hx_log_member_action','hx_staff_modules'))), :'sig_fn');
+            'handle_new_user','list_open_service_offers','hx_acting_institution','hx_member_can','hx_member_guard','hx_member_clean_roles','hx_log_member_action','hx_staff_modules','my_staff_context'))), :'sig_fn');
 SELECT public.t_eq('J.2 ni las políticas', (SELECT md5(string_agg(tablename || policyname || cmd || COALESCE(qual, '') || COALESCE(with_check, ''), '|' ORDER BY tablename, policyname)) FROM pg_policies
           WHERE tablename IN ('institution_members','institution_member_actions') OR policyname IN ('jo_member_select','jos_member_select','apps_member_select','inst_member_select')), :'sig_pol');
 SELECT public.t_eq('J.3 ni los datos', (SELECT count(*)::text FROM public.institution_members), :'sig_rows');
@@ -447,6 +499,7 @@ BEGIN
   EXECUTE replace(d, E'BEGIN\n  PERFORM auth.uid();', 'BEGIN');
 END $t$;
 \i :MIG
+\i :MIG2
 SELECT public.t_true('L.3 restablecida, la migración vuelve a aplicarse y la función delega', (SELECT pg_get_functiondef('public.invite_team_to_offer(uuid)'::regprocedure) LIKE '%hx_acting_institution(auth.uid(), ''ofertas'')%'));
 
 \pset tuples_only off
