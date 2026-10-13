@@ -688,7 +688,11 @@ function SuperadminPage() {
                         <div className="flex items-center gap-2">
                           <PhoneCall className="h-4 w-4 text-red-400 shrink-0" />
                           <p className="text-sm font-bold text-red-300">
-                            {e.incident_type === "panic" ? "Botón de pánico" : e.incident_type}
+                            {e.incident_type === "panic"
+                              ? "Botón de pánico"
+                              : e.incident_type === "sos_familiar"
+                                ? "SOS Familiar"
+                                : e.incident_type}
                           </p>
                         </div>
                         <Button

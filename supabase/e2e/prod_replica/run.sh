@@ -38,6 +38,8 @@ CHAIN=(
   20261011100000_market_validation_v2.sql
   20261012100000_clinical_data_scope.sql
 )
+# 20261012140000_restore_signup_trigger.sql NO va en la cadena: con el disparador activo, los escenarios que crean usuarios a mano
+# en auth.users recibirían perfil y rol automáticos. La aplica el escenario «deriva» al empezar su sección 6.
 
 ERRF=$(mktemp)
 trap 'rm -f "$ERRF"' EXIT

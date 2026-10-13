@@ -133,6 +133,36 @@ SELECT public.t_eq('5.1 la reserva transita con el guardián de producción y de
 SELECT public.t_eq('5.2 llegada registrada por el sistema', public.q1(format($q$SELECT count(*)::text FROM public.care_logs WHERE booking_id = %L AND event_type = 'arrival' AND system_generated$q$, :'bk')), '1');
 SELECT public.t_eq('5.3 la familia fue avisada', public.q1(format($q$SELECT count(*)::text FROM public.notifications WHERE user_id = %L AND type = 'care_started'$q$, :'fam')), '1');
 
+-- ═══ 6) Registro de usuarios: el disparador que producción había perdido ══════════════════════════════════
+-- Producción tenía la función handle_new_user() pero NO el disparador sobre auth.users: las cuentas nacían sin perfil ni rol.
+SELECT public.t_true('6.0 antes de la migración no hay disparador de alta (como en producción)', NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'auth.users'::regclass AND tgname = 'on_auth_user_created' AND NOT tgisinternal));
+\i ../../migrations/20261012140000_restore_signup_trigger.sql
+SELECT public.t_true('6.1 la migración crea el disparador de alta sobre auth.users', EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'auth.users'::regclass AND tgname = 'on_auth_user_created' AND NOT tgisinternal));
+-- Quien inserta en auth.users en producción es el rol de Auth (no el dueño ni authenticated): se simula con un rol sin EXECUTE.
+DO $$ BEGIN CREATE ROLE supabase_auth_admin NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+GRANT USAGE ON SCHEMA auth, public TO supabase_auth_admin;
+GRANT INSERT, SELECT ON auth.users TO supabase_auth_admin;
+SELECT public.t_true('6.2 handle_new_user() no es ejecutable por PUBLIC ni authenticated (como en producción)', NOT has_function_privilege('authenticated', 'public.handle_new_user()', 'EXECUTE') AND NOT has_function_privilege('anon', 'public.handle_new_user()', 'EXECUTE'));
+
+\set np '00000000-0000-0000-0000-0000000006a1'
+\set nf '00000000-0000-0000-0000-0000000006a2'
+\set ni '00000000-0000-0000-0000-0000000006a3'
+\set nx '00000000-0000-0000-0000-0000000006a4'
+SET ROLE supabase_auth_admin;
+INSERT INTO auth.users(id, email, raw_user_meta_data) VALUES (:'np', 'np@t.co', '{"role":"professional","full_name":"Nuevo Pro","city":"Bogotá"}');
+INSERT INTO auth.users(id, email, raw_user_meta_data) VALUES (:'nf', 'nf@t.co', '{"full_name":"Nueva Familia"}');
+INSERT INTO auth.users(id, email, raw_user_meta_data) VALUES (:'ni', 'ni@t.co', '{"role":"institution","institution_name":"Clínica Nueva"}');
+INSERT INTO auth.users(id, email, raw_user_meta_data) VALUES (:'nx', 'nx@t.co', '{"role":"superadmin","full_name":"Intruso"}');
+RESET ROLE;
+
+SELECT public.t_eq('6.3 el profesional nuevo recibe perfil, rol y perfil profesional', public.q1(format($q$SELECT (SELECT count(*) FROM public.profiles WHERE user_id = %1$L AND full_name = 'Nuevo Pro' AND city = 'Bogotá')::text || '/' || (SELECT string_agg(role::text, ',') FROM public.user_roles WHERE user_id = %1$L) || '/' || (SELECT count(*) FROM public.professional_profiles WHERE user_id = %1$L)::text$q$, :'np')), '1/professional/1');
+SELECT public.t_eq('6.4 sin rol elegido nace como familia, con su perfil de familia', public.q1(format($q$SELECT (SELECT string_agg(role::text, ',') FROM public.user_roles WHERE user_id = %1$L) || '/' || (SELECT count(*) FROM public.family_profiles WHERE user_id = %1$L)::text$q$, :'nf')), 'family/1');
+SELECT public.t_eq('6.5 la institución nueva conserva el nombre que escribió', public.q1(format($q$SELECT (SELECT string_agg(role::text, ',') FROM public.user_roles WHERE user_id = %1$L) || '/' || (SELECT institution_name FROM public.institution_profiles WHERE user_id = %1$L)$q$, :'ni')), 'institution/Clínica Nueva');
+SELECT public.t_eq('6.6 nadie se hace superadmin por escribirlo en los metadatos del registro', public.q1(format($q$SELECT string_agg(role::text, ',') FROM public.user_roles WHERE user_id = %1$L$q$, :'nx')), 'family');
+SELECT public.t_eq('6.7 un solo disparador de alta', public.q1($$SELECT count(*)::text FROM pg_trigger WHERE tgrelid = 'auth.users'::regclass AND tgname = 'on_auth_user_created' AND NOT tgisinternal$$), '1');
+\i ../../migrations/20261012140000_restore_signup_trigger.sql
+SELECT public.t_eq('6.8 …y tras la segunda pasada sigue habiendo uno solo', public.q1($$SELECT count(*)::text FROM pg_trigger WHERE tgrelid = 'auth.users'::regclass AND tgname = 'on_auth_user_created' AND NOT tgisinternal$$), '1');
+
 \pset tuples_only off
 SELECT count(*) FILTER (WHERE ok) AS pasaron, count(*) FILTER (WHERE NOT ok) AS fallaron, count(*) AS total FROM public._t;
 SELECT n, name, detail FROM public._t WHERE NOT ok ORDER BY n;

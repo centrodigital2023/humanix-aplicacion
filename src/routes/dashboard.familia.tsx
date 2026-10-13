@@ -52,6 +52,8 @@ import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { usePlan } from "@/hooks/use-plan";
 import { PlanNameGate } from "@/components/humanix/PlanNameGate";
 import { FamilySmartCenter } from "@/components/humanix/family/FamilySmartCenter";
+import { SosFamiliarButton } from "@/components/humanix/SosFamiliarButton";
+import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 
 export const Route = createFileRoute("/dashboard/familia")({
   head: () => ({ meta: [{ title: "Familia · Humanix" }] }),
@@ -534,6 +536,20 @@ function FamilyDashboard() {
       <div className="space-y-6">
         {/* Acciones rápidas */}
         <FamilyQuickActions />
+
+        {/* SOS: pedir ayuda con la ubicación y ver las alertas de mi círculo de cuidado */}
+        {user?.id && (
+          <section aria-label="Emergencias" className="space-y-3">
+            <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground sm:max-w-[60%]">
+                ¿Necesitas ayuda urgente? Avisa a tu círculo de cuidado y a tu profesional con tu
+                ubicación.
+              </p>
+              <SosFamiliarButton patientId={user.id} patientName={user.fullName} />
+            </div>
+            <SosAlertsPanel userId={user.id} />
+          </section>
+        )}
 
         {/* Tu centro de cuidado: saludo, calma y resumen del día para todas las familias, y herramientas inteligentes (plan Esencial) */}
         <FamilySmartCenter

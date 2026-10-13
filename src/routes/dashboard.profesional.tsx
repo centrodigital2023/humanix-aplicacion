@@ -58,6 +58,7 @@ import { PublishGate } from "@/components/humanix/PublishGate";
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
 import { OpportunityHub } from "@/components/humanix/hub/OpportunityHub";
+import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 import { InstitutionAgenda } from "@/components/humanix/hub/InstitutionAgenda";
 import { OfferApplicationsPanel } from "@/components/humanix/hub/OfferApplicationsPanel";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
@@ -774,6 +775,9 @@ function ProDashboard() {
               />
             )}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
+
+            {/* Alertas SOS de las personas que atiendo (solo aparece si hay alguna) */}
+            {userId && <SosAlertsPanel userId={userId} />}
 
             {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
             {userId && (

@@ -1,130 +1,193 @@
-// SOS Familiar: botón de pánico que crea una clinical_alert crítica con
-// ubicación en tiempo real. Reusa la tubería de monitoreo clínico
-// (clinical_alerts → Database Webhook → clinical-alert-notify) para avisar
-// de inmediato por WhatsApp al paciente, su familia y su profesional.
+// SOS Familiar: botón de pánico que registra una alerta crítica con la ubicación y avisa DENTRO de la app al círculo de cuidado, al
+// profesional con servicio vigente y a quien contrató (lo hace la base: migración 20261012160000_sos_familiar.sql).
+//
+// Lo que promete es lo que de verdad ocurre: la pantalla dice a cuántas personas se avisó en la app (lo cuenta la base) y deja el
+// WhatsApp a mano —con el mensaje y la ubicación ya escritos— porque el aviso automático por WhatsApp solo existe si el proyecto
+// tiene pg_net, el secreto de Vault y los secretos de la función. Y siempre, a un toque, la línea de emergencias 123.
 import { useState } from "react";
-import { Siren, Loader2, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-const sb = supabase as unknown as SupabaseClient;
-
-function getLocation(): Promise<{ lat: number | null; lng: number | null }> {
-  return new Promise((resolve) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      resolve({ lat: null, lng: null });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => resolve({ lat: null, lng: null }),
-      { timeout: 4000, enableHighAccuracy: true },
-    );
-  });
-}
+import { Siren, Loader2, MapPin, Phone, MessageCircle, UserPlus } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { sendSos, useEmergencyContact, type SosSendResult } from "@/hooks/use-sos";
+import {
+  EMERGENCY_NUMBER,
+  EMERGENCY_TEL,
+  normalizeCoPhone,
+  sosOutcome,
+  sosWhatsappText,
+  whatsappLink,
+} from "@/lib/sos";
 
 export function SosFamiliarButton({
   patientId,
+  bookingId,
+  patientName,
   className = "",
+  label = "SOS Familiar",
 }: {
+  /** A quién se le pide ayuda (uno mismo, o su paciente si lo pulsa su profesional o su círculo). */
   patientId: string;
+  /** Reserva en curso, si la hay: así el aviso llega también a la otra parte del servicio. */
+  bookingId?: string | null;
+  patientName?: string | null;
   className?: string;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [result, setResult] = useState<SosSendResult | null>(null);
+  const contact = useEmergencyContact(patientId, open);
 
   const trigger = async () => {
     setBusy(true);
     try {
-      const { lat, lng } = await getLocation();
-
-      const { error } = await sb.from("clinical_alerts").insert({
-        patient_id: patientId,
-        alert_type: "sos_manual",
-        severity: "critical",
-        status: "active",
-        actual_value: 0,
-        unit: null,
-        lat,
-        lng,
-      });
-      if (error) throw error;
-
-      setSent(true);
-      toast.success("SOS enviado", {
-        description:
-          lat != null
-            ? "Tu ubicación fue compartida. Tu familia y tu profesional fueron notificados por WhatsApp."
-            : "Tu familia y tu profesional fueron notificados por WhatsApp.",
-      });
-    } catch (e) {
-      // El detalle técnico va a la consola: en una emergencia la persona necesita saber qué hacer, no leer un error de la
-      // base de datos (y menos en inglés).
-      console.error("[SosFamiliarButton]", e);
-      toast.error("No se pudo enviar el SOS", {
-        description:
-          "Si es una emergencia, llama ya a la línea de emergencias 123 y avisa a tu familia por teléfono.",
-        duration: 15000,
-      });
+      setResult(await sendSos({ patientId, bookingId }));
     } finally {
       setBusy(false);
     }
   };
 
+  const close = () => {
+    if (busy) return;
+    setOpen(false);
+    setResult(null);
+  };
+
+  const emergencyPhone = contact.data?.phone ?? null;
+  const hasContact = !!normalizeCoPhone(emergencyPhone);
+  const outcome = result
+    ? sosOutcome({
+        status: result.status,
+        inappNotified: result.inappNotified,
+        whatsappAuto: result.whatsappAuto,
+        hasLocation: result.place.lat != null,
+        hasEmergencyContact: hasContact,
+      })
+    : null;
+  const waText = sosWhatsappText({
+    name: patientName ?? contact.data?.patientName,
+    lat: result?.place.lat,
+    lng: result?.place.lng,
+  });
+
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="destructive"
         onClick={() => {
-          setSent(false);
+          setResult(null);
           setOpen(true);
         }}
-        className={`inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 text-white font-semibold px-4 py-2.5 text-sm shadow-[0_0_24px_-6px_rgba(220,38,38,0.6)] hover:bg-red-700 transition animate-pulse ${className}`}
+        className={`gap-2 font-semibold animate-pulse ${className}`}
       >
         <Siren className="h-4 w-4" />
-        SOS Familiar
-      </button>
+        {label}
+      </Button>
 
-      {open && (
-        <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="max-w-sm w-full rounded-2xl border border-red-600/40 bg-card p-6 shadow-[var(--shadow-elegant)]">
-            <div className="h-12 w-12 rounded-2xl bg-red-600/15 text-red-600 inline-flex items-center justify-center">
+      <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : close())}>
+        <DialogContent className="max-w-sm border-destructive/40">
+          <DialogHeader>
+            <div className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive inline-flex items-center justify-center">
               <Siren className="h-6 w-6" />
             </div>
-            <h3 className="mt-3 font-display text-xl font-bold">
-              {sent ? "SOS enviado" : "¿Activar SOS familiar?"}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {sent ? (
-                "Tu ubicación y una alerta crítica fueron enviadas por WhatsApp a tu familia y tu profesional asignado. Mantén la calma, te están contactando."
-              ) : (
-                <>
-                  Enviaremos tu <strong>ubicación en tiempo real</strong> y una alerta crítica por
-                  WhatsApp a tu familia y tu profesional. Úsalo solo si necesitas ayuda urgente.
-                </>
-              )}
+            <DialogTitle className="font-display text-xl">
+              {outcome ? outcome.headline : "¿Pedir ayuda ahora?"}
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="text-sm text-muted-foreground" aria-live="polite">
+                {outcome ? (
+                  <ul className="space-y-1.5">
+                    {outcome.lines.map((l) => (
+                      <li key={l}>{l}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>
+                    Registramos tu <strong>ubicación</strong> y una alerta crítica, y avisamos
+                    dentro de Humanix a tu círculo de cuidado y a tu profesional. Úsalo solo si
+                    necesitas ayuda urgente.
+                  </p>
+                )}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          {!result && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              Compartiremos tu ubicación GPS si tu dispositivo lo permite.
             </p>
-            {!sent && (
-              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
-                Compartiremos tu ubicación GPS si tu dispositivo lo permite.
-              </p>
+          )}
+
+          <div className="space-y-2">
+            {/* Siempre a la mano: es lo más rápido ante una urgencia. */}
+            <Button
+              asChild
+              variant={outcome?.callFirst || !result ? "destructive" : "outline"}
+              className="w-full gap-2"
+            >
+              <a href={EMERGENCY_TEL}>
+                <Phone className="h-4 w-4" />
+                Llamar al {EMERGENCY_NUMBER}
+              </a>
+            </Button>
+
+            {result && (
+              <>
+                {hasContact ? (
+                  <Button asChild variant="outline" className="w-full gap-2">
+                    <a
+                      href={whatsappLink(emergencyPhone, waText)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Avisar por WhatsApp a {contact.data?.name || "mi contacto"}
+                    </a>
+                  </Button>
+                ) : (
+                  <>
+                    <Button asChild variant="outline" className="w-full gap-2">
+                      <a
+                        href={whatsappLink(null, waText)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Elegir a quién avisar por WhatsApp
+                      </a>
+                    </Button>
+                    <Link
+                      to="/dashboard/familia/onboarding"
+                      search={{ step: undefined }}
+                      className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground underline underline-offset-2"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Guarda un contacto de emergencia para la próxima vez
+                    </Link>
+                  </>
+                )}
+              </>
             )}
-            <div className="mt-5 flex gap-2">
-              <button
-                onClick={() => setOpen(false)}
-                disabled={busy}
-                className="flex-1 rounded-xl border border-border bg-background py-2.5 text-sm font-medium hover:bg-muted/40"
-              >
-                {sent ? "Cerrar" : "Cancelar"}
-              </button>
-              {!sent && (
-                <button
+
+            {!result ? (
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={close} disabled={busy}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1 gap-2"
                   onClick={trigger}
                   disabled={busy}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 text-white py-2.5 text-sm font-semibold disabled:opacity-60 hover:bg-red-700"
                 >
                   {busy ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -132,12 +195,16 @@ export function SosFamiliarButton({
                     <Siren className="h-4 w-4" />
                   )}
                   Enviar SOS ahora
-                </button>
-              )}
-            </div>
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" className="w-full" onClick={close}>
+                Cerrar
+              </Button>
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

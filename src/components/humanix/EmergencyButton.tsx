@@ -1,8 +1,10 @@
-// Botón de pánico fucsia neural. Registra incidente + abre llamada al 123.
+// Botón de pánico fucsia neural. Registra el incidente (lo ve el superadmin en tiempo real), avisa dentro de la app a la otra parte
+// del servicio y a su círculo de cuidado (lo hace la base: migración 20261012160000_sos_familiar.sql) y abre la llamada al 123.
 import { useState } from "react";
 import { AlertOctagon, Loader2, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { EMERGENCY_TEL } from "@/lib/sos";
 
 export function EmergencyButton({
   bookingId,
@@ -49,12 +51,21 @@ export function EmergencyButton({
       });
       if (error) throw error;
       toast.success("Emergencia reportada", {
-        description: "Superadmin notificado. Llamando al 123…",
+        description: bookingId
+          ? "Avisamos a Humanix y a la otra parte del servicio. Llamando al 123…"
+          : "Avisamos a Humanix. Llamando al 123…",
       });
       // Línea única de emergencias en Colombia
-      window.location.href = "tel:123";
+      window.location.href = EMERGENCY_TEL;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo reportar la emergencia");
+      // El detalle técnico va a la consola; en una emergencia la persona necesita saber qué hacer. Aunque el reporte falle,
+      // la llamada al 123 es lo importante: se abre igual.
+      console.error("[EmergencyButton]", e);
+      toast.error("No se pudo reportar la emergencia en Humanix", {
+        description: "Llamando al 123. Avisa a tu contacto por teléfono.",
+        duration: 15000,
+      });
+      window.location.href = EMERGENCY_TEL;
     } finally {
       setBusy(false);
       setOpen(false);
@@ -80,8 +91,8 @@ export function EmergencyButton({
             </div>
             <h3 className="mt-3 font-display text-xl font-bold">Confirmar emergencia</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Reportaremos la incidencia al superadmin de Humanix con tu ubicación y te conectaremos
-              con la
+              Reportaremos la incidencia a Humanix con tu ubicación, avisaremos dentro de la app a
+              la otra parte del servicio y te conectaremos con la
               <strong> línea única de emergencias 123</strong>.
             </p>
             <div className="mt-5 flex gap-2">

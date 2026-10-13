@@ -58,6 +58,8 @@ import { ApplicantsInbox } from "@/components/humanix/hub/ApplicantsInbox";
 import { PublishShiftsDialog } from "@/components/humanix/hub/PublishShiftsDialog";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
+import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
+import { SosFamiliarButton } from "@/components/humanix/SosFamiliarButton";
 import { CareHistoryCard } from "@/components/humanix/care/CareHistoryCard";
 import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
@@ -709,6 +711,20 @@ function InstitutionDashboard() {
                 onPublish={() => setPublishOpen(true)}
                 onGoToInbox={() => scrollToId("postulaciones")}
                 onGoToTalent={() => setTab("talento")}
+              />
+            </div>
+
+            {/* SOS: alertas de mis servicios y botón para pedir ayuda en uno de ellos (solo aparece la lista si hay alguna) */}
+            <SosAlertsPanel userId={user.id} />
+            <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground sm:max-w-[60%]">
+                ¿Emergencia en uno de tus turnos? Avisa al equipo de Humanix y a tu profesional con
+                la ubicación, y llama al 123.
+              </p>
+              <SosFamiliarButton
+                patientId={user.id}
+                patientName={instProfile?.institution_name}
+                label="SOS Institución"
               />
             </div>
 

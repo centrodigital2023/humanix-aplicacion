@@ -539,3 +539,52 @@ CREATE TRIGGER trg_guard_service_bookings_financials BEFORE UPDATE ON public.ser
 CREATE TRIGGER trg_notify_booking_cancelled AFTER UPDATE OF status ON public.service_bookings FOR EACH ROW WHEN (((new.status = 'cancelled'::text) AND (old.status IS DISTINCT FROM 'cancelled'::text))) EXECUTE FUNCTION notify_booking_cancelled();
 CREATE TRIGGER trg_sb_compute_fee BEFORE INSERT OR UPDATE OF total_amount, platform_fee_pct ON public.service_bookings FOR EACH ROW EXECUTE FUNCTION compute_platform_fee();
 CREATE TRIGGER trg_validate_rating_dimensions BEFORE INSERT ON public.service_rating_dimensions FOR EACH ROW EXECUTE FUNCTION validate_rating_dimensions();
+
+-- Añadida el 2026-10-12 (extraída de producción): la función de alta de usuarios. El DISPARADOR sobre auth.users NO existe en
+-- producción; lo restablece 20261012140000_restore_signup_trigger.sql (por eso aquí solo está la función).
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_role public.app_role;
+  v_meta_role TEXT;
+BEGIN
+  INSERT INTO public.profiles (user_id, full_name, email, phone, city)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    NEW.email,
+    NEW.raw_user_meta_data->>'phone',
+    NEW.raw_user_meta_data->>'city'
+  );
+
+  v_meta_role := NEW.raw_user_meta_data->>'role';
+  IF v_meta_role IN ('professional','family','institution') THEN
+    v_role := v_meta_role::public.app_role;
+    INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, v_role)
+      ON CONFLICT DO NOTHING;
+
+    IF v_role = 'professional' THEN
+      INSERT INTO public.professional_profiles (user_id) VALUES (NEW.id)
+        ON CONFLICT DO NOTHING;
+    ELSIF v_role = 'institution' THEN
+      INSERT INTO public.institution_profiles (user_id, institution_name)
+      VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'institution_name','Institución'))
+        ON CONFLICT DO NOTHING;
+    ELSIF v_role = 'family' THEN
+      INSERT INTO public.family_profiles (user_id) VALUES (NEW.id)
+        ON CONFLICT DO NOTHING;
+    END IF;
+  ELSE
+    INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'family')
+      ON CONFLICT DO NOTHING;
+    INSERT INTO public.family_profiles (user_id) VALUES (NEW.id)
+      ON CONFLICT DO NOTHING;
+  END IF;
+
+  RETURN NEW;
+END $function$;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
