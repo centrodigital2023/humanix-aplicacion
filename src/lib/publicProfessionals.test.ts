@@ -6,6 +6,7 @@ import {
   isEmptyIdLookup,
   proCity,
   publicProfessionalsArgs,
+  uniqueProfessionalCount,
 } from "./publicProfessionals";
 
 const MIGRATION = readFileSync(
@@ -151,5 +152,19 @@ describe("contrato con la función del servidor", () => {
       /GRANT EXECUTE ON FUNCTION public\.public_professionals\([^)]*\) TO anon, authenticated;/,
     );
     expect(MIGRATION).toContain("SECURITY DEFINER SET search_path = public");
+  });
+});
+
+describe("uniqueProfessionalCount", () => {
+  it("un profesional que coincide con dos términos se cuenta una vez", () => {
+    expect(
+      uniqueProfessionalCount([
+        [{ user_id: "a" }, { user_id: "b" }],
+        [{ user_id: "b" }, { user_id: "c" }],
+      ]),
+    ).toBe(3);
+    expect(uniqueProfessionalCount([])).toBe(0);
+    expect(uniqueProfessionalCount([[], []])).toBe(0);
+    expect(uniqueProfessionalCount([[{ user_id: "a" }, { user_id: "a" }]])).toBe(1);
   });
 });

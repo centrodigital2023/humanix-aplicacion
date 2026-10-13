@@ -6,19 +6,22 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2, Loader2, Minus, Plus, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppUser } from "@/hooks/use-app-user";
-import { countPublicProfessionals } from "@/hooks/use-public-professionals";
+import { countPublicProfessionalsForTerms } from "@/hooks/use-public-professionals";
 import { loadDraft, saveDraft } from "@/lib/audience";
+import { OFFER_ISSUE_MESSAGE, offerIssueFromError } from "@/lib/contentModeration";
+import {
+  OTHER_ROLE_MAX,
+  SHIFT_ROLES,
+  roleByKey,
+  roleLabel,
+  roleSearchTerms,
+  roleSpecialty,
+  shiftOfferTitle,
+  validateOtherRole,
+} from "@/lib/shiftRoles";
 import { PictoCard, primaryBtn, type Tint } from "./ui";
 import { useSpeakOnChange, useVoice } from "./voice";
 
-type RoleTpl = {
-  key: string;
-  emoji: string;
-  label: string;
-  tint: Tint;
-  specialty: string;
-  suggested: number;
-};
 type ScheduleTpl = {
   key: string;
   emoji: string;
@@ -27,41 +30,6 @@ type ScheduleTpl = {
   tint: Tint;
   modality: "shift" | "hour";
 };
-
-const ROLES: RoleTpl[] = [
-  {
-    key: "jefe",
-    emoji: "🩺",
-    label: "Enfermería jefe",
-    tint: "sky",
-    specialty: "Enfermería",
-    suggested: 220000,
-  },
-  {
-    key: "aux",
-    emoji: "💉",
-    label: "Auxiliar",
-    tint: "emerald",
-    specialty: "Auxiliar",
-    suggested: 140000,
-  },
-  {
-    key: "cuidador",
-    emoji: "🤝",
-    label: "Cuidador",
-    tint: "rose",
-    specialty: "Cuidador",
-    suggested: 110000,
-  },
-  {
-    key: "terapia",
-    emoji: "🦾",
-    label: "Terapeuta",
-    tint: "violet",
-    specialty: "Terapia",
-    suggested: 180000,
-  },
-];
 
 const SCHEDULES: ScheduleTpl[] = [
   { key: "dia", emoji: "☀️", label: "Día", hint: "7am–7pm", tint: "amber", modality: "shift" },
@@ -79,6 +47,8 @@ const SCHEDULES: ScheduleTpl[] = [
 
 type ShiftDraft = {
   role: string;
+  /** Lo que escribe la persona cuando elige «Otro». */
+  otherRole: string;
   schedule: string;
   city: string;
   date: string;
@@ -96,6 +66,7 @@ const todayISO = () => {
 
 const EMPTY: ShiftDraft = {
   role: "aux",
+  otherRole: "",
   schedule: "dia",
   city: "",
   date: "",
@@ -139,7 +110,11 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     if (hydrated) saveDraft(DRAFT_KEY, draft);
   }, [draft, hydrated]);
 
-  const role = useMemo(() => ROLES.find((r) => r.key === draft.role) ?? ROLES[0], [draft.role]);
+  const role = useMemo(() => roleByKey(draft.role), [draft.role]);
+  const otherRole = draft.otherRole ?? "";
+  const label = roleLabel(role, otherRole);
+  const searchTerms = useMemo(() => roleSearchTerms(role, otherRole), [role, otherRole]);
+  const searchKey = searchTerms.join("|");
   const schedule = useMemo(
     () => SCHEDULES.find((s) => s.key === draft.schedule) ?? SCHEDULES[0],
     [draft.schedule],
@@ -148,11 +123,17 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
   // Candidatos reales que encajan (rol + ciudad), con debounce mientras escribe.
   useEffect(() => {
     if (!hydrated) return;
+    // «Otro» sin escribir todavía: no hay nada que buscar (y no se cuenta a todo el mundo como candidato).
+    if (searchKey === "") {
+      setMatches(null);
+      return;
+    }
     const t = setTimeout(async () => {
       try {
         // Cantidad real de profesionales publicados que encajan (función segura del servidor; las vistas antiguas daban 0).
-        const total = await countPublicProfessionals(
-          { specialty: role.specialty, city: draft.city },
+        const total = await countPublicProfessionalsForTerms(
+          searchKey.split("|"),
+          { city: draft.city },
           { signal: AbortSignal.timeout(10000) },
         );
         setMatches(total);
@@ -161,7 +142,7 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [hydrated, role.specialty, draft.city]);
+  }, [hydrated, searchKey, draft.city]);
 
   // Métricas reales del panel para instituciones con sesión.
   useEffect(() => {
@@ -197,6 +178,11 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
 
   const validate = () => {
     const e: Partial<Record<keyof ShiftDraft, string>> = {};
+    if (role.free) {
+      // Una institución puede pedir perfiles de apoyo; una familia, solo de salud o cuidado (igual que sus ofertas).
+      const check = validateOtherRole(otherRole, { family: !isInstitution });
+      if (!check.ok) e.otherRole = check.message;
+    }
     if (!draft.city.trim()) e.city = "Escribe la ciudad.";
     if (!draft.amount || draft.amount <= 0) e.amount = "Escribe el pago.";
     setErrors(e);
@@ -226,9 +212,9 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     const { error } = await supabase.from("job_offers").insert({
       posted_by: user.id,
       poster_type: isInstitution ? "institution" : "family",
-      title: `${role.label} · ${schedule.label}`,
+      title: shiftOfferTitle(label, schedule.label),
       description: `${schedule.label} (${schedule.hint}). Personas: ${draft.people}.`,
-      specialty_required: role.specialty,
+      specialty_required: roleSpecialty(role, otherRole),
       city: draft.city.trim(),
       modality: schedule.modality,
       amount: draft.amount,
@@ -239,6 +225,14 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
     setBusy(false);
     if (error) {
       console.error(error);
+      // La base también modera: si rechazó el texto, se dice por qué (ofensivo, venta de artículos, ajeno a salud o contacto).
+      const issue = offerIssueFromError(error);
+      if (issue) {
+        setErrors({ otherRole: OFFER_ISSUE_MESSAGE[issue] });
+        setPublishError(OFFER_ISSUE_MESSAGE[issue]);
+        say(OFFER_ISSUE_MESSAGE[issue]);
+        return;
+      }
       setPublishError("No se pudo publicar. Tus datos siguen aquí; intenta otra vez.");
       say("No se pudo publicar. Intenta otra vez.");
       return;
@@ -249,7 +243,7 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
 
   const offerShareText = published
     ? encodeURIComponent(
-        `🏥 Turno disponible en Humanix · ${role.label} (${schedule.label}) en ${draft.city || "Colombia"}. Aplica en humanix.lat`,
+        `🏥 Turno disponible en Humanix · ${label} (${schedule.label}) en ${draft.city || "Colombia"}. Aplica en humanix.lat`,
       )
     : "";
 
@@ -266,19 +260,49 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
           <legend id="shift-q" className="font-display text-3xl font-bold">
             ¿A quién necesitas?
           </legend>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {ROLES.map((r) => (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {SHIFT_ROLES.map((r) => (
               <PictoCard
                 key={r.key}
                 size="md"
                 emoji={r.emoji}
                 label={r.label}
                 tint={r.tint}
-                selected={draft.role === r.key}
+                selected={role.key === r.key}
                 onSelect={() => update({ role: r.key, amount: r.suggested })}
               />
             ))}
           </div>
+          {role.free && (
+            <div className="mt-4">
+              <label htmlFor="shift-other" className="text-base font-bold">
+                ✍️ ¿Qué perfil necesitas?
+              </label>
+              <input
+                id="shift-other"
+                value={otherRole}
+                maxLength={OTHER_ROLE_MAX}
+                onChange={(e) => update({ otherRole: e.target.value })}
+                placeholder="Psicólogo, Nutricionista, Camillero…"
+                aria-invalid={Boolean(errors.otherRole)}
+                aria-describedby={errors.otherRole ? "shift-other-err" : "shift-other-hint"}
+                className={`${field} mt-2`}
+              />
+              {errors.otherRole ? (
+                <p
+                  id="shift-other-err"
+                  role="alert"
+                  className="mt-1 text-base font-semibold text-warn"
+                >
+                  {errors.otherRole}
+                </p>
+              ) : (
+                <p id="shift-other-hint" className="mt-1 text-sm text-muted-foreground">
+                  Escríbelo con tus palabras. Sin teléfonos ni enlaces: solo el perfil que buscas.
+                </p>
+              )}
+            </div>
+          )}
         </fieldset>
 
         <fieldset className="mt-7">

@@ -113,3 +113,12 @@ export function proCity(
   const first = (p.service_cities ?? []).map((c) => c.trim()).find(Boolean);
   return first ?? null;
 }
+
+/** Cuántos profesionales distintos hay entre varias listas (uno puede coincidir con más de un término de búsqueda). */
+export function uniqueProfessionalCount(
+  lists: ReadonlyArray<ReadonlyArray<{ user_id: string }>>,
+): number {
+  const seen = new Set<string>();
+  for (const list of lists) for (const p of list) seen.add(p.user_id);
+  return seen.size;
+}

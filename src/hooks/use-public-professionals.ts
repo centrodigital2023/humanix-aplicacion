@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   isEmptyIdLookup,
   publicProfessionalsArgs,
+  uniqueProfessionalCount,
   type PublicProfessional,
   type PublicProfessionalFilters,
 } from "@/lib/publicProfessionals";
@@ -48,6 +49,27 @@ export async function countPublicProfessionals(
   const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
+}
+
+/**
+ * Cuántos profesionales publicados coinciden con ALGUNO de los términos de especialidad (por ejemplo «Médico», «Medic», «Médic»): la
+ * búsqueda por especialidad del servidor no distingue ni tildes ni la «a/o» final, así que se piden por término y se cuentan sin repetir.
+ */
+export async function countPublicProfessionalsForTerms(
+  terms: readonly string[],
+  filters: Omit<PublicProfessionalFilters, "specialty"> = {},
+  opts: { signal?: AbortSignal } = {},
+): Promise<number> {
+  const unique = [...new Set(terms.map((t) => t.trim()).filter(Boolean))];
+  if (unique.length === 0) return 0;
+  if (unique.length === 1)
+    return countPublicProfessionals({ ...filters, specialty: unique[0] }, opts);
+  const lists = await Promise.all(
+    unique.map((specialty) =>
+      fetchPublicProfessionals({ ...filters, specialty, limit: 500 }, opts),
+    ),
+  );
+  return uniqueProfessionalCount(lists);
 }
 
 export function usePublicProfessionals(filters: PublicProfessionalFilters, enabled = true) {
