@@ -40,6 +40,7 @@ import { EnhancedPatientsModule } from "@/components/humanix/EnhancedPatientsMod
 import { EnhancedAgendaModule } from "@/components/humanix/EnhancedAgendaModule";
 import { EnhancedReportsWithCRMModule } from "@/components/humanix/EnhancedReportsWithCRMModule";
 import { TalentTab, type ProSummary } from "@/components/humanix/TalentTab";
+import { ServiceOffersFeed } from "@/components/humanix/service/ServiceOffersFeed";
 import { EnhancedInstitutionOperations } from "@/components/humanix/EnhancedInstitutionOperations";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
@@ -1081,6 +1082,10 @@ function InstitutionDashboard() {
         {/* ══ TAB: TALENTO ══ */}
         {tab === "talento" && (
           <div className="space-y-5">
+            {/* Profesionales que publican su servicio, con Trust Score, RETHUS, calificación y cercanía */}
+            <div className="rounded-2xl border border-border bg-card/95 p-4">
+              <ServiceOffersFeed viewerId={user.id} audience="institution" />
+            </div>
             <TalentTab
               userId={user.id}
               applications={applications}

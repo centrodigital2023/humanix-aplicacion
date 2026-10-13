@@ -34,6 +34,8 @@ import { PRESENCE_TTL_MS, nextLiveExpiry, toCell } from "@/lib/presence";
 const sb = supabase as unknown as SupabaseClient;
 
 const ROOT = ["live-map"] as const;
+/** Raíz de las consultas de ofertas de servicio de profesionales (`use-service-offers`): las recarga el aviso `service_offers_changed`. */
+export const SERVICE_OFFERS_ROOT = ["service-offers"] as const;
 export const liveMapKeys = {
   all: ROOT,
   professionals: (o: string) => [...ROOT, "professionals", o] as const,
@@ -61,6 +63,7 @@ const DEBOUNCE_MS = 800;
 const clients = new Map<QueryClient, number>();
 let channel: ReturnType<typeof sb.channel> | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
+let offersTimer: ReturnType<typeof setTimeout> | undefined;
 
 function subscribeMapPing(qc: QueryClient): () => void {
   clients.set(qc, (clients.get(qc) ?? 0) + 1);
@@ -74,6 +77,15 @@ function subscribeMapPing(qc: QueryClient): () => void {
           clients.forEach((_n, client) => void client.invalidateQueries({ queryKey: ROOT }));
         }, DEBOUNCE_MS);
       })
+      .on("broadcast", { event: "service_offers_changed" }, () => {
+        // Un profesional publica, pausa o cierra una oferta de servicio: las familias e instituciones recargan su lista segura.
+        clearTimeout(offersTimer);
+        offersTimer = setTimeout(() => {
+          clients.forEach(
+            (_n, client) => void client.invalidateQueries({ queryKey: SERVICE_OFFERS_ROOT }),
+          );
+        }, DEBOUNCE_MS);
+      })
       .subscribe();
   }
   return () => {
@@ -82,10 +94,20 @@ function subscribeMapPing(qc: QueryClient): () => void {
     else clients.set(qc, left);
     if (clients.size === 0 && channel) {
       clearTimeout(timer);
+      clearTimeout(offersTimer);
       void sb.removeChannel(channel);
       channel = null;
     }
   };
+}
+
+/** Escucha los avisos en vivo de la base (mapa y ofertas de servicio) por el canal privado compartido. Solo con sesión. */
+export function useLiveMapPing(enabled = true) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    return subscribeMapPing(qc);
+  }, [enabled, qc]);
 }
 
 /** Recarga todo lo del mapa cuando la base avisa que algo cambió. Con sesión, por el canal privado; sin sesión, por lo público. */

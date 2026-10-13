@@ -48,6 +48,7 @@ import { kmTo, sortProfessionals, STATUS_LABEL } from "@/lib/liveMap";
 import { trustBadgeText } from "@/lib/trustScore";
 import { useMapProfessionals } from "@/hooks/use-live-map";
 import { FamilyMapVisibility } from "@/components/humanix/family/FamilyMapVisibility";
+import { ServiceOffersFeed } from "@/components/humanix/service/ServiceOffersFeed";
 import { toast } from "sonner";
 import { useAppUser } from "@/hooks/use-app-user";
 import { MyBookings } from "@/components/humanix/simple/MyBookings";
@@ -367,6 +368,9 @@ function FamilyDashboard() {
             <ApplicantCards userId={user.id} familyName={user.fullName} />
           </div>
         )}
+
+        {/* Profesionales que publican su servicio: Trust Score, RETHUS, calificación, estado en vivo y cercanía */}
+        {user?.id && <ServiceOffersFeed viewerId={user.id} audience="family" />}
 
         {/* Mis servicios activos */}
         {user && <MyBookings userId={user.id} />}

@@ -62,6 +62,7 @@ import { OpportunityHub } from "@/components/humanix/hub/OpportunityHub";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 import { InstitutionAgenda } from "@/components/humanix/hub/InstitutionAgenda";
 import { FamilyOffersList } from "@/components/humanix/hub/FamilyOffersList";
+import { MyServiceOffers } from "@/components/humanix/service/MyServiceOffers";
 import { OfferApplicationsPanel } from "@/components/humanix/hub/OfferApplicationsPanel";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
@@ -1636,6 +1637,7 @@ function ProDashboard() {
                     <TabsTrigger value="familias">Turnos de familias</TabsTrigger>
                     <TabsTrigger value="ofertas-familias">Ofertas de familias</TabsTrigger>
                     <TabsTrigger value="instituciones">EPS, IPS y clínicas</TabsTrigger>
+                    <TabsTrigger value="mi-oferta">Mi oferta de servicio</TabsTrigger>
                   </TabsList>
                   <TabsContent value="familias">
                     <OpportunityHub userId={userId} />
@@ -1645,6 +1647,18 @@ function ProDashboard() {
                   </TabsContent>
                   <TabsContent value="instituciones">
                     <InstitutionAgenda userId={userId} />
+                  </TabsContent>
+                  <TabsContent value="mi-oferta">
+                    <MyServiceOffers
+                      userId={userId}
+                      profile={{
+                        specialty: specialty.trim() || null,
+                        city: profile?.home_city?.trim() || cities.split(",")[0]?.trim() || null,
+                        hourlyRate: typeof hourly === "number" && hourly > 0 ? hourly : null,
+                        published: !!profile?.published,
+                      }}
+                      onGoToProfile={() => setTab("perfil")}
+                    />
                   </TabsContent>
                 </Tabs>
               </div>
