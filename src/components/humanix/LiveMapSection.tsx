@@ -5,19 +5,19 @@ type Role = "professional" | "family" | "institution" | "guest";
 const COPY: Record<Role, { title: string; desc: string }> = {
   family: {
     title: "Mapa en vivo · Profesionales y tu ubicación",
-    desc: "Puntos azules = profesionales conectados. Marca tu ubicación (toca el mapa o usa GPS) para calcular la distancia exacta a cada profesional.",
+    desc: "Puntos azules = profesionales (verde: disponibles ahora). Mientras tengas ofertas abiertas, los profesionales cercanos ven tu zona aproximada, nunca tu dirección. Marca tu ubicación para ver qué tan cerca está cada uno.",
   },
   professional: {
     title: "Mapa en vivo · Familias, instituciones y tu ubicación",
-    desc: "Familias en amarillo · instituciones en fucsia. Marca tu ubicación (toca el mapa o usa GPS) para aparecer cerca de quien te necesita.",
+    desc: "Familias con ofertas abiertas en amarillo · instituciones en fucsia, con su Trust Score. Marca tu ubicación y comparte tu zona en vivo para aparecer cerca de quien te necesita (siempre aproximada, ~1 km).",
   },
   institution: {
     title: "Mapa en vivo · Profesionales y tu sede",
-    desc: "Profesionales en azul · familias en amarillo. Marca la ubicación de tu sede (toca el mapa o usa GPS) para verlos por cercanía.",
+    desc: "Profesionales en azul, disponibles, en vivo y ocupados en tiempo real. Marca la ubicación de tu sede para verlos por cercanía.",
   },
   guest: {
     title: "Mapa en vivo · Talento humano en salud",
-    desc: "Mira profesionales, familias e instituciones conectados en este momento en Colombia.",
+    desc: "Mira profesionales e instituciones activos en este momento en Colombia.",
   },
 };
 

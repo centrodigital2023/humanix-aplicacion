@@ -17,18 +17,23 @@ export type MapPin = {
   verified?: boolean;
   /** Ocupado / no disponible: se ve atenuado. */
   dim?: boolean;
-  /** GPS en vivo. */
+  /** Con la aplicación abierta ahora mismo. */
   live?: boolean;
   badge?: string;
+  /** «82 · Alto»: el Trust Score ya redactado (nulo si aún no hay). */
+  trust?: string | null;
+  /** «Disponible», «Ocupado»…: el estado ya redactado. */
+  statusLabel?: string;
   raw?: unknown;
 };
 
 export type SimpleLiveMapProps = {
-  /** "pros" = profesionales (familias, IPS). "offers" = ofertas abiertas (profesionales). */
+  /** "pros" = profesionales (familias, IPS). "offers" = quien tiene ofertas u horas abiertas (profesionales). */
   mode: "pros" | "offers";
   height?: number;
   center?: LatLng;
-  primaryLabel: string;
+  /** Texto del botón principal; puede cambiar según el pin («Ver oferta» o «Ver oportunidades»). */
+  primaryLabel: string | ((pin: MapPin) => string);
   onPrimary: (pin: MapPin) => void;
   secondary?: { emoji: string; label: string; href: (pin: MapPin) => string };
 };

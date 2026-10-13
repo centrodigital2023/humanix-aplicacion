@@ -1,24 +1,17 @@
-// Mapa en vivo, versión simple: pines grandes con emoji, datos reales de
-// Supabase y movimiento en tiempo real (tabla user_locations vía
-// useLivePresence + cambios en professional_profiles / job_offers).
+// Mapa en vivo, versión simple: pines grandes con emoji y datos reales por las funciones seguras de la base (`map_professionals` y
+// `map_open_demand`, ver `hooks/use-live-map.ts`): nunca teléfono ni dirección, posiciones en cuadrícula de ~1 km y, si alguien no
+// tiene ubicación, simplemente no es un pin (no se inventa un sitio). Se actualiza solo cuando la base avisa que algo cambió.
 // Al tocar un pin aparece una tarjeta grande abajo con 1-2 botones.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2, LocateFixed, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useLivePresence } from "@/hooks/use-live-presence";
-import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
-import {
-  BOGOTA,
-  cityToLatLng,
-  deterministicOffset,
-  distanceKm,
-  formatKm,
-  getBrowserLocation,
-  type LatLng,
-} from "@/lib/geo";
+import { useSession } from "@/hooks/use-has-session";
+import { useMapDemand, useMapProfessionals } from "@/hooks/use-live-map";
+import { BOGOTA, distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
+import { demandHeadline, STATUS_LABEL, withPosition } from "@/lib/liveMap";
+import { trustBadgeText } from "@/lib/trustScore";
 import { useVoice } from "./voice";
 import type { MapPin, SimpleLiveMapProps } from "./SimpleLiveMap";
 
@@ -79,40 +72,6 @@ function ClickAway({ onClick }: { onClick: () => void }) {
   return null;
 }
 
-type ProRow = {
-  user_id: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  specialty: string | null;
-  hourly_rate: number | null;
-  avg_rating: number | null;
-  available: boolean | null;
-  verified: boolean | null;
-  rethus_verified: boolean | null;
-  lat: number | null;
-  lng: number | null;
-  home_city: string | null;
-  years_experience: number | null;
-};
-
-type OfferRow = {
-  id: string;
-  title: string;
-  city: string;
-  amount: number;
-  modality: "hour" | "shift" | "month" | "package";
-  lat: number | null;
-  lng: number | null;
-  poster_type: "family" | "institution";
-};
-
-const MODALITY: Record<OfferRow["modality"], string> = {
-  hour: "/h",
-  shift: "/turno",
-  month: "/mes",
-  package: "",
-};
-
 export function SimpleLiveMap({
   mode,
   height = 420,
@@ -122,106 +81,61 @@ export function SimpleLiveMap({
   center,
 }: SimpleLiveMapProps) {
   const { say } = useVoice();
-  const [pins, setPins] = useState<MapPin[] | null>(null);
   const [selected, setSelected] = useState<MapPin | null>(null);
   const [me, setMe] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
   const [flyTarget, setFlyTarget] = useState<LatLng | null>(null);
-  const { liveLocations } = useLivePresence({ loadAll: true });
+  const session = useSession();
 
-  const load = useCallback(async () => {
+  // Profesionales (familias e instituciones) u oferta abierta (profesionales). Solo se pide lo que ese mapa necesita.
+  const prosQ = useMapProfessionals({ authed: session.has, enabled: mode === "pros" });
+  const demandQ = useMapDemand({ authed: session.has, enabled: mode === "offers" && session.has });
+
+  const pins = useMemo<MapPin[] | null>(() => {
     if (mode === "pros") {
-      const { data } = await supabase
-        .from("public_professionals_safe")
-        .select(
-          "user_id, full_name, avatar_url, specialty, hourly_rate, avg_rating, available, verified, rethus_verified, lat, lng, home_city, years_experience",
-        )
-        .eq("active", true)
-        .limit(200)
-        .abortSignal(AbortSignal.timeout(10000));
-      const rows = (data ?? []) as ProRow[];
-      setPins(
-        rows
-          .filter((r) => r.user_id)
-          .map((r) => {
-            const base =
-              r.lat != null && r.lng != null
-                ? { lat: r.lat, lng: r.lng }
-                : (() => {
-                    const c = cityToLatLng(r.home_city);
-                    const o = deterministicOffset(r.user_id!);
-                    return { lat: c.lat + o.lat, lng: c.lng + o.lng };
-                  })();
-            return {
-              id: r.user_id!,
-              ...base,
-              emoji: "👩‍⚕️",
-              title: (r.full_name ?? "Profesional").split(" ").slice(0, 2).join(" "),
-              subtitle: r.specialty ?? "Cuidado en casa",
-              avatarUrl: r.avatar_url,
-              price: r.hourly_rate ? `${COP(r.hourly_rate)} / hora` : null,
-              rating: r.avg_rating,
-              verified: Boolean(r.verified || r.rethus_verified),
-              dim: !r.available,
-              live: false,
-              raw: r,
-            } satisfies MapPin;
-          }),
-      );
-    } else {
-      const { data } = await supabase
-        .from("job_offers")
-        .select("id, title, city, amount, modality, lat, lng, poster_type")
-        .eq("status", "open")
-        .order("created_at", { ascending: false })
-        .limit(200)
-        .abortSignal(AbortSignal.timeout(10000));
-      const rows = (data ?? []) as OfferRow[];
-      setPins(
-        rows.map((r) => {
-          const base =
-            r.lat != null && r.lng != null
-              ? { lat: r.lat, lng: r.lng }
-              : (() => {
-                  const c = cityToLatLng(r.city);
-                  const o = deterministicOffset(r.id);
-                  return { lat: c.lat + o.lat, lng: c.lng + o.lng };
-                })();
-          return {
-            id: r.id,
-            ...base,
-            emoji: r.poster_type === "institution" ? "🏥" : "🏠",
-            title: r.title,
-            subtitle: r.city,
-            price: `${COP(r.amount)} ${MODALITY[r.modality]}`.trim(),
-            badge: `${Math.round(r.amount / 1000)}k`,
-            raw: r,
-          } satisfies MapPin;
-        }),
+      if (!prosQ.data) return null;
+      return withPosition(prosQ.data).map(
+        (p) =>
+          ({
+            id: p.id,
+            lat: p.lat,
+            lng: p.lng,
+            emoji: "👩‍⚕️",
+            title: p.name,
+            subtitle: p.specialty ?? "Cuidado en casa",
+            avatarUrl: p.avatarUrl,
+            price: p.hourlyRate ? `${COP(p.hourlyRate)} / hora` : null,
+            rating: p.rating,
+            verified: p.verified || p.rethus,
+            dim: p.status !== "available",
+            live: p.live,
+            trust: p.trust.score != null ? trustBadgeText(p.trust) : null,
+            statusLabel: STATUS_LABEL[p.status],
+            raw: p,
+          }) satisfies MapPin,
       );
     }
-  }, [mode]);
+    if (!session.has) return session.ready ? [] : null;
+    if (!demandQ.data) return null;
+    return withPosition(demandQ.data).map(
+      (d) =>
+        ({
+          // Con oferta, el pin abre esa oferta; con horas sueltas, abre las oportunidades.
+          id: d.offerId ?? d.id,
+          lat: d.lat,
+          lng: d.lng,
+          emoji: d.kind === "institution" ? "🏥" : "🏠",
+          title: d.kind === "institution" ? d.name : `Familia ${d.name}`,
+          subtitle: demandHeadline(d),
+          price: d.topHourly ? `Hasta ${COP(d.topHourly)} / hora` : null,
+          badge: d.topHourly ? `${Math.round(d.topHourly / 1000)}k` : undefined,
+          trust: d.trust.score != null ? trustBadgeText(d.trust) : null,
+          raw: d,
+        }) satisfies MapPin,
+    );
+  }, [mode, prosQ.data, demandQ.data, session.has, session.ready]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Cambios en la base de datos → recargar pines al instante.
-  useRealtimeRefresh(
-    `simple-map-${mode}`,
-    mode === "pros" ? [{ table: "professional_profiles" }] : [{ table: "job_offers" }],
-    load,
-  );
-
-  // GPS en vivo de profesionales conectados (estilo Uber).
-  const merged = useMemo(() => {
-    if (!pins) return [];
-    if (mode !== "pros") return pins;
-    return pins.map((p) => {
-      const live = liveLocations.get(p.id);
-      return live?.isOnline ? { ...p, lat: live.lat, lng: live.lng, live: true, dim: false } : p;
-    });
-  }, [pins, liveLocations, mode]);
+  const merged = useMemo(() => pins ?? [], [pins]);
 
   const ordered = useMemo(() => {
     if (!me) return merged;
@@ -229,6 +143,7 @@ export function SimpleLiveMap({
   }, [merged, me]);
 
   const activeCount = merged.filter((p) => !p.dim).length;
+  const busyCount = merged.filter((p) => p.dim).length;
   const liveCount = merged.filter((p) => p.live).length;
 
   const locate = async () => {
@@ -298,11 +213,16 @@ export function SimpleLiveMap({
             ? "Cargando…"
             : mode === "pros"
               ? `${activeCount} disponibles`
-              : `${merged.length} ofertas`}
+              : `${merged.length} ${merged.length === 1 ? "solicitud" : "solicitudes"}`}
         </span>
         {liveCount > 0 && (
           <span className="rounded-full bg-emerald-600 px-3.5 py-2 text-sm font-bold text-white shadow-md">
             📡 {liveCount} en vivo
+          </span>
+        )}
+        {mode === "pros" && busyCount > 0 && (
+          <span className="rounded-full bg-white/95 px-3.5 py-2 text-sm font-bold text-gray-600 shadow-md">
+            ⚪ {busyCount} ocupados
           </span>
         )}
       </div>
@@ -350,8 +270,12 @@ export function SimpleLiveMap({
       )}
 
       {pins !== null && pins.length === 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-16 z-[500] mx-auto w-fit rounded-full bg-white/95 px-4 py-2 text-base font-bold text-trust-deep shadow-md">
-          {mode === "pros" ? "Pronto habrá profesionales aquí" : "Pronto habrá ofertas aquí"}
+        <div className="pointer-events-none absolute inset-x-0 bottom-16 z-[500] mx-auto w-fit max-w-[90%] rounded-full bg-white/95 px-4 py-2 text-center text-base font-bold text-trust-deep shadow-md">
+          {mode === "pros"
+            ? "Pronto habrá profesionales aquí"
+            : session.has
+              ? "Pronto habrá solicitudes aquí"
+              : "Entra como profesional para ver solicitudes cerca de ti"}
         </div>
       )}
 
@@ -385,7 +309,9 @@ export function SimpleLiveMap({
               <p className="truncate text-lg font-bold">{selected.title}</p>
               <p className="truncate text-sm text-gray-600">{selected.subtitle}</p>
               <p className="mt-1 flex flex-wrap gap-x-3 text-sm font-bold">
+                {selected.statusLabel && <span>{selected.statusLabel}</span>}
                 {selected.verified && <span className="text-emerald-700">✅ Verificado</span>}
+                {selected.trust && <span>🛡️ {selected.trust}</span>}
                 {(selected.rating ?? 0) > 0 && <span>⭐ {selected.rating?.toFixed(1)}</span>}
                 {me && <span>📍 {formatKm(distanceKm(me, selected))}</span>}
                 {selected.live && <span className="text-emerald-700">📡 En vivo</span>}
@@ -400,7 +326,13 @@ export function SimpleLiveMap({
               disabled={mode === "pros" && selected.dim}
               className="min-h-14 rounded-2xl bg-trust-deep px-4 text-lg font-bold text-white active:scale-[0.98] disabled:opacity-50"
             >
-              {mode === "pros" && selected.dim ? "Ocupado ahora" : primaryLabel}
+              {mode === "pros" && selected.dim
+                ? (selected.raw as { status?: string } | undefined)?.status === "busy"
+                  ? "Ocupado ahora"
+                  : "No disponible ahora"
+                : typeof primaryLabel === "function"
+                  ? primaryLabel(selected)
+                  : primaryLabel}
             </button>
             {secondary && (
               <a

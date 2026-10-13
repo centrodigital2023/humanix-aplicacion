@@ -49,6 +49,7 @@ import { AiFingerprintCard } from "@/components/humanix/AiFingerprintCard";
 import { SemanticOffers } from "@/components/humanix/SemanticOffers";
 import { LiveMapSection } from "@/components/humanix/LiveMapSection";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
+import { toCell } from "@/lib/presence";
 import { ReferencesManager } from "@/components/humanix/ReferencesManager";
 import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
@@ -1784,14 +1785,18 @@ function ProDashboard() {
                 <div className="mb-4">
                   <p className="text-sm font-semibold">Tu ubicación principal</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Marca dónde prestas servicio. Aparecerás en el mapa del marketplace.
+                    Marca dónde prestas servicio. Aparecerás en el mapa del marketplace con una zona
+                    aproximada (~1 km): nunca se muestra tu punto exacto.
                   </p>
                 </div>
                 <LocationPicker
                   lat={profile?.lat ?? null}
                   lng={profile?.lng ?? null}
                   defaultCity={profile?.home_city ?? undefined}
-                  onChange={async (lat, lng, address) => {
+                  onChange={async (pickedLat, pickedLng, address) => {
+                    // La ubicación del profesional la puede leer cualquier cuenta: se guarda en la cuadrícula de ~1 km, no el punto exacto.
+                    const lat = toCell(pickedLat);
+                    const lng = toCell(pickedLng);
                     await supabase
                       .from("professional_profiles")
                       .update({
@@ -1803,7 +1808,7 @@ function ProDashboard() {
                     setProfile((prev) =>
                       prev ? { ...prev, lat, lng, home_city: address ?? prev.home_city } : prev,
                     );
-                    toast.success("Ubicación guardada");
+                    toast.success("Ubicación guardada (zona aproximada)");
                   }}
                 />
               </div>
@@ -1819,7 +1824,9 @@ function ProDashboard() {
                   lat: profile?.lat ?? null,
                   lng: profile?.lng ?? null,
                   defaultCity: profile?.home_city ?? undefined,
-                  onChange: async (lat, lng, address) => {
+                  onChange: async (pickedLat, pickedLng, address) => {
+                    const lat = toCell(pickedLat);
+                    const lng = toCell(pickedLng);
                     await supabase
                       .from("professional_profiles")
                       .update({

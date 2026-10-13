@@ -16,6 +16,7 @@ import { HomeButton } from "./HomeButton";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 import type { AppRole, AppUser } from "@/hooks/use-app-user";
+import { usePresence } from "@/hooks/use-presence";
 
 export type NavItem = {
   label: string;
@@ -68,6 +69,11 @@ export function AppShell({
   children,
 }: Props) {
   const { theme, toggleTheme } = useTheme();
+  // «En vivo» mientras la persona usa la aplicación (profesional, familia o institución). El servidor aproxima y decide lo que se ve.
+  usePresence({
+    userId: user.id,
+    enabled: user.roles.some((r) => r === "professional" || r === "family" || r === "institution"),
+  });
   const location = useLocation();
   const router = useRouter();
   const navigate = useNavigate();

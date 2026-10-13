@@ -4,60 +4,52 @@
 //  - Profesionales: ofertas abiertas → "Ver oferta" + compartir mi ubicación en vivo.
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import type { AppUser } from "@/hooks/use-app-user";
-import { useLivePresence } from "@/hooks/use-live-presence";
+import { usePresence } from "@/hooks/use-presence";
 import type { Audience } from "@/lib/audience";
+import type { MapDemand, MapProfessional } from "@/lib/liveMap";
 import { whatsappLink } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
 import { SimpleLiveMap, type MapPin } from "./SimpleLiveMap";
 import { QuickBooking, type BookablePro } from "./QuickBooking";
 import { useVoice } from "./voice";
 
-type ProRaw = { hourly_rate: number | null };
-
 function ShareMyLocation({ user }: { user: AppUser }) {
   const { say } = useVoice();
-  const { isTracking, startTracking, stopTracking } = useLivePresence({
-    userId: user.id,
-    userType: "professional",
-    loadAll: false,
-  });
-  const [busy, setBusy] = useState(false);
-  const toggle = async () => {
-    setBusy(true);
-    try {
-      if (isTracking) {
-        await stopTracking();
-        say("Ya no compartes tu ubicación.");
-      } else {
-        await startTracking();
-        say("Ahora te ven en el mapa.");
-      }
-    } finally {
-      setBusy(false);
+  const { isSharing, startSharing, stopSharing, error } = usePresence({ userId: user.id });
+  const toggle = () => {
+    if (isSharing) {
+      stopSharing();
+      say("Ya no compartes tu ubicación.");
+    } else {
+      say(startSharing() ? "Ahora te ven en el mapa." : "No pudimos usar tu ubicación.");
     }
   };
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={isTracking}
-      onClick={toggle}
-      disabled={busy}
-      className={`inline-flex min-h-14 items-center gap-3 rounded-2xl px-5 text-base font-bold transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ok/40 ${
-        isTracking ? "bg-ok text-ok-foreground shadow-lg shadow-ok/25" : "bg-card shadow-sm"
-      }`}
-    >
-      {busy ? (
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      ) : (
+    <div className="space-y-2">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isSharing}
+        onClick={toggle}
+        className={`inline-flex min-h-14 items-center gap-3 rounded-2xl px-5 text-base font-bold transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ok/40 ${
+          isSharing ? "bg-ok text-ok-foreground shadow-lg shadow-ok/25" : "bg-card shadow-sm"
+        }`}
+      >
         <span aria-hidden="true" className="text-xl">
           📡
         </span>
+        {isSharing ? "Te ven en el mapa" : "Mostrarme en el mapa"}
+      </button>
+      <p className="text-sm text-muted-foreground">
+        Se muestra tu zona aproximada (a ~1 km), nunca tu dirección ni tu punto exacto.
+      </p>
+      {error && (
+        <p role="alert" className="text-sm font-medium text-warn">
+          {error}
+        </p>
       )}
-      {isTracking ? "Te ven en el mapa" : "Mostrarme en el mapa"}
-    </button>
+    </div>
   );
 }
 
@@ -72,18 +64,23 @@ export function LiveNearby({ audience, user }: { audience: Audience; user: AppUs
         {isPro && user && <ShareMyLocation user={user} />}
         <SimpleLiveMap
           mode="offers"
-          primaryLabel="Ver oferta"
+          primaryLabel={(pin: MapPin) =>
+            (pin.raw as MapDemand | undefined)?.offerId ? "Ver oferta" : "Ver oportunidades"
+          }
           onPrimary={(pin: MapPin) => {
+            // Con oferta, el pin abre esa oferta; con horas sueltas, abre las oportunidades del panel.
+            const offerId = (pin.raw as MapDemand | undefined)?.offerId ?? null;
             if (!user)
               navigate({
                 to: "/auth",
                 search: {
                   role: "professional",
                   mode: "signup",
-                  redirect: `/oferta/${pin.id}`,
+                  redirect: offerId ? `/oferta/${offerId}` : "/dashboard/profesional",
                 } as never,
               });
-            else navigate({ to: "/oferta/$offerId", params: { offerId: pin.id } });
+            else if (offerId) navigate({ to: "/oferta/$offerId", params: { offerId } });
+            else navigate({ to: "/dashboard/profesional" });
           }}
         />
       </div>
@@ -109,7 +106,7 @@ export function LiveNearby({ audience, user }: { audience: Audience; user: AppUs
           setBooking({
             id: pin.id,
             name: pin.title,
-            hourlyRate: (pin.raw as ProRaw | undefined)?.hourly_rate ?? null,
+            hourlyRate: (pin.raw as MapProfessional | undefined)?.hourlyRate ?? null,
             avatarUrl: pin.avatarUrl,
           })
         }

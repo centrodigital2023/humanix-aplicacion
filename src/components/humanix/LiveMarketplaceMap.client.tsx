@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -20,15 +20,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  geocodeCity,
-  getBrowserLocation,
-  distanceKm,
-  formatKm,
-  cityToLatLng,
-  deterministicOffset,
-} from "@/lib/geo";
-import { Star, Phone, MessageCircle, User as UserIcon } from "lucide-react";
+import { geocodeCity, getBrowserLocation, distanceKm, formatKm } from "@/lib/geo";
+import { Star, User as UserIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -40,7 +33,18 @@ import {
 import { clusterMarkers, isCluster } from "@/lib/marker-clustering";
 import { useThrottle } from "@/hooks/use-throttle";
 import { useNavigate } from "@tanstack/react-router";
-import { useLivePresence } from "@/hooks/use-live-presence";
+import { useQueryClient } from "@tanstack/react-query";
+import { usePresence } from "@/hooks/use-presence";
+import {
+  liveMapKeys,
+  useLiveCounts,
+  useMapDemand,
+  useMapInstitutions,
+  useMapProfessionals,
+} from "@/hooks/use-live-map";
+import { counterItems, demandHeadline, EMPTY_COUNTS, withPosition } from "@/lib/liveMap";
+import { toCell } from "@/lib/presence";
+import { trustBadgeText } from "@/lib/trustScore";
 
 type Role = "professional" | "family" | "institution" | "guest";
 
@@ -56,7 +60,6 @@ type Point = {
   fullName?: string | null;
   rating?: number | null;
   hourlyRate?: number | null;
-  phone?: string | null;
   city?: string | null;
   meta?: string | null;
   specialty?: string | null;
@@ -64,8 +67,14 @@ type Point = {
   yearsExperience?: number | null;
   subSpecialties?: string[] | null;
   availabilityStatus?: "available" | "busy" | "away" | null;
-  hasExactLocation?: boolean;
+  /** Con la aplicación abierta ahora mismo. */
   isLive?: boolean;
+  /** «82 · Alto»: el Trust Score ya redactado. */
+  trust?: string | null;
+  /** Familias con oferta abierta: la oferta que se abre. */
+  offerId?: string | null;
+  /** Lo que hay abierto («2 ofertas · hasta $24.000/h»). */
+  headline?: string | null;
 };
 
 const COLORS = {
@@ -114,6 +123,15 @@ function makeMarkerIcon(
     iconSize: [size + 4, size + 4],
     iconAnchor: [(size + 4) / 2, (size + 4) / 2],
   });
+}
+
+/** Colores y texto del estado en la ventana del pin (disponible / ocupado / no disponible). */
+function statusStyle(status: "available" | "busy" | "away" | null | undefined) {
+  if (status === "busy")
+    return { soft: "#f59e0b22", text: "#d97706", dot: "#f59e0b", label: "Ocupado" };
+  if (status === "away")
+    return { soft: "#9ca3af22", text: "#6b7280", dot: "#9ca3af", label: "No disponible" };
+  return { soft: "#22c55e22", text: "#16a34a", dot: "#22c55e", label: "Disponible ahora" };
 }
 
 const ME_ICON = () =>
@@ -204,11 +222,15 @@ export function LiveMarketplaceMap({
   const isGuest = preview || effectiveRole === "guest" || !userId;
   const navigate = useNavigate();
 
-  // ── Presencia GPS en vivo (estilo Uber/InDrive) ───────────────────────────
-  const { liveLocations, isTracking, startTracking, stopTracking } = useLivePresence({
+  // ── Presencia: «en vivo» mientras se usa la aplicación; el profesional puede, además, compartir su zona aproximada (~1 km) ──
+  const {
+    isSharing: isTracking,
+    startSharing,
+    stopSharing,
+    error: presenceError,
+  } = usePresence({
     userId: !isGuest ? userId : undefined,
-    userType: !isGuest && effectiveRole !== "guest" ? (effectiveRole as any) : undefined,
-    loadAll: true,
+    enabled: !isGuest && effectiveRole !== "guest",
   });
   // Antes esto abría un modal de pantalla completa que tapaba el mapa por
   // completo ("el mapa queda detrás del registro"). En Uber/InDrive puedes
@@ -229,12 +251,8 @@ export function LiveMarketplaceMap({
     }
     return false;
   };
-  const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [available, setAvailable] = useState(true);
-  const [pros, setPros] = useState<Point[]>([]);
-  const [families, setFamilies] = useState<Point[]>([]);
-  const [institutions, setInstitutions] = useState<Point[]>([]);
   const [picking, setPicking] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(11);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -325,9 +343,10 @@ export function LiveMarketplaceMap({
           }
           const loc = await resolveLoc(data?.home_city ?? null);
           if (!loc || cancelled) return;
+          // Lo del profesional es legible por cualquier cuenta: se guarda en la cuadrícula de ~1 km, no el punto exacto.
           await supabase
             .from("professional_profiles")
-            .update({ lat: loc.lat, lng: loc.lng })
+            .update({ lat: toCell(loc.lat), lng: toCell(loc.lng) })
             .eq("user_id", userId);
           if (!cancelled) setMeCoords(loc);
         }
@@ -348,10 +367,10 @@ export function LiveMarketplaceMap({
         if (effectiveRole === "professional") {
           const { data } = await supabase
             .from("professional_profiles")
-            .select("available, availability_status")
+            .select("available")
             .eq("user_id", userId)
             .maybeSingle();
-          setAvailable(data?.available === true || data?.availability_status === "available");
+          setAvailable(data?.available === true);
         } else if (effectiveRole === "family") {
           const { data } = await supabase
             .from("family_profiles")
@@ -373,183 +392,96 @@ export function LiveMarketplaceMap({
     })();
   }, [effectiveRole, userId, isGuest]);
 
-  const loadAll = async () => {
-    try {
-      // Intento 1: columnas completas (funciona luego de aplicar la migración).
-      // Intento 2: columnas garantizadas (funciona antes de la migración).
-      const isColErr = (r: { error: any }) => r.error?.code === "42703";
+  // Datos: funciones seguras de la base (sin teléfono ni dirección, posiciones en cuadrícula de ~1 km). Se actualizan solas cuando la
+  // base avisa que algo cambió. Cada quien ve lo que le sirve: los profesionales, a quien los necesita; los demás, a los profesionales.
+  const qc = useQueryClient();
+  const authed = !isGuest;
+  const showPros = effectiveRole !== "professional";
+  const showFamilies = authed && effectiveRole === "professional";
+  const prosQ = useMapProfessionals({ authed, enabled: showPros });
+  const demandQ = useMapDemand({ authed, enabled: showFamilies });
+  const instQ = useMapInstitutions({ authed });
+  const countsQ = useLiveCounts({ authed });
+  const loading =
+    (showPros && prosQ.isLoading) || (showFamilies && demandQ.isLoading) || instQ.isLoading;
 
-      const [proFull, famFull, instFull] = await Promise.all([
-        supabase
-          .from("public_professionals_safe")
-          .select(
-            "user_id, lat, lng, has_exact_location, specialty, sub_specialties, gender, years_experience, home_city, hourly_rate, avg_rating, available, availability_status, avatar_url, full_name, phone",
-          )
-          .limit(300),
-        supabase
-          .from("public_family_map_safe")
-          .select(
-            "user_id, default_lat, default_lng, has_exact_location, patient_name, default_address, visible_on_map, whatsapp, full_name, avatar_url, phone",
-          )
-          .limit(300),
-        supabase
-          .from("public_institutions_safe")
-          .select(
-            "user_id, lat, lng, has_exact_location, institution_name, city, institution_type, visible_on_map, full_name, avatar_url, phone",
-          )
-          .limit(300),
-      ]);
-
-      // Retry con columnas mínimas si la vista aún no tiene los nuevos campos
-      const [proRes, famRes, instRes] = await Promise.all([
-        isColErr(proFull)
-          ? supabase
-              .from("public_professionals_safe")
-              .select(
-                "user_id, lat, lng, specialty, sub_specialties, gender, years_experience, home_city, hourly_rate, avg_rating, available, availability_status, avatar_url",
-              )
-              .limit(300)
-          : Promise.resolve(proFull),
-        isColErr(famFull)
-          ? supabase
-              .from("public_family_map_safe")
-              .select(
-                "user_id, default_lat, default_lng, patient_name, default_address, visible_on_map, whatsapp",
-              )
-              .limit(300)
-          : Promise.resolve(famFull),
-        isColErr(instFull)
-          ? supabase
-              .from("public_institutions_safe")
-              .select("user_id, lat, lng, institution_name, city, institution_type, visible_on_map")
-              .limit(300)
-          : Promise.resolve(instFull),
-      ]);
-
-      const resolveCoords = (
-        lat: number | null,
-        lng: number | null,
-        city: string | null,
-        userId: string,
-      ): { lat: number; lng: number } => {
-        if (lat != null && lng != null) return { lat: Number(lat), lng: Number(lng) };
-        const base = cityToLatLng(city);
-        const off = deterministicOffset(userId);
-        return { lat: base.lat + off.lat, lng: base.lng + off.lng };
-      };
-
-      setPros(
-        (proRes.data ?? []).map((p: any) => {
-          const coords = resolveCoords(p.lat, p.lng, p.home_city, p.user_id);
-          return {
-            id: `pro-${p.user_id}`,
-            ...coords,
-            kind: "professional" as const,
-            title: p.specialty || "Profesional disponible",
-            subtitle: `${p.home_city ?? ""}${p.hourly_rate ? ` · $${Number(p.hourly_rate).toLocaleString("es-CO")}/h` : ""}`,
-            userId: p.user_id,
-            avatarUrl: p.avatar_url ?? null,
-            fullName: p.full_name ?? null,
-            rating: p.avg_rating ?? null,
-            hourlyRate: p.hourly_rate ?? null,
-            phone: p.phone ?? null,
-            city: p.home_city ?? null,
-            meta: p.specialty ?? null,
-            specialty: p.specialty ?? null,
-            gender: p.gender ?? null,
-            yearsExperience: p.years_experience ?? null,
-            subSpecialties: p.sub_specialties ?? null,
-            hasExactLocation: p.has_exact_location ?? p.lat != null,
-            availabilityStatus:
-              p.availability_status === "busy"
-                ? "busy"
-                : p.available === true || p.availability_status === "available"
-                  ? "available"
-                  : "away",
-          };
-        }),
-      );
-      setFamilies(
-        (famRes.data ?? []).map((p: any) => {
-          const coords = resolveCoords(
-            p.default_lat,
-            p.default_lng,
-            p.default_address ?? null,
-            p.user_id,
-          );
-          return {
-            id: `fam-${p.user_id}`,
-            ...coords,
-            kind: "family" as const,
-            title: p.patient_name ? `Familia · ${p.patient_name}` : "Familia",
-            subtitle: p.default_address ?? undefined,
-            userId: p.user_id,
-            avatarUrl: p.avatar_url ?? null,
-            fullName: p.full_name ?? null,
-            phone: p.whatsapp ?? p.phone ?? null,
-            meta: p.default_address ?? null,
-            hasExactLocation: p.has_exact_location ?? p.default_lat != null,
-            availabilityStatus:
-              p.visible_on_map === true ? ("available" as const) : ("away" as const),
-          };
-        }),
-      );
-      setInstitutions(
-        (instRes.data ?? []).map((p: any) => {
-          const coords = resolveCoords(p.lat, p.lng, p.city, p.user_id);
-          return {
-            id: `inst-${p.user_id}`,
-            ...coords,
-            kind: "institution" as const,
-            title: p.institution_name || "Institución",
-            subtitle: `${p.institution_type ?? ""}${p.city ? ` · ${p.city}` : ""}`,
-            userId: p.user_id,
-            avatarUrl: p.avatar_url ?? null,
-            fullName: p.institution_name ?? p.full_name ?? null,
-            phone: p.phone ?? null,
-            city: p.city ?? null,
-            meta: p.institution_type ?? null,
-            hasExactLocation: p.has_exact_location ?? p.lat != null,
-            availabilityStatus:
-              p.visible_on_map === true ? ("available" as const) : ("away" as const),
-          };
-        }),
-      );
-    } catch (e) {
-      console.error("[LiveMap] load failed", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadAll();
-    const suffix = Math.random().toString(36).slice(2, 8);
-    const ch = supabase
-      .channel(`live-marketplace-map-${suffix}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () =>
-        loadAll(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "professional_profiles" },
-        () => loadAll(),
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "family_profiles" }, () =>
-        loadAll(),
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "institution_profiles" }, () =>
-        loadAll(),
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "job_offers" }, () =>
-        loadAll(),
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadAll())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, []);
+  const pros = useMemo<Point[]>(
+    () =>
+      withPosition(prosQ.data ?? []).map((p) => ({
+        id: `pro-${p.id}`,
+        lat: p.lat,
+        lng: p.lng,
+        kind: "professional" as const,
+        title: p.specialty || "Profesional",
+        subtitle: `${p.city ?? ""}${p.hourlyRate ? ` · $${Number(p.hourlyRate).toLocaleString("es-CO")}/h` : ""}`,
+        userId: p.id,
+        avatarUrl: p.avatarUrl,
+        fullName: p.name,
+        rating: p.rating,
+        hourlyRate: p.hourlyRate,
+        city: p.city,
+        meta: p.specialty,
+        specialty: p.specialty,
+        gender: p.gender,
+        yearsExperience: p.yearsExperience,
+        subSpecialties: p.subSpecialties,
+        trust: p.trust.score != null ? trustBadgeText(p.trust) : null,
+        isLive: p.live,
+        availabilityStatus:
+          p.status === "busy"
+            ? ("busy" as const)
+            : p.status === "available"
+              ? ("available" as const)
+              : ("away" as const),
+      })),
+    [prosQ.data],
+  );
+  const families = useMemo<Point[]>(
+    () =>
+      withPosition((demandQ.data ?? []).filter((d) => d.kind === "family")).map((d) => ({
+        id: `fam-${d.id}`,
+        lat: d.lat,
+        lng: d.lng,
+        kind: "family" as const,
+        title: `Familia · ${d.name}`,
+        subtitle: demandHeadline(d),
+        userId: d.id,
+        city: d.city,
+        meta: d.city,
+        headline: demandHeadline(d),
+        offerId: d.offerId,
+        trust: d.trust.score != null ? trustBadgeText(d.trust) : null,
+        availabilityStatus: "available" as const,
+      })),
+    [demandQ.data],
+  );
+  const institutions = useMemo<Point[]>(
+    () =>
+      withPosition(instQ.data ?? []).map((i) => ({
+        id: `inst-${i.id}`,
+        lat: i.lat,
+        lng: i.lng,
+        kind: "institution" as const,
+        title: i.name,
+        subtitle: `${i.type ?? ""}${i.city ? ` · ${i.city}` : ""}`,
+        userId: i.id,
+        fullName: i.name,
+        city: i.city,
+        meta: i.type,
+        headline:
+          i.openOffers > 0
+            ? `${i.openOffers} ${i.openOffers === 1 ? "oferta abierta" : "ofertas abiertas"}`
+            : null,
+        isLive: i.live,
+        availabilityStatus:
+          i.status === "available"
+            ? ("available" as const)
+            : i.status === "busy"
+              ? ("busy" as const)
+              : ("away" as const),
+      })),
+    [instQ.data],
+  );
 
   const toggleAvailability = async () => {
     if (isGuest || !userId) return;
@@ -560,10 +492,7 @@ export function LiveMarketplaceMap({
       if (effectiveRole === "professional") {
         ({ error } = await supabase
           .from("professional_profiles")
-          .update({
-            available: next,
-            availability_status: next ? "available" : "unavailable",
-          })
+          .update({ available: next })
           .eq("user_id", userId));
       } else if (effectiveRole === "family") {
         ({ error } = await supabase
@@ -579,7 +508,7 @@ export function LiveMarketplaceMap({
       if (error) throw error;
       setAvailable(next);
       toast.success(next ? "Estás visible en el mapa" : "Te ocultaste del mapa");
-      loadAll();
+      void qc.invalidateQueries({ queryKey: liveMapKeys.all });
     } catch (e: any) {
       toast.error("No se pudo actualizar disponibilidad");
       console.error(e);
@@ -663,28 +592,10 @@ export function LiveMarketplaceMap({
     meCoords.lng,
   ]);
 
-  // Fusionar ubicaciones GPS en vivo sobre los puntos estáticos del perfil.
-  // Si el usuario tiene GPS activo, su marcador se mueve en tiempo real y
-  // se muestra con el indicador verde "en vivo".
-  const applyLiveLocations = useCallback(
-    (points: Point[]): Point[] =>
-      points.map((p) => {
-        if (!p.userId) return p;
-        const live = liveLocations.get(p.userId);
-        if (!live?.isOnline) return p;
-        return { ...p, lat: live.lat, lng: live.lng, hasExactLocation: true, isLive: true };
-      }),
-    [liveLocations],
-  );
-
-  // All roles see everyone: professionals (blue) + families (yellow) + institutions (fuchsia)
+  // Cada quien ve lo que le sirve: profesionales (azul), familias con ofertas abiertas (amarillo) e instituciones (fucsia).
   const visiblePoints = useMemo<Point[]>(
-    () => [
-      ...applyLiveLocations(filteredPros),
-      ...applyLiveLocations(families),
-      ...applyLiveLocations(institutions),
-    ],
-    [filteredPros, families, institutions, applyLiveLocations],
+    () => [...filteredPros, ...families, ...institutions],
+    [filteredPros, families, institutions],
   );
 
   // Cluster by proximity when zoomed out; radius shrinks as user zooms in.
@@ -759,16 +670,16 @@ export function LiveMarketplaceMap({
           />
           <div className="min-w-0">
             <p className="text-sm font-semibold">
-              {available ? "Presencia en vivo activa" : "Presencia en vivo apagada"}
+              {available ? "Visible en el mapa" : "Oculto del mapa"}
             </p>
             <p className="text-xs text-muted-foreground leading-snug">
               {isGuest
                 ? "Regístrate para aparecer y contactar talento en tiempo real"
                 : effectiveRole === "professional"
-                  ? "Tu punto azul aparece ahora para familias e instituciones"
+                  ? "Familias e instituciones ven tu zona aproximada (~1 km) y si estás disponible u ocupado"
                   : effectiveRole === "family"
-                    ? "Tu punto amarillo aparece para profesionales disponibles"
-                    : "Tu punto fucsia aparece para profesionales disponibles"}
+                    ? "Los profesionales cercanos ven tu zona aproximada mientras tengas ofertas abiertas, nunca tu dirección"
+                    : "Los profesionales ven tu sede en el mapa mientras estés visible"}
             </p>
           </div>
         </div>
@@ -793,17 +704,28 @@ export function LiveMarketplaceMap({
                 className="flex-1 sm:flex-initial"
                 onClick={() => {
                   if (requireAuth()) return;
+                  if (effectiveRole !== "professional") {
+                    void handleGps();
+                    return;
+                  }
+                  // El profesional puede mostrar su zona aproximada (~1 km) en vivo; nunca su punto exacto.
                   if (isTracking) {
-                    stopTracking();
-                    toast("GPS en vivo desactivado");
+                    stopSharing();
+                    toast("Dejaste de compartir tu zona en vivo");
+                  } else if (startSharing()) {
+                    toast.success("Compartes tu zona aproximada (~1 km) en vivo");
+                    void handleGps();
                   } else {
-                    startTracking().then(() => handleGps());
-                    toast.success("GPS en vivo activado — tu posición se actualiza en tiempo real");
+                    toast.error("No pudimos usar tu ubicación");
                   }
                 }}
               >
                 <Crosshair className="h-4 w-4 mr-1" />
-                {isTracking ? "GPS Activo" : "GPS"}
+                {effectiveRole !== "professional"
+                  ? "GPS"
+                  : isTracking
+                    ? "Zona en vivo"
+                    : "Compartir zona"}
               </Button>
             </>
           )}
@@ -832,65 +754,36 @@ export function LiveMarketplaceMap({
         </div>
       </Card>
 
+      {presenceError && (
+        <p role="alert" className="text-xs font-medium text-warn">
+          {presenceError}
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        {/* Indicador de usuarios con GPS en vivo activo ahora mismo */}
-        {liveLocations.size > 0 && (
-          <Badge variant="outline" className="gap-1.5 border-emerald-500/40">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-            <span style={{ color: "#22c55e", fontWeight: 700 }}>{liveLocations.size}</span>
-            <span className="text-muted-foreground">en vivo ahora</span>
+        {/* Contadores reales por grupo (de la base, al día): disponibles, en vivo y ocupados */}
+        {counterItems(
+          isGuest || effectiveRole === "family" ? "family" : effectiveRole,
+          countsQ.data ?? EMPTY_COUNTS,
+        ).map((it) => (
+          <Badge
+            key={it.key}
+            variant="outline"
+            className="gap-1.5"
+            data-testid={`map-count-${it.key}`}
+          >
+            <span className="h-2.5 w-2.5 rounded-full bg-ok" />
+            <span className="font-medium">{it.label}:</span>
+            <span className="font-bold text-ok">{it.available}</span>
+            <span className="text-muted-foreground">{it.availableLabel}</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="font-bold">{it.live}</span>
+            <span className="text-muted-foreground">en vivo</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="font-bold text-warn">{it.busy}</span>
+            <span className="text-muted-foreground">{it.busyLabel}</span>
           </Badge>
-        )}
-        {(() => {
-          const availPros = pros.filter((p) => p.availabilityStatus === "available").length;
-          const livePros = pros.filter((p) => p.userId && liveLocations.has(p.userId)).length;
-          const shownPros = filteredPros.length;
-          return (
-            <Badge variant="outline" className="gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              <span style={{ color: "#22c55e", fontWeight: 700 }}>{availPros}</span>
-              <span className="text-muted-foreground">/ {pros.length} profesionales</span>
-              {livePros > 0 && (
-                <span style={{ color: "#22c55e", fontSize: 10 }}>({livePros} GPS)</span>
-              )}
-              {shownPros !== pros.length && (
-                <span className="text-muted-foreground">(filtrados: {shownPros})</span>
-              )}
-            </Badge>
-          );
-        })()}
-        {
-          <>
-            <Badge variant="outline" className="gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              <span style={{ color: "#22c55e", fontWeight: 700 }}>
-                {families.filter((f) => f.availabilityStatus === "available").length}
-              </span>
-              <span className="text-muted-foreground">/ {families.length} familias</span>
-              {(() => {
-                const lf = families.filter((f) => f.userId && liveLocations.has(f.userId)).length;
-                return lf > 0 ? (
-                  <span style={{ color: "#22c55e", fontSize: 10 }}>({lf} GPS)</span>
-                ) : null;
-              })()}
-            </Badge>
-            <Badge variant="outline" className="gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
-              <span style={{ color: "#22c55e", fontWeight: 700 }}>
-                {institutions.filter((i) => i.availabilityStatus === "available").length}
-              </span>
-              <span className="text-muted-foreground">/ {institutions.length} instituciones</span>
-              {(() => {
-                const li = institutions.filter(
-                  (i) => i.userId && liveLocations.has(i.userId),
-                ).length;
-                return li > 0 ? (
-                  <span style={{ color: "#22c55e", fontSize: 10 }}>({li} GPS)</span>
-                ) : null;
-              })()}
-            </Badge>
-          </>
-        }
+        ))}
         {pickLocation && (
           <Badge variant="outline" className="gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-biosensor" />
@@ -1242,7 +1135,7 @@ export function LiveMarketplaceMap({
                 p.kind,
                 p.availabilityStatus ?? "available",
                 isSelected,
-                p.hasExactLocation !== false,
+                true,
                 p.isLive === true,
               );
               const Icon =
@@ -1258,8 +1151,14 @@ export function LiveMarketplaceMap({
                     ? "Familia"
                     : "Institución";
               const accent = COLORS[p.kind];
-              const waHref = p.phone ? `https://wa.me/${String(p.phone).replace(/\D/g, "")}` : null;
-              const telHref = p.phone ? `tel:${p.phone}` : null;
+              // Sin teléfono ni WhatsApp en el mapa: el contacto va por la plataforma (perfil, oferta, reserva) y según el plan.
+              const offerHref =
+                p.kind === "family" || (p.kind === "institution" && (p.headline ?? "") !== "")
+                  ? p.offerId
+                    ? `/oferta/${p.offerId}`
+                    : "/dashboard/profesional"
+                  : null;
+              const offerLabel = p.offerId ? "Ver oferta" : "Ver oportunidades";
               const profileHref =
                 p.kind === "professional" && p.userId ? `/profesional/${p.userId}` : null;
               return (
@@ -1328,9 +1227,8 @@ export function LiveMarketplaceMap({
                                 alignItems: "center",
                                 gap: 4,
                                 marginTop: 2,
-                                background:
-                                  p.availabilityStatus === "busy" ? "#f59e0b22" : "#22c55e22",
-                                color: p.availabilityStatus === "busy" ? "#d97706" : "#16a34a",
+                                background: statusStyle(p.availabilityStatus).soft,
+                                color: statusStyle(p.availabilityStatus).text,
                               }}
                             >
                               <span
@@ -1339,11 +1237,10 @@ export function LiveMarketplaceMap({
                                   height: 6,
                                   borderRadius: 9999,
                                   display: "inline-block",
-                                  background:
-                                    p.availabilityStatus === "busy" ? "#f59e0b" : "#22c55e",
+                                  background: statusStyle(p.availabilityStatus).dot,
                                 }}
                               />
-                              {p.availabilityStatus === "busy" ? "Ocupado" : "Disponible ahora"}
+                              {statusStyle(p.availabilityStatus).label}
                             </span>
                           )}
                         </div>
@@ -1353,6 +1250,16 @@ export function LiveMarketplaceMap({
                         <p className="text-xs text-muted-foreground" style={{ margin: "2px 0" }}>
                           {p.meta}
                           {p.city ? ` · ${p.city}` : ""}
+                        </p>
+                      )}
+                      {p.headline && (
+                        <p className="text-xs font-medium" style={{ margin: "2px 0" }}>
+                          {p.headline}
+                        </p>
+                      )}
+                      {p.trust && (
+                        <p className="text-xs" style={{ margin: "2px 0", fontWeight: 600 }}>
+                          🛡️ Confianza {p.trust}
                         </p>
                       )}
                       {p.isLive && (
@@ -1377,10 +1284,10 @@ export function LiveMarketplaceMap({
                               animation: "livePulse 1s infinite",
                             }}
                           />
-                          GPS en vivo · posición exacta ahora
+                          En vivo ahora · zona aproximada
                         </p>
                       )}
-                      {!p.hasExactLocation && !p.isLive && (
+                      {!p.isLive && (
                         <p
                           style={{
                             fontSize: 10,
@@ -1389,7 +1296,7 @@ export function LiveMarketplaceMap({
                             fontStyle: "italic",
                           }}
                         >
-                          📍 Ubicación aproximada · ciudad
+                          📍 Zona aproximada (~1 km)
                         </p>
                       )}
 
@@ -1461,52 +1368,6 @@ export function LiveMarketplaceMap({
                           </a>
                         ) : (
                           <>
-                            {waHref && (
-                              <a
-                                href={waHref}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  flex: 1,
-                                  textAlign: "center",
-                                  background: "#25D366",
-                                  color: "white",
-                                  padding: "6px 10px",
-                                  borderRadius: 8,
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  textDecoration: "none",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: 4,
-                                }}
-                              >
-                                <MessageCircle className="h-3 w-3" /> WhatsApp
-                              </a>
-                            )}
-                            {telHref && (
-                              <a
-                                href={telHref}
-                                style={{
-                                  flex: 1,
-                                  textAlign: "center",
-                                  background: accent,
-                                  color: "white",
-                                  padding: "6px 10px",
-                                  borderRadius: 8,
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  textDecoration: "none",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: 4,
-                                }}
-                              >
-                                <Phone className="h-3 w-3" /> Llamar
-                              </a>
-                            )}
                             {profileHref && (
                               <a
                                 href={profileHref}
@@ -1530,18 +1391,27 @@ export function LiveMarketplaceMap({
                                 <UserIcon className="h-3 w-3" /> Perfil
                               </a>
                             )}
+                            {offerHref && (
+                              <a
+                                href={offerHref}
+                                style={{
+                                  flex: 1,
+                                  textAlign: "center",
+                                  background: accent,
+                                  color: "white",
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                {offerLabel}
+                              </a>
+                            )}
                           </>
                         )}
                       </div>
-
-                      {!isGuest && !p.phone && !profileHref && (
-                        <p
-                          className="text-xs text-muted-foreground"
-                          style={{ marginTop: 8, textAlign: "center" }}
-                        >
-                          Contacto no disponible
-                        </p>
-                      )}
                     </div>
                   </Popup>
                 </Marker>
