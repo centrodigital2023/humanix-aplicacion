@@ -54,6 +54,7 @@ import { Route as BuscarRouteImport } from './routes/buscar'
 import { Route as AuxiliarEnfermeriaRouteImport } from './routes/auxiliar-enfermeria'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AccesoEquipoRouteImport } from './routes/acceso-equipo'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperadminIndexRouteImport } from './routes/superadmin.index'
@@ -80,6 +81,7 @@ import { Route as DashboardProfesionalRouteImport } from './routes/dashboard.pro
 import { Route as DashboardMonitoreoRouteImport } from './routes/dashboard.monitoreo'
 import { Route as DashboardInstitucionRouteImport } from './routes/dashboard.institucion'
 import { Route as DashboardFamiliaRouteImport } from './routes/dashboard.familia'
+import { Route as DashboardEquipoRouteImport } from './routes/dashboard.equipo'
 import { Route as DashboardEpsRouteImport } from './routes/dashboard.eps'
 import { Route as BBannerIdRouteImport } from './routes/b.$bannerId'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
@@ -312,6 +314,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccesoEquipoRoute = AccesoEquipoRouteImport.update({
+  id: '/acceso-equipo',
+  path: '/acceso-equipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
   path: '/$',
@@ -442,6 +449,11 @@ const DashboardFamiliaRoute = DashboardFamiliaRouteImport.update({
   path: '/familia',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardEquipoRoute = DashboardEquipoRouteImport.update({
+  id: '/equipo',
+  path: '/equipo',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardEpsRoute = DashboardEpsRouteImport.update({
   id: '/eps',
   path: '/eps',
@@ -478,6 +490,7 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/acceso-equipo': typeof AccesoEquipoRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/auxiliar-enfermeria': typeof AuxiliarEnfermeriaRoute
@@ -525,6 +538,7 @@ export interface FileRoutesByFullPath {
   '/verificar': typeof VerificarRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
+  '/dashboard/equipo': typeof DashboardEquipoRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
@@ -557,6 +571,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/acceso-equipo': typeof AccesoEquipoRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/auxiliar-enfermeria': typeof AuxiliarEnfermeriaRoute
@@ -602,6 +617,7 @@ export interface FileRoutesByTo {
   '/verificar': typeof VerificarRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
+  '/dashboard/equipo': typeof DashboardEquipoRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
@@ -635,6 +651,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/acceso-equipo': typeof AccesoEquipoRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/auxiliar-enfermeria': typeof AuxiliarEnfermeriaRoute
@@ -682,6 +699,7 @@ export interface FileRoutesById {
   '/verificar': typeof VerificarRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
+  '/dashboard/equipo': typeof DashboardEquipoRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
@@ -716,6 +734,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/acceso-equipo'
     | '/admin'
     | '/auth'
     | '/auxiliar-enfermeria'
@@ -763,6 +782,7 @@ export interface FileRouteTypes {
     | '/verificar'
     | '/b/$bannerId'
     | '/dashboard/eps'
+    | '/dashboard/equipo'
     | '/dashboard/familia'
     | '/dashboard/institucion'
     | '/dashboard/monitoreo'
@@ -795,6 +815,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/acceso-equipo'
     | '/admin'
     | '/auth'
     | '/auxiliar-enfermeria'
@@ -840,6 +861,7 @@ export interface FileRouteTypes {
     | '/verificar'
     | '/b/$bannerId'
     | '/dashboard/eps'
+    | '/dashboard/equipo'
     | '/dashboard/familia'
     | '/dashboard/institucion'
     | '/dashboard/monitoreo'
@@ -872,6 +894,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/acceso-equipo'
     | '/admin'
     | '/auth'
     | '/auxiliar-enfermeria'
@@ -919,6 +942,7 @@ export interface FileRouteTypes {
     | '/verificar'
     | '/b/$bannerId'
     | '/dashboard/eps'
+    | '/dashboard/equipo'
     | '/dashboard/familia'
     | '/dashboard/institucion'
     | '/dashboard/monitoreo'
@@ -952,6 +976,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  AccesoEquipoRoute: typeof AccesoEquipoRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   AuxiliarEnfermeriaRoute: typeof AuxiliarEnfermeriaRoute
@@ -1326,6 +1351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/acceso-equipo': {
+      id: '/acceso-equipo'
+      path: '/acceso-equipo'
+      fullPath: '/acceso-equipo'
+      preLoaderRoute: typeof AccesoEquipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$': {
       id: '/$'
       path: '/$'
@@ -1508,6 +1540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardFamiliaRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/equipo': {
+      id: '/dashboard/equipo'
+      path: '/equipo'
+      fullPath: '/dashboard/equipo'
+      preLoaderRoute: typeof DashboardEquipoRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/eps': {
       id: '/dashboard/eps'
       path: '/eps'
@@ -1577,6 +1616,7 @@ const DashboardInstitucionRouteWithChildren =
 
 interface DashboardRouteChildren {
   DashboardEpsRoute: typeof DashboardEpsRoute
+  DashboardEquipoRoute: typeof DashboardEquipoRoute
   DashboardFamiliaRoute: typeof DashboardFamiliaRouteWithChildren
   DashboardInstitucionRoute: typeof DashboardInstitucionRouteWithChildren
   DashboardMonitoreoRoute: typeof DashboardMonitoreoRoute
@@ -1587,6 +1627,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEpsRoute: DashboardEpsRoute,
+  DashboardEquipoRoute: DashboardEquipoRoute,
   DashboardFamiliaRoute: DashboardFamiliaRouteWithChildren,
   DashboardInstitucionRoute: DashboardInstitucionRouteWithChildren,
   DashboardMonitoreoRoute: DashboardMonitoreoRoute,
@@ -1644,6 +1685,7 @@ const SuperadminRouteWithChildren = SuperadminRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  AccesoEquipoRoute: AccesoEquipoRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   AuxiliarEnfermeriaRoute: AuxiliarEnfermeriaRoute,

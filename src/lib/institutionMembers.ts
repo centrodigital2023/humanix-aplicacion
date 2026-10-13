@@ -258,13 +258,18 @@ const modulesField = z
   .min(1, "Elige al menos un módulo.")
   .max(STAFF_MODULE_KEYS.length);
 
-export const createMemberSchema = z
-  .object({
-    displayName,
-    jobTitle: jobTitle.optional(),
+/** Lo que se puede editar de una persona ya creada (y la base de lo que se pide al crearla). */
+export const memberProfileSchema = z.object({
+  displayName,
+  jobTitle: jobTitle.optional(),
+  modules: modulesField,
+});
+export type MemberProfileInput = z.infer<typeof memberProfileSchema>;
+
+export const createMemberSchema = memberProfileSchema
+  .extend({
     username: z.string({ error: "Escribe un usuario." }),
     password: z.string({ error: "Escribe una contraseña." }),
-    modules: modulesField,
   })
   .superRefine((v, ctx) => {
     const u = usernameError(normalizeUsername(v.username));

@@ -47,6 +47,7 @@ const ROLE_LABEL: Record<AppRole, string> = {
   superadmin: "Superadmin",
   hr_staff: "Talento Humano",
   evaluator: "Evaluador",
+  institution_staff: "Equipo de la institución",
 };
 
 const TONE: Record<NonNullable<Props["badge"]>["tone"] & string, string> = {

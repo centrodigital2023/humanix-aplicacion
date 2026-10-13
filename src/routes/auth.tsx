@@ -861,6 +861,17 @@ function AuthPage() {
                       </button>
                     </p>
                   )}
+                  {mode === "signin" && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      ¿Eres del equipo de una institución?{" "}
+                      <Link
+                        to="/acceso-equipo"
+                        className="font-semibold text-foreground hover:text-biosensor underline underline-offset-2"
+                      >
+                        Entra con tu usuario
+                      </Link>
+                    </p>
+                  )}
                 </div>
 
                 <a

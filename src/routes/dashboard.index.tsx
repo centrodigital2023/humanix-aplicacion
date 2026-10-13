@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { pathForRole, type AppRole } from "@/hooks/use-app-user";
+import { parseStaffContext } from "@/lib/staffPanel";
 
 export const Route = createFileRoute("/dashboard/")({
   head: () => ({
@@ -18,6 +20,7 @@ const PRIORITY: AppRole[] = [
   "institution",
   "family",
   "professional",
+  "institution_staff",
 ];
 
 function hardRedirect(to: string) {
@@ -67,6 +70,26 @@ function DashboardRouter() {
         };
 
         let list = (result.data?.map((x) => x.role) ?? []) as AppRole[];
+
+        // El personal de una institución no tiene roles: se reconoce por su pertenencia y va a su panel (o a explicarle por qué no).
+        if (result.data && !list.length) {
+          try {
+            const { data: ctx, error: ctxError } = await (
+              supabase as unknown as SupabaseClient
+            ).rpc("my_staff_context");
+            const staff = ctxError ? null : parseStaffContext(ctx);
+            if (staff) {
+              go(
+                staff.status === "suspended"
+                  ? "/acceso-equipo?motivo=suspendido"
+                  : pathForRole("institution_staff"),
+              );
+              return;
+            }
+          } catch {
+            /* sin la función o sin red: sigue el camino de siempre */
+          }
+        }
 
         // If DB timed out or user_roles is empty, fall back to signup metadata
         if (!list.length && metaRole) {

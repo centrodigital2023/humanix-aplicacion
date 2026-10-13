@@ -137,11 +137,14 @@ function AcceptDialog({
   open,
   onOpenChange,
   onAccepted,
+  contractsHidden = false,
 }: {
   app: Applicant;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAccepted: (contractId: string | null) => void;
+  /** Personal de la institución: el contrato lo firma la cuenta de la institución. */
+  contractsHidden?: boolean;
 }) {
   const qc = useQueryClient();
   const needsSchedule = app.shifts.length === 0;
@@ -185,7 +188,9 @@ function AcceptDialog({
     onSuccess: (result) => {
       toast.success(`Aceptaste a ${app.name}`, {
         description: result?.contract_id
-          ? "La reserva quedó con la dirección y el contrato está listo para firmar."
+          ? contractsHidden
+            ? "La reserva quedó confirmada. El contrato queda listo para la firma de la cuenta de la institución."
+            : "La reserva quedó con la dirección y el contrato está listo para firmar."
           : "La reserva quedó confirmada.",
       });
       void qc.invalidateQueries({ queryKey: ["inst"] });
@@ -228,8 +233,10 @@ function AcceptDialog({
               </li>
             )}
             <li>
-              Se genera el <strong>contrato inteligente</strong>: ambas partes firman validando su
-              identidad.
+              Se genera el <strong>contrato inteligente</strong>:{" "}
+              {contractsHidden
+                ? "lo firman la cuenta de la institución y el profesional, validando su identidad."
+                : "ambas partes firman validando su identidad."}
             </li>
             <li>El pago se hace únicamente en la página web de Humanix.</li>
           </ul>
@@ -411,12 +418,15 @@ function ApplicantCard({
   onCounter,
   onDecline,
   onOpenContract,
+  contractsHidden = false,
 }: {
   app: Applicant;
   onAccept: () => void;
   onCounter: () => void;
   onDecline: () => void;
   onOpenContract: (contractId: string) => void;
+  /** El personal no ve ni firma contratos (es solo de la cuenta de la institución). */
+  contractsHidden?: boolean;
 }) {
   const headline = headlineFor(app, "institution", formatCOP);
   const actions = applicationActions(
@@ -546,7 +556,16 @@ function ApplicantCard({
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {app.status === "accepted" && app.contractId && (
+        {app.status === "accepted" && app.contractId && contractsHidden && (
+          <span
+            className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
+            data-testid="contract-reserved"
+          >
+            <FileSignature className="h-3.5 w-3.5" aria-hidden />
+            El contrato lo firma la cuenta de la institución.
+          </span>
+        )}
+        {app.status === "accepted" && app.contractId && !contractsHidden && (
           <Button
             size="sm"
             variant={contractNeedsMe ? "hero" : "outline"}
@@ -578,10 +597,17 @@ interface Props {
   compact?: boolean;
   /** Para saltar a la lista completa desde la vista compacta. */
   onSeeAll?: () => void;
+  /** Personal de la institución: acepta, rechaza y contraoferta, pero no ve ni firma contratos. */
+  readOnlyContracts?: boolean;
 }
 
 /** Postulaciones recibidas: aceptar (reserva + contrato), contraofertar el valor o rechazar. */
-export function ApplicantsInbox({ userId, compact = false, onSeeAll }: Props) {
+export function ApplicantsInbox({
+  userId,
+  compact = false,
+  onSeeAll,
+  readOnlyContracts = false,
+}: Props) {
   const inbox = useInstitutionInbox(userId);
   const groups = useMemo(() => groupInbox(inbox.data ?? []), [inbox.data]);
   const [accepting, setAccepting] = useState<Applicant | null>(null);
@@ -678,6 +704,7 @@ export function ApplicantsInbox({ userId, compact = false, onSeeAll }: Props) {
                   onCounter={() => setCountering(a)}
                   onDecline={() => setDeclining(a)}
                   onOpenContract={setContractId}
+                  contractsHidden={readOnlyContracts}
                 />
               ))}
               {compact && s.items.length > limit && onSeeAll && (
@@ -712,6 +739,7 @@ export function ApplicantsInbox({ userId, compact = false, onSeeAll }: Props) {
                 onCounter={() => undefined}
                 onDecline={() => undefined}
                 onOpenContract={setContractId}
+                contractsHidden={readOnlyContracts}
               />
             ))}
         </div>
@@ -723,7 +751,8 @@ export function ApplicantsInbox({ userId, compact = false, onSeeAll }: Props) {
           app={accepting}
           open
           onOpenChange={(o) => !o && setAccepting(null)}
-          onAccepted={(id) => id && setContractId(id)}
+          onAccepted={(id) => id && !readOnlyContracts && setContractId(id)}
+          contractsHidden={readOnlyContracts}
         />
       )}
       {declining && (
@@ -746,7 +775,7 @@ export function ApplicantsInbox({ userId, compact = false, onSeeAll }: Props) {
           onDone={() => setCountering(null)}
         />
       )}
-      {contractId && (
+      {contractId && !readOnlyContracts && (
         <SmartContractDialog
           contractId={contractId}
           userId={userId}

@@ -26,6 +26,7 @@ import {
   Sparkles,
   Heart,
   ShieldCheck,
+  UsersRound,
 } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +59,7 @@ import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { CoverageCenter } from "@/components/humanix/hub/CoverageCenter";
 import { ApplicantsInbox } from "@/components/humanix/hub/ApplicantsInbox";
 import { PublishShiftsDialog } from "@/components/humanix/hub/PublishShiftsDialog";
+import { StaffManager } from "@/components/humanix/staff/StaffManager";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
@@ -89,6 +91,7 @@ type Tab =
   | "pacientes"
   | "monitoreo"
   | "agenda"
+  | "personal"
   | "perfil";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -99,6 +102,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "pacientes", label: "Pacientes", icon: <Stethoscope className="h-5 w-5" /> },
   { id: "monitoreo", label: "Monitoreo", icon: <Heart className="h-5 w-5" /> },
   { id: "agenda", label: "Agenda", icon: <CalendarDays className="h-5 w-5" /> },
+  { id: "personal", label: "Personal", icon: <UsersRound className="h-5 w-5" /> },
   { id: "perfil", label: "Perfil", icon: <UserCircle className="h-5 w-5" /> },
 ];
 
@@ -1155,6 +1159,9 @@ function InstitutionDashboard() {
             <EnhancedAgendaModule userId={user.id} />
           </div>
         )}
+
+        {/* ══ TAB: PERSONAL (usuario y contraseña propios, por módulos) ══ */}
+        {tab === "personal" && <StaffManager institutionId={user.id} />}
 
         {/* ══ TAB: PERFIL ══ */}
         {tab === "perfil" && (
