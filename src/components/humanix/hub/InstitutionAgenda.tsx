@@ -224,6 +224,8 @@ export function InstitutionAgenda({ userId }: { userId: string }) {
             <SelectContent>
               <SelectItem value="match">Mejor compatibilidad</SelectItem>
               <SelectItem value="soonest">Más próximos</SelectItem>
+              <SelectItem value="nearest">Más cerca de ti</SelectItem>
+              <SelectItem value="hourly">Mejor pago por hora</SelectItem>
               <SelectItem value="pay">Mayor pago total</SelectItem>
             </SelectContent>
           </Select>

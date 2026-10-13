@@ -13,6 +13,8 @@ import {
   type RankedShift,
 } from "@/lib/opportunities";
 import { buildPriceBreakdown, formatCOP } from "@/lib/pricing";
+import { distanceBandLabel } from "@/lib/trustScore";
+import { TrustBadge } from "@/components/humanix/TrustBadge";
 import type { PlanKey } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { ContactRevealPanel } from "./ContactRevealPanel";
@@ -83,6 +85,12 @@ export function ShiftCard({
             {shift.city && (
               <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
                 <MapPin className="h-3 w-3" aria-hidden /> {shift.city}
+                {shift.distance_band_km != null && (
+                  <span data-testid="distance-band">
+                    {" "}
+                    · {distanceBandLabel(shift.distance_band_km)}
+                  </span>
+                )}
               </span>
             )}
           </p>
@@ -170,6 +178,7 @@ export function ShiftCard({
             <HeartPulse className="h-3 w-3" aria-hidden /> {shift.care_type}
           </span>
         )}
+        {family?.trust && <TrustBadge kind="family" summary={family.trust} />}
         <FamilyReputationBadge
           familyId={shift.family_user_id}
           stars={family?.stars ?? null}

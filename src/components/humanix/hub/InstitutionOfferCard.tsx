@@ -21,9 +21,11 @@ import {
   type RankedOffer,
 } from "@/lib/institutionOffers";
 import { MODALITY_LABEL, professionalNet } from "@/lib/institutionNegotiation";
+import { distanceBandLabel } from "@/lib/trustScore";
 import { formatCOP } from "@/lib/pricing";
 import type { PlanKey } from "@/lib/plans";
 import { cn } from "@/lib/utils";
+import { TrustBadge } from "@/components/humanix/TrustBadge";
 import { InstitutionReputationBadge } from "./InstitutionReputationBadge";
 import { OfferContactPanel } from "./OfferContactPanel";
 
@@ -97,6 +99,12 @@ export function InstitutionOfferCard({
             {offer.city && (
               <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
                 <MapPin className="h-3 w-3" aria-hidden /> {offer.city}
+                {offer.distanceBand != null && (
+                  <span data-testid="distance-band">
+                    {" "}
+                    · {distanceBandLabel(offer.distanceBand)}
+                  </span>
+                )}
               </span>
             )}
           </p>
@@ -241,6 +249,7 @@ export function InstitutionOfferCard({
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
+        {offer.trust && <TrustBadge kind="institution" summary={offer.trust} />}
         <InstitutionReputationBadge
           institutionId={offer.institutionId}
           stars={offer.rating.stars}

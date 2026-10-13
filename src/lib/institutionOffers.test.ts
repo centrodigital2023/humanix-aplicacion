@@ -239,6 +239,40 @@ describe("scoreOffer", () => {
   });
 });
 
+describe("Trust Score y cercanía de la institución", () => {
+  it("normaliza el Trust Score que entrega la base y el rango de cercanía", () => {
+    const o = normalizeOfferRow(
+      row({
+        institution_trust: 91,
+        institution_trust_level: "excellent",
+        institution_trust_enough: true,
+        distance_band_km: 5,
+      }),
+    );
+    expect(o.trust).toEqual({ score: 91, level: "excellent", enough: true, verified: true });
+    expect(o.distanceBand).toBe(5);
+  });
+
+  it("una institución nueva se marca sin evidencia suficiente", () => {
+    const o = normalizeOfferRow(
+      row({
+        institution_verified: false,
+        institution_trust: 30,
+        institution_trust_level: "building",
+        institution_trust_enough: false,
+      }),
+    );
+    expect(o.trust).toEqual({ score: 30, level: "building", enough: false, verified: false });
+    expect(o.distanceBand).toBeNull();
+  });
+
+  it("con filas antiguas (sin Trust Score) no inventa nada", () => {
+    const o = normalizeOfferRow(row());
+    expect(o.trust).toBeNull();
+    expect(o.distanceBand).toBeNull();
+  });
+});
+
 describe("rankOffers, filtros y resumen", () => {
   const offers = [
     normalizeOfferRow(row({ offer_id: "a", title: "Auxiliar UCI", is_urgent: false })),
@@ -296,6 +330,60 @@ describe("rankOffers, filtros y resumen", () => {
     );
     const pay = applyOfferFilters(ranked, { ...DEFAULT_OFFER_FILTERS, sort: "pay" });
     expect(pay[0].offer.shifts.length).toBe(2);
+  });
+
+  it("ordena por lo más cerca (por rangos) y, dentro del rango, por lo que empieza antes", () => {
+    const set = [
+      normalizeOfferRow(row({ offer_id: "far", distance_band_km: 50 })),
+      normalizeOfferRow(
+        row({
+          offer_id: "close-late",
+          distance_band_km: 2,
+          shifts: [{ id: "x1", starts_at: at(60), ends_at: at(72), positions: 1, filled: 0 }],
+        }),
+      ),
+      normalizeOfferRow(
+        row({
+          offer_id: "close-early",
+          distance_band_km: 2,
+          shifts: [{ id: "x2", starts_at: at(24), ends_at: at(36), positions: 1, filled: 0 }],
+        }),
+      ),
+      normalizeOfferRow(row({ offer_id: "unknown", distance_band_km: null })),
+      normalizeOfferRow(row({ offer_id: "mid", distance_band_km: 10 })),
+    ];
+    const near = applyOfferFilters(rankOffers(set, pro, NOW), {
+      ...DEFAULT_OFFER_FILTERS,
+      sort: "nearest",
+    });
+    expect(near.map((r) => r.offer.id)).toEqual([
+      "close-early",
+      "close-late",
+      "mid",
+      "far",
+      "unknown",
+    ]);
+  });
+
+  it("ordena por el mejor pago por hora equivalente: mensual y paquete (sin equivalente) al final", () => {
+    const set = [
+      normalizeOfferRow(row({ offer_id: "shift-12h", modality: "shift", amount: 180_000 })),
+      normalizeOfferRow(
+        row({ offer_id: "hour-30k", modality: "hour", amount: 30_000, shifts: [] }),
+      ),
+      normalizeOfferRow(
+        row({ offer_id: "month", modality: "month", amount: 4_000_000, shifts: [] }),
+      ),
+      normalizeOfferRow(
+        row({ offer_id: "hour-18k", modality: "hour", amount: 18_000, shifts: [] }),
+      ),
+    ];
+    const best = applyOfferFilters(rankOffers(set, pro, NOW), {
+      ...DEFAULT_OFFER_FILTERS,
+      sort: "hourly",
+    });
+    // 30.000 / h · turno de 12 h a 180.000 = 15.000 / h (2 turnos de 12 h) · 18.000 / h · mensual sin equivalente
+    expect(best.map((r) => r.offer.id)).toEqual(["hour-30k", "hour-18k", "shift-12h", "month"]);
   });
 
   it("oculta las ofertas a las que ya se postuló cuando se pide", () => {

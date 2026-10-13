@@ -171,6 +171,16 @@ describe("checkOutgoingMessage", () => {
 });
 
 describe("groupNeedsIntoShifts", () => {
+  it("conserva la cercanía de la familia en el turno y en cada hora que se le une", () => {
+    const [shift] = groupNeedsIntoShifts([
+      block(8, 1, { distance_band_km: 10 }),
+      block(9, 1, { distance_band_km: 10 }),
+    ]);
+    expect(shift.distance_band_km).toBe(10);
+    const [bare] = groupNeedsIntoShifts([block(8, 1)]);
+    expect(bare.distance_band_km).toBeNull();
+  });
+
   it("une horas contiguas de una misma familia en un turno", () => {
     const shifts = groupNeedsIntoShifts([block(8), block(9), block(10)]);
     expect(shifts).toHaveLength(1);
@@ -516,6 +526,49 @@ describe("splitOpenNeedRows", () => {
     expect([...appliedNeedIds]).toEqual(["a"]);
   });
 
+  it("trae el Trust Score de la familia y su cercanía por rangos cuando la base los entrega", () => {
+    const rows = [
+      row({
+        id: "t1",
+        family_user_id: "fam-t",
+        family_trust: 82,
+        family_trust_level: "high",
+        family_trust_enough: true,
+        family_verified: true,
+        distance_band_km: 5,
+      }),
+      row({
+        id: "t2",
+        family_user_id: "fam-n",
+        family_trust: 30,
+        family_trust_level: "building",
+        family_trust_enough: false,
+        family_verified: false,
+        distance_band_km: null,
+      }),
+    ];
+    const { blocks, families } = splitOpenNeedRows(rows);
+    expect(families["fam-t"].trust).toEqual({
+      score: 82,
+      level: "high",
+      enough: true,
+      verified: true,
+    });
+    expect(families["fam-n"].trust).toEqual({
+      score: 30,
+      level: "building",
+      enough: false,
+      verified: false,
+    });
+    expect(blocks.map((b) => b.distance_band_km)).toEqual([5, null]);
+  });
+
+  it("con filas antiguas (sin Trust Score) no inventa nada", () => {
+    const { blocks, families } = splitOpenNeedRows([row({ id: "old" })]);
+    expect(families["fam-1"]).not.toHaveProperty("trust");
+    expect(blocks[0].distance_band_km).toBeNull();
+  });
+
   it("un turno cuenta como postulado si alguna de sus horas lo está", () => {
     const shift = shiftOf({ need_ids: ["x", "y"] });
     expect(isShiftApplied(shift, new Set(["y"]))).toBe(true);
@@ -578,6 +631,31 @@ describe("applyFilters y vistas", () => {
     expect(
       applyFilters(items, { ...DEFAULT_FILTERS, sort: "pay" }).map((r) => r.shift.key),
     ).toEqual(["a", "c", "b"]);
+  });
+
+  it("ordena por lo más cerca (por rangos) y, dentro del rango, por lo que empieza antes", () => {
+    const near = [
+      mk("far", { distance_band_km: 50, starts_at: iso(NOW + 8 * HOUR) }),
+      mk("close-late", { distance_band_km: 2, starts_at: iso(NOW + 30 * HOUR) }),
+      mk("close-early", { distance_band_km: 2, starts_at: iso(NOW + 10 * HOUR) }),
+      mk("unknown", { distance_band_km: null, starts_at: iso(NOW + 1 * HOUR) }),
+      mk("mid", { distance_band_km: 10, starts_at: iso(NOW + 9 * HOUR) }),
+    ];
+    expect(
+      applyFilters(near, { ...DEFAULT_FILTERS, sort: "nearest" }).map((r) => r.shift.key),
+    ).toEqual(["close-early", "close-late", "mid", "far", "unknown"]);
+  });
+
+  it("ordena por el mejor pago por hora: sin tarifa al final y, a igual pago, el más próximo", () => {
+    const pay = [
+      mk("low", { rate_avg: 15000, starts_at: iso(NOW + 8 * HOUR) }),
+      mk("none", { rate_avg: null, rate_max: null, starts_at: iso(NOW + 8 * HOUR) }),
+      mk("high-late", { rate_avg: 32000, starts_at: iso(NOW + 40 * HOUR) }),
+      mk("high-early", { rate_avg: 32000, starts_at: iso(NOW + 12 * HOUR) }),
+    ];
+    expect(
+      applyFilters(pay, { ...DEFAULT_FILTERS, sort: "hourly" }).map((r) => r.shift.key),
+    ).toEqual(["high-early", "high-late", "low", "none"]);
   });
 
   it("lista las ciudades una sola vez y ordenadas", () => {

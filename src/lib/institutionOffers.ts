@@ -7,6 +7,7 @@
 
 import { cityKey } from "./marketplaceInsights";
 import { normalizeText } from "./pqrsRules";
+import { distanceBandRank, trustFromColumns, type TrustSummary } from "./trustScore";
 import {
   bogotaDayKey,
   bogotaDayLabel,
@@ -71,6 +72,11 @@ export interface InstitutionOfferRow {
   rating_count: number | null;
   rating_avg: number | string | null;
   completed_services: number | null;
+  /** Trust Score de la institución y cercanía por rangos (migración 20261012190000; las filas antiguas no los traen). */
+  institution_trust?: number | null;
+  institution_trust_level?: string | null;
+  institution_trust_enough?: boolean | null;
+  distance_band_km?: number | null;
 }
 
 export interface InstitutionOffer {
@@ -99,6 +105,10 @@ export interface InstitutionOffer {
   createdAt: string;
   rating: { stars: number | null; ratings: number };
   completedServices: number;
+  /** Trust Score de la institución, tal como lo calcula la base (null si la lista no lo trae). */
+  trust: TrustSummary | null;
+  /** Tope del rango de cercanía (2, 5, 10, 20, 50 o 100 = «más de 50 km»); null si no hay ubicación de alguno de los dos. */
+  distanceBand: number | null;
   /** Postulación vigente (pendiente o aceptada) de este profesional, si existe. */
   application: {
     id: string;
@@ -148,6 +158,16 @@ export function normalizeOfferRow(r: InstitutionOfferRow): InstitutionOffer {
       ratings: Math.max(0, r.rating_count ?? 0),
     },
     completedServices: Math.max(0, r.completed_services ?? 0),
+    trust:
+      r.institution_trust === undefined
+        ? null
+        : trustFromColumns(
+            r.institution_trust,
+            r.institution_trust_level,
+            r.institution_trust_enough,
+            r.institution_verified,
+          ),
+    distanceBand: r.distance_band_km ?? null,
     application:
       active && r.my_application_id
         ? {
@@ -382,7 +402,8 @@ export interface OfferFilters {
   verifiedOnly: boolean;
   hideConflicts: boolean;
   hideApplied: boolean;
-  sort: "match" | "soonest" | "pay";
+  /** match = compatibilidad · soonest = más próximos · nearest = más cerca · pay = mayor pago total · hourly = mejor pago por hora. */
+  sort: "match" | "soonest" | "nearest" | "pay" | "hourly";
 }
 
 export const DEFAULT_OFFER_FILTERS: OfferFilters = {
@@ -427,6 +448,21 @@ export function applyOfferFilters(items: RankedOffer[], f: OfferFilters): Ranked
   if (f.sort === "pay") {
     const pay = (r: RankedOffer) => estimatedOfferTotal(r.offer) ?? 0;
     return [...out].sort((a, b) => pay(b) - pay(a));
+  }
+  if (f.sort === "nearest") {
+    // Por rango de distancia; dentro del mismo rango, el que empieza antes. Lo que no tiene distancia va al final.
+    return [...out].sort(
+      (a, b) =>
+        distanceBandRank(a.offer.distanceBand) - distanceBandRank(b.offer.distanceBand) ||
+        ms(a.offer.firstStart) - ms(b.offer.firstStart),
+    );
+  }
+  if (f.sort === "hourly") {
+    // Mejor pago por hora equivalente (por hora, o por turno con agenda). Mensual y paquete no tienen equivalente: van al final.
+    const hourly = (r: RankedOffer) => hourlyEquivalent(r.offer) ?? -1;
+    return [...out].sort(
+      (a, b) => hourly(b) - hourly(a) || ms(a.offer.firstStart) - ms(b.offer.firstStart),
+    );
   }
   return out;
 }

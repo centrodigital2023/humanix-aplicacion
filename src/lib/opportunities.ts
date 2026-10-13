@@ -9,6 +9,7 @@
 import { cityKey } from "./marketplaceInsights";
 import { normalizeText } from "./pqrsRules";
 import { containsPaymentInstruction } from "../../supabase/functions/_shared/paymentGuard";
+import { distanceBandRank, trustFromColumns, type TrustSummary } from "./trustScore";
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -145,6 +146,8 @@ export interface NeedBlock {
   hourly_rate: number | null;
   notes_public: string | null;
   status: string;
+  /** Tope del rango de cercanía (2, 5, 10, 20, 50 o 100 = «más de 50 km»); la base nunca entrega kilómetros exactos. */
+  distance_band_km?: number | null;
 }
 
 export interface Shift {
@@ -162,6 +165,8 @@ export interface Shift {
   /** Promedio ponderado por horas, redondeado a COP. */
   rate_avg: number | null;
   notes: string[];
+  /** Cercanía por rangos respecto a la ubicación del profesional (null = sin ubicación de alguno de los dos). */
+  distance_band_km?: number | null;
 }
 
 function newShift(b: NeedBlock): Shift {
@@ -179,6 +184,7 @@ function newShift(b: NeedBlock): Shift {
     rate_max: b.hourly_rate,
     rate_avg: b.hourly_rate,
     notes: b.notes_public?.trim() ? [b.notes_public.trim()] : [],
+    distance_band_km: b.distance_band_km ?? null,
   };
 }
 
@@ -228,6 +234,7 @@ export function groupNeedsIntoShifts(blocks: NeedBlock[], maxHours = MAX_SHIFT_H
       }
       current.care_type = current.care_type || b.care_type;
       current.city = current.city || b.city;
+      current.distance_band_km = current.distance_band_km ?? b.distance_band_km ?? null;
       const note = b.notes_public?.trim();
       if (note && !current.notes.includes(note)) current.notes.push(note);
     } else {
@@ -664,10 +671,18 @@ export interface OpenNeedRow {
   family_stars: number | string | null;
   family_ratings: number | null;
   family_completed: number | null;
+  /** Trust Score de la familia y cercanía por rangos (migración 20261012190000; las filas antiguas no los traen). */
+  family_trust?: number | null;
+  family_trust_level?: string | null;
+  family_trust_enough?: boolean | null;
+  family_verified?: boolean | null;
+  distance_band_km?: number | null;
 }
 
 export interface FamilyInfo extends FamilySignal {
   completed: number;
+  /** Trust Score de la familia, tal como lo calcula la base. Ausente si la lista no lo trae. */
+  trust?: TrustSummary;
 }
 
 export function splitOpenNeedRows(rows: OpenNeedRow[]): {
@@ -690,6 +705,7 @@ export function splitOpenNeedRows(rows: OpenNeedRow[]): {
       hourly_rate: r.hourly_rate,
       notes_public: r.notes_public,
       status: "open",
+      distance_band_km: r.distance_band_km ?? null,
     });
     if (r.already_applied) appliedNeedIds.add(r.id);
     if (!families[r.family_user_id]) {
@@ -698,6 +714,16 @@ export function splitOpenNeedRows(rows: OpenNeedRow[]): {
         stars: stars != null && Number.isFinite(stars) ? stars : null,
         ratings: r.family_ratings ?? 0,
         completed: r.family_completed ?? 0,
+        ...(r.family_trust !== undefined
+          ? {
+              trust: trustFromColumns(
+                r.family_trust,
+                r.family_trust_level,
+                r.family_trust_enough,
+                r.family_verified,
+              ),
+            }
+          : {}),
       };
     }
   }
@@ -717,7 +743,8 @@ export interface HubFilters {
   minRate: number | null;
   urgentOnly: boolean;
   hideConflicts: boolean;
-  sort: "match" | "soonest" | "pay";
+  /** match = compatibilidad · soonest = más próximos · nearest = más cerca · pay = mayor pago total · hourly = mejor pago por hora. */
+  sort: "match" | "soonest" | "nearest" | "pay" | "hourly";
 }
 
 export const DEFAULT_FILTERS: HubFilters = {
@@ -748,6 +775,21 @@ export function applyFilters(items: RankedShift[], f: HubFilters): RankedShift[]
   if (f.sort === "pay") {
     const pay = (r: RankedShift) => estimatedTotal(r.shift.rate_avg, r.shift.hours) ?? 0;
     return [...out].sort((a, b) => pay(b) - pay(a));
+  }
+  if (f.sort === "nearest") {
+    // Por rango de distancia; dentro del mismo rango, el que empieza antes. Lo que no tiene distancia va al final.
+    return [...out].sort(
+      (a, b) =>
+        distanceBandRank(a.shift.distance_band_km) - distanceBandRank(b.shift.distance_band_km) ||
+        ms(a.shift.starts_at) - ms(b.shift.starts_at),
+    );
+  }
+  if (f.sort === "hourly") {
+    // Mejor pago por hora; sin tarifa va al final; a igual pago, el que empieza antes.
+    const hourly = (r: RankedShift) => r.shift.rate_avg ?? -1;
+    return [...out].sort(
+      (a, b) => hourly(b) - hourly(a) || ms(a.shift.starts_at) - ms(b.shift.starts_at),
+    );
   }
   return out;
 }
