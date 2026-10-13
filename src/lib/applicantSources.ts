@@ -34,7 +34,7 @@ export interface OfferSource {
   modality: string | null;
 }
 
-/** Lo que muestra el perfil público (`public_professionals_safe`). */
+/** Lo que muestra el perfil público (directorio seguro: `public.public_professionals`). */
 export interface ProFacts {
   user_id: string;
   avg_rating: number | string | null;

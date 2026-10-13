@@ -30,6 +30,8 @@ import { distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { buildSeo } from "@/lib/seo";
 import { usePlan } from "@/hooks/use-plan";
+import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
+import { proCity } from "@/lib/publicProfessionals";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
 import { PlanNameGate } from "@/components/humanix/PlanNameGate";
@@ -191,49 +193,45 @@ function BuscarPage() {
   const loadPros = useCallback(async () => {
     if (tab !== "profesionales") return;
     setLoading(true);
-    let query = supabase
-      .from("public_professionals_safe")
-      .select(
-        "user_id, specialty, years_experience, hourly_rate, shift_rate, monthly_rate, service_cities, trust_score, avg_rating, verified, rethus_verified, total_jobs, ai_summary, available, reserved_until, active, lat, lng",
-      )
-      .eq("active", true)
-      .order("avg_rating", { ascending: false })
-      .limit(60);
-
-    if (search.specialty) query = query.ilike("specialty", `%${search.specialty}%`);
-    if (search.city) query = query.contains("service_cities", [search.city]);
-    if (search.verified) query = query.eq("verified", true);
-    if (search.minRate) query = query.gte("hourly_rate", search.minRate);
-    if (search.maxRate) query = query.lte("hourly_rate", search.maxRate);
-    if (search.rating) query = query.gte("avg_rating", search.rating);
-
-    const { data, error } = await query;
-    if (error) {
+    // Directorio público por la función segura del servidor: nombre, foto y ciudad ya vienen en la misma fila.
+    let rows: Pro[];
+    try {
+      const found = await fetchPublicProfessionals({
+        specialty: search.specialty,
+        city: search.city,
+        verified: search.verified,
+        minRate: search.minRate,
+        maxRate: search.maxRate,
+        minRating: search.rating,
+        limit: 60,
+      });
+      rows = found.map((r) => ({
+        user_id: r.user_id,
+        specialty: r.specialty,
+        years_experience: r.years_experience,
+        hourly_rate: r.hourly_rate,
+        shift_rate: r.shift_rate,
+        monthly_rate: r.monthly_rate,
+        service_cities: r.service_cities,
+        trust_score: r.trust_score,
+        avg_rating: r.avg_rating,
+        verified: r.verified,
+        rethus_verified: r.rethus_verified,
+        total_jobs: r.total_jobs,
+        ai_summary: r.ai_summary,
+        available: r.available,
+        reserved_until: r.reserved_until,
+        active: r.active,
+        lat: r.lat,
+        lng: r.lng,
+        profiles: { full_name: r.full_name, city: proCity(r), avatar_url: r.avatar_url },
+      }));
+    } catch (error) {
       console.error(error);
       setPros([]);
       setLoading(false);
       return;
     }
-
-    const baseRows = (data ?? []) as Array<Omit<Pro, "profiles">>;
-    const userIds = baseRows.map((p) => p.user_id);
-    let profilesMap = new Map<
-      string,
-      { full_name: string | null; city: string | null; avatar_url: string | null }
-    >();
-    if (userIds.length) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, city, avatar_url")
-        .in("user_id", userIds);
-      profilesMap = new Map(
-        (profs ?? []).map((p) => [
-          p.user_id,
-          { full_name: p.full_name, city: p.city, avatar_url: p.avatar_url },
-        ]),
-      );
-    }
-    let rows: Pro[] = baseRows.map((p) => ({ ...p, profiles: profilesMap.get(p.user_id) ?? null }));
     if (search.q) {
       const needle = search.q.toLowerCase();
       rows = rows.filter(

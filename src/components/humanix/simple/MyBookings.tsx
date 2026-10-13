@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { ACTIVE_STATUSES } from "@/lib/family-journey";
 import { JourneySteps } from "./JourneySteps";
@@ -39,11 +40,9 @@ export function MyBookings({ userId }: { userId: string }) {
     setRows(list);
     const ids = [...new Set(list.map((r) => r.professional_id))];
     if (ids.length) {
-      const { data: profs } = await supabase
-        .from("public_profiles_safe")
-        .select("user_id, full_name")
-        .in("user_id", ids);
-      setNames(Object.fromEntries((profs ?? []).map((p) => [p.user_id ?? "", p.full_name ?? ""])));
+      // Nombres por la función segura del directorio (la vista antigua solo mostraba a quien ya se había contratado).
+      const profs = await fetchPublicProfessionals({ ids }).catch(() => []);
+      setNames(Object.fromEntries(profs.map((p) => [p.user_id, p.full_name ?? ""])));
     }
   }, [userId]);
 

@@ -12,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { hubKeys } from "@/hooks/use-opportunity-feed";
+import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
 import type { ProFacts, ProposalSource } from "@/lib/applicantSources";
 import { DAY_MS } from "@/lib/intelShared";
 import type { RadarNeed } from "@/lib/coverageRadar";
@@ -252,7 +253,7 @@ export function useCircleMemberCount(userId: string | null | undefined) {
   });
 }
 
-/** Nombres de los profesionales (vista pública segura). */
+/** Nombres de los profesionales (directorio público seguro: función `public_professionals`). */
 export function useProfessionalNames(ids: string[]) {
   const unique = useMemo(() => [...new Set(ids.filter(Boolean))], [ids]);
   return useQuery({
@@ -260,15 +261,9 @@ export function useProfessionalNames(ids: string[]) {
     enabled: unique.length > 0,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<Record<string, string>> => {
-      const { data, error } = await sb
-        .from("public_profiles_safe")
-        .select("user_id, full_name")
-        .in("user_id", unique);
-      if (error) throw error;
+      const rows = await fetchPublicProfessionals({ ids: unique });
       const out: Record<string, string> = {};
-      for (const r of (data ?? []) as Array<{ user_id: string | null; full_name: string | null }>) {
-        if (r.user_id && r.full_name) out[r.user_id] = r.full_name;
-      }
+      for (const r of rows) if (r.user_id && r.full_name) out[r.user_id] = r.full_name;
       return out;
     },
   });
@@ -282,15 +277,9 @@ export function useApplicantFacts(ids: string[], enabled = true) {
     enabled: enabled && unique.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<Record<string, ProFacts>> => {
-      const { data, error } = await sb
-        .from("public_professionals_safe")
-        .select(
-          "user_id, avg_rating, total_jobs, trust_score, rethus_verified, verified, years_experience, available, lat, lng",
-        )
-        .in("user_id", unique);
-      if (error) throw error;
+      const rows = await fetchPublicProfessionals({ ids: unique });
       const out: Record<string, ProFacts> = {};
-      for (const r of (data ?? []) as ProFacts[]) if (r.user_id) out[r.user_id] = r;
+      for (const r of rows) if (r.user_id) out[r.user_id] = r;
       return out;
     },
   });

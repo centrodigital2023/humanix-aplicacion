@@ -6,6 +6,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2, Loader2, Minus, Plus, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppUser } from "@/hooks/use-app-user";
+import { countPublicProfessionals } from "@/hooks/use-public-professionals";
 import { loadDraft, saveDraft } from "@/lib/audience";
 import { PictoCard, primaryBtn, type Tint } from "./ui";
 import { useSpeakOnChange, useVoice } from "./voice";
@@ -148,15 +149,16 @@ export function InstitutionFlow({ user }: { user: AppUser | null }) {
   useEffect(() => {
     if (!hydrated) return;
     const t = setTimeout(async () => {
-      let q = supabase
-        .from("public_professionals_safe")
-        .select("user_id", { count: "exact", head: true })
-        .eq("active", true)
-        .ilike("specialty", `%${role.specialty}%`)
-        .abortSignal(AbortSignal.timeout(10000));
-      if (draft.city.trim()) q = q.contains("service_cities", [draft.city.trim()]);
-      const { count, error } = await q;
-      setMatches(error ? -1 : (count ?? 0));
+      try {
+        // Cantidad real de profesionales publicados que encajan (función segura del servidor; las vistas antiguas daban 0).
+        const total = await countPublicProfessionals(
+          { specialty: role.specialty, city: draft.city },
+          { signal: AbortSignal.timeout(10000) },
+        );
+        setMatches(total);
+      } catch {
+        setMatches(-1);
+      }
     }, 400);
     return () => clearTimeout(t);
   }, [hydrated, role.specialty, draft.city]);

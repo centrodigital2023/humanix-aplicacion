@@ -3,7 +3,7 @@
 // Autoguardado; la cuenta se pide solo al tocar "Pedir".
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Loader2, MapPin, MessageCircle, RotateCcw, Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
 import { COLOMBIA_CITIES, distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
 import { CONTACT } from "@/lib/social";
 import { loadDraft, saveDraft, whatsappLink } from "@/lib/audience";
@@ -126,24 +126,22 @@ export function FamilyFlow() {
       setLoadError(false);
       const needCfg = NEEDS.find((n) => n.key === d.need);
       const city = resolveCity(d.place);
-      const columns =
-        "user_id, full_name, avatar_url, specialty, years_experience, hourly_rate, shift_rate, avg_rating, verified, rethus_verified, available, lat, lng";
+      // Directorio público por la función segura del servidor (las vistas antiguas devolvían cero filas a las familias).
+      const run = (withSpecialty: boolean) =>
+        fetchPublicProfessionals(
+          { specialty: withSpecialty && needCfg ? needCfg.match : null, city, limit: 40 },
+          { signal: AbortSignal.timeout(10000) },
+        );
 
-      const run = (withSpecialty: boolean) => {
-        let q = supabase
-          .from("public_professionals_safe")
-          .select(columns)
-          .eq("active", true)
-          .limit(40)
-          .abortSignal(AbortSignal.timeout(10000));
-        if (withSpecialty && needCfg) q = q.ilike("specialty", `%${needCfg.match}%`);
-        if (city) q = q.contains("service_cities", [city]);
-        return q;
-      };
-
-      let { data, error } = await run(true);
-      // Si nadie tiene esa especialidad exacta, ampliamos a cualquier perfil de la zona.
-      if (!error && (data?.length ?? 0) === 0) ({ data, error } = await run(false));
+      let data: Pro[] = [];
+      let error: unknown = null;
+      try {
+        data = await run(true);
+        // Si nadie tiene esa especialidad exacta, ampliamos a cualquier perfil de la zona.
+        if (data.length === 0) data = await run(false);
+      } catch (e) {
+        error = e;
+      }
 
       if (error) {
         console.error(error);
@@ -164,7 +162,7 @@ export function FamilyFlow() {
           s -= Math.min(distanceKm(origin, { lat: p.lat, lng: p.lng }), 50);
         return s;
       };
-      const top = ((data ?? []) as Pro[])
+      const top = data
         .filter((p) => p.user_id)
         .sort((a, b) => score(b) - score(a))
         .slice(0, 3);

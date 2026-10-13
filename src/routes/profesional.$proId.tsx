@@ -24,35 +24,29 @@ import { AgendaViewer } from "@/components/humanix/AgendaViewer";
 import { DimensionAverages } from "@/components/humanix/DimensionAverages";
 import { PublicRecognition } from "@/components/humanix/care/PublicRecognition";
 import { useAppUser } from "@/hooks/use-app-user";
+import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
+import { proCity } from "@/lib/publicProfessionals";
 import { buildSeo, jsonLdString, SITE_URL, SOCIAL_IMAGE_URL } from "@/lib/seo";
 
 export const Route = createFileRoute("/profesional/$proId")({
   loader: async ({ params }) => {
     try {
-      const [profRes, proRes] = await Promise.all([
-        supabase
-          .from("public_profiles_safe")
-          .select("full_name, avatar_url, city, bio")
-          .eq("user_id", params.proId)
-          .maybeSingle(),
-        supabase
-          .from("public_professionals_safe")
-          .select("specialty, ai_summary, service_cities, rethus_verified, avg_rating, total_jobs")
-          .eq("user_id", params.proId)
-          .maybeSingle(),
-      ]);
+      // Directorio público por la función segura del servidor: sin sesión llega el nombre abreviado y sin foto.
+      const [pro] = await fetchPublicProfessionals({ ids: [params.proId] });
       return {
-        seo: {
-          name: profRes.data?.full_name ?? null,
-          avatar: profRes.data?.avatar_url ?? null,
-          city: profRes.data?.city ?? proRes.data?.service_cities?.[0] ?? "Colombia",
-          bio: profRes.data?.bio ?? null,
-          specialty: proRes.data?.specialty ?? "profesional de salud",
-          summary: proRes.data?.ai_summary ?? null,
-          rethus: !!proRes.data?.rethus_verified,
-          rating: Number(proRes.data?.avg_rating ?? 0),
-          jobs: Number(proRes.data?.total_jobs ?? 0),
-        },
+        seo: pro
+          ? {
+              name: pro.full_name,
+              avatar: pro.avatar_url,
+              city: proCity(pro) ?? "Colombia",
+              bio: pro.bio,
+              specialty: pro.specialty ?? "profesional de salud",
+              summary: pro.ai_summary,
+              rethus: !!pro.rethus_verified,
+              rating: Number(pro.avg_rating ?? 0),
+              jobs: Number(pro.total_jobs ?? 0),
+            }
+          : null,
       };
     } catch {
       return { seo: null };
@@ -177,16 +171,10 @@ function ProfessionalPublicPage() {
     let active = true;
     (async () => {
       try {
-        // Usar vistas públicas (security_invoker=false) para bypasar RLS —
-        // professional_profiles tiene RLS que bloquea lecturas de otras familias.
-        const [proRes, docsRes] = await Promise.all([
-          supabase
-            .from("public_professionals_safe")
-            .select(
-              "user_id, specialty, sub_specialties, bio, ai_summary, ai_strengths, years_experience, hourly_rate, shift_rate, monthly_rate, service_cities, trust_score, avg_rating, verified, rethus_verified, rethus_number, total_jobs, available, reserved_until, lat, lng, certifications, work_experience, full_name, avatar_url, phone",
-            )
-            .eq("user_id", proId)
-            .maybeSingle(),
+        // Directorio público por la función segura del servidor (professional_profiles tiene RLS que bloquea lecturas de otras cuentas
+        // y las vistas public_*_safe, por ser security_invoker, devolvían cero filas).
+        const [proRows, docsRes] = await Promise.all([
+          fetchPublicProfessionals({ ids: [proId] }),
           supabase
             .from("professional_documents")
             .select("id, doc_type, status, file_name, created_at")
@@ -195,7 +183,7 @@ function ProfessionalPublicPage() {
             .order("created_at", { ascending: false }),
         ]);
         if (!active) return;
-        const proData = proRes.data as Pro | null;
+        const proData = (proRows[0] ?? null) as unknown as Pro | null;
         setPro(proData);
         if (proData) {
           setProfile({
