@@ -39,7 +39,7 @@ export const instKeys = {
 };
 
 /** Agrupa avisos seguidos en una sola recarga. */
-function useDebouncedInvalidate(keys: ReadonlyArray<readonly unknown[]>, delay = 1200) {
+export function useDebouncedInvalidate(keys: ReadonlyArray<readonly unknown[]>, delay = 1200) {
   const qc = useQueryClient();
   const serialized = JSON.stringify(keys);
   return useMemo(() => {

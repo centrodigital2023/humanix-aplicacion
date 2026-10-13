@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { familyOfferKeys } from "@/hooks/use-family-offers";
 import { instKeys } from "@/hooks/use-institution-hub";
 import {
   MESSAGE_ERROR_COPY,
@@ -33,6 +34,7 @@ import {
   type ServerError,
 } from "@/lib/opportunities";
 import {
+  PARTY_COPY,
   buildOfferApplicationDraft,
   type InstitutionOffer,
   type OfferMatch,
@@ -94,7 +96,10 @@ function buildSchema(offer: InstitutionOffer) {
 }
 type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
-/** Postulación a los turnos de una institución: turnos a cubrir, mensaje y, con plan de pago, otro valor. */
+/**
+ * Postulación a una oferta de una institución (turnos a cubrir) o de una familia (sin turnos): mensaje y, con plan Esencial o
+ * superior, otro valor — por hora, por turno, mensual o por paquete, según la oferta.
+ */
 export function ApplyOfferDialog({
   offer,
   match,
@@ -107,6 +112,7 @@ export function ApplyOfferDialog({
 }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const who = PARTY_COPY[offer.party];
   const schema = useMemo(() => buildSchema(offer), [offer]);
   const draft = useMemo(
     () => buildOfferApplicationDraft(offer, intro, match.freeShiftIds),
@@ -141,7 +147,9 @@ export function ApplyOfferDialog({
     effective,
     (offer.hasAgenda ? chosen : []).map((s) => ({ hours: hoursBetween(s.starts_at, s.ends_at) })),
   );
-  const net = professionalNet(total, commissionPct);
+  // Sin turnos (por hora o por turno) no hay total: se muestra el valor propuesto y lo que queda por hora o por turno.
+  const hasTotal = total > 0;
+  const net = professionalNet(hasTotal ? total : effective, commissionPct);
   const conflicting = new Set(match.conflictingShiftIds);
 
   const toggleShift = (id: string, checked: boolean) => {
@@ -165,10 +173,11 @@ export function ApplyOfferDialog({
     },
     onSuccess: () => {
       toast.success("Postulación enviada", {
-        description: "La institución ya puede ver tu perfil y responderte.",
+        description: `${who.The} ya puede ver tu perfil y responderte.`,
       });
       void qc.invalidateQueries({ queryKey: instKeys.offers(userId) });
       void qc.invalidateQueries({ queryKey: instKeys.myApps(userId) });
+      void qc.invalidateQueries({ queryKey: familyOfferKeys.all });
       onOpenChange(false);
     },
     onError: (error) => {
@@ -186,6 +195,7 @@ export function ApplyOfferDialog({
         failure.kind === "conflict"
       ) {
         void qc.invalidateQueries({ queryKey: instKeys.offers(userId) });
+        void qc.invalidateQueries({ queryKey: familyOfferKeys.all });
       }
     },
   });
@@ -233,8 +243,7 @@ export function ApplyOfferDialog({
             </fieldset>
           ) : (
             <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-              Esta oferta no tiene turnos definidos: el horario lo confirma la institución al
-              aceptar.
+              Esta oferta no tiene turnos definidos: el horario lo confirma {who.the} al aceptar.
             </p>
           )}
 
@@ -246,16 +255,21 @@ export function ApplyOfferDialog({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Total que propones</dt>
-              <dd className="text-sm font-semibold">{total > 0 ? formatCOP(total) : "—"}</dd>
+              <dt className="text-muted-foreground">
+                {hasTotal ? "Total que propones" : "Valor que propones"}
+              </dt>
+              <dd className="text-sm font-semibold">
+                {hasTotal
+                  ? formatCOP(total)
+                  : `${formatCOP(effective)} ${MODALITY_LABEL[offer.modality]}`}
+              </dd>
             </div>
             <div className="col-span-2">
               <dt className="text-muted-foreground">
-                Te quedan{commissionPct > 0 ? ` (−${commissionPct}% comisión)` : " (sin comisión)"}
+                Te quedan{hasTotal ? "" : ` ${MODALITY_LABEL[offer.modality]}`}
+                {commissionPct > 0 ? ` (−${commissionPct}% comisión)` : " (sin comisión)"}
               </dt>
-              <dd className="text-sm font-semibold text-ok">
-                {total > 0 ? formatCOP(net.net) : "—"}
-              </dd>
+              <dd className="text-sm font-semibold text-ok">{formatCOP(net.net)}</dd>
             </div>
           </dl>
 
@@ -312,7 +326,7 @@ export function ApplyOfferDialog({
                 )}
                 <p className="text-xs text-muted-foreground">
                   Rango permitido: {formatCOP(band.min)} a {formatCOP(band.max)}{" "}
-                  {MODALITY_LABEL[offer.modality]}. La institución puede aceptar, rechazar o
+                  {MODALITY_LABEL[offer.modality]}. {who.The} puede aceptar, rechazar o
                   contraofertar (hasta 3 rondas).
                 </p>
               </div>
@@ -327,7 +341,7 @@ export function ApplyOfferDialog({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="offer-message" className="text-sm font-medium">
-                Mensaje para la institución
+                Mensaje para {who.the}
               </Label>
               <button
                 type="button"

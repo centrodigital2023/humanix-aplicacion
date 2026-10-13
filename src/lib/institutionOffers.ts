@@ -24,12 +24,37 @@ import {
 import {
   contractTotal,
   isOfferModality,
+  professionalNet,
   type ApplicationStatus,
   type OfferModality,
   type PartyRole,
 } from "./institutionNegotiation";
 
 const ms = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : Number.NaN);
+
+/** Quien publica la oferta: una institución (EPS, IPS, clínica…) o una familia. La tarjeta, el puntaje y la postulación son los mismos. */
+export type OfferParty = "institution" | "family";
+
+/** Cómo se nombra a quien publica en los textos de la pantalla. */
+export const PARTY_COPY: Record<
+  OfferParty,
+  { noun: string; the: string; The: string; ofThe: string; name: string }
+> = {
+  institution: {
+    noun: "Institución",
+    the: "la institución",
+    The: "La institución",
+    ofThe: "de la institución",
+    name: "Institución de salud",
+  },
+  family: {
+    noun: "Familia",
+    the: "la familia",
+    The: "La familia",
+    ofThe: "de la familia",
+    name: "Familia",
+  },
+};
 
 // ─── Filas del servidor ──────────────────────────────────────────────────────
 
@@ -81,7 +106,11 @@ export interface InstitutionOfferRow {
 
 export interface InstitutionOffer {
   id: string;
+  /** Quien la publica. Las ofertas de familias se adaptan a este mismo modelo (ver familyOffers.ts). */
+  party: OfferParty;
+  /** Id de quien publica (institución o familia). */
   institutionId: string;
+  /** Nombre de quien publica (institución, o la familia con nombre abreviado). */
   institutionName: string;
   institutionType: string | null;
   verified: boolean;
@@ -132,8 +161,9 @@ export function normalizeOfferRow(r: InstitutionOfferRow): InstitutionOffer {
   const totalHours = shifts.reduce((n, s) => n + hoursBetween(s.starts_at, s.ends_at), 0);
   return {
     id: r.offer_id,
+    party: "institution",
     institutionId: r.institution_user_id,
-    institutionName: (r.institution_name ?? "").trim() || "Institución de salud",
+    institutionName: (r.institution_name ?? "").trim() || PARTY_COPY.institution.name,
     institutionType: r.institution_type,
     verified: Boolean(r.institution_verified),
     title: r.title,
@@ -206,6 +236,29 @@ export function estimatedOfferTotal(offer: InstitutionOffer, amount = offer.amou
   );
 }
 
+export interface OfferPayView {
+  /** Total estimado de la oferta; null cuando no se puede calcular (por hora o por turno sin agenda: depende de las horas que se acuerden). */
+  total: number | null;
+  /** Lo que le queda al profesional después de la comisión: del total, o del valor publicado (por hora / por turno) si no hay total. */
+  net: number;
+  /** El neto es por hora o por turno (no hay total). */
+  perUnit: boolean;
+}
+
+/** Lo que la tarjeta y la postulación muestran como total y neto. Nunca un guion donde sí se puede decir cuánto le queda por hora. */
+export function offerPayView(
+  offer: InstitutionOffer,
+  commissionPct: number,
+  amount = offer.amount,
+): OfferPayView {
+  const total = estimatedOfferTotal(offer, amount);
+  return {
+    total,
+    net: professionalNet(total ?? amount, commissionPct).net,
+    perUnit: total == null,
+  };
+}
+
 // ─── Compatibilidad explicable ───────────────────────────────────────────────
 
 export interface OfferMatch extends MatchResult {
@@ -218,6 +271,7 @@ const GENERAL_CARE_HOME = "Cuidado general en casa, abierto a varios perfiles";
 export function scoreOffer(offer: InstitutionOffer, pro: ProContext): OfferMatch {
   const reasons: string[] = [];
   const warnings: string[] = [];
+  const who = PARTY_COPY[offer.party];
   let score = 0;
 
   // Ciudad (30)
@@ -236,7 +290,7 @@ export function scoreOffer(offer: InstitutionOffer, pro: ProContext): OfferMatch
   const fit = careFitText(
     `${offer.specialty ?? ""} ${offer.serviceArea ?? ""} ${offer.title}`,
     pro,
-    "La institución no especificó la especialidad",
+    `${who.The} no especificó la especialidad`,
   );
   score += fit.points;
   if (fit.reason)
@@ -281,7 +335,7 @@ export function scoreOffer(offer: InstitutionOffer, pro: ProContext): OfferMatch
   const conflict = offer.hasAgenda && freeShiftIds.length === 0;
   if (!offer.hasAgenda) {
     score += 5;
-    warnings.push("Horario por coordinar con la institución");
+    warnings.push(`Horario por coordinar con ${who.the}`);
   } else if (conflict) {
     warnings.push("Todos los turnos se cruzan con servicios que ya tienes confirmados");
   } else if (conflictingShiftIds.length > 0) {
@@ -294,12 +348,17 @@ export function scoreOffer(offer: InstitutionOffer, pro: ProContext): OfferMatch
     reasons.push("Sin cruces con tu agenda");
   }
 
-  // Confianza en la institución (10) — sin historial no se penaliza.
+  // Confianza en quien publica (10) — sin historial no se penaliza.
   let trust = 0;
   if (offer.verified) {
     trust += 4;
-    reasons.push("Institución verificada por Humanix");
-  } else {
+    reasons.push(
+      offer.party === "family"
+        ? "Familia con identidad verificada"
+        : "Institución verificada por Humanix",
+    );
+  } else if (offer.party === "institution") {
+    // Una familia nueva sin verificar es lo normal: solo se avisa en las instituciones.
     warnings.push("Institución aún sin verificar");
   }
   const { stars, ratings } = offer.rating;
@@ -307,14 +366,14 @@ export function scoreOffer(offer: InstitutionOffer, pro: ProContext): OfferMatch
     const txt = `${stars.toFixed(1)} · ${ratings} reseñas`;
     if (stars >= 4.5) {
       trust += 6;
-      reasons.push(`Institución con excelente reputación (${txt})`);
+      reasons.push(`${who.noun} con excelente reputación (${txt})`);
     } else if (stars >= 4) {
       trust += 4;
-      reasons.push(`Institución bien calificada (${txt})`);
+      reasons.push(`${who.noun} bien calificada (${txt})`);
     } else if (stars >= 3.5) {
       trust += 2;
     } else {
-      warnings.push(`Institución con calificación baja (${txt})`);
+      warnings.push(`${who.noun} con calificación baja (${txt})`);
     }
   } else {
     trust += 3;
@@ -418,6 +477,20 @@ export const DEFAULT_OFFER_FILTERS: OfferFilters = {
   sort: "match",
 };
 
+/** ¿Hay algún filtro distinto del predeterminado? (el orden no cuenta como filtro) */
+export function hasActiveOfferFilters(f: OfferFilters): boolean {
+  return (
+    f.city !== "" ||
+    f.query !== "" ||
+    f.modality !== "all" ||
+    f.minHourly != null ||
+    f.urgentOnly ||
+    f.verifiedOnly ||
+    f.hideConflicts ||
+    f.hideApplied
+  );
+}
+
 export function applyOfferFilters(items: RankedOffer[], f: OfferFilters): RankedOffer[] {
   const q = normalizeText(f.query);
   const city = cityKey(f.city);
@@ -520,7 +593,7 @@ export function applicationBadge(
   const a = offer.application;
   if (!a) {
     if (offer.lastClosedStatus === "rejected")
-      return { label: "La institución respondió tu postulación", tone: "muted" };
+      return { label: `${PARTY_COPY[offer.party].The} respondió tu postulación`, tone: "muted" };
     return null;
   }
   if (a.status === "accepted") return { label: "Aceptado: revisa tu reserva", tone: "ok" };
@@ -534,7 +607,10 @@ export function applicationBadge(
  * experiencia, verificación RETHUS y turnos) y sin datos de contacto ni de pago.
  */
 export function buildOfferApplicationDraft(
-  offer: Pick<InstitutionOffer, "title" | "institutionName"> & { shifts: OfferShiftRow[] },
+  offer: Pick<InstitutionOffer, "title" | "institutionName"> & {
+    shifts: OfferShiftRow[];
+    party?: OfferParty;
+  },
   pro: ProIntro,
   selectedShiftIds?: string[],
 ): string {
@@ -548,7 +624,13 @@ export function buildOfferApplicationDraft(
     bits[0] += ` con ${pro.yearsExperience} ${pro.yearsExperience === 1 ? "año" : "años"} de experiencia`;
   }
   bits[0] += pro.rethusVerified ? " y RETHUS verificado." : ".";
-  bits.push(`Me interesa «${offer.title}» en ${offer.institutionName}.`);
+  // Si el nombre ya termina en punto («Ana G.», «Clínica X S.A.») no se agrega otro.
+  const stop = offer.institutionName.trim().endsWith(".") ? "" : ".";
+  bits.push(
+    offer.party === "family"
+      ? `Me interesa «${offer.title}», la oferta de ${offer.institutionName}${stop}`
+      : `Me interesa «${offer.title}» en ${offer.institutionName}${stop}`,
+  );
   if (chosen.length === 1)
     bits.push(
       `Puedo cubrir el turno del ${formatShiftRange(chosen[0].starts_at, chosen[0].ends_at)}.`,

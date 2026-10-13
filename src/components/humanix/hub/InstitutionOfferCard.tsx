@@ -5,6 +5,7 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  Home,
   MapPin,
   Send,
   Siren,
@@ -13,19 +14,27 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { URGENCY_LABEL, formatShiftRange, hoursBetween, type ProIntro } from "@/lib/opportunities";
 import {
+  URGENCY_LABEL,
+  bogotaDayLabel,
+  formatShiftRange,
+  hoursBetween,
+  type ProIntro,
+} from "@/lib/opportunities";
+import {
+  PARTY_COPY,
   applicationBadge,
-  estimatedOfferTotal,
   hourlyEquivalent,
+  offerPayView,
   type RankedOffer,
 } from "@/lib/institutionOffers";
-import { MODALITY_LABEL, professionalNet } from "@/lib/institutionNegotiation";
+import { MODALITY_LABEL } from "@/lib/institutionNegotiation";
 import { distanceBandLabel } from "@/lib/trustScore";
 import { formatCOP } from "@/lib/pricing";
 import type { PlanKey } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { TrustBadge } from "@/components/humanix/TrustBadge";
+import { FamilyReputationBadge } from "./FamilyReputationBadge";
 import { InstitutionReputationBadge } from "./InstitutionReputationBadge";
 import { OfferContactPanel } from "./OfferContactPanel";
 
@@ -60,7 +69,10 @@ const BADGE_TONE = {
   muted: "text-muted-foreground",
 } as const;
 
-/** Un turno de una institución: agenda, valor y neto, compatibilidad explicada, reputación y acciones. */
+/**
+ * Una oferta de una institución (turnos) o de una familia (sin turnos: se acuerda al aceptar): valor y neto, compatibilidad
+ * explicada, Trust Score, cercanía por rangos, reputación y acciones.
+ */
 export function InstitutionOfferCard({
   ranked,
   userId,
@@ -70,9 +82,10 @@ export function InstitutionOfferCard({
   onApply,
 }: Props) {
   const { offer, match, urgency } = ranked;
+  const who = PARTY_COPY[offer.party];
+  const isFamily = offer.party === "family";
   const [showAll, setShowAll] = useState(false);
-  const total = estimatedOfferTotal(offer);
-  const net = total != null ? professionalNet(total, commissionPct) : null;
+  const pay = offerPayView(offer, commissionPct);
   const hourly = hourlyEquivalent(offer);
   const shifts = showAll ? offer.shifts : offer.shifts.slice(0, 3);
   const badge = applicationBadge(offer);
@@ -89,11 +102,16 @@ export function InstitutionOfferCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-            <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden />
+            {isFamily ? (
+              <Home className="h-4 w-4 text-muted-foreground" aria-hidden />
+            ) : (
+              <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden />
+            )}
             {offer.institutionName}
             {offer.verified && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-ok">
-                <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> Verificada
+                <BadgeCheck className="h-3.5 w-3.5" aria-hidden />{" "}
+                {isFamily ? "Identidad verificada" : "Verificada"}
               </span>
             )}
             {offer.city && (
@@ -167,8 +185,8 @@ export function InstitutionOfferCard({
                 </ul>
               )}
               <p className="text-[11px] text-muted-foreground">
-                Puntaje calculado con tu ciudad, especialidad, tarifa, agenda y la reputación de la
-                institución. No usa datos personales.
+                Puntaje calculado con tu ciudad, especialidad, tarifa, agenda y la reputación{" "}
+                {who.ofThe}. No usa datos personales.
               </p>
             </PopoverContent>
           </Popover>
@@ -191,22 +209,25 @@ export function InstitutionOfferCard({
               ? `Total (${offer.shifts.length} ${offer.shifts.length === 1 ? "turno" : "turnos"})`
               : "Total"}
           </p>
-          <p className="text-sm font-semibold">{total != null ? formatCOP(total) : "—"}</p>
+          <p className="text-sm font-semibold">
+            {pay.total != null ? formatCOP(pay.total) : "Por acordar"}
+          </p>
           {offer.hasAgenda && (
             <p className="text-[11px] text-muted-foreground">{offer.totalHours} h en total</p>
           )}
         </div>
         <div className="rounded-lg bg-ok/10 p-2.5">
           <p className="text-[11px] text-muted-foreground">
-            Te quedan{commissionPct > 0 ? ` (−${commissionPct}%)` : " (sin comisión)"}
+            Te quedan{pay.perUnit ? ` ${MODALITY_LABEL[offer.modality]}` : ""}
+            {commissionPct > 0 ? ` (−${commissionPct}%)` : " (sin comisión)"}
           </p>
-          <p className="text-sm font-semibold text-ok">{net ? formatCOP(net.net) : "—"}</p>
+          <p className="text-sm font-semibold text-ok">{formatCOP(pay.net)}</p>
         </div>
       </div>
 
       {offer.hasAgenda ? (
         <div className="rounded-lg border border-border p-2.5 text-xs">
-          <p className="mb-1 font-medium text-foreground">Agenda de la institución</p>
+          <p className="mb-1 font-medium text-foreground">Agenda {who.ofThe}</p>
           <ul className="space-y-1">
             {shifts.map((s) => {
               const clash = match.conflictingShiftIds.includes(s.id);
@@ -237,7 +258,16 @@ export function InstitutionOfferCard({
         </div>
       ) : (
         <p className="rounded-lg border border-dashed border-border p-2.5 text-xs text-muted-foreground">
-          Horario por coordinar con la institución al aceptar.
+          {offer.firstStart && bogotaDayLabel(offer.firstStart) && (
+            <span className="mr-1 font-medium text-foreground" data-testid="offer-dates">
+              Desde {bogotaDayLabel(offer.firstStart)}
+              {offer.lastEnd && bogotaDayLabel(offer.lastEnd)
+                ? ` hasta ${bogotaDayLabel(offer.lastEnd)}`
+                : ""}
+              .
+            </span>
+          )}
+          Horario por coordinar con {who.the} al aceptar.
         </p>
       )}
 
@@ -249,13 +279,24 @@ export function InstitutionOfferCard({
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        {offer.trust && <TrustBadge kind="institution" summary={offer.trust} />}
-        <InstitutionReputationBadge
-          institutionId={offer.institutionId}
-          stars={offer.rating.stars}
-          ratings={offer.rating.ratings}
-          completed={offer.completedServices}
-        />
+        {offer.trust && (
+          <TrustBadge kind={isFamily ? "family" : "institution"} summary={offer.trust} />
+        )}
+        {isFamily ? (
+          <FamilyReputationBadge
+            familyId={offer.institutionId}
+            stars={offer.rating.stars}
+            ratings={offer.rating.ratings}
+            completed={offer.completedServices}
+          />
+        ) : (
+          <InstitutionReputationBadge
+            institutionId={offer.institutionId}
+            stars={offer.rating.stars}
+            ratings={offer.rating.ratings}
+            completed={offer.completedServices}
+          />
+        )}
       </div>
 
       {match.warnings.length > 0 && !app && (

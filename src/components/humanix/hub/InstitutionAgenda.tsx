@@ -1,28 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  AlertTriangle,
-  CalendarDays,
-  Clock,
-  Flame,
-  ListFilter,
-  RefreshCw,
-  Search,
-  Wallet,
-} from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock, Flame, RefreshCw, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useInstitutionFeed } from "@/hooks/use-institution-hub";
 import { usePlan } from "@/hooks/use-plan";
 import {
@@ -33,11 +15,11 @@ import {
   type OfferFilters,
   type OfferMatch,
 } from "@/lib/institutionOffers";
-import { MODALITY_NAME, isOfferModality } from "@/lib/institutionNegotiation";
 import { formatCOP } from "@/lib/pricing";
 import { FREE_COMMISSION_PCT } from "@/lib/proIncome";
 import { ApplyOfferDialog } from "./ApplyOfferDialog";
 import { InstitutionOfferCard } from "./InstitutionOfferCard";
+import { OfferFilterBar } from "./OfferFilterBar";
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
@@ -65,19 +47,8 @@ export function InstitutionAgenda({ userId }: { userId: string }) {
 
   const model = feed.model;
   const commissionPct = can("no_commission") ? 0 : FREE_COMMISSION_PCT;
-  const set = <K extends keyof OfferFilters>(key: K, value: OfferFilters[K]) =>
-    setFilters((f) => ({ ...f, [key]: value }));
   const cities = useMemo(() => (model ? distinctOfferCities(model.offers) : []), [model]);
   const days = useMemo(() => (model ? groupOffersByDay(model.visible) : []), [model]);
-  const hasFilters =
-    filters.city !== "" ||
-    filters.query !== "" ||
-    filters.modality !== "all" ||
-    filters.minHourly != null ||
-    filters.urgentOnly ||
-    filters.verifiedOnly ||
-    filters.hideConflicts ||
-    filters.hideApplied;
 
   if (feed.isLoading || planLoading) {
     return (
@@ -183,126 +154,7 @@ export function InstitutionAgenda({ userId }: { userId: string }) {
         </p>
       )}
 
-      <Card className="space-y-3 p-3">
-        <div className="grid gap-2 sm:grid-cols-4">
-          <div className="relative sm:col-span-2">
-            <Search
-              className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              className="pl-8"
-              placeholder="Buscar servicio, institución o especialidad (UCI, urgencias…)"
-              value={filters.query}
-              onChange={(e) => set("query", e.target.value)}
-              aria-label="Buscar ofertas de instituciones"
-            />
-          </div>
-          <Select
-            value={filters.city || "all"}
-            onValueChange={(v) => set("city", v === "all" ? "" : v)}
-          >
-            <SelectTrigger aria-label="Ciudad">
-              <SelectValue placeholder="Ciudad" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las ciudades</SelectItem>
-              {cities.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.sort}
-            onValueChange={(v) => set("sort", v as OfferFilters["sort"])}
-          >
-            <SelectTrigger aria-label="Ordenar por">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="match">Mejor compatibilidad</SelectItem>
-              <SelectItem value="soonest">Más próximos</SelectItem>
-              <SelectItem value="nearest">Más cerca de ti</SelectItem>
-              <SelectItem value="hourly">Mejor pago por hora</SelectItem>
-              <SelectItem value="pay">Mayor pago total</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-          <Select
-            value={filters.modality}
-            onValueChange={(v) =>
-              set("modality", v === "all" ? "all" : isOfferModality(v) ? v : "all")
-            }
-          >
-            <SelectTrigger className="h-8 w-40" aria-label="Modalidad">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las modalidades</SelectItem>
-              {(["shift", "hour", "month", "package"] as const).map((m) => (
-                <SelectItem key={m} value={m}>
-                  {MODALITY_NAME[m]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <label className="flex items-center gap-2">
-            <Switch
-              checked={filters.urgentOnly}
-              onCheckedChange={(v) => set("urgentOnly", v)}
-              aria-label="Solo urgentes"
-            />
-            Solo urgentes
-          </label>
-          <label className="flex items-center gap-2">
-            <Switch
-              checked={filters.verifiedOnly}
-              onCheckedChange={(v) => set("verifiedOnly", v)}
-              aria-label="Solo instituciones verificadas"
-            />
-            Solo verificadas
-          </label>
-          <label className="flex items-center gap-2">
-            <Switch
-              checked={filters.hideConflicts}
-              onCheckedChange={(v) => set("hideConflicts", v)}
-              aria-label="Ocultar cruces de agenda"
-            />
-            Ocultar cruces con mi agenda
-          </label>
-          <label className="flex items-center gap-2">
-            <Switch
-              checked={filters.hideApplied}
-              onCheckedChange={(v) => set("hideApplied", v)}
-              aria-label="Ocultar a las que ya me postulé"
-            />
-            Ocultar las que ya apliqué
-          </label>
-          <label className="flex items-center gap-2">
-            Desde
-            <Input
-              className="h-8 w-28"
-              type="number"
-              inputMode="numeric"
-              step={500}
-              placeholder="$ / hora"
-              value={filters.minHourly ?? ""}
-              onChange={(e) =>
-                set("minHourly", e.target.value === "" ? null : Number(e.target.value))
-              }
-              aria-label="Valor mínimo por hora"
-            />
-          </label>
-          {hasFilters && (
-            <Button size="sm" variant="ghost" onClick={() => setFilters(DEFAULT_OFFER_FILTERS)}>
-              <ListFilter className="mr-1 h-3.5 w-3.5" aria-hidden /> Limpiar filtros
-            </Button>
-          )}
-        </div>
-      </Card>
+      <OfferFilterBar filters={filters} onChange={setFilters} cities={cities} party="institution" />
 
       {model.ranked.length === 0 ? (
         <Card className="space-y-2 p-6 text-center text-sm">

@@ -61,6 +61,7 @@ import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
 import { OpportunityHub } from "@/components/humanix/hub/OpportunityHub";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 import { InstitutionAgenda } from "@/components/humanix/hub/InstitutionAgenda";
+import { FamilyOffersList } from "@/components/humanix/hub/FamilyOffersList";
 import { OfferApplicationsPanel } from "@/components/humanix/hub/OfferApplicationsPanel";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
@@ -1631,12 +1632,16 @@ function ProDashboard() {
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-4">
                 <Tabs defaultValue="familias" className="space-y-4">
-                  <TabsList>
-                    <TabsTrigger value="familias">Familias</TabsTrigger>
+                  <TabsList className="h-auto flex-wrap justify-start">
+                    <TabsTrigger value="familias">Turnos de familias</TabsTrigger>
+                    <TabsTrigger value="ofertas-familias">Ofertas de familias</TabsTrigger>
                     <TabsTrigger value="instituciones">EPS, IPS y clínicas</TabsTrigger>
                   </TabsList>
                   <TabsContent value="familias">
                     <OpportunityHub userId={userId} />
+                  </TabsContent>
+                  <TabsContent value="ofertas-familias">
+                    <FamilyOffersList userId={userId} />
                   </TabsContent>
                   <TabsContent value="instituciones">
                     <InstitutionAgenda userId={userId} />
@@ -1705,38 +1710,6 @@ function ProDashboard() {
                 <SemanticOffers userId={userId} appliedIds={appliedIds} onApply={apply} />
               </div>
             )}
-
-            {/* All offers */}
-            <div className="rounded-2xl border border-border bg-card/95 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold">
-                  Ofertas de familias activas ({offers.length})
-                </p>
-                <Link
-                  to="/buscar"
-                  search={{ tab: "ofertas" }}
-                  className="text-xs text-biosensor hover:underline"
-                >
-                  Marketplace →
-                </Link>
-              </div>
-              {offers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  No hay ofertas activas en este momento.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {offers.map((o) => (
-                    <OfferCard
-                      key={o.id}
-                      offer={o}
-                      applied={appliedIds.has(o.id)}
-                      onApply={apply}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
