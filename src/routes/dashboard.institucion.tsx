@@ -41,6 +41,7 @@ import { EnhancedAgendaModule } from "@/components/humanix/EnhancedAgendaModule"
 import { EnhancedReportsWithCRMModule } from "@/components/humanix/EnhancedReportsWithCRMModule";
 import { TalentTab, type ProSummary } from "@/components/humanix/TalentTab";
 import { ServiceOffersFeed } from "@/components/humanix/service/ServiceOffersFeed";
+import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { EnhancedInstitutionOperations } from "@/components/humanix/EnhancedInstitutionOperations";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
@@ -715,6 +716,9 @@ function InstitutionDashboard() {
               />
             </div>
 
+            {/* Contadores reales en vivo: profesionales disponibles, en vivo y ocupados, e instituciones con ofertas abiertas */}
+            <LivePulseBar role="institution" />
+
             {/* SOS: alertas de mis servicios y botón para pedir ayuda en uno de ellos (solo aparece la lista si hay alguna) */}
             <SosAlertsPanel userId={user.id} />
             <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1082,6 +1086,7 @@ function InstitutionDashboard() {
         {/* ══ TAB: TALENTO ══ */}
         {tab === "talento" && (
           <div className="space-y-5">
+            <LivePulseBar role="institution" />
             {/* Profesionales que publican su servicio, con Trust Score, RETHUS, calificación y cercanía */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
               <ServiceOffersFeed viewerId={user.id} audience="institution" />

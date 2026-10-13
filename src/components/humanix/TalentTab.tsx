@@ -1042,6 +1042,8 @@ function ProCard({
   canViewNames: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  // Sin validación con IA todavía no hay Trust Score: se dice «Sin validar», no «0».
+  const trustKnown = pro.trust_score != null;
   const trust = pro.trust_score ?? 0;
   const appliedOffer = offers.find((o) => o.id === latestApp?.job_offer_id);
   const wa = isApplicant
@@ -1159,8 +1161,12 @@ function ProCard({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[11px] font-bold leading-none">{trust}</span>
-                <span className="text-[8px] text-muted-foreground">Trust</span>
+                <span className="text-[11px] font-bold leading-none">
+                  {trustKnown ? trust : "—"}
+                </span>
+                <span className="text-[8px] text-muted-foreground">
+                  {trustKnown ? "Trust" : "Sin validar"}
+                </span>
               </div>
             </div>
           </div>

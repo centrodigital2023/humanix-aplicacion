@@ -14,6 +14,7 @@ import { EPSDashboard } from "@/components/humanix/EPSDashboard";
 import { EnhancedPatientsModule } from "@/components/humanix/EnhancedPatientsModule";
 import { InstitutionClinicalMonitoring } from "@/components/humanix/InstitutionClinicalMonitoring";
 import { EpsCompliance } from "@/components/humanix/institution/EpsCompliance";
+import { TalentNetwork } from "@/components/humanix/institution/TalentNetwork";
 import {
   InstSmartCenter,
   type InstSection,
@@ -54,12 +55,13 @@ const NAV: NavItem[] = [
   { label: "Configuración", to: "/institution/profile", icon: Settings },
 ];
 
-type EpsTab = "overview" | "patients" | "monitoring" | "compliance" | "reports";
+type EpsTab = "overview" | "patients" | "monitoring" | "network" | "compliance" | "reports";
 
 const TABS: Array<{ id: EpsTab; label: string; icon: React.ReactNode }> = [
   { id: "overview", label: "Resumen", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
   { id: "patients", label: "Pacientes", icon: <Users className="h-3.5 w-3.5" /> },
   { id: "monitoring", label: "Monitoreo", icon: <Activity className="h-3.5 w-3.5" /> },
+  { id: "network", label: "Red de profesionales", icon: <Users className="h-3.5 w-3.5" /> },
   { id: "compliance", label: "Cumplimiento", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
   { id: "reports", label: "Reportes", icon: <FileBarChart2 className="h-3.5 w-3.5" /> },
 ];
@@ -162,6 +164,8 @@ function EPSPortalPage() {
         )}
 
         {tab === "monitoring" && <InstitutionClinicalMonitoring institutionId={user.id} />}
+
+        {tab === "network" && <TalentNetwork userId={user.id} />}
 
         {tab === "compliance" && <EpsCompliance userId={user.id} />}
 
