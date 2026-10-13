@@ -45,7 +45,7 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-interface Receipt {
+export interface PqrsReceipt {
   radicado: string;
   due_at: string | null;
   emergency_notice: boolean;
@@ -56,8 +56,19 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-foreground mb-2";
 const errorClass = "mt-1 text-xs text-red-600";
 
-export function PqrsForm() {
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+/**
+ * Formulario de PQRS. En la página pública va solo; dentro de un panel recibe los datos de la cuenta (`defaults`, para no
+ * pedirlos otra vez) y avisa cuando se radica (`onReceipt`, para refrescar «Mis solicitudes»). Con sesión iniciada el servidor
+ * vincula la solicitud a la cuenta (ver `handleSubmit` en pqrs.server.ts).
+ */
+export function PqrsForm({
+  defaults,
+  onReceipt,
+}: {
+  defaults?: Partial<Pick<FormValues, "type" | "topic" | "name" | "email" | "phone">>;
+  onReceipt?: (receipt: PqrsReceipt) => void;
+} = {}) {
+  const [receipt, setReceipt] = useState<PqrsReceipt | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
@@ -68,11 +79,11 @@ export function PqrsForm() {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      type: "peticion",
-      topic: "",
-      name: "",
-      email: "",
-      phone: "",
+      type: defaults?.type ?? "peticion",
+      topic: defaults?.topic ?? "",
+      name: defaults?.name ?? "",
+      email: defaults?.email ?? "",
+      phone: defaults?.phone ?? "",
       message: "",
       consent: false,
       website: "",
@@ -122,11 +133,13 @@ export function PqrsForm() {
       );
       return;
     }
-    setReceipt({
+    const issued: PqrsReceipt = {
       radicado: result.radicado,
       due_at: result.due_at ?? null,
       emergency_notice: result.emergency_notice,
-    });
+    };
+    setReceipt(issued);
+    onReceipt?.(issued);
     reset();
   };
 

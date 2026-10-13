@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { checkOutgoingMessage } from "@/lib/opportunities";
+import { checkOfferText, offerIssueFromError, OFFER_ISSUE_MESSAGE } from "@/lib/contentModeration";
 
 // Untyped client for tables not in generated types (migration pendiente de regenerar)
 const sb = supabase as unknown as SupabaseClient;
@@ -142,6 +143,15 @@ export function FamilyNeedsCalendar({
       );
       return;
     }
+    // Sin groserías, sin artículos en venta y solo salud o cuidado: aviso al instante; la base repite la regla.
+    const moderation = checkOfferText([careType.trim(), noteCheck.text], {
+      requireCare: true,
+      checkContact: true,
+    });
+    if (!moderation.ok) {
+      toast.error(moderation.message);
+      return;
+    }
     const start = new Date(day);
     start.setHours(hour, 0, 0, 0);
     const end = new Date(start);
@@ -157,8 +167,10 @@ export function FamilyNeedsCalendar({
       notes: noteCheck.text || null,
     };
     const { data, error } = await sb.from("family_needs").insert(payload).select().single();
-    if (error) toast.error(error.message);
-    else if (data) setNeeds((n) => [...n, data as Need]);
+    if (error) {
+      const issue = offerIssueFromError(error);
+      toast.error(issue ? OFFER_ISSUE_MESSAGE[issue] : error.message);
+    } else if (data) setNeeds((n) => [...n, data as Need]);
   }
 
   const today = new Date();

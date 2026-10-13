@@ -32,7 +32,9 @@ import { SmartFamilyProfileForm } from "@/components/humanix/SmartFamilyProfileF
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { PendingRatingsCard } from "@/components/humanix/PendingRatingsCard";
 import { FamilyNeedsCalendar } from "@/components/humanix/FamilyNeedsCalendar";
-import { ProposalsInbox } from "@/components/humanix/ProposalsInbox";
+import { ApplicantCards } from "@/components/humanix/ApplicantCards";
+import { OwnTrustCard } from "@/components/humanix/OwnTrustCard";
+import { MyPqrsCard } from "@/components/humanix/MyPqrsCard";
 import { CareCirclePanel } from "@/components/humanix/CareCirclePanel";
 import { CareFeed } from "@/components/humanix/CareFeed";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
@@ -91,17 +93,6 @@ type ApplicationRow = {
   job_offer_id: string;
 };
 
-type ProSummary = {
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  city: string | null;
-  specialty: string | null;
-  avg_rating: number | null;
-  hourly_rate: number | null;
-  phone: string | null;
-};
-
 type NearbyOffer = {
   id: string;
   title: string;
@@ -126,13 +117,6 @@ type NearbyPro = {
   available: boolean;
 };
 
-function waLink(phone: string | null | undefined, text: string) {
-  if (!phone) return null;
-  const clean = phone.replace(/[^0-9]/g, "");
-  const normalized = clean.startsWith("57") ? clean : `57${clean}`;
-  return `https://wa.me/${normalized}?text=${encodeURIComponent(text)}`;
-}
-
 function FamilyDashboard() {
   const { user, loading, logout } = useAppUser({ allow: ["family", "superadmin"] });
   const { can: canPlan } = usePlan(user?.id ?? null);
@@ -140,7 +124,6 @@ function FamilyDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
-  const [proMap, setProMap] = useState<Record<string, ProSummary>>({});
   const [nearby, setNearby] = useState<NearbyOffer[]>([]);
   const [familyCity, setFamilyCity] = useState<string>("Bogotá");
   const [onboardingComplete, setOnboardingComplete] = useState(true);
@@ -262,7 +245,7 @@ function FamilyDashboard() {
         const myCity = profRes.data?.city ?? offerList[0]?.city ?? "Bogotá";
         setFamilyCity(myCity);
 
-        // Buzón de postulaciones a MIS ofertas
+        // Postulaciones a MIS ofertas (resumen para el centro de cuidado; las tarjetas completas las trae ApplicantCards)
         const offerIds = offerList.map((o) => o.id);
         if (offerIds.length > 0) {
           const { data: appsData } = await supabase
@@ -275,54 +258,6 @@ function FamilyDashboard() {
             .limit(50);
           const apps = (appsData ?? []) as ApplicationRow[];
           setApplications(apps);
-
-          // Cargar info de profesionales que se postularon
-          const proIds = Array.from(new Set(apps.map((a) => a.professional_id)));
-          if (proIds.length > 0) {
-            const [proRowsRes, profilesRowsRes] = await Promise.all([
-              supabase
-                .from("professional_profiles")
-                .select("user_id, specialty, avg_rating, hourly_rate")
-                .in("user_id", proIds),
-              supabase
-                .from("profiles")
-                .select("user_id, full_name, avatar_url, city, phone")
-                .in("user_id", proIds),
-            ]);
-            const map: Record<string, ProSummary> = {};
-            (proRowsRes.data ?? []).forEach((r) => {
-              map[r.user_id] = {
-                user_id: r.user_id,
-                full_name: null,
-                avatar_url: null,
-                city: null,
-                specialty: r.specialty,
-                avg_rating: r.avg_rating,
-                hourly_rate: r.hourly_rate,
-                phone: null,
-              };
-            });
-            (profilesRowsRes.data ?? []).forEach((p) => {
-              const existing = map[p.user_id] ?? {
-                user_id: p.user_id,
-                full_name: null,
-                avatar_url: null,
-                city: null,
-                specialty: null,
-                avg_rating: null,
-                hourly_rate: null,
-                phone: null,
-              };
-              map[p.user_id] = {
-                ...existing,
-                full_name: p.full_name,
-                avatar_url: p.avatar_url,
-                city: p.city,
-                phone: p.phone,
-              };
-            });
-            setProMap(map);
-          }
         }
 
         // Ofertas cercanas (mismo city) que NO son mías y están open
@@ -562,6 +497,13 @@ function FamilyDashboard() {
           coords={familyCoords}
         />
 
+        {/* Quién se postuló a lo que publiqué: tarjetas con confianza, calificación, zona y valor; aceptar, rechazar o negociar según el plan */}
+        {user?.id && (
+          <div id="propuestas" className="scroll-mt-4">
+            <ApplicantCards userId={user.id} familyName={user.fullName} />
+          </div>
+        )}
+
         {/* Mis servicios activos */}
         {user && <MyBookings userId={user.id} />}
 
@@ -600,9 +542,6 @@ function FamilyDashboard() {
               <h2 className="font-display text-xl font-bold">Mi agenda</h2>
             </div>
             <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
-            <div id="propuestas" className="scroll-mt-4 empty:hidden">
-              <ProposalsInbox userId={user.id} role="family" />
-            </div>
             <div id="circulo" className="scroll-mt-4 empty:hidden">
               <CareCirclePanel userId={user.id} userEmail={user.email} />
             </div>
@@ -616,6 +555,20 @@ function FamilyDashboard() {
               <TrustedTeamCard userId={user.id} role="family" />
             </div>
             <CareHistoryCard userId={user.id} kind="family" />
+          </section>
+        )}
+
+        {/* ── CONFIANZA Y SOPORTE: mi Trust Score y mis PQRS (llegan al equipo de Humanix) ───────── */}
+        {user?.id && (
+          <section
+            id="confianza"
+            aria-label="Confianza y soporte"
+            className="scroll-mt-4 grid items-start gap-4 lg:grid-cols-2"
+          >
+            <OwnTrustCard userId={user.id} kind="family" />
+            <div id="pqrs" className="scroll-mt-4">
+              <MyPqrsCard userId={user.id} name={user.fullName} email={user.email} />
+            </div>
           </section>
         )}
 
@@ -722,111 +675,6 @@ function FamilyDashboard() {
               </div>
               <WearableConnections patientId={user.id} />
               <ClinicalMonitor patientId={user.id} showDeviceGuide={false} compact />
-            </section>
-
-            {/* Buzón de postulaciones */}
-            <section id="postulaciones" className="scroll-mt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display text-base font-semibold flex items-center gap-2">
-                  <Inbox className="h-4 w-4 text-fuchsia-neural" />
-                  Postulaciones
-                </h2>
-                <span className="text-xs text-muted-foreground">
-                  {applications.length} en total
-                </span>
-              </div>
-              {dataLoading ? (
-                <Card className="p-6 text-center text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Cargando…
-                </Card>
-              ) : applications.length === 0 ? (
-                <Card className="p-8 text-center">
-                  <Inbox className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="font-semibold">Sin postulaciones aún</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Publica una solicitud para recibirlas.
-                  </p>
-                </Card>
-              ) : (
-                <div className="grid gap-3">
-                  {Array.from(new Map(applications.map((a) => [a.id, a])).values()).map((a) => {
-                    const pro = proMap[a.professional_id];
-                    const offer = offers.find((o) => o.id === a.job_offer_id);
-                    const wa = waLink(
-                      pro?.phone,
-                      `Hola ${pro?.full_name ?? ""}, te escribo desde Humanix por tu postulación a "${offer?.title ?? "mi solicitud"}".`,
-                    );
-                    const stars = pro?.avg_rating ?? 0;
-                    return (
-                      <Card key={`app-${a.id}`} className="p-4 flex flex-col sm:flex-row gap-4">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          {pro?.avatar_url ? (
-                            <img
-                              src={pro.avatar_url}
-                              alt={pro.full_name ?? ""}
-                              className="h-11 w-11 rounded-full object-cover border border-border shrink-0"
-                            />
-                          ) : (
-                            <div className="h-11 w-11 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
-                              {(pro?.full_name ?? "?").slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold truncate">
-                                {pro?.full_name ?? "Profesional"}
-                              </p>
-                              {stars > 0 && (
-                                <span className="inline-flex items-center gap-0.5 text-xs text-copper">
-                                  <Star className="h-3 w-3 fill-copper" />
-                                  {Number(stars).toFixed(1)}
-                                </span>
-                              )}
-                              <StatusPill status={a.status} />
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {pro?.specialty ?? "Salud"} · {pro?.city ?? "—"}
-                              {pro?.hourly_rate
-                                ? ` · $${pro.hourly_rate.toLocaleString("es-CO")}/h`
-                                : ""}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {offer?.title ?? "Solicitud"}
-                              {a.proposed_amount
-                                ? ` · $${a.proposed_amount.toLocaleString("es-CO")} COP`
-                                : ""}
-                            </p>
-                            {a.message && (
-                              <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">
-                                "{a.message}"
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex sm:flex-col gap-2 sm:w-36 shrink-0">
-                          <Button size="sm" variant="hero" asChild className="flex-1">
-                            <Link to="/profesional/$proId" params={{ proId: a.professional_id }}>
-                              Ver perfil
-                            </Link>
-                          </Button>
-                          {wa && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              asChild
-                              className="flex-1 border-biosensor/40 text-biosensor hover:bg-biosensor/5"
-                            >
-                              <a href={wa} target="_blank" rel="noopener noreferrer">
-                                <Phone className="h-3.5 w-3.5 mr-1" /> WhatsApp
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
             </section>
 
             <LivePulseBar role="family" />

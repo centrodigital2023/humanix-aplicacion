@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { checkOfferText, offerIssueFromError, OFFER_ISSUE_MESSAGE } from "@/lib/contentModeration";
 
 type Candidate = {
   user_id: string;
@@ -112,6 +113,17 @@ export function HiringCopilot({ defaultCity }: { defaultCity?: string }) {
         .select("role")
         .eq("user_id", u.user.id);
       const isInst = (roles ?? []).some((r) => r.role === "institution");
+      // Primer filtro al instante; la base repite la misma regla (disparador de moderación) y es la que decide.
+      const moderation = checkOfferText(
+        [draft.title, draft.description, draft.specialty_required],
+        {
+          requireCare: !isInst,
+        },
+      );
+      if (!moderation.ok) {
+        toast.error(moderation.message);
+        return;
+      }
       const { data: offer, error } = await supabase
         .from("job_offers")
         .insert({
@@ -136,7 +148,12 @@ export function HiringCopilot({ defaultCity }: { defaultCity?: string }) {
       setDraft(null);
       setCandidates([]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo publicar");
+      const issue = offerIssueFromError(e as { hint?: string | null; message?: string | null });
+      toast.error(
+        issue
+          ? OFFER_ISSUE_MESSAGE[issue]
+          : ((e as { message?: string } | null)?.message ?? "No se pudo publicar"),
+      );
     } finally {
       setPublishing(false);
     }
