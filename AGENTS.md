@@ -1,4 +1,4 @@
-# humanix-care-connect — reglas técnicas
+# humanix-aplicacion — reglas técnicas
 
 Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file-based routes in `src/routes`, Tailwind 4 tokens, shadcn/Radix, react-hook-form + Zod, TanStack Query, Lovable Cloud (Postgres/Auth/Realtime), Vitest, Bun.
 

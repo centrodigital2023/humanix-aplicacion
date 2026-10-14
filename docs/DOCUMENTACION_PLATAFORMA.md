@@ -1,4 +1,4 @@
-# Humanix Care Connect — Documentación de la plataforma
+# Humanix Aplicación — Documentación de la plataforma
 
 > Generada el 7 de octubre de 2026 a partir de la lectura del código y las migraciones del repositorio.
 > **Importante sobre "qué funciona":** este documento distingue tres niveles de evidencia.
