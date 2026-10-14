@@ -18,8 +18,9 @@
 --        · si el código es válido, llama a la función interna tal cual (su comportamiento no cambia).
 --      Los intentos se anotan en `inst_ingest_failures` (20261014100000), con su propio alcance («wearable»): lo que falle un dispositivo
 --      de la institución no frena a un reloj de familia, y al revés.
---   3. La pantalla genera códigos de 96 bits con el generador criptográfico del navegador (SamsungHealthCard.tsx); la columna ya trae un
---      valor por defecto igual de fuerte en la base.
+--   3. La pantalla genera códigos de 60 bits (12 caracteres de un alfabeto de 32, con el generador criptográfico del navegador:
+--      `src/lib/pairingCode.ts`, usado por SamsungHealthCard.tsx); con el freno de arriba, adivinar uno no es práctico. La columna trae
+--      además un valor por defecto de 96 bits (`encode(gen_random_bytes(12), 'hex')`) en la base.
 --
 -- Idempotente. Depende de: wearable_connections y vital_signs_readings (ya existen en producción) y de 20261014100000
 -- (inst_ingest_failures, hx_ingest_ip_hash, hx_inst_purge_failures).
