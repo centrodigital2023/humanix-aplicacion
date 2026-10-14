@@ -46,6 +46,7 @@ import { formatCOP } from "@/lib/pricing";
 import { buildWellbeingReport, DEFAULT_WINDOW_DAYS } from "@/lib/wellbeing";
 import { ApplicantsRankingCard } from "./ApplicantsRankingCard";
 import { CareBudgetCard } from "./CareBudgetCard";
+import { CareHelpHomeCard } from "./CareHelpHomeCard";
 import { CareJourneyCard } from "./CareJourneyCard";
 import { CoverageRadarCard, type RadarAnchor } from "./CoverageRadarCard";
 import { FamilyBriefCard } from "./FamilyBriefCard";
@@ -381,6 +382,10 @@ export function FamilySmartCenter({
           loading={!ready || (premium && logsQ.isLoading)}
         />
       </div>
+
+      {ready && route && (
+        <CareHelpHomeCard route={route} userId={userId} bookings={wbBookings} now={now} />
+      )}
 
       <div id="centro-herramientas" className="scroll-mt-4 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
