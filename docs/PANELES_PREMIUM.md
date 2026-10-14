@@ -169,7 +169,7 @@ El portal mostraba cifras que no salían de ningún dato. Se reemplazó por lo r
 | «Facturación» = servicios terminados × $85.000 y «+12 %» fijo | **Inversión del periodo** = lo realmente pagado (`buildCostReport`); sin tendencias inventadas |
 | «Cumplimiento» por una fórmula arbitraria, reingresos 4,2 % y «3,2 h por visita» fijos, «+3 %»/«-1,2 %» | Quitados. La duración promedio sale de las horas registradas (≥ 3 servicios); el cumplimiento real vive en la pestaña **Cumplimiento** (calidad) |
 | Alertas, puntajes de riesgo y registros de entrada de **toda la plataforma** (el filtro `tenant_id` se declaraba y no se aplicaba) | Solo los de **los servicios de la institución** (ids de sus reservas de los últimos 120 días, de a 100) |
-| Pacientes de ejemplo («Carlos Rodríguez M.»…) que abrían el monitoreo con el id de la propia institución | Los módulos reales de la institución: **Pacientes** (`EnhancedPatientsModule`) y **Monitoreo** (`InstitutionClinicalMonitoring`) |
+| Pacientes de ejemplo («Carlos Rodríguez M.»…) que abrían el monitoreo con el id de la propia institución | Los módulos reales de la institución: **Pacientes** (`PatientsHub`) y **Monitoreo** (`MonitoringHub`); desde el 2026-10-14 con sus propias tablas (`docs/PACIENTES_Y_MONITOREO.md`) |
 | Cumplimiento con porcentajes fijos y sellos «HIPAA/GDPR Ready», «MFA habilitado», «TLS 1.3», «Backups», «ISO 27001» | Indicadores reales de calidad (plan IPS Mejorado) y enlaces a Habeas Data, privacidad y cumplimiento, con el aviso de que el portal **no certifica** por sí solo el cumplimiento normativo |
 | «Reportes IA» con fechas de junio de 2026 y botones sin función | El centro de gestión real (costos, calidad, equipo, pronóstico, informe) |
 
@@ -193,7 +193,7 @@ Eso salía de los archivos del repositorio, **no de producción**, y para produc
 | Tabla | En producción el 2026-10-12 | Hoy (2026-10-13) |
 |---|---|---|
 | `clinical_alerts` | Existía (la creó `drizzle/migrations/0007`) y está vacía. Lee el paciente, el profesional del servicio y el staff (`is_staff()` = superadmin, HR y evaluadores). **Sin** política de INSERT, **sin** columnas `lat`/`lng`, **sin** el tipo `sos_manual` y **sin** disparador hacia `clinical-alert-notify` | Lee el superadmin y las partes del servicio (paciente, círculo de cuidado, profesional con servicio vigente y quien contrató: `hx_can_access_alert`). Insertan el propio paciente, quien lo atiende o su círculo (SOS crítico, con guarda anti-abuso). Columnas `lat`, `lng`, `accuracy_m`, `triggered_by`, `inapp_notified`; tipo `sos_manual`; quien atiende solo cambia estado y notas. Avisos dentro de la app; WhatsApp automático sigue sin activarse |
-| `patient_risk_scores`, `service_checkins`, `vital_signs`, `alert_thresholds`, `clinical_reports`, `institution_patient_cases`, vista `eps_dashboard_metrics` | **No existen** | Siguen sin existir (ver `docs/MIGRACIONES.md` §5.2) |
+| `patient_risk_scores`, `service_checkins`, `vital_signs`, `alert_thresholds`, `clinical_reports`, `institution_patient_cases`, vista `eps_dashboard_metrics` | **No existen** | Siguen sin existir (ver `docs/MIGRACIONES.md` §5.2). **2026-10-14:** `institution_patient_cases` ya no se usa; Pacientes y Monitoreo guardan en las tablas `inst_*` de `20261014100000` |
 | `vital_signs_readings`, `wearable_connections` | Existen y están vacías; políticas por dueño o `is_staff()`; `anon` con `ALL` | Solo dueño, profesional con reserva vigente y superadmin; `anon` sin privilegios; `authenticated` solo con los de datos que ya tenía |
 
 **Qué se hizo.** `supabase/migrations/20261012100000_clinical_data_scope.sql` reemplaza las políticas «por rol» de los archivos
@@ -227,7 +227,7 @@ advertencia: si alguien lo aplica en un entorno nuevo debe aplicar después esta
    aviso hacia `clinical-alert-notify` (`20261007170000_wire_webhooks_and_fix_cron.sql`) y los secretos de WhatsApp del servidor. Mientras
    tanto el botón dice que no se pudo enviar y manda a llamar al **123**. Lo mismo ocurre con el check-in/out del profesional
    (`service_checkins`), la tarjeta de riesgo (`patient_risk_scores`, `vital_signs`) y los pacientes que agrega la institución
-   (`institution_patient_cases`): sus tablas no existen.
+   (`institution_patient_cases`): sus tablas no existen (los pacientes se rehicieron el 2026-10-14 sobre `inst_*`).
 4. ✅ **Resuelto (`20261012150000`).** **`anon` conservaba `ALL` sobre `vital_signs_readings` y `wearable_connections`** (privilegios por defecto; solo las protege RLS):
    `REVOKE ALL ON public.vital_signs_readings, public.wearable_connections FROM anon;` y lo mismo que se hizo con `clinical_alerts` para
    `authenticated`.

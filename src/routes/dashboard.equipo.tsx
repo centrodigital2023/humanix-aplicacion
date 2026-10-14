@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  Activity,
   Briefcase,
   Building2,
   KeyRound,
@@ -8,6 +9,7 @@ import {
   Lock,
   LogOut,
   RefreshCw,
+  Stethoscope,
   Users,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,6 +21,9 @@ import { Logo } from "@/components/humanix/Logo";
 import { StaffOffersTab } from "@/components/humanix/staff/StaffOffersTab";
 import { StaffPasswordDialog } from "@/components/humanix/staff/StaffPasswordDialog";
 import { StaffTalentTab } from "@/components/humanix/staff/StaffTalentTab";
+import { PatientsHub } from "@/components/humanix/patients/PatientsHub";
+import { MonitoringHub } from "@/components/humanix/monitoring/MonitoringHub";
+import type { CareScope } from "@/components/humanix/instcare/scope";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useStaffContext } from "@/hooks/use-staff";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +47,12 @@ export const Route = createFileRoute("/dashboard/equipo")({
   component: StaffDashboard,
 });
 
-const TAB_ICON: Record<StaffModuleKey, typeof Briefcase> = { ofertas: Briefcase, talento: Users };
+const TAB_ICON: Record<StaffModuleKey, typeof Briefcase> = {
+  ofertas: Briefcase,
+  talento: Users,
+  pacientes: Stethoscope,
+  monitoreo: Activity,
+};
 
 function StaffDashboard() {
   const { user, loading, logout } = useAppUser({ allow: ["institution_staff"] });
@@ -95,6 +105,18 @@ function StaffDashboard() {
 
   const tabs = gate.state === "ready" ? gate.tabs : [];
   const tab = resolveStaffTab(search.tab, tabs);
+  // Lo que la persona puede hacer con los pacientes: solo lo que su módulo permite (la base de datos lo vuelve a comprobar).
+  const careScope: CareScope = {
+    institutionId: ctx.institutionId,
+    viewerId: user.id,
+    viewerName: ctx.displayName,
+    institutionName: ctx.institutionName,
+    isOwner: false,
+    canPatients: tabs.includes("pacientes"),
+    canMonitoring: tabs.includes("monitoreo"),
+  };
+  const goTab = (next: StaffModuleKey) =>
+    void navigate({ to: "/dashboard/equipo", search: { tab: next }, replace: true });
 
   return (
     <div className="min-h-screen bg-background text-foreground bg-aurora pb-16">
@@ -188,6 +210,27 @@ function StaffDashboard() {
               {tabs.includes("talento") && (
                 <TabsContent value="talento" className="mt-5">
                   <StaffTalentTab viewerId={user.id} />
+                </TabsContent>
+              )}
+              {tabs.includes("pacientes") && (
+                <TabsContent value="pacientes" className="mt-5">
+                  <PatientsHub
+                    scope={careScope}
+                    onOpenMonitoring={
+                      tabs.includes("monitoreo") ? () => goTab("monitoreo") : undefined
+                    }
+                    onOpenOffers={tabs.includes("ofertas") ? () => goTab("ofertas") : undefined}
+                  />
+                </TabsContent>
+              )}
+              {tabs.includes("monitoreo") && (
+                <TabsContent value="monitoreo" className="mt-5">
+                  <MonitoringHub
+                    scope={careScope}
+                    onOpenPatients={
+                      tabs.includes("pacientes") ? () => goTab("pacientes") : undefined
+                    }
+                  />
                 </TabsContent>
               )}
             </Tabs>

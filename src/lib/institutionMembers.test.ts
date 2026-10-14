@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   MAX_STAFF_PER_INSTITUTION,
@@ -40,28 +41,53 @@ function seeded(seed: number) {
 }
 
 describe("módulos", () => {
-  it("el catálogo coincide con lo que acepta la base de datos (ofertas y talento)", () => {
-    expect([...STAFF_MODULE_KEYS]).toEqual(["ofertas", "talento"]);
-    expect(STAFF_MODULES.map((m) => m.key)).toEqual(["ofertas", "talento"]);
+  it("el catálogo coincide con lo que acepta la base de datos (ofertas, talento, pacientes y monitoreo)", () => {
+    expect([...STAFF_MODULE_KEYS]).toEqual(["ofertas", "talento", "pacientes", "monitoreo"]);
+    expect(STAFF_MODULES.map((m) => m.key)).toEqual([
+      "ofertas",
+      "talento",
+      "pacientes",
+      "monitoreo",
+    ]);
     for (const m of STAFF_MODULES) {
       expect(m.label.length).toBeGreaterThan(3);
       expect(m.description.length).toBeGreaterThan(20);
     }
   });
 
-  it("lo reservado a la cuenta de la institución se explica con motivo", () => {
+  it("los módulos son los mismos que `hx_staff_modules()` en la migración (si cambia uno, cambia el otro)", () => {
+    const sql = readFileSync(
+      new URL(
+        "../../supabase/migrations/20261014100000_institution_care_core.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const fn = /FUNCTION public\.hx_staff_modules\(\)[\s\S]*?ARRAY\[([^\]]*)\]/.exec(sql);
+    expect(fn).not.toBeNull();
+    const inDb = [...fn![1]!.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    expect(inDb).toEqual([...STAFF_MODULE_KEYS]);
+  });
+
+  it("lo reservado a la cuenta de la institución se explica con motivo (los módulos clínicos ya se pueden delegar)", () => {
     const labels = RESERVED_FOR_OWNER.map((r) => r.label).join("|");
     expect(labels).toMatch(/contratos/i);
     expect(labels).toMatch(/pagos/i);
-    expect(labels).toMatch(/pacientes/i);
+    expect(labels).toMatch(/equipo/i);
+    expect(labels).not.toMatch(/pacientes|monitoreo/i);
     for (const r of RESERVED_FOR_OWNER) expect(r.reason.length).toBeGreaterThan(20);
   });
 
+  it("dar acceso a datos sensibles se avisa en la descripción del módulo", () => {
+    const patients = STAFF_MODULES.find((m) => m.key === "pacientes")!;
+    expect(patients.description).toMatch(/Ley 1581/);
+    expect(patients.description).toMatch(/autorización/);
+  });
+
   it("normaliza: descarta lo desconocido, quita repetidos y respeta el orden del catálogo", () => {
-    expect(normalizeModules(["talento", "ofertas", "talento", "pacientes", 3, null])).toEqual([
-      "ofertas",
-      "talento",
-    ]);
+    expect(
+      normalizeModules(["monitoreo", "talento", "ofertas", "talento", "pagos", 3, null]),
+    ).toEqual(["ofertas", "talento", "monitoreo"]);
     expect(normalizeModules(null)).toEqual([]);
     expect(normalizeModules([])).toEqual([]);
     expect(isStaffModule("ofertas")).toBe(true);

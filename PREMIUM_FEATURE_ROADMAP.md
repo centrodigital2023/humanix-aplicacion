@@ -84,3 +84,16 @@ Siguiente (por valor y esfuerzo): avisos informativos por WhatsApp Business (nun
 explícito (Ley 1581), umbrales de signos vitales por paciente, resumen semanal para la familia y el círculo, informe mensual
 para la EPS/IPS (cumplimiento + alertas), calificación de la experiencia del círculo y reemplazo asistido con un clic desde
 el equipo de confianza.
+
+## Implementado: Pacientes y Monitoreo clínico de la institución (EPS, IPS, clínicas, hospitales)
+Los dos módulos del panel de la institución se rehicieron sobre tablas propias (`inst_*`): pacientes, casos con valoración real, notas
+**inalterables encadenadas por hash**, tareas y seguimientos automáticos, **NEWS2 calculado en la base de datos**, alertas con plazo y
+escalamiento, dispositivos con código de 122 bits que se muestra una vez, relevo de turno (I-PASS), exportación de la historia en FHIR R4,
+planes Free e IPS Mejorado aplicados en el servidor y personal por módulo (`pacientes` y `monitoreo`). La experiencia busca retención y
+entusiasmo sin inventar nada: estados vacíos con inicio rápido, brújula del día, logros, «Tu semana de cuidado» sin datos de pacientes y
+una racha de alertas vistas a tiempo. Documentación en `docs/PACIENTES_Y_MONITOREO.md`; suite en `supabase/e2e/institution_care/`.
+
+Siguiente (por valor y esfuerzo): validar la exportación FHIR con el validador oficial de HL7, integraciones de relojes por proveedor
+(hoy se conecta con el código y un ejemplo de `curl`), que la persona vincule su cuenta de Humanix y dé su autorización dentro de la app,
+guardar los logros en la base (hoy son por navegador), umbrales de NEWS2 fijados por el médico para cada paciente, avisos informativos
+de escalamiento por WhatsApp Business (nunca pagos) y el aviso al equipo cuando un dispositivo deja de enviar.

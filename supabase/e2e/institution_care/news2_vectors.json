@@ -1,0 +1,1910 @@
+[
+ {
+  "name": "FR 4",
+  "input": {
+   "rr": 4,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 8",
+  "input": {
+   "rr": 8,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 9",
+  "input": {
+   "rr": 9,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 11",
+  "input": {
+   "rr": 11,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 12",
+  "input": {
+   "rr": 12,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 16",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 20",
+  "input": {
+   "rr": 20,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 21",
+  "input": {
+   "rr": 21,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 24",
+  "input": {
+   "rr": 24,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 25",
+  "input": {
+   "rr": 25,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 40",
+  "input": {
+   "rr": 40,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 85 %",
+  "input": {
+   "rr": 16,
+   "spo2": 85,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 91 %",
+  "input": {
+   "rr": 16,
+   "spo2": 91,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 92 %",
+  "input": {
+   "rr": 16,
+   "spo2": 92,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 93 %",
+  "input": {
+   "rr": 16,
+   "spo2": 93,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 94 %",
+  "input": {
+   "rr": 16,
+   "spo2": 94,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 95 %",
+  "input": {
+   "rr": 16,
+   "spo2": 95,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 96 %",
+  "input": {
+   "rr": 16,
+   "spo2": 96,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 1 · 100 %",
+  "input": {
+   "rr": 16,
+   "spo2": 100,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 80 %",
+  "input": {
+   "rr": 16,
+   "spo2": 80,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 83 %",
+  "input": {
+   "rr": 16,
+   "spo2": 83,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 84 %",
+  "input": {
+   "rr": 16,
+   "spo2": 84,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 85 %",
+  "input": {
+   "rr": 16,
+   "spo2": 85,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 86 %",
+  "input": {
+   "rr": 16,
+   "spo2": 86,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 87 %",
+  "input": {
+   "rr": 16,
+   "spo2": 87,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 88 %",
+  "input": {
+   "rr": 16,
+   "spo2": 88,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 92 %",
+  "input": {
+   "rr": 16,
+   "spo2": 92,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 93 %",
+  "input": {
+   "rr": 16,
+   "spo2": 93,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 97 %",
+  "input": {
+   "rr": 16,
+   "spo2": 97,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 aire · 100 %",
+  "input": {
+   "rr": 16,
+   "spo2": 100,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 83 %",
+  "input": {
+   "rr": 16,
+   "spo2": 83,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 5,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 85 %",
+  "input": {
+   "rr": 16,
+   "spo2": 85,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 4,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 87 %",
+  "input": {
+   "rr": 16,
+   "spo2": 87,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 88 %",
+  "input": {
+   "rr": 16,
+   "spo2": 88,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 92 %",
+  "input": {
+   "rr": 16,
+   "spo2": 92,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 93 %",
+  "input": {
+   "rr": 16,
+   "spo2": 93,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 94 %",
+  "input": {
+   "rr": 16,
+   "spo2": 94,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 95 %",
+  "input": {
+   "rr": 16,
+   "spo2": 95,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 4,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 96 %",
+  "input": {
+   "rr": 16,
+   "spo2": 96,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 4,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 97 %",
+  "input": {
+   "rr": 16,
+   "spo2": 97,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 5,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 escala 2 con O2 · 100 %",
+  "input": {
+   "rr": 16,
+   "spo2": 100,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 2
+  },
+  "expect": {
+   "score": 5,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Oxígeno suplementario",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": true,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 60",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 60,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 90",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 90,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 91",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 91,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 100",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 100,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 101",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 101,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 110",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 110,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 111",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 111,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 219",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 219,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 220",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 220,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 260",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 260,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 30",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 30,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 40",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 40,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 41",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 41,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 50",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 50,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 51",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 51,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 90",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 90,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 91",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 91,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 110",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 110,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 111",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 111,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 130",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 130,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 131",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 131,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 180",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 180,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Conciencia A",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Conciencia C",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "C",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Conciencia V",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "V",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Conciencia P",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "P",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Conciencia U",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "U",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 33.0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 33.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 35.0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 35.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 35.1",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 35.1,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 36.0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 36.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 36.1",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 36.1,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 37.0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 38.0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 38.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 38.1",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 38.1,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 39.0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 39.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 39.1",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 39.1,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 41.0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 41.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Todo normal",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Máximo posible",
+  "input": {
+   "rr": 30,
+   "spo2": 85,
+   "on_o2": true,
+   "sbp": 80,
+   "hr": 140,
+   "avpu": "U",
+   "temp_c": 34.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 20,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Un solo 3 aislado (FR 8)",
+  "input": {
+   "rr": 8,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Cinco puntos",
+  "input": {
+   "rr": 22,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 115,
+   "avpu": "A",
+   "temp_c": 38.5,
+   "scale": 1
+  },
+  "expect": {
+   "score": 5,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Sin ningún dato",
+  "input": {
+   "rr": null,
+   "spo2": null,
+   "on_o2": null,
+   "sbp": null,
+   "hr": null,
+   "avpu": null,
+   "temp_c": null,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 0
+  }
+ },
+ {
+  "name": "Solo pulso 120 (parcial)",
+  "input": {
+   "rr": null,
+   "spo2": null,
+   "on_o2": null,
+   "sbp": null,
+   "hr": 120,
+   "avpu": null,
+   "temp_c": null,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 1
+  }
+ },
+ {
+  "name": "Solo SpO2 90 y aire (parcial)",
+  "input": {
+   "rr": null,
+   "spo2": 90,
+   "on_o2": false,
+   "sbp": null,
+   "hr": null,
+   "avpu": null,
+   "temp_c": null,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 2
+  }
+ },
+ {
+  "name": "Sin saber si hay oxígeno: se trata como aire y no cuenta como medido",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": null,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 6
+  }
+ },
+ {
+  "name": "SpO2 91,6 se redondea a 92",
+  "input": {
+   "rr": 16,
+   "spo2": 91.6,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "SpO2 91,4 se redondea a 91",
+  "input": {
+   "rr": 16,
+   "spo2": 91.4,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 38,04 se redondea a 38,0",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 38.04,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Temperatura 38,06 se redondea a 38,1",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 38.06,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Tres puntos sin ningún 3 (FR 22 + pulso 95)",
+  "input": {
+   "rr": 22,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 95,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Ejemplo alto: FR 22 · SpO2 93 · O2 · PAS 105 · pulso 115 · T 38,5",
+  "input": {
+   "rr": 22,
+   "spo2": 93,
+   "on_o2": true,
+   "sbp": 105,
+   "hr": 115,
+   "avpu": "A",
+   "temp_c": 38.5,
+   "scale": 1
+  },
+  "expect": {
+   "score": 10,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Siete puntos exactos (FR 22 · pulso 115 · T 38,5 · PAS 105 · SpO2 95)",
+  "input": {
+   "rr": 22,
+   "spo2": 95,
+   "on_o2": false,
+   "sbp": 105,
+   "hr": 115,
+   "avpu": "A",
+   "temp_c": 38.5,
+   "scale": 1
+  },
+  "expect": {
+   "score": 7,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Seis puntos (FR 22 · pulso 115 · T 38,5 · PAS 105)",
+  "input": {
+   "rr": 22,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 105,
+   "hr": 115,
+   "avpu": "A",
+   "temp_c": 38.5,
+   "scale": 1
+  },
+  "expect": {
+   "score": 6,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 40,5 se redondea a 41",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 40.5,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 90,5 se redondea a 91",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 90.5,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "Pulso 130,5 se redondea a 131",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 130.5,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 8,5 se redondea a 9",
+  "input": {
+   "rr": 8.5,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 20,5 se redondea a 21",
+  "input": {
+   "rr": 20.5,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "FR 24,5 se redondea a 25",
+  "input": {
+   "rr": 24.5,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 120,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 90,5 se redondea a 91",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 90.5,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 2,
+   "max_single": 2,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 100,5 se redondea a 101",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 100.5,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 1,
+   "max_single": 1,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 110,5 se redondea a 111",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 110.5,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 0,
+   "max_single": 0,
+   "measured": 7
+  }
+ },
+ {
+  "name": "PAS 219,5 se redondea a 220",
+  "input": {
+   "rr": 16,
+   "spo2": 98,
+   "on_o2": false,
+   "sbp": 219.5,
+   "hr": 70,
+   "avpu": "A",
+   "temp_c": 37.0,
+   "scale": 1
+  },
+  "expect": {
+   "score": 3,
+   "max_single": 3,
+   "measured": 7
+  }
+ }
+]

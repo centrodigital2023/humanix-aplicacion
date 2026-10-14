@@ -1,5 +1,8 @@
 # 🔗 GUÍA RÁPIDA DE INTEGRACIÓN - HUMANIX CARE CONNECT
 
+> **Actualización 2026-10-14:** `EnhancedPatientsModule` e `InstitutionClinicalMonitoring` ya no existen: los reemplazan `PatientsHub` y
+> `MonitoringHub` (ver `docs/PACIENTES_Y_MONITOREO.md`). El resto de este archivo es historia de mayo de 2026.
+
 ## Imports Disponibles
 
 ### 1. Módulos de Institución

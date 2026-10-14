@@ -11,8 +11,9 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAppUser } from "@/hooks/use-app-user";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { EPSDashboard } from "@/components/humanix/EPSDashboard";
-import { EnhancedPatientsModule } from "@/components/humanix/EnhancedPatientsModule";
-import { InstitutionClinicalMonitoring } from "@/components/humanix/InstitutionClinicalMonitoring";
+import { PatientsHub } from "@/components/humanix/patients/PatientsHub";
+import { MonitoringHub } from "@/components/humanix/monitoring/MonitoringHub";
+import { ownerScope } from "@/components/humanix/instcare/scope";
 import { EpsCompliance } from "@/components/humanix/institution/EpsCompliance";
 import { TalentNetwork } from "@/components/humanix/institution/TalentNetwork";
 import {
@@ -87,6 +88,7 @@ function EPSPortalPage() {
   }
 
   const name = identity.data?.institution_name || user.fullName || "Mi institución";
+  const careScope = ownerScope({ userId: user.id, userName: user.fullName, institutionName: name });
   const detail = [identity.data?.institution_type, identity.data?.city].filter(Boolean).join(" · ");
 
   return (
@@ -158,12 +160,21 @@ function EPSPortalPage() {
         {tab === "overview" && <EPSDashboard institutionId={user.id} title={`Resumen · ${name}`} />}
 
         {tab === "patients" && (
-          <div className="rounded-2xl border border-border bg-card/95 p-4">
-            <EnhancedPatientsModule userId={user.id} />
-          </div>
+          <PatientsHub
+            scope={careScope}
+            onOpenMonitoring={() => setTab("monitoring")}
+            onOpenOffers={() =>
+              void navigate({ to: "/dashboard/institucion", search: { tab: "ofertas" } })
+            }
+            onOpenTeam={() =>
+              void navigate({ to: "/dashboard/institucion", search: { tab: "personal" } })
+            }
+          />
         )}
 
-        {tab === "monitoring" && <InstitutionClinicalMonitoring institutionId={user.id} />}
+        {tab === "monitoring" && (
+          <MonitoringHub scope={careScope} onOpenPatients={() => setTab("patients")} />
+        )}
 
         {tab === "network" && <TalentNetwork userId={user.id} />}
 

@@ -37,7 +37,6 @@ import { Logo } from "@/components/humanix/Logo";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
 import { EnhancedBulkOffersModule } from "@/components/humanix/EnhancedBulkOffersModule";
 import { CoverageSemaphore } from "@/components/humanix/CoverageSemaphore";
-import { EnhancedPatientsModule } from "@/components/humanix/EnhancedPatientsModule";
 import { EnhancedAgendaModule } from "@/components/humanix/EnhancedAgendaModule";
 import { EnhancedReportsWithCRMModule } from "@/components/humanix/EnhancedReportsWithCRMModule";
 import { TalentTab, type ProSummary } from "@/components/humanix/TalentTab";
@@ -52,7 +51,6 @@ import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { HumanixAssistant } from "@/components/humanix/HumanixAssistant";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
 import { OffersMap, type MapPoint } from "@/components/humanix/OffersMap";
-import { InstitutionClinicalMonitoring } from "@/components/humanix/InstitutionClinicalMonitoring";
 
 import { useAppUser } from "@/hooks/use-app-user";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
@@ -60,6 +58,9 @@ import { CoverageCenter } from "@/components/humanix/hub/CoverageCenter";
 import { ApplicantsInbox } from "@/components/humanix/hub/ApplicantsInbox";
 import { PublishShiftsDialog } from "@/components/humanix/hub/PublishShiftsDialog";
 import { StaffManager } from "@/components/humanix/staff/StaffManager";
+import { PatientsHub } from "@/components/humanix/patients/PatientsHub";
+import { MonitoringHub } from "@/components/humanix/monitoring/MonitoringHub";
+import { ownerScope } from "@/components/humanix/instcare/scope";
 import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
@@ -79,6 +80,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/institucion")({
+  // `?tab=pacientes` (o monitoreo, ofertas…): los avisos al equipo y los enlaces de otras pantallas abren la pestaña indicada.
+  validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
+    typeof search.tab === "string" && TABS.some((t) => t.id === search.tab)
+      ? { tab: search.tab as Tab }
+      : {},
   head: () => ({ meta: [{ title: "Panel Institución · Humanix" }] }),
   component: InstitutionDashboard,
 });
@@ -241,7 +247,12 @@ function InstitutionDashboard() {
   });
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState<Tab>("inicio");
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<Tab>(search.tab ?? "inicio");
+  // Si llega otro `?tab=` con la pantalla ya abierta (un aviso, un enlace), se cambia de pestaña.
+  useEffect(() => {
+    if (search.tab) setTab(search.tab);
+  }, [search.tab]);
   // dataLoading: Phase 1 (profile + offers + apps) pending — shows inbox skeleton
   const [dataLoading, setDataLoading] = useState(true);
   // talentLoading: Phase 2 (professional profiles) pending — shows talent skeleton
@@ -1145,13 +1156,29 @@ function InstitutionDashboard() {
 
         {/* ══ TAB: PACIENTES ══ */}
         {tab === "pacientes" && (
-          <div className="rounded-2xl border border-border bg-card/95 p-4">
-            <EnhancedPatientsModule userId={user.id} />
-          </div>
+          <PatientsHub
+            scope={ownerScope({
+              userId: user.id,
+              userName: user.fullName,
+              institutionName: instName,
+            })}
+            onOpenMonitoring={() => setTab("monitoreo")}
+            onOpenOffers={() => setTab("ofertas")}
+            onOpenTeam={() => setTab("personal")}
+          />
         )}
 
         {/* ══ TAB: MONITOREO ══ */}
-        {tab === "monitoreo" && <InstitutionClinicalMonitoring institutionId={user.id} />}
+        {tab === "monitoreo" && (
+          <MonitoringHub
+            scope={ownerScope({
+              userId: user.id,
+              userName: user.fullName,
+              institutionName: instName,
+            })}
+            onOpenPatients={() => setTab("pacientes")}
+          />
+        )}
 
         {/* ══ TAB: AGENDA ══ */}
         {tab === "agenda" && (

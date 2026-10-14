@@ -17,7 +17,7 @@ export const STAFF_EMAIL_DOMAIN = "staff.humanix.lat";
 
 // ─── Módulos ───────────────────────────────────────────────────────────────────
 
-export const STAFF_MODULE_KEYS = ["ofertas", "talento"] as const;
+export const STAFF_MODULE_KEYS = ["ofertas", "talento", "pacientes", "monitoreo"] as const;
 export type StaffModuleKey = (typeof STAFF_MODULE_KEYS)[number];
 
 export interface StaffModule {
@@ -40,6 +40,18 @@ export const STAFF_MODULES: readonly StaffModule[] = [
     description:
       "Ver los profesionales cercanos, sus contadores en vivo y las ofertas de servicio que publican (solo lectura).",
   },
+  {
+    key: "pacientes",
+    label: "Pacientes y casos",
+    description:
+      "Registrar pacientes (con la autorización de la persona o su acudiente), abrir y cerrar casos, escribir notas firmadas, tareas, relevos y exportar la historia. Son datos sensibles (Ley 1581): da este acceso solo a quien lo necesita.",
+  },
+  {
+    key: "monitoreo",
+    label: "Monitoreo clínico",
+    description:
+      "Registrar signos vitales, ver el NEWS2, atender las alertas y emparejar dispositivos. Para editar los datos de las personas, dale también «Pacientes y casos».",
+  },
 ];
 
 /** Lo que el personal NO puede hacer, y por qué (se muestra tal cual al dueño para que decida con claridad). */
@@ -51,11 +63,6 @@ export const RESERVED_FOR_OWNER: readonly { label: string; reason: string }[] = 
   {
     label: "Pagos y billetera",
     reason: "Los pagos se hacen solo en el pago web, con la cuenta de la institución.",
-  },
-  {
-    label: "Pacientes y monitoreo clínico",
-    reason:
-      "Son datos sensibles (Ley 1581): llegará con permisos propios; hoy es solo de la cuenta de la institución.",
   },
   {
     label: "Perfil, datos legales y equipo",

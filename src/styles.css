@@ -740,3 +740,37 @@ html.easy-read .easy-hide {
     right: 1.5rem !important;
   }
 }
+
+/* ── Monitoreo: la línea del pulso se dibuja sola (con movimiento reducido queda dibujada) ───────────── */
+@keyframes ecg-draw {
+  from {
+    stroke-dashoffset: 320;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-ecg {
+  stroke-dasharray: 320;
+  animation: ecg-draw 2.2s ease-out both;
+}
+@keyframes ecg-loop {
+  0% {
+    stroke-dashoffset: 320;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-ecg-loop {
+  stroke-dasharray: 320;
+  animation: ecg-loop 3.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-ecg,
+  .animate-ecg-loop {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

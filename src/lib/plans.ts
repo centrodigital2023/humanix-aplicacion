@@ -43,7 +43,13 @@ export type PlanFeature =
   | "inst_quality_compliance"
   | "inst_team_reliability"
   | "inst_coverage_forecast"
-  | "inst_executive_report";
+  | "inst_executive_report"
+  | "inst_care_scale"
+  | "inst_devices"
+  | "inst_alert_escalation"
+  | "inst_care_followups"
+  | "inst_shift_handoff"
+  | "inst_care_export";
 
 export type PlanDef = {
   key: PlanKey;
@@ -160,6 +166,12 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "inst_team_reliability",
       "inst_coverage_forecast",
       "inst_executive_report",
+      "inst_care_scale",
+      "inst_devices",
+      "inst_alert_escalation",
+      "inst_care_followups",
+      "inst_shift_handoff",
+      "inst_care_export",
     ],
     featuresLabel: [
       "Bolsa de créditos IA mensual",
@@ -169,6 +181,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
       "Soporte prioritario y onboarding asistido",
       "Cobro por sucursales: COP 299.000 base + COP 50.000 por sede adicional",
       "Centro de gestión inteligente: costos y proyección, calidad y cumplimiento (puntualidad, parte del turno, contratos y RETHUS), equipo confiable, pronóstico de cobertura a 14 días e informe para la gerencia",
+      "Pacientes y monitoreo clínico a escala: hasta 1.000 pacientes y 300 en monitoreo con NEWS2 (Free: 5 y 3), relojes y sensores conectados, escalamiento automático de alertas sin atender, seguimientos automáticos de cada caso, relevo de turno I-PASS guardado en la historia y exportación de la historia en FHIR y CSV",
     ],
   },
 };
@@ -224,6 +237,12 @@ export const FEATURE_MIN_PLAN: Record<PlanFeature, PlanKey> = {
   inst_team_reliability: "institution_monthly",
   inst_coverage_forecast: "institution_monthly",
   inst_executive_report: "institution_monthly",
+  inst_care_scale: "institution_monthly",
+  inst_devices: "institution_monthly",
+  inst_alert_escalation: "institution_monthly",
+  inst_care_followups: "institution_monthly",
+  inst_shift_handoff: "institution_monthly",
+  inst_care_export: "institution_monthly",
 };
 
 export function tierOf(plan: PlanKey | string | null | undefined): number {

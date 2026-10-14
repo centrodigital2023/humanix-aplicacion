@@ -136,7 +136,7 @@ src/
 │   ├── humanix/              # Domain-specific components
 │   │   ├── AppShell.tsx
 │   │   ├── HumanixAssistant.tsx
-│   │   ├── EnhancedPatientsModule.tsx
+│   │   ├── patients/ monitoring/ instcare/   # PatientsHub y MonitoringHub (reemplazan EnhancedPatientsModule, 2026-10-14)
 │   │   └── ...               # 60+ custom components
 │   └── ui/                   # Radix UI + shadcn/ui primitives
 │       ├── button.tsx
@@ -231,7 +231,7 @@ Large, feature-rich components tied to business logic:
 
 - **Institutional Modules**
   - `EnhancedBulkOffersModule.tsx` - Batch job posting
-  - `EnhancedPatientsModule.tsx` - Patient management
+  - `patients/PatientsHub.tsx` and `monitoring/MonitoringHub.tsx` - Patient coordination and clinical monitoring (replaced `EnhancedPatientsModule`; see `docs/PACIENTES_Y_MONITOREO.md`)
   - `EnhancedReportsWithCRMModule.tsx` - CRM analytics
   - `InstitutionModules.tsx` - Dashboard layout
 
@@ -816,7 +816,7 @@ export { Button, buttonVariants }
 #### Components
 - **Domain components:** PascalCase, descriptive name
   - ✅ `SmartProfileCard.tsx`
-  - ✅ `EnhancedPatientsModule.tsx`
+  - ✅ `PatientsHub.tsx`
   - ❌ `Card.tsx`, `Component.tsx`
 
 - **UI primitives:** PascalCase, single word

@@ -13,7 +13,7 @@ es lo que hay en la base.
 
 |                           | `supabase/migrations/`                                                                | `drizzle/migrations/`                                                                                             |
 | ------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Archivos                  | 128 (de abril al 13 de octubre de 2026)                                               | 15 (`0000`–`0014`, del 7 al 12 de octubre)                                                                        |
+| Archivos                  | 130 (de abril al 14 de octubre de 2026)                                               | 15 (`0000`–`0014`, del 7 al 12 de octubre)                                                                        |
 | Quién la escribe          | Nosotros (y Lovable entre abril y junio)                                              | La herramienta de migración de Lovable; `drizzle/schema.ts` queda «auto-generado, no editar»                      |
 | Cómo llega a producción   | A mano: simulacro (se deshace solo) → aplicar → verificar                             | La aplica Lovable y la registra en `drizzle.__drizzle_migrations`                                                 |
 | Registro en producción    | `supabase_migrations.schema_migrations` tiene **1 fila** (`20260622163525`): no sirve | **15 filas**. `hash` = SHA-256 del `.sql` y `created_at` = `when` del diario; las 15 coinciden con el repositorio |
@@ -87,7 +87,7 @@ hoy y no existe en producción:
 | Invitar a un amigo (`ReferralCard`, `InviteFriendInline`; código al registrarse en `auth.tsx`)    | `referrals`, `get_or_create_referral_code`, `apply_referral_code` (`20260606000001`)                                                                  | Sin código de invitación                                                               |
 | Cumplimiento de salud (`HealthComplianceCard`; profesional)                                       | `health_compliance`                                                                                                                                   | Vacío                                                                                  |
 | Sedes y facturación IPS (`IpsBranchBilling`; institución)                                         | `institution_branches`                                                                                                                                | Vacío                                                                                  |
-| Casos de pacientes (`EnhancedPatientsModule`; institución y EPS)                                  | `institution_patient_cases`                                                                                                                           | Sin casos                                                                              |
+| ~~Casos de pacientes~~ (`EnhancedPatientsModule`; institución y EPS)                              | ~~`institution_patient_cases`~~ **Resuelto el 2026-10-14:** `PatientsHub` usa las tablas `inst_*` de `20261014100000` y ya no la necesita             | Ver §5.3                                                                               |
 | Monitoreo (`PatientRiskCard`; `dashboard.monitoreo`)                                              | `patient_risk_scores`, `vital_signs`, `service_checkins` (ya documentado en #106 y #107)                                                              | El portal EPS lo dice «aún no habilitado»                                              |
 | Contrato de servicio (`ServiceContractCard` en `/servicio/$bookingId`; `generate-contract`)       | `service_contracts`                                                                                                                                   | No genera el contrato                                                                  |
 | Estadísticas públicas (`usePublicStats`)                                                          | Vista `public_stats`                                                                                                                                  | Contadores en 0 (existen `get_platform_counts` y `get_live_counts`)                    |
@@ -104,6 +104,19 @@ y esas suscripciones nunca reciben eventos: `ad_banners`, `ai_credit_topups`, `a
 de servicio» no dependen de la publicación: usan el canal privado de difusión (`hx_ping_map`, `hx_ping_service_offers`). No se agregaron
 las demás tablas: añadir tablas sensibles a la publicación es una decisión de seguridad (Realtime respeta RLS, pero conviene revisar
 cada política antes).
+
+### 5.3 Pacientes y Monitoreo (2026-10-14)
+
+Dos migraciones nuevas, probadas en local sobre la réplica de producción (`supabase/e2e/institution_care`: 447 comprobaciones, 0 fallos):
+
+| Migración                                 | Qué hace                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20261014100000_institution_care_core`    | Tablas `inst_patients`, `inst_cases`, `inst_notes` (encadenadas por hash), `inst_tasks`, `inst_devices`, `inst_obs`, `inst_alerts`, `inst_live`, `inst_events` e `inst_ingest_failures`, con `GRANT` + RLS; las funciones `inst_*`; NEWS2 en la base; planes; módulos `pacientes` y `monitoreo` del personal; `pg_cron` (escalamiento cada minuto y purga nocturna) si existe |
+| `20261014110000_wearable_ingest_throttle` | Freno a `wearable_ingest_by_pairing_code` (se puede llamar sin sesión y su código de 32 bits era adivinable)                                                                                                                                                                                                                                                                  |
+
+La migración de junio `20260601162000_institution_patient_cases.sql` quedó **superada** (lleva una nota); no debe aplicarse en entornos
+nuevos. Reglas, planes y límites: `docs/PACIENTES_Y_MONITOREO.md`. El estado en producción se anota en la bitácora de abajo cuando se
+aplican.
 
 ## 6. Decisiones pendientes
 

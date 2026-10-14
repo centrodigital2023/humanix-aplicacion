@@ -16,6 +16,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "react-qr-code";
+import { generatePairingCode } from "@/lib/pairingCode";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,24 +81,6 @@ interface SamsungConnection {
   pairedAt: string;
   lastSyncAt: string | null;
   syncing: boolean;
-}
-
-function genCode(patientId: string): string {
-  const seed = `${patientId}:${PROVIDER}:${Date.now()}`;
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-    h >>>= 0;
-  }
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  let n = h;
-  for (let i = 0; i < 8; i++) {
-    code += chars[n % chars.length];
-    n = n >>> 5 || (h >> i) & 0xff;
-  }
-  return code;
 }
 
 function buildPairingUrl(code: string, patientId: string): string {
@@ -203,7 +186,7 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
   const connect = useCallback(async () => {
     setBusy(true);
     try {
-      const code = genCode(patientId);
+      const code = generatePairingCode();
       const { error } = await (supabase as any).from("wearable_connections").upsert(
         {
           patient_id: patientId,
@@ -247,7 +230,7 @@ export function SamsungHealthCard({ patientId }: { patientId: string }) {
 
   const renew = useCallback(async () => {
     if (!conn) return;
-    const code = genCode(patientId);
+    const code = generatePairingCode();
     const { error } = await (supabase as any)
       .from("wearable_connections")
       .update({ external_user_id: code, updated_at: new Date().toISOString() })

@@ -1,5 +1,8 @@
 # 🚀 HUMANIX CARE CONNECT - AMPLIACIONES IMPLEMENTADAS
 
+> **Actualización 2026-10-14:** `EnhancedPatientsModule` e `InstitutionClinicalMonitoring` ya no existen: los reemplazan `PatientsHub` y
+> `MonitoringHub` (ver `docs/PACIENTES_Y_MONITOREO.md`). El resto de este archivo es historia de mayo de 2026.
+
 ## Resumen de Cambios (Mayo 25, 2026)
 
 Se han implementado **ampliaciones inteligentes y cumplimiento FUID** para el panel de institución, módulos de pacientes, agenda, CRM y formularios dinámicos.

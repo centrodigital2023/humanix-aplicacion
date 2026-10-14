@@ -1,3 +1,8 @@
+-- ⚠️ SUPERADA (2026-10-14) — NO aplicar en entornos nuevos
+-- Esta tabla NUNCA se aplicó en producción y la pantalla «Pacientes» ya no la usa: los pacientes, casos, notas y tareas de la institución
+-- viven ahora en `inst_patients`, `inst_cases`, `inst_notes` e `inst_tasks` (20261014100000_institution_care_core.sql, con sus GRANT, RLS
+-- y funciones). Se conserva como historia. Ver docs/PACIENTES_Y_MONITOREO.md y AUDIT_REPORT.md #122.
+--
 CREATE TABLE IF NOT EXISTS public.institution_patient_cases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   institution_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
