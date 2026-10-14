@@ -5,7 +5,7 @@
 // reparte el resultado en tarjetas. El plan se lee de `mp_subscriptions` (solo escribe el webhook de pagos); la puerta
 // es de interfaz: son cuentas sobre datos que la familia ya puede leer. Sin el plan, cada herramienta muestra qué es
 // y un dato real de la cuenta, y el botón lleva a /planes (los pagos solo se hacen en la página web).
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { HeartPulse, Lock, Radar, Scale, Sparkles, Wallet } from "lucide-react";
 import { PlanBadge } from "@/components/humanix/PlanGate";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,16 @@ import { usePlan } from "@/hooks/use-plan";
 import { rankApplicants } from "@/lib/applicantRanking";
 import { buildApplicants, type ApplicationSource, type OfferSource } from "@/lib/applicantSources";
 import { buildBudgetReport } from "@/lib/careBudget";
+import { careDaysReport } from "@/lib/careDays";
+import {
+  ROUTES,
+  episodeDay as computeEpisodeDay,
+  goalProgress,
+  inferRoutes,
+  isCareRoute,
+  pickRoute,
+  type CareRoute,
+} from "@/lib/careJourney";
 import { buildCoverageRadar } from "@/lib/coverageRadar";
 import { buildFamilyBrief, heroStats, type BriefTarget } from "@/lib/familyBrief";
 import { DAY_MS, plural } from "@/lib/intelShared";
@@ -35,6 +45,7 @@ import { formatCOP } from "@/lib/pricing";
 import { buildWellbeingReport, DEFAULT_WINDOW_DAYS } from "@/lib/wellbeing";
 import { ApplicantsRankingCard } from "./ApplicantsRankingCard";
 import { CareBudgetCard } from "./CareBudgetCard";
+import { CareJourneyCard } from "./CareJourneyCard";
 import { CoverageRadarCard, type RadarAnchor } from "./CoverageRadarCard";
 import { FamilyBriefCard } from "./FamilyBriefCard";
 import { PremiumPreview } from "@/components/humanix/premium/PremiumPreview";
@@ -195,6 +206,43 @@ export function FamilySmartCenter({
   );
   const ranked = useMemo(() => rankApplicants(applicants, { market }), [applicants, market]);
 
+  // ── Ruta de cuidado (reconoce la necesidad por la agenda; la familia puede elegir otra) ───────────
+  // La elección se recuerda en este navegador (comodidad de quien la usa); no es un dato que la plataforma necesite.
+  const routeKey = `humanix-care-route:${userId}`;
+  const [chosenRoute, setChosenRoute] = useState<CareRoute | null>(null);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(routeKey);
+      setChosenRoute(isCareRoute(saved) ? saved : null);
+    } catch {
+      /* sin almacenamiento: la ruta se sugiere igual desde la agenda */
+    }
+  }, [routeKey]);
+  const onRouteChange = (r: CareRoute) => {
+    setChosenRoute(r);
+    try {
+      localStorage.setItem(routeKey, r);
+    } catch {
+      /* sin almacenamiento: vale para esta sesión */
+    }
+  };
+  const inferredRoutes = useMemo(
+    () => inferRoutes((needsQ.data ?? []).map((n) => n.care_type)),
+    [needsQ.data],
+  );
+  const route = pickRoute(inferredRoutes, chosenRoute);
+  const routeTone = route ? ROUTES[route].tone : "warm";
+  const careLogs = useMemo(() => wbLogs ?? [], [wbLogs]);
+  const episode = useMemo(() => computeEpisodeDay(bookings, now), [bookings, now]);
+  const careDays = useMemo(
+    () => careDaysReport({ bookings, logs: careLogs, now, tone: routeTone }),
+    [bookings, careLogs, now, routeTone],
+  );
+  const goals = useMemo(
+    () => (premium && route ? goalProgress(route, careLogs, now) : null),
+    [premium, route, careLogs, now],
+  );
+
   // ── Resumen del día ───────────────────────────────────────────────────────
   const snapshot = useMemo(
     () =>
@@ -309,6 +357,24 @@ export function FamilySmartCenter({
           aria-label="Revisando tu día"
         />
       )}
+
+      <div id="ruta-de-cuidado" className="scroll-mt-4">
+        <CareJourneyCard
+          route={route}
+          inferred={inferredRoutes}
+          onRouteChange={onRouteChange}
+          episodeDay={episode}
+          careDays={careDays}
+          goals={goals}
+          bookings={wbBookings}
+          logs={careLogs}
+          report={wellbeing}
+          premium={premium}
+          now={now}
+          personName={name}
+          loading={!ready || (premium && logsQ.isLoading)}
+        />
+      </div>
 
       <div id="centro-herramientas" className="scroll-mt-4 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
