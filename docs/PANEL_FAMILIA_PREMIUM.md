@@ -1,5 +1,7 @@
 # Panel de familia: funciones inteligentes y premium
 
+> Ver también [`PANEL_FAMILIA_RUTAS_DE_CUIDADO.md`](./PANEL_FAMILIA_RUTAS_DE_CUIDADO.md): rutas de cuidado (adulto mayor, niño o niña, posoperatorio, enfermedad, crónicos), días con cuidado, carta de la semana y hoja para la cita.
+
 > **Qué hay.** Debajo de las acciones rápidas del panel de familia (`/dashboard/familia`) aparece **«Tu centro de cuidado»**:
 > un resumen priorizado del día para **todas** las familias y, con el plan **Esencial** (COP 9.000/mes), cuatro herramientas:
 > informe de bienestar con resumen para el médico, comparador inteligente de postulaciones, presupuesto de cuidado y
