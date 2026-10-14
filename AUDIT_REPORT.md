@@ -291,5 +291,5 @@ ni ningún cliente escribe directo, de las funciones nuevas `anon` solo ejecuta 
 reloj, los dos trabajos de `pg_cron` están programados (el de escalamiento corrió 28 veces sin fallos, aunque sin alertas que escalar; la
 purga nocturna aún no tuvo su primera ejecución, el 15 de octubre a las 03:17 UTC) y las tablas están vacías. No se pudo llamar a la API
 pública de producción desde el entorno de trabajo (la red de salida bloquea ese dominio): todo se comprobó con SQL. La interfaz nueva está
-en `main` y **aún no se publica**: hasta entonces la interfaz en línea conserva los módulos anteriores. Detalle en `docs/MIGRACIONES.md`
-§5.3.
+en `main`; se pidió publicarla ese mismo día (commit `186dd29`) y no se pudo comprobar desde el entorno de trabajo que ya sirva la versión
+nueva. Detalle en `docs/MIGRACIONES.md` §5.3.

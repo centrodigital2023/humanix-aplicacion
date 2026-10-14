@@ -2,7 +2,8 @@
 
 Estado: construido y verificado **en local el 2026-10-14** (PostgreSQL real, navegador real, render en servidor). Las dos migraciones
 **se aplicaron a producción ese mismo día** con el procedimiento de `docs/MIGRACIONES.md` §3 (detalle en §5.3 de ese documento); la
-interfaz nueva está en `main` y **falta publicarla**. La sección 9 dice qué quedó comprobado y qué no.
+interfaz nueva está en `main` y **se pidió publicarla ese mismo día**, sin confirmación visual todavía (estado en `docs/MIGRACIONES.md`
+§5.3). La sección 9 dice qué quedó comprobado y qué no.
 
 ## 1. Qué es y por qué se rehízo
 
@@ -171,7 +172,7 @@ registra signos ni cambia el monitoreo). Que Monitoreo pueda escribir notas es d
   hay códigos débiles que rotar).
 - No se pudo llamar a la API pública de producción (PostgREST con sesiones reales, Realtime) desde el entorno de trabajo: su red de
   salida bloquea ese dominio. En producción se comprobó con SQL (permisos, RLS, funciones, `pg_cron`) y con la sonda de deriva; las
-  llamadas reales desde el navegador se verán al publicar la interfaz.
+  llamadas reales desde el navegador se verán al abrir la interfaz publicada: falta esa prueba manual con una cuenta de institución.
 - `pg_cron` en producción: el escalamiento (cada minuto) corrió 28 veces sin ningún fallo entre las 13:12 y las 13:39 UTC del 14 de
   octubre, pero sin alertas que escalar (las tablas están vacías); la **purga nocturna** (03:17 UTC) aún no tuvo su primera
   ejecución: queda por confirmar el 15 de octubre.

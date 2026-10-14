@@ -88,7 +88,7 @@ hoy y no existe en producción:
 | Invitar a un amigo (`ReferralCard`, `InviteFriendInline`; código al registrarse en `auth.tsx`)    | `referrals`, `get_or_create_referral_code`, `apply_referral_code` (`20260606000001`)                                                                  | Sin código de invitación                                                               |
 | Cumplimiento de salud (`HealthComplianceCard`; profesional)                                       | `health_compliance`                                                                                                                                   | Vacío                                                                                  |
 | Sedes y facturación IPS (`IpsBranchBilling`; institución)                                         | `institution_branches`                                                                                                                                | Vacío                                                                                  |
-| ~~Casos de pacientes~~ (`EnhancedPatientsModule`; institución y EPS)                              | ~~`institution_patient_cases`~~ **Resuelto el 2026-10-14:** `PatientsHub` usa las tablas `inst_*` (ya en producción); falta publicar                  | Ver §5.3                                                                               |
+| ~~Casos de pacientes~~ (`EnhancedPatientsModule`; institución y EPS)                              | ~~`institution_patient_cases`~~ **Resuelto el 2026-10-14:** `PatientsHub` usa las tablas `inst_*` (ya en producción); publicación pedida              | Ver §5.3                                                                               |
 | Monitoreo (`PatientRiskCard`; `dashboard.monitoreo`)                                              | `patient_risk_scores`, `vital_signs`, `service_checkins` (ya documentado en #106 y #107)                                                              | El portal EPS lo dice «aún no habilitado»                                              |
 | Contrato de servicio (`ServiceContractCard` en `/servicio/$bookingId`; `generate-contract`)       | `service_contracts`                                                                                                                                   | No genera el contrato                                                                  |
 | Estadísticas públicas (`usePublicStats`)                                                          | Vista `public_stats`                                                                                                                                  | Contadores en 0 (existen `get_platform_counts` y `get_live_counts`)                    |
@@ -151,8 +151,14 @@ nuevos. Reglas, planes y límites: `docs/PACIENTES_Y_MONITOREO.md`.
 entorno de trabajo: su red de salida bloquea ese dominio; todo lo anterior se comprobó con SQL. Las migraciones traen
 `NOTIFY pgrst, 'reload schema'` y producción tiene los disparadores de recarga, pero esa recarga no se observó desde fuera.
 
-**Falta publicar la interfaz.** La interfaz nueva (`PatientsHub`, `MonitoringHub`) está en `main`, pero todavía no se ha publicado:
-hasta entonces el sitio en línea sigue con la versión anterior a este cambio, que no usa las tablas nuevas.
+**Interfaz: publicación pedida el 2026-10-14, sin confirmación visual.** Con el visto bueno de la persona responsable se pidió a Lovable
+publicar el commit `186dd29` (la interfaz nueva: `PatientsHub`, `MonitoringHub`) en `https://humanix-connect.lovable.app`; Lovable aceptó
+la petición (despliegue `26f6dad9-0db8-44d1-bf6e-69e9698be9af`) con estado «pendiente». Desde el entorno de trabajo no se pudo abrir el
+sitio (su red de salida bloquea ese dominio) ni consultar el estado del despliegue, así que **no está comprobado que ya sirva la
+versión nueva**. Tampoco se pudo reproducir aquí el `vite build` de producción: falta `@lovable.dev/vite-tanstack-config` y la
+instalación local del plugin de TanStack Start está incompleta; lo cubren `tsc`, ESLint, las pruebas y el render en servidor. Para
+confirmarlo: entrar como institución y abrir Pacientes (estado vacío «Sin pacientes activos» con «Crear primer caso») y Monitoreo
+(«Triage NEWS2», con «Agregar primer paciente»); la versión anterior decía «Triage IA».
 
 ## 6. Decisiones pendientes
 
