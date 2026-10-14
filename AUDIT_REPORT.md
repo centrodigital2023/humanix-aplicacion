@@ -283,3 +283,12 @@ fallos; la nueva, `institution_care`, con 447 comprobaciones y pruebas de mutaci
 equivalentes), Chromium contra PostgreSQL real (Pacientes 14/14 y Monitoreo 16/16, de 375 a 1 280 px y con la consola limpia), render en
 servidor sin `window` (16 comprobaciones), y Prettier, ESLint y `tsc` sin hallazgos nuevos respecto a antes. No se pudo probar: Realtime
 real (el aviso del servidor se simuló), PostgREST con JWT reales, relojes reales ni navegadores móviles reales.
+
+**En producción (14 de octubre):** las dos migraciones (`20261014100000` y `20261014110000`) se aplicaron tras un simulacro que comparó el
+`md5` de cada parte con los archivos del repositorio y que hizo 34 comprobaciones sin ningún fallo (terminó en `DRYRUN_OK` y no dejó
+nada). La sonda de deriva revisó 267 objetos y no faltó ninguno. Las 10 tablas `inst_*` tienen RLS activa, `anon` no tiene privilegios
+sobre ellas ni ningún cliente escribe directo, de las funciones nuevas `anon` solo ejecuta `inst_device_ingest` y la puerta con freno de
+la ingesta del reloj, los dos trabajos de `pg_cron` están activos (escalamiento cada minuto y purga nocturna) y las tablas están
+vacías. No se pudo llamar a la API pública de producción desde el entorno de trabajo (la red de salida bloquea ese dominio): todo se
+comprobó con SQL. La interfaz nueva está en `main` y **aún no se publica**: hasta entonces la interfaz en línea conserva los módulos
+anteriores. Detalle en `docs/MIGRACIONES.md` §5.3.

@@ -1,7 +1,8 @@
 # Pacientes y Monitoreo clínico (paneles de EPS, IPS, clínicas y hospitales)
 
-Estado: construido y verificado **en local el 2026-10-14** (PostgreSQL real, navegador real, render en servidor). Las migraciones se
-aplican a producción con el procedimiento de `docs/MIGRACIONES.md` §3; la sección 9 dice qué quedó comprobado y qué no.
+Estado: construido y verificado **en local el 2026-10-14** (PostgreSQL real, navegador real, render en servidor). Las dos migraciones
+**se aplicaron a producción ese mismo día** con el procedimiento de `docs/MIGRACIONES.md` §3 (detalle en §5.3 de ese documento); la
+interfaz nueva está en `main` y **falta publicarla**. La sección 9 dice qué quedó comprobado y qué no.
 
 ## 1. Qué es y por qué se rehízo
 
@@ -152,6 +153,7 @@ registra signos ni cambia el monitoreo). Que Monitoreo pueda escribir notas es d
 | Suite SQL (`supabase/e2e/institution_care/run.sh`) sobre la réplica de producción                                                                            | 447 comprobaciones, 0 fallos (más pruebas de mutación del SQL; los dos mutantes equivalentes que sobreviven se explican abajo)                                                                         |
 | Navegador real contra PostgreSQL real (RLS, permisos por columna y funciones reales)                                                                         | Pacientes: 14 pasos de punta a punta. Monitoreo: 16 pasos (vacío → alta → signos → NEWS2 → alerta → reloj sin sesión → relevo → plan Free → personal por módulo → 375/768/1280 px → fallos de lectura) |
 | Render en servidor (sin `window`)                                                                                                                            | 16 comprobaciones; ninguna salida con `undefined`, `NaN` ni `[object]`                                                                                                                                 |
+| Producción (aplicación del 2026-10-14; ver `docs/MIGRACIONES.md` §5.3)                                                                                       | Simulacro con `md5` por parte: 34 comprobaciones, 0 fallos. Sonda de deriva: 267 objetos, 0 faltan. RLS en las 10 tablas, `anon` sin privilegios sobre ellas, `pg_cron` activo, tablas vacías          |
 
 **Lo que no se pudo verificar o no está hecho (dicho sin adornos):**
 
@@ -167,6 +169,9 @@ registra signos ni cambia el monitoreo). Que Monitoreo pueda escribir notas es d
 - Mutantes de SQL que sobreviven por ser equivalentes (cambian el texto pero no el comportamiento): M36 y M151.
 - La réplica local no tiene las tablas de wearables de producción; la suite crea esas tablas de prueba. En producción están vacías (no
   hay códigos débiles que rotar).
+- No se pudo llamar a la API pública de producción (PostgREST con sesiones reales, Realtime) desde el entorno de trabajo: su red de
+  salida bloquea ese dominio. En producción se comprobó con SQL (permisos, RLS, funciones, `pg_cron`) y con la sonda de deriva; las
+  llamadas reales desde el navegador se verán al publicar la interfaz.
 
 ## 10. Referencias de diseño
 

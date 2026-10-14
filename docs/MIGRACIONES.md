@@ -1,7 +1,8 @@
 # Migraciones: qué hay, qué manda y cómo se comprueba
 
-Estado **verificado contra producción el 2026-10-13**, solo lectura. Todo lo de la sección 5 se puede repetir con la sonda de la
-sección 4 (`bun run scripts/migration-drift-probe.ts`).
+Estado **verificado contra producción el 2026-10-13**, solo lectura (§5.1 y §5.2); las dos migraciones de §5.3 se **aplicaron y
+verificaron el 2026-10-14**. Todo lo de la sección 5 se puede repetir con la sonda de la sección 4
+(`bun run scripts/migration-drift-probe.ts`).
 
 ## 1. En una frase
 
@@ -87,7 +88,7 @@ hoy y no existe en producción:
 | Invitar a un amigo (`ReferralCard`, `InviteFriendInline`; código al registrarse en `auth.tsx`)    | `referrals`, `get_or_create_referral_code`, `apply_referral_code` (`20260606000001`)                                                                  | Sin código de invitación                                                               |
 | Cumplimiento de salud (`HealthComplianceCard`; profesional)                                       | `health_compliance`                                                                                                                                   | Vacío                                                                                  |
 | Sedes y facturación IPS (`IpsBranchBilling`; institución)                                         | `institution_branches`                                                                                                                                | Vacío                                                                                  |
-| ~~Casos de pacientes~~ (`EnhancedPatientsModule`; institución y EPS)                              | ~~`institution_patient_cases`~~ **Resuelto el 2026-10-14:** `PatientsHub` usa las tablas `inst_*` de `20261014100000` y ya no la necesita             | Ver §5.3                                                                               |
+| ~~Casos de pacientes~~ (`EnhancedPatientsModule`; institución y EPS)                              | ~~`institution_patient_cases`~~ **Resuelto el 2026-10-14:** `PatientsHub` usa las tablas `inst_*` (ya en producción); falta publicar                  | Ver §5.3                                                                               |
 | Monitoreo (`PatientRiskCard`; `dashboard.monitoreo`)                                              | `patient_risk_scores`, `vital_signs`, `service_checkins` (ya documentado en #106 y #107)                                                              | El portal EPS lo dice «aún no habilitado»                                              |
 | Contrato de servicio (`ServiceContractCard` en `/servicio/$bookingId`; `generate-contract`)       | `service_contracts`                                                                                                                                   | No genera el contrato                                                                  |
 | Estadísticas públicas (`usePublicStats`)                                                          | Vista `public_stats`                                                                                                                                  | Contadores en 0 (existen `get_platform_counts` y `get_live_counts`)                    |
@@ -115,8 +116,41 @@ Dos migraciones nuevas, probadas en local sobre la réplica de producción (`sup
 | `20261014110000_wearable_ingest_throttle` | Freno a `wearable_ingest_by_pairing_code` (se puede llamar sin sesión y su código de 32 bits era adivinable)                                                                                                                                                                                                                                                                  |
 
 La migración de junio `20260601162000_institution_patient_cases.sql` quedó **superada** (lleva una nota); no debe aplicarse en entornos
-nuevos. Reglas, planes y límites: `docs/PACIENTES_Y_MONITOREO.md`. El estado en producción se anota en la bitácora de abajo cuando se
-aplican.
+nuevos. Reglas, planes y límites: `docs/PACIENTES_Y_MONITOREO.md`.
+
+**Estado en producción: aplicadas y verificadas el 2026-10-14**, con el procedimiento de §3.
+
+- **Simulacro.** Las dos migraciones se llevaron a la base por partes y se comparó el `md5` de cada parte y del total con los archivos del
+  repositorio (y el cuerpo de `wearable_ingest_by_pairing_code` antes del cambio coincidía con el de la migración original:
+  `b63ff473…`). Un bloque que las ejecutaba y hacía **34 comprobaciones** terminó en `DRYRUN_OK`, sin ningún fallo, y no dejó nada.
+  Comprobaba la estructura y los permisos (10 tablas, RLS en todas, nadie escribe directo por la API, `anon` no lee ninguna, la huella
+  del código de un dispositivo no sale por la API, módulos del personal, los dos trabajos de `pg_cron` y 6 tablas en Realtime) y un
+  recorrido completo con datos que luego se deshacen: paciente en monitoreo, signos graves → NEWS2 19 → alerta crítica, «ya la vi»,
+  resolver, nota y cadena de notas íntegra; los límites del plan Free (5 pacientes, 3 en monitoreo, sin dispositivos, sin exportar ni
+  guardar el relevo); que otra persona no ve nada ni puede registrar pacientes; la ingesta sin sesión con un código inventado; y el
+  recorrido de IPS Mejorado (topes 1000 / 300 / 300, dispositivo, lectura del reloj sin sesión, exportación con constancia, relevo
+  guardado).
+- **Aplicación.** El mismo bloque, con la misma guarda de `md5` y sin el `RAISE` final.
+- **Sonda de deriva** (`--from 20261014000000 --to 20261014999999 --chunk 300`): **267 objetos revisados (165 columnas, 65 funciones, 19
+  índices, 10 tablas, 8 disparadores), 0 faltan.**
+- **Permisos.** Las 10 tablas `inst_*` tienen RLS activa. Nueve tienen una sola política (`SELECT` para `authenticated`, solo de la
+  propia institución con el módulo `pacientes` o `monitoreo`); `inst_ingest_failures` no tiene política ni permisos para clientes.
+  `anon` no tiene ningún privilegio sobre las tablas y ningún cliente puede insertar, modificar ni borrar directo (todo pasa por las
+  funciones `inst_*`). `authenticated` lee ocho tablas completas y, de `inst_devices`, solo las columnas sin la huella del código.
+  De esta entrega, `anon` solo ejecuta `inst_device_ingest` y `wearable_ingest_by_pairing_code` (la puerta con freno);
+  `wearable_ingest_by_pairing_code_core` no la ejecuta ni `anon` ni `authenticated`. (`anon` ejecuta además `hx_text_norm` y
+  `hx_offer_text_issue`, de las migraciones del 12 y 13 de octubre, anteriores a esta entrega.) Realtime publica 6 tablas
+  (`inst_patients`, `inst_cases`, `inst_tasks`, `inst_alerts`, `inst_live` e `inst_events`) y respeta la RLS.
+- **`pg_cron`.** Activos: `inst-escalate-alerts` (cada minuto) e `inst-purge-telemetry` (todos los días a las 03:17 UTC).
+- **Datos.** Las 10 tablas `inst_*` están vacías, y `wearable_connections` también (0 conexiones: no había códigos viejos que rotar).
+- **Registro.** Como el resto de `supabase/migrations/`, no se anotan en `supabase_migrations.schema_migrations` (§2).
+
+**Lo que no se pudo comprobar.** No se pudo llamar a la API pública de producción (PostgREST con sesiones reales, Realtime) desde el
+entorno de trabajo: su red de salida bloquea ese dominio; todo lo anterior se comprobó con SQL. Las migraciones traen
+`NOTIFY pgrst, 'reload schema'` y producción tiene los disparadores de recarga, pero esa recarga no se observó desde fuera.
+
+**Falta publicar la interfaz.** La interfaz nueva (`PatientsHub`, `MonitoringHub`) está en `main`, pero todavía no se ha publicado:
+hasta entonces el sitio en línea sigue con la versión anterior a este cambio, que no usa las tablas nuevas.
 
 ## 6. Decisiones pendientes
 
