@@ -172,6 +172,9 @@ registra signos ni cambia el monitoreo). Que Monitoreo pueda escribir notas es d
 - No se pudo llamar a la API pública de producción (PostgREST con sesiones reales, Realtime) desde el entorno de trabajo: su red de
   salida bloquea ese dominio. En producción se comprobó con SQL (permisos, RLS, funciones, `pg_cron`) y con la sonda de deriva; las
   llamadas reales desde el navegador se verán al publicar la interfaz.
+- `pg_cron` en producción: el escalamiento (cada minuto) corrió 28 veces sin ningún fallo entre las 13:12 y las 13:39 UTC del 14 de
+  octubre, pero sin alertas que escalar (las tablas están vacías); la **purga nocturna** (03:17 UTC) aún no tuvo su primera
+  ejecución: queda por confirmar el 15 de octubre.
 
 ## 10. Referencias de diseño
 

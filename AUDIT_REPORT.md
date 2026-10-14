@@ -285,10 +285,11 @@ servidor sin `window` (16 comprobaciones), y Prettier, ESLint y `tsc` sin hallaz
 real (el aviso del servidor se simuló), PostgREST con JWT reales, relojes reales ni navegadores móviles reales.
 
 **En producción (14 de octubre):** las dos migraciones (`20261014100000` y `20261014110000`) se aplicaron tras un simulacro que comparó el
-`md5` de cada parte con los archivos del repositorio y que hizo 34 comprobaciones sin ningún fallo (terminó en `DRYRUN_OK` y no dejó
-nada). La sonda de deriva revisó 267 objetos y no faltó ninguno. Las 10 tablas `inst_*` tienen RLS activa, `anon` no tiene privilegios
-sobre ellas ni ningún cliente escribe directo, de las funciones nuevas `anon` solo ejecuta `inst_device_ingest` y la puerta con freno de
-la ingesta del reloj, los dos trabajos de `pg_cron` están activos (escalamiento cada minuto y purga nocturna) y las tablas están
-vacías. No se pudo llamar a la API pública de producción desde el entorno de trabajo (la red de salida bloquea ese dominio): todo se
-comprobó con SQL. La interfaz nueva está en `main` y **aún no se publica**: hasta entonces la interfaz en línea conserva los módulos
-anteriores. Detalle en `docs/MIGRACIONES.md` §5.3.
+`md5` de cada parte con los archivos del repositorio y que hizo 34 comprobaciones sin ningún fallo (terminó en `DRYRUN_OK` y no dejó nada).
+La sonda de deriva revisó 267 objetos y no faltó ninguno. Las 10 tablas `inst_*` tienen RLS activa, `anon` no tiene privilegios sobre ellas
+ni ningún cliente escribe directo, de las funciones nuevas `anon` solo ejecuta `inst_device_ingest` y la puerta con freno de la ingesta del
+reloj, los dos trabajos de `pg_cron` están programados (el de escalamiento corrió 28 veces sin fallos, aunque sin alertas que escalar; la
+purga nocturna aún no tuvo su primera ejecución, el 15 de octubre a las 03:17 UTC) y las tablas están vacías. No se pudo llamar a la API
+pública de producción desde el entorno de trabajo (la red de salida bloquea ese dominio): todo se comprobó con SQL. La interfaz nueva está
+en `main` y **aún no se publica**: hasta entonces la interfaz en línea conserva los módulos anteriores. Detalle en `docs/MIGRACIONES.md`
+§5.3.

@@ -141,7 +141,9 @@ nuevos. Reglas, planes y límites: `docs/PACIENTES_Y_MONITOREO.md`.
   `wearable_ingest_by_pairing_code_core` no la ejecuta ni `anon` ni `authenticated`. (`anon` ejecuta además `hx_text_norm` y
   `hx_offer_text_issue`, de las migraciones del 12 y 13 de octubre, anteriores a esta entrega.) Realtime publica 6 tablas
   (`inst_patients`, `inst_cases`, `inst_tasks`, `inst_alerts`, `inst_live` e `inst_events`) y respeta la RLS.
-- **`pg_cron`.** Activos: `inst-escalate-alerts` (cada minuto) e `inst-purge-telemetry` (todos los días a las 03:17 UTC).
+- **`pg_cron`.** Activos: `inst-escalate-alerts` (cada minuto) e `inst-purge-telemetry` (todos los días a las 03:17 UTC). El primero
+  corrió 28 veces sin ningún fallo entre las 13:12 y las 13:39 UTC del 14 de octubre, pero sin alertas que escalar (las tablas están
+  vacías). El segundo **aún no tuvo su primera ejecución**: queda por confirmar el 15 de octubre (`cron.job_run_details`).
 - **Datos.** Las 10 tablas `inst_*` están vacías, y `wearable_connections` también (0 conexiones: no había códigos viejos que rotar).
 - **Registro.** Como el resto de `supabase/migrations/`, no se anotan en `supabase_migrations.schema_migrations` (§2).
 
