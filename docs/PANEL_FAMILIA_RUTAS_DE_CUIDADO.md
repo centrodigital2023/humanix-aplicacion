@@ -35,6 +35,7 @@ Todo se calcula en el cliente con reservas, partes y necesidades que el panel ya
 - **Movimiento con cuidado:** las animaciones usan `motion-safe:` y se apagan con «reducir movimiento».
 - **Pedir ayuda sin culpa:** el mensaje nombra días reales y una petición clara; nunca regaña, no lleva nombres, pagos ni datos de salud, y solo se prepara (la familia lo envía).
 - **Casa lista es logística:** sin medicamentos ni indicaciones clínicas; el texto de cada ítem requiere revisión clínica antes de publicarse.
+- **Cierre con cuidado:** que no haya servicios no prueba que la persona se recuperó ni que esté bien. El cierre es opcional, está en condicional («si este capítulo ya terminó»), nunca afirma recuperación y solo existe en posoperatorio y niño o niña. En adulto mayor, enfermedad y crónicos no hay cierre: un hueco de servicios puede significar cosas muy distintas.
 - **Viralidad responsable:** la firma «Enviado desde mi panel de Humanix» es discreta y se puede quitar.
 
 ## 4. Investigación y nivel de evidencia
@@ -63,4 +64,4 @@ Se revisaron tendencias de cuidado familiar (apps de coordinación de cuidadores
 
 ## 7. Pruebas
 
-`bun test` / `vitest` sobre `careJourney`, `careDays`, `careMoments`, `weeklyLetter` y `visitPrep` (161 casos, con `careMoments`, `careHomeReady` y `helpRequest`): rutas, etapas, metas, umbrales, privacidad, tono, estabilidad del texto. Se verificó además por mutación manual (15 de 16 mutantes detectados; el sobreviviente quedó cubierto con una prueba de frontera).
+`bun test` / `vitest` sobre `careJourney`, `careDays`, `careMoments`, `weeklyLetter` y `visitPrep` (188 casos, con `careMoments`, `careHomeReady`, `helpRequest` y `careChapter`): rutas, etapas, metas, umbrales, privacidad, tono, estabilidad del texto. Se verificó además por mutación manual (15 de 16 mutantes detectados; el sobreviviente quedó cubierto con una prueba de frontera).
