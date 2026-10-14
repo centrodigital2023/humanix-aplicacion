@@ -28,6 +28,7 @@ import { rankApplicants } from "@/lib/applicantRanking";
 import { buildApplicants, type ApplicationSource, type OfferSource } from "@/lib/applicantSources";
 import { buildBudgetReport } from "@/lib/careBudget";
 import { careDaysReport } from "@/lib/careDays";
+import { buildCareMoments } from "@/lib/careMoments";
 import {
   ROUTES,
   episodeDay as computeEpisodeDay,
@@ -238,6 +239,10 @@ export function FamilySmartCenter({
     () => careDaysReport({ bookings, logs: careLogs, now, tone: routeTone }),
     [bookings, careLogs, now, routeTone],
   );
+  const moments = useMemo(
+    () => buildCareMoments({ bookings, logs: careLogs, now, tone: routeTone }),
+    [bookings, careLogs, now, routeTone],
+  );
   const goals = useMemo(
     () => (premium && route ? goalProgress(route, careLogs, now) : null),
     [premium, route, careLogs, now],
@@ -365,6 +370,7 @@ export function FamilySmartCenter({
           onRouteChange={onRouteChange}
           episodeDay={episode}
           careDays={careDays}
+          moments={moments}
           goals={goals}
           bookings={wbBookings}
           logs={careLogs}

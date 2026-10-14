@@ -18,6 +18,7 @@ import {
   ClipboardCopy,
   Download,
   Eye,
+  Sparkles,
   HeartHandshake,
   HeartPulse,
   Phone,
@@ -33,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { CareDaysReport } from "@/lib/careDays";
+import { momentsShareText, type CareMoment } from "@/lib/careMoments";
 import {
   CARE_ROUTES,
   EMERGENCY_LINE,
@@ -44,7 +46,7 @@ import {
   type CareRoute,
   type GoalProgress,
 } from "@/lib/careJourney";
-import { bogotaYmd } from "@/lib/intelShared";
+import { bogotaYmd, dateEs } from "@/lib/intelShared";
 import { EMERGENCY_NUMBER, EMERGENCY_TEL, whatsappLink } from "@/lib/sos";
 import { cn } from "@/lib/utils";
 import { buildVisitPrep } from "@/lib/visitPrep";
@@ -73,6 +75,8 @@ export interface CareJourneyCardProps {
   /** Día del episodio de cuidado en curso (1 = el primero), o `null` si no hay uno. */
   episodeDay: number | null;
   careDays: CareDaysReport;
+  /** Buenos momentos que ya constan (de `buildCareMoments`), del más reciente al más antiguo. */
+  moments?: readonly CareMoment[];
   /** Metas de la semana (solo con plan); `null` muestra la invitación. */
   goals: GoalProgress[] | null;
   bookings: LetterBooking[];
@@ -156,6 +160,7 @@ export function CareJourneyCard({
   onRouteChange,
   episodeDay,
   careDays,
+  moments = [],
   goals,
   bookings,
   logs,
@@ -182,6 +187,7 @@ export function CareJourneyCard({
       }),
     [route, bookings, logs, now, personName, includeName, includeTeam],
   );
+  const memories = useMemo(() => momentsShareText(moments, { tone }), [moments, tone]);
   const visit = useMemo(() => buildVisitPrep({ route, report }), [route, report]);
   const stage = route && episodeDay !== null ? journeyStage(route, episodeDay) : null;
 
@@ -201,7 +207,7 @@ export function CareJourneyCard({
   return (
     <Card
       aria-label="Tu ruta de cuidado"
-      className="space-y-5 overflow-hidden rounded-3xl border-biosensor/20 bg-gradient-to-br from-biosensor/5 via-background to-copper/5 p-4 sm:p-6"
+      className="space-y-5 overflow-hidden rounded-3xl border-biosensor/20 bg-gradient-to-br from-biosensor/5 via-background to-copper/5 p-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 sm:p-6"
     >
       {/* Encabezado y elección de ruta */}
       <div className="space-y-3">
@@ -256,7 +262,14 @@ export function CareJourneyCard({
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-background/70 p-4">
             <CareDaysRing report={careDays} tone={tone} />
             <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-display text-base font-semibold">{careDays.headline}</p>
+              <p className="font-display text-base font-semibold">
+                {careDays.headline}
+                {careDays.crossedThisWeek !== null && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-copper/15 px-2 py-0.5 align-middle text-[11px] font-semibold text-copper motion-safe:animate-in motion-safe:zoom-in-90 motion-safe:duration-500">
+                    <Sparkles className="h-3 w-3" aria-hidden="true" /> Nuevo hito
+                  </span>
+                )}
+              </p>
               <p className="text-sm text-muted-foreground" aria-live="polite">
                 {careDays.line}
               </p>
@@ -287,6 +300,60 @@ export function CareJourneyCard({
               )}
             </div>
           </div>
+
+          {/* Momentos memorables */}
+          {!memories.empty && (
+            <section
+              aria-label="Momentos memorables"
+              className="space-y-3 rounded-2xl border border-copper/25 bg-background/70 p-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles className="h-4 w-4 text-copper" aria-hidden="true" /> Momentos
+                  memorables
+                </h4>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => void copyText(memories.text, "Recuerdos copiados")}
+                  >
+                    <ClipboardCopy className="h-4 w-4" aria-hidden="true" /> Copiar
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="gap-1.5">
+                    <a
+                      href={whatsappLink(null, memories.text)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Preparar los recuerdos en WhatsApp (tú eliges a quién enviarlos)"
+                    >
+                      <Share2 className="h-4 w-4" aria-hidden="true" /> Compartir
+                    </a>
+                  </Button>
+                </div>
+              </div>
+              <ul className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1">
+                {moments.map((m, i) => (
+                  <li
+                    key={m.id}
+                    style={{ animationDelay: `${Math.min(i, 5) * 80}ms` }}
+                    className="w-52 shrink-0 snap-start rounded-2xl border border-border bg-gradient-to-br from-copper/10 to-background p-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-2 motion-safe:fill-mode-backwards motion-safe:duration-500"
+                  >
+                    <p className="text-xs font-medium text-copper">{dateEs(m.at)}</p>
+                    <p className="mt-1 font-display text-sm font-semibold leading-snug">
+                      {m.title}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{m.body}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                Solo buenos momentos que ya constan: sin nombres, avisos ni datos de salud.
+              </p>
+            </section>
+          )}
 
           {/* Metas de la semana */}
           {def.goals.length > 0 &&
