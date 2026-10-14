@@ -45,7 +45,7 @@ console.log(matches);
 ### Variables de entorno (.env.example)
 
 ```
-SUPABASE_URL=https://rwllmouomrytejtbpxvn.supabase.co
+SUPABASE_URL=https://ncyzoswhszhttdoxhqdh.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
 # Opcional, sólo si llamas funciones con verify_jwt = true
 USER_JWT=

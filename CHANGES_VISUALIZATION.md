@@ -3,6 +3,11 @@
 > **Actualización 2026-10-14:** `EnhancedPatientsModule` e `InstitutionClinicalMonitoring` ya no existen: los reemplazan `PatientsHub` y
 > `MonitoringHub` (ver `docs/PACIENTES_Y_MONITOREO.md`). El resto de este archivo es historia de mayo de 2026.
 
+> **Aviso sobre el origen (2026-10-14):** este documento se escribió en mayo de 2026 para el proyecto **`humanix-care-connect`**
+> (probablemente el proyecto de Lovable «Humanix Connect»), del que este repositorio se copió como *remix* el 2026-06-19. El repositorio de este proyecto es
+> **`centrodigital2023/humanix-aplicacion`**. Las referencias a `humanix-care-connect` y a su commit (`3af4910`, `27f8df7`) se
+> conservan solo como historia: esos commits no existen aquí. Para el estado real, ver `AGENTS.md`, `AI_CODEBASE_OVERVIEW.md` y `docs/`.
+
 ## 🎯 RESUMEN EJECUTIVO
 
 **Fecha:** 25 de Mayo de 2026  
