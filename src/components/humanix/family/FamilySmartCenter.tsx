@@ -46,6 +46,7 @@ import { formatCOP } from "@/lib/pricing";
 import { buildWellbeingReport, DEFAULT_WINDOW_DAYS } from "@/lib/wellbeing";
 import { ApplicantsRankingCard } from "./ApplicantsRankingCard";
 import { CareBudgetCard } from "./CareBudgetCard";
+import { CareChapterCard } from "./CareChapterCard";
 import { CareHelpHomeCard } from "./CareHelpHomeCard";
 import { CareJourneyCard } from "./CareJourneyCard";
 import { CoverageRadarCard, type RadarAnchor } from "./CoverageRadarCard";
@@ -382,6 +383,8 @@ export function FamilySmartCenter({
           loading={!ready || (premium && logsQ.isLoading)}
         />
       </div>
+
+      {ready && route && <CareChapterCard route={route} bookings={wbBookings} now={now} />}
 
       {ready && route && (
         <CareHelpHomeCard route={route} userId={userId} bookings={wbBookings} now={now} />
