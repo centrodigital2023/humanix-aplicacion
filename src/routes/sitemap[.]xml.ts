@@ -106,12 +106,12 @@ const CITY_PRIORITY: Record<string, number> = {
   pereira: 0.76,
 };
 
-function getCitySpecialtyCombos(today: string): string[] {
+function getCitySpecialtyCombos(): string[] {
   const entries: string[] = [];
   for (const city of SEO_CITIES) {
     const basePriority = CITY_PRIORITY[city] ?? 0.72;
     for (const specialty of SEO_SPECIALTIES) {
-      entries.push(urlEntry(`${SITE_URL}/${specialty}-${city}`, today, "weekly", basePriority));
+      entries.push(urlEntry(`${SITE_URL}/${specialty}-${city}`, undefined, "weekly", basePriority));
     }
   }
   return entries;
@@ -147,7 +147,6 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const today = new Date().toISOString().slice(0, 10);
         const urls: string[] = [];
 
         // 1) Static pages
@@ -172,7 +171,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             .eq("verified", true)
             .limit(5000);
           for (const p of pros ?? []) {
-            const lastmod = (p.updated_at ?? today).toString().slice(0, 10);
+            const lastmod = p.updated_at ? String(p.updated_at).slice(0, 10) : undefined;
             urls.push(urlEntry(`${SITE_URL}/profesional/${p.user_id}`, lastmod, "weekly", 0.7));
           }
         } catch (err) {
@@ -189,7 +188,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             .eq("blocked", false)
             .limit(5000);
           for (const o of offers ?? []) {
-            const lastmod = (o.updated_at ?? today).toString().slice(0, 10);
+            const lastmod = o.updated_at ? String(o.updated_at).slice(0, 10) : undefined;
             urls.push(urlEntry(`${SITE_URL}/oferta/${o.id}`, lastmod, "daily", 0.75));
           }
         } catch (err) {
@@ -197,7 +196,7 @@ export const Route = createFileRoute("/sitemap.xml")({
         }
 
         // 4) City × specialty SEO landing pages (catch-all route)
-        urls.push(...getCitySpecialtyCombos(today));
+        urls.push(...getCitySpecialtyCombos());
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n        xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>`;
 
