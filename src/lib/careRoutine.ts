@@ -5,7 +5,7 @@ export interface RoutineBooking {
   status: string;
   scheduled_at: string;
   professional_id: string;
-  duration_hours?: number | null;
+  duration_hours?: number | string | null;
 }
 
 export interface CareRoutine {
@@ -46,7 +46,7 @@ export function detectRoutine(bookings: RoutineBooking[], now: number): CareRout
   if (!best || best.b.length < ROUTINE_MIN_TIMES) return null;
 
   const proId = best.b[0].professional_id;
-  const durations = best.b.map((b) => b.duration_hours).filter((d): d is number => !!d && d > 0);
+  const durations = best.b.map((b) => Number(b.duration_hours)).filter((d) => Number.isFinite(d) && d > 0);
   const nowLocal = new Date(now - BOGOTA_OFFSET_MS);
   const todayStart = Date.UTC(nowLocal.getUTCFullYear(), nowLocal.getUTCMonth(), nowLocal.getUTCDate());
   let delta = (best.weekday - nowLocal.getUTCDay() + 7) % 7;
