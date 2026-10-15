@@ -5107,6 +5107,10 @@ export type Database = {
       }
       accept_slot_proposal: { Args: { p_proposal_id: string }; Returns: string }
       ad_track: { Args: { _id: string; _kind: string }; Returns: undefined }
+      ai_credits_monthly_allowance: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       append_contract_event: {
         Args: {
           p_actor: string
@@ -5164,6 +5168,28 @@ export type Database = {
       }
       career_stats_core: { Args: { p_user: string }; Returns: Json }
       city_key: { Args: { p_city: string }; Returns: string }
+      consume_ai_credits: {
+        Args: {
+          p_amount?: number
+          p_feature: string
+          p_meta?: Json
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          credits_used: number
+          feature: string
+          id: string
+          meta: Json | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_credits_ledger"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       consume_reveal_quota: {
         Args: { p_counterpart: string; p_offer: string; p_pro: string }
         Returns: number
@@ -5324,6 +5350,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_ai_credits_balance: {
+        Args: { p_user_id: string }
+        Returns: {
+          allowance: number
+          period_end: string
+          period_start: string
+          remaining: number
+          used: number
+        }[]
+      }
       get_booking_contact: {
         Args: { _booking_id: string }
         Returns: {
@@ -5403,6 +5439,20 @@ export type Database = {
           professionals_total: number
         }[]
       }
+      get_total_ai_credits_balance: {
+        Args: { p_user_id: string }
+        Returns: {
+          extra_remaining: number
+          extra_total: number
+          extra_used: number
+          grand_total: number
+          monthly_allowance: number
+          monthly_remaining: number
+          monthly_used: number
+          period_end: string
+          period_start: string
+        }[]
+      }
       get_trust_score: {
         Args: { p_user: string }
         Returns: {
@@ -5460,6 +5510,12 @@ export type Database = {
         Args: { p_module: string; p_uid: string }
         Returns: string
       }
+      hx_ai_credits_assert_self: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      hx_ai_month_start: { Args: never; Returns: string }
+      hx_ai_monthly_used: { Args: { p_user_id: string }; Returns: number }
       hx_alert_rank: { Args: { p_reason: string }; Returns: number }
       hx_can_access_alert: {
         Args: { p_booking: string; p_patient: string; p_type: string }
