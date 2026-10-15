@@ -40,6 +40,7 @@ import { Route as EnfermeriaPereiraRouteImport } from './routes/enfermeria-perei
 import { Route as EpsIpsRouteImport } from './routes/eps-ips'
 import { Route as EvaluadorRouteImport } from './routes/evaluador'
 import { Route as FamiliasRouteImport } from './routes/familias'
+import { Route as FisioterapiaDomicilioRouteImport } from './routes/fisioterapia-domicilio'
 import { Route as HabeasDataRouteImport } from './routes/habeas-data'
 import { Route as MensajesRouteImport } from './routes/mensajes'
 import { Route as PairRouteImport } from './routes/pair'
@@ -242,6 +243,11 @@ const EvaluadorRoute = EvaluadorRouteImport.update({
 const FamiliasRoute = FamiliasRouteImport.update({
   id: '/familias',
   path: '/familias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FisioterapiaDomicilioRoute = FisioterapiaDomicilioRouteImport.update({
+  id: '/fisioterapia-domicilio',
+  path: '/fisioterapia-domicilio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HabeasDataRoute = HabeasDataRouteImport.update({
@@ -519,6 +525,7 @@ export interface FileRoutesByFullPath {
   '/eps-ips': typeof EpsIpsRoute
   '/evaluador': typeof EvaluadorRoute
   '/familias': typeof FamiliasRoute
+  '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
   '/mensajes': typeof MensajesRoute
   '/pair': typeof PairRoute
@@ -599,6 +606,7 @@ export interface FileRoutesByTo {
   '/eps-ips': typeof EpsIpsRoute
   '/evaluador': typeof EvaluadorRoute
   '/familias': typeof FamiliasRoute
+  '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
   '/mensajes': typeof MensajesRoute
   '/pair': typeof PairRoute
@@ -680,6 +688,7 @@ export interface FileRoutesById {
   '/eps-ips': typeof EpsIpsRoute
   '/evaluador': typeof EvaluadorRoute
   '/familias': typeof FamiliasRoute
+  '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
   '/mensajes': typeof MensajesRoute
   '/pair': typeof PairRoute
@@ -763,6 +772,7 @@ export interface FileRouteTypes {
     | '/eps-ips'
     | '/evaluador'
     | '/familias'
+    | '/fisioterapia-domicilio'
     | '/habeas-data'
     | '/mensajes'
     | '/pair'
@@ -843,6 +853,7 @@ export interface FileRouteTypes {
     | '/eps-ips'
     | '/evaluador'
     | '/familias'
+    | '/fisioterapia-domicilio'
     | '/habeas-data'
     | '/mensajes'
     | '/pair'
@@ -923,6 +934,7 @@ export interface FileRouteTypes {
     | '/eps-ips'
     | '/evaluador'
     | '/familias'
+    | '/fisioterapia-domicilio'
     | '/habeas-data'
     | '/mensajes'
     | '/pair'
@@ -1005,6 +1017,7 @@ export interface RootRouteChildren {
   EpsIpsRoute: typeof EpsIpsRoute
   EvaluadorRoute: typeof EvaluadorRoute
   FamiliasRoute: typeof FamiliasRoute
+  FisioterapiaDomicilioRoute: typeof FisioterapiaDomicilioRoute
   HabeasDataRoute: typeof HabeasDataRoute
   MensajesRoute: typeof MensajesRoute
   PairRoute: typeof PairRoute
@@ -1251,6 +1264,13 @@ declare module '@tanstack/react-router' {
       path: '/familias'
       fullPath: '/familias'
       preLoaderRoute: typeof FamiliasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fisioterapia-domicilio': {
+      id: '/fisioterapia-domicilio'
+      path: '/fisioterapia-domicilio'
+      fullPath: '/fisioterapia-domicilio'
+      preLoaderRoute: typeof FisioterapiaDomicilioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/habeas-data': {
@@ -1714,6 +1734,7 @@ const rootRouteChildren: RootRouteChildren = {
   EpsIpsRoute: EpsIpsRoute,
   EvaluadorRoute: EvaluadorRoute,
   FamiliasRoute: FamiliasRoute,
+  FisioterapiaDomicilioRoute: FisioterapiaDomicilioRoute,
   HabeasDataRoute: HabeasDataRoute,
   MensajesRoute: MensajesRoute,
   PairRoute: PairRoute,
