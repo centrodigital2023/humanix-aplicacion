@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { pathForRole, type AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
 import { computeCta } from "@/lib/planCta";
-import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
+import { LATER_MESSAGE, startCheckout } from "@/lib/checkout";
+import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
 import { AUDIENCE_COPY, type Audience } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
 import { whatsappLink } from "@/lib/audience";
@@ -52,17 +53,23 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
   const { say } = useVoice();
   const plan = usePlan(user?.id);
   const [busy, setBusy] = useState<PlanKey | null>(null);
-  const [error, setError] = useState<PlanKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const renewSoon = planValidity(plan, Date.now()).renewSoon;
 
   const act = async (key: PlanKey) => {
     const cta = computeCta(key, {
       userId: user?.id,
       currentPlan: plan.plan,
       cancelAtPeriodEnd: plan.cancelAtPeriodEnd,
+      renewSoon,
     });
     const { action } = cta;
     setError(null);
     if (action.kind === "current") return;
+    if (action.kind === "later") {
+      setError(LATER_MESSAGE);
+      return;
+    }
     if (action.kind === "sales") {
       window.open(
         whatsappLink(CONTACT.whatsappNumber, "Hola Humanix, quiero el plan para IPS."),
@@ -94,29 +101,26 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
       });
       return;
     }
-    // checkout / reactivate → Mercado Pago
+    // checkout / reactivate → Mercado Pago (solo en la web)
+    if (plan.error) {
+      // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
+      setError("No pudimos confirmar tu plan ahora. Revisa tu conexión e inténtalo de nuevo.");
+      void plan.refresh();
+      return;
+    }
     setBusy(key);
     say("Te llevamos a pagar de forma segura.");
-    try {
-      const { data, error: err } = await supabase.functions.invoke("mp-create-subscription", {
-        body: {
-          plan: key,
-          amount: PLAN_CATALOG[key].amountCOP,
-          email: user?.email,
-          return_to: user ? pathForRole(user.primaryRole) : "/dashboard/profesional",
-        },
-      });
-      if (err) throw err;
-      const url =
-        (data as { init_point?: string; sandbox_init_point?: string })?.init_point ??
-        (data as { sandbox_init_point?: string })?.sandbox_init_point;
-      if (!url) throw new Error("sin URL");
-      window.location.href = url;
-    } catch (e) {
-      console.error(e);
-      setError(key);
-      setBusy(null);
+    const r = await startCheckout(supabase.functions.invoke.bind(supabase.functions), {
+      plan: key,
+      email: user?.email,
+      returnTo: user ? pathForRole(user.primaryRole) : null,
+    });
+    if (r.ok) {
+      window.location.href = r.url;
+      return;
     }
+    setError(r.message);
+    setBusy(null);
   };
 
   return (
@@ -128,6 +132,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
             userId: user?.id,
             currentPlan: plan.plan,
             cancelAtPeriodEnd: plan.cancelAtPeriodEnd,
+            renewSoon,
           });
           const paid = def.amountCOP > 0;
           return (
@@ -179,20 +184,13 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
       </ul>
       {error && (
         <div
-          role="alert"
-          className="mt-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+          role="status"
+          className="mt-4 rounded-2xl border border-border bg-card p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
         >
-          <div className="flex-1">
-            <p className="font-semibold text-rose-700 dark:text-rose-400">
-              No se pudo procesar el pago
-            </p>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Inténtalo de nuevo desde la página de planes.
-            </p>
-          </div>
+          <p className="flex-1 text-sm">{error}</p>
           <a
             href="/planes"
-            className="inline-flex items-center gap-2 rounded-xl bg-biosensor hover:bg-biosensor/90 text-white font-semibold px-4 py-2.5 text-sm transition shrink-0"
+            className="inline-flex items-center gap-2 rounded-xl bg-biosensor hover:bg-biosensor/90 text-biosensor-foreground font-semibold px-4 py-2.5 text-sm transition shrink-0"
           >
             Ver planes
           </a>

@@ -1,8 +1,13 @@
 // delete-account — self-service hard delete.
 // El usuario autenticado llama esta función para eliminarse completamente.
 // Usa service role para borrar TODOS sus datos y la cuenta auth.
+//
+// Discreción: no se envía ningún aviso a otras personas; el detalle queda solo en el registro de auditoría (staff) y
+// la respuesta al navegador no lleva detalles internos. Protección: mientras haya servicios en curso o programados
+// la cuenta propia no se elimina (regla en `_shared/accountDeletion.ts`, la misma que muestra la interfaz).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
+import { OPEN_BOOKING_STATUSES, deletionBlockers } from "../_shared/accountDeletion.ts";
 
 Deno.serve(async (req) => {
   const cors = buildCorsHeaders(req);
@@ -42,6 +47,29 @@ Deno.serve(async (req) => {
       });
     }
     userId = body.target_user_id;
+  }
+
+  const json = (payload: unknown, status = 200) =>
+    new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+
+  // Nadie se queda a mitad de un cuidado: con servicios abiertos la cuenta propia no se elimina.
+  if (userId === callerUserId) {
+    const { data: open, error: openErr } = await admin
+      .from("service_bookings")
+      .select("status, scheduled_at")
+      .or(`client_id.eq.${userId},professional_id.eq.${userId}`)
+      .in("status", [...OPEN_BOOKING_STATUSES]);
+    if (openErr) return json({ error: "try_again" }, 503);
+    const blockers = deletionBlockers(open ?? [], Date.now());
+    if (blockers.blocked) {
+      return json(
+        { error: "active_services", in_progress: blockers.inProgress, upcoming: blockers.upcoming },
+        409,
+      );
+    }
   }
 
   const summary: Record<string, unknown> = { user_id: userId, deleted_by: callerUserId };
@@ -149,18 +177,20 @@ Deno.serve(async (req) => {
   // ── 6) Borrar cuenta auth (hard delete, irreversible) ───────────────────
   const { error: authErr } = await admin.auth.admin.deleteUser(userId);
   if (authErr) {
-    // No es bloqueante — los datos ya están borrados; sólo reportamos.
-    summary["auth_error"] = authErr.message;
-    return new Response(
-      JSON.stringify({ ok: false, error: authErr.message, summary }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
-    );
+    // Los datos ya están borrados; el detalle queda en el registro (no se devuelve al navegador).
+    console.error("delete-account: auth delete failed", authErr.message);
+    try {
+      await admin.rpc("log_audit", {
+        _action: "user.self_delete_auth_failed",
+        _resource_type: "auth_user",
+        _resource_id: userId,
+        _severity: "error",
+        _meta: { ...summary, auth_error: authErr.message },
+      });
+    } catch { /* ignore */ }
+    return json({ ok: false, error: "try_again" }, 500);
   }
 
-  summary["auth_user_deleted"] = true;
-
-  return new Response(JSON.stringify({ ok: true, summary }), {
-    status: 200,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
+  // Respuesta mínima: el resumen de lo borrado queda solo en la auditoría.
+  return json({ ok: true });
 });
