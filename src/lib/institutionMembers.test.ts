@@ -57,10 +57,7 @@ describe("módulos", () => {
 
   it("los módulos son los mismos que `hx_staff_modules()` en la migración (si cambia uno, cambia el otro)", () => {
     const sql = readFileSync(
-      new URL(
-        "../../supabase/migrations/20261014100000_institution_care_core.sql",
-        import.meta.url,
-      ),
+      require("node:path").resolve(process.cwd(), "supabase/migrations/20261014100000_institution_care_core.sql"),
       "utf8",
     );
     const fn = /FUNCTION public\.hx_staff_modules\(\)[\s\S]*?ARRAY\[([^\]]*)\]/.exec(sql);
