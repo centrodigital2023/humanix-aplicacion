@@ -187,6 +187,9 @@ export function WalletPanel({ userId }: { userId: string }) {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  // La billetera necesita su backend (wallet_*, payout_requests, get_or_create_wallet). Si la base no lo tiene, la
+  // tarjeta no se muestra: mejor nada que un saldo en cero y un botón de retiro que falla.
+  const [unavailable, setUnavailable] = useState(false);
 
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<PayoutMethod>("nequi");
@@ -196,7 +199,7 @@ export function WalletPanel({ userId }: { userId: string }) {
 
   const load = async () => {
     try {
-      const [{ data: w }, { data: tx }, { data: po }] = await Promise.all([
+      const [{ data: w, error: wErr }, { data: tx }, { data: po }] = await Promise.all([
         sb.rpc("get_or_create_wallet", { p_user_id: userId }).maybeSingle(),
         sb
           .from("wallet_transactions")
@@ -211,6 +214,10 @@ export function WalletPanel({ userId }: { userId: string }) {
           .order("requested_at", { ascending: false })
           .limit(6),
       ]);
+      if (wErr) {
+        setUnavailable(true);
+        return;
+      }
       if (w) setWallet(w as WalletAccount);
       setTransactions((tx as WalletTransaction[]) ?? []);
       setPayouts((po as PayoutRequest[]) ?? []);
@@ -289,6 +296,8 @@ export function WalletPanel({ userId }: { userId: string }) {
       setSubmitting(false);
     }
   };
+
+  if (unavailable) return null;
 
   return (
     <div className="space-y-4">

@@ -77,7 +77,8 @@ export function ReferralCard({ userId }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading) return null;
+  // Sin código no hay nada que compartir (p. ej. si la base aún no tiene el programa de referidos).
+  if (loading || !code) return null;
 
   return (
     <Card className="p-5 sm:p-6 border-biosensor/20 bg-gradient-to-br from-biosensor/5 to-card">

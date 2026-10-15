@@ -8,6 +8,9 @@ import {
   addOneMonth,
   carryOverDays,
   checkoutDecision,
+  creditsGrantFromPayment,
+  isPaymentTopic,
+  MAX_CREDITS_PER_PURCHASE,
   paidPlanOf,
   returnPathFor,
   statusAfterFailure,
@@ -127,6 +130,23 @@ describe("abrir un pago", () => {
 });
 
 describe("pago aprobado: qué plan se activa", () => {
+  it("solo escribe columnas que existen en producción (mp_subscriptions)", () => {
+    const out = subscriptionAfterApproval({
+      row: null,
+      payment: pay("pro_monthly", 29000),
+      now: NOW,
+    });
+    const PROD_COLUMNS = [
+      "plan",
+      "status",
+      "amount",
+      "currency",
+      "current_period_end",
+      "next_payment_at",
+    ];
+    expect(out.ok && Object.keys(out.patch).sort()).toEqual([...PROD_COLUMNS].sort());
+  });
+
   it("activa el plan PAGADO, no el que esté en la fila (cierra la escalada de plan)", () => {
     // Abrió el pago de IPS (la fila quedó así) pero pagó el Esencial.
     const r = row("institution_monthly", "pending", null);
@@ -241,7 +261,7 @@ describe("pago aprobado: qué plan se activa", () => {
     });
   });
 
-  it("siempre deja el plan activo, sin cancelación programada y con el monto real", () => {
+  it("siempre deja el plan activo y con el monto real", () => {
     const out = subscriptionAfterApproval({
       row: null,
       payment: pay("pro_monthly", 29000.4),
@@ -249,7 +269,6 @@ describe("pago aprobado: qué plan se activa", () => {
     });
     expect(out.ok && out.patch).toMatchObject({
       status: "active",
-      cancel_at_period_end: false,
       amount: 29000,
       currency: "COP",
     });
@@ -299,5 +318,60 @@ describe("a qué panel vuelve quien paga", () => {
   it("sin rol conocido va al panel general (nunca a una ruta externa)", () => {
     expect(returnPathFor([], "https://malo.example")).toBe("/dashboard");
     expect(returnPathFor(["superadmin"], "/dashboard/profesional")).toBe("/dashboard");
+  });
+});
+
+describe("créditos IA: qué se acredita por un pago aprobado", () => {
+  const credits = (meta: object, amount = 15000, currency = "COP") => ({
+    metadata: { type: "credits", user_id: "u", ...meta },
+    transaction_amount: amount,
+    currency_id: currency,
+  });
+
+  it("acredita lo que fijó el servidor: créditos, paquete, vigencia y el monto real", () => {
+    expect(
+      creditsGrantFromPayment(
+        credits({ credits: 120, pack_id: "starter", validity_days: 60, price_cop: 15000 }),
+      ),
+    ).toEqual({
+      ok: true,
+      grant: { credits: 120, packId: "starter", validityDays: 60, priceCop: 15000 },
+    });
+  });
+
+  it("un monto menor al precio del paquete no acredita nada", () => {
+    expect(creditsGrantFromPayment(credits({ credits: 120, price_cop: 15000 }, 1000))).toEqual({
+      ok: false,
+      error: "amount_mismatch",
+    });
+    expect(creditsGrantFromPayment(credits({ credits: 120 }, 0))).toEqual({
+      ok: false,
+      error: "amount_mismatch",
+    });
+  });
+
+  it("créditos imposibles (cero, negativos, decimales o exagerados) no se acreditan", () => {
+    for (const c of [0, -5, 1.5, "x", null, MAX_CREDITS_PER_PURCHASE + 1]) {
+      expect(creditsGrantFromPayment(credits({ credits: c, price_cop: 15000 })).ok).toBe(false);
+    }
+  });
+
+  it("otra moneda no acredita nada", () => {
+    expect(creditsGrantFromPayment(credits({ credits: 10 }, 15000, "USD"))).toEqual({
+      ok: false,
+      error: "currency_mismatch",
+    });
+  });
+
+  it("vigencia fuera de rango vuelve a 90 días; sin paquete queda en null", () => {
+    const g = creditsGrantFromPayment(credits({ credits: 10, validity_days: 9999 }));
+    expect(g.ok && g.grant).toMatchObject({ validityDays: 90, packId: null });
+  });
+
+  it("solo se procesan avisos de pagos (no merchant_order)", () => {
+    expect(isPaymentTopic("payment")).toBe(true);
+    expect(isPaymentTopic(null)).toBe(true);
+    expect(isPaymentTopic("merchant_order")).toBe(false);
+    expect(isPaymentTopic("subscription_preapproval")).toBe(false);
   });
 });

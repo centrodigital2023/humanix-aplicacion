@@ -5,6 +5,7 @@ import { Loader2, Calendar, Clock, MapPin, ShieldCheck } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { PriceBreakdownCard } from "@/components/humanix/PriceBreakdownCard";
 import { toast } from "sonner";
 
 const COP = (n: number) =>
@@ -52,8 +53,6 @@ export function BookNowButton({
   const [notes, setNotes] = useState("");
 
   const total = Math.max(0, Math.round(hours * hourlyRate));
-  const platformFee = Math.round(total * 0.03);
-  const proPayout = total - platformFee;
 
   const submit = async () => {
     if (!hourlyRate) {
@@ -212,15 +211,15 @@ export function BookNowButton({
                     {hours} h × {COP(hourlyRate)}/h
                   </div>
                 </div>
-                <div className="border-t border-biosensor/20 pt-2 grid grid-cols-2 gap-2 text-[11px]">
-                  <div>
-                    <p className="text-muted-foreground">Profesional recibe</p>
-                    <p className="font-semibold text-foreground">{COP(proPayout)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-muted-foreground">Comisión Humanix (3%)</p>
-                    <p className="font-semibold text-copper">{COP(platformFee)}</p>
-                  </div>
+                {/* Misma regla que el servidor (platform_commission_pct): la comisión se descuenta al profesional
+                    — 12 % si está en el plan Free, 0 % con un plan de pago —; quien contrata paga el total. */}
+                <div className="border-t border-biosensor/20 pt-2">
+                  <PriceBreakdownCard
+                    hourlyRate={hourlyRate}
+                    hours={hours}
+                    professionalId={professionalId}
+                    viewer="payer"
+                  />
                 </div>
               </div>
             </div>

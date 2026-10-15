@@ -61,14 +61,17 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
+  // Sin la tabla institution_branches en la base, la tarjeta no se muestra (agregar sedes fallaría).
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = async () => {
-    const { data } = await sb
+    const { data, error } = await sb
       .from("institution_branches")
       .select("id, name, city, address, is_main, status")
       .eq("institution_id", institutionId)
       .order("is_main", { ascending: false })
       .order("created_at", { ascending: true });
+    if (error) setUnavailable(true);
     setBranches((data as Branch[]) ?? []);
     setLoading(false);
   };
@@ -146,6 +149,8 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
       toast.error(err instanceof Error ? err.message : "No se pudo eliminar");
     }
   };
+
+  if (unavailable) return null;
 
   return (
     <div className="space-y-4">

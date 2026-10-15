@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { extraCreditsFromTopups } from "@/lib/aiCreditsBalance";
 
 export type AiCreditsBalance = {
   monthly_allowance: number;
@@ -49,7 +50,26 @@ export function useAiCredits(userId: string | undefined) {
           .eq("active", true)
           .order("sort_order"),
       ]);
-      if (balRes.data?.[0]) setBalance(balRes.data[0] as AiCreditsBalance);
+      if (balRes.data?.[0]) {
+        setBalance(balRes.data[0] as AiCreditsBalance);
+      } else if (balRes.error) {
+        // Sin la función de saldo en la base: se calcula con los paquetes propios (RLS: solo los de la persona).
+        const { data: rows } = await anyClient
+          .from("ai_credit_topups")
+          .select("credits, credits_used, expires_at")
+          .eq("user_id", userId);
+        const extra = extraCreditsFromTopups(rows ?? [], Date.now());
+        const now = new Date();
+        setBalance({
+          monthly_allowance: 0,
+          monthly_used: 0,
+          monthly_remaining: 0,
+          ...extra,
+          grand_total: extra.extra_remaining,
+          period_start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+          period_end: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
+        });
+      }
       if (packsRes.data) setPacks(packsRes.data as AiCreditPack[]);
     } catch (e) {
       console.warn("[useAiCredits]", e);

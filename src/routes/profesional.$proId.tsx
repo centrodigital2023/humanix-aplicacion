@@ -522,9 +522,10 @@ function ProfessionalPublicPage() {
                   <ShieldCheck className="h-4 w-4 text-copper" /> Comisión transparente
                 </h2>
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                  Humanix cobra solo el <strong className="text-copper">3%</strong> sobre cada
-                  contratación. El profesional recibe el <strong>97%</strong>. Sin tarifas ocultas,
-                  sin permanencia.
+                  Pagas el valor acordado directamente al profesional. Si el profesional está en el
+                  plan Free, Humanix le descuenta el <strong className="text-copper">12%</strong>;
+                  con un plan de pago recibe el <strong>100%</strong>. Sin tarifas ocultas ni
+                  permanencia.
                 </p>
               </Card>
             </aside>

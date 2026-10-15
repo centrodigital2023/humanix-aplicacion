@@ -61,7 +61,9 @@ export function usePlan(userId: string | null | undefined): UserPlanState {
     for (let attempt = 0; attempt < 2; attempt++) {
       const { data, error } = await supabase
         .from("mp_subscriptions")
-        .select("plan, status, amount, currency, current_period_end, cancel_at_period_end")
+        // «*»: la tabla de producción no tiene todas las columnas del repositorio (p. ej. cancel_at_period_end);
+        // pedir una columna que no existe hace fallar la consulta para todos.
+        .select("*")
         .eq("user_id", userId)
         .maybeSingle();
       if (!error) {

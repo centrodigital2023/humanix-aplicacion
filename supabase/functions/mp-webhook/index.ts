@@ -10,6 +10,8 @@ const corsHeaders = {
 import { logExecution } from "../_shared/execLog.ts";
 import {
   PLAN_LABEL,
+  creditsGrantFromPayment,
+  isPaymentTopic,
   statusAfterFailure,
   subscriptionAfterApproval,
   type SubscriptionRow,
@@ -153,7 +155,9 @@ Deno.serve(async (req) => {
       const body = await req.json().catch(() => ({}));
       paymentId = paymentId ?? body?.data?.id ?? body?.resource;
     }
-    if (!paymentId || !(topic === "payment" || topic === "merchant_order" || !topic)) {
+    // Solo los avisos de pagos: un `merchant_order` trae el id de una orden, no de un pago, y consultarlo como pago
+    // daba 404 → 502 → Mercado Pago reintentaba sin fin.
+    if (!paymentId || !isPaymentTopic(topic)) {
       return new Response("ok", { status: 200 });
     }
     executionId = String(paymentId);
@@ -216,7 +220,6 @@ Deno.serve(async (req) => {
     const userId = resolveUserId(payment);
     const extRef = String(payment.external_reference ?? "");
     const isCredits = extRef.startsWith("credits:") || payment.metadata?.type === "credits";
-    const meta = payment.metadata ?? {};
     const amount = Math.round(Number(payment.transaction_amount ?? 0));
     const currency = String(payment.currency_id ?? "COP");
 
@@ -232,7 +235,9 @@ Deno.serve(async (req) => {
       return new Response("ok", { status: 200, headers: corsHeaders });
     }
 
-    await rest("mp_payments", {
+    // on_conflict: el mismo pago llega varias veces (pendiente → aprobado); sin esto el segundo aviso chocaba con el
+    // índice único de mp_payment_id (409) y el webhook fallaba en cada reintento.
+    await rest("mp_payments?on_conflict=mp_payment_id", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates" },
       body: JSON.stringify({
@@ -247,20 +252,35 @@ Deno.serve(async (req) => {
       }),
     });
 
+    // Pago aprobado que no corresponde a lo vendido: no se acredita nada, queda registrado para revisión y se responde
+    // 200 (reintentar no lo arreglaría).
+    const rejectPayment = async (errorCode: string) => {
+      await rest(`payment_webhook_events?provider=eq.mercadopago&external_event_id=eq.${encodeURIComponent(eventId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ processed: true, processed_at: new Date().toISOString(), error_code: errorCode }),
+      });
+      await logExecution({
+        functionName: "mp-webhook", triggerType: "webhook", status: "rejected",
+        startedAt, executionId, errorCode,
+      });
+      return new Response("ok", { status: 200, headers: corsHeaders });
+    };
+
     const notify = (row: Record<string, unknown>) =>
       rest("notifications", { method: "POST", body: JSON.stringify({ user_id: userId, ...row }) });
 
     if (status === "approved") {
-      if (currency !== "COP" || amount <= 0) throw new Error("invalid_amount_or_currency");
+      if (currency !== "COP" || amount <= 0) return await rejectPayment("invalid_amount_or_currency");
 
       if (isCredits) {
-        const credits = Number(meta.credits ?? 0);
-        if (credits > 0) {
-          await grantCredits(
-            SUPABASE_URL, SRK, userId, meta.pack_id ?? null, credits, amount,
-            String(payment.id), payment.preference_id ?? null, Number(meta.validity_days ?? 90),
-          );
-        }
+        const credit = creditsGrantFromPayment(payment);
+        if (!credit.ok) return await rejectPayment(credit.error);
+        const { credits, packId, validityDays, priceCop } = credit.grant;
+        // Idempotente: índice único de ai_credit_topups.mp_payment_id (409 = ya acreditado).
+        await grantCredits(
+          SUPABASE_URL, SRK, userId, packId, credits, priceCop,
+          String(payment.id), payment.preference_id ?? null, validityDays,
+        );
         await notify({
           type: "credits_purchased",
           title: "✅ Créditos IA acreditados",
@@ -272,18 +292,7 @@ Deno.serve(async (req) => {
         // Renovar suma desde el vencimiento; subir de plan convierte los días restantes. Ver _shared/planBilling.ts.
         const current = await readSubscription(rest, userId);
         const result = subscriptionAfterApproval({ row: current, payment, now: Date.now() });
-        if (!result.ok) {
-          // Pago aprobado que no corresponde a un plan válido: no se activa nada y queda registrado para revisión.
-          await rest(`payment_webhook_events?provider=eq.mercadopago&external_event_id=eq.${encodeURIComponent(eventId)}`, {
-            method: "PATCH",
-            body: JSON.stringify({ processed: true, processed_at: new Date().toISOString(), error_code: result.error }),
-          });
-          await logExecution({
-            functionName: "mp-webhook", triggerType: "webhook", status: "rejected",
-            startedAt, executionId, errorCode: result.error,
-          });
-          return new Response("ok", { status: 200, headers: corsHeaders });
-        }
+        if (!result.ok) return await rejectPayment(result.error);
         await rest("mp_subscriptions?on_conflict=user_id", {
           method: "POST",
           headers: { Prefer: "resolution=merge-duplicates" },

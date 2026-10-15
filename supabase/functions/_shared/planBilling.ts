@@ -169,7 +169,6 @@ export interface ActivationPatch {
   currency: "COP";
   current_period_end: string;
   next_payment_at: string;
-  cancel_at_period_end: false;
 }
 
 export type ApprovalResult =
@@ -231,7 +230,6 @@ export function subscriptionAfterApproval(input: {
       currency: "COP",
       current_period_end: iso,
       next_payment_at: iso,
-      cancel_at_period_end: false,
     },
   };
 }
@@ -271,4 +269,54 @@ export function returnPathFor(roles: readonly string[], requested?: unknown): st
     return requested;
   }
   return own[0] ?? "/dashboard";
+}
+
+// ─── Créditos IA ──────────────────────────────────────────────────────────────
+
+/** Tope de créditos por compra: un número mayor es un dato dañado, no un paquete. */
+export const MAX_CREDITS_PER_PURCHASE = 100_000;
+
+export interface CreditGrant {
+  credits: number;
+  packId: string | null;
+  validityDays: number;
+  priceCop: number;
+}
+
+export type CreditGrantResult =
+  | { ok: true; grant: CreditGrant }
+  | { ok: false; error: "invalid_credits" | "amount_mismatch" | "currency_mismatch" };
+
+/**
+ * Qué acreditar por un pago de créditos aprobado. Todo sale de lo que fijó NUESTRO servidor en la preferencia
+ * (`metadata`): créditos, paquete, vigencia y precio. El monto pagado debe cubrir ese precio. Las preferencias creadas
+ * antes de guardar el precio (sin `price_cop`) solo exigen un monto positivo.
+ */
+export function creditsGrantFromPayment(payment: PaidPayment): CreditGrantResult {
+  if (String(payment.currency_id ?? "COP") !== "COP")
+    return { ok: false, error: "currency_mismatch" };
+  const meta = payment.metadata ?? {};
+  const credits = Number(meta.credits);
+  if (!Number.isInteger(credits) || credits <= 0 || credits > MAX_CREDITS_PER_PURCHASE) {
+    return { ok: false, error: "invalid_credits" };
+  }
+  const amount = Math.round(Number(payment.transaction_amount ?? 0));
+  const price = Number(meta.price_cop);
+  const expected = Number.isFinite(price) && price > 0 ? price : 1;
+  if (!(amount > 0) || amount < expected) return { ok: false, error: "amount_mismatch" };
+  const days = Number(meta.validity_days);
+  return {
+    ok: true,
+    grant: {
+      credits,
+      packId: typeof meta.pack_id === "string" ? meta.pack_id : null,
+      validityDays: Number.isInteger(days) && days >= 1 && days <= 730 ? days : 90,
+      priceCop: amount,
+    },
+  };
+}
+
+/** Avisos de Mercado Pago que no son de un pago (p. ej. `merchant_order`): se reconocen y se ignoran. */
+export function isPaymentTopic(topic: string | null): boolean {
+  return topic === null || topic === "" || topic === "payment";
 }

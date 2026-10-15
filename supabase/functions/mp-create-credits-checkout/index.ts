@@ -78,6 +78,8 @@ Deno.serve(async (req) => {
         pack_id: packId,
         credits: totalCredits,
         validity_days: pack.validity_days ?? 90,
+        // El webhook exige que el monto pagado cubra este precio (lo fija el servidor, nunca el navegador).
+        price_cop: pack.price_cop,
       },
     };
 
