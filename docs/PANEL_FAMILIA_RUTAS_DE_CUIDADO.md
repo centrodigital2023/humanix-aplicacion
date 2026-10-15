@@ -22,6 +22,27 @@ Una familia no cuida «en general». Cuida a un adulto mayor, a un niño o una n
 
 Todo se calcula en el cliente con reservas, partes y necesidades que el panel ya carga.
 
+### 2.1 Rituales que unen (rama `feat/familia-mlp-rituales`)
+
+Tarjeta `src/components/humanix/family/CareRitualsCard.tsx`, debajo de «Casa lista y ayuda del círculo» (`#rituales`). Todas las familias; los sellos del pasaporte que salen de los partes usan los partes que ya carga el plan Esencial. Se guarda solo en el navegador (`localStorage`, con `try/catch`); sin migración.
+
+| Pieza                                                             | Rutas                                 | Módulo                      | Inspiración y evidencia                                                                                                                                                                                                              |
+| ----------------------------------------------------------------- | ------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Ritual de hoy (cambia cada día, «lo hicimos», invitar al círculo) | Las cinco                             | `src/lib/careRituals.ts`    | Reminiscencia en personas mayores (ensayos con menos síntomas depresivos justo después; poco seguimiento a largo plazo); compañía y conversación diaria (p. ej. ElliQ, resultados reportados por el proveedor, sin método publicado) |
+| Plan «cuando… entonces…» (hasta 3)                                | Adulto mayor, posoperatorio, crónicos | `careRituals.ts`            | Intenciones de implementación: mejor adherencia a la medicación en ensayos pequeños con pacientes; listas y recordatorios de apps ERAS (evidencia limitada, mayoría observacional)                                                   |
+| Pasaporte de valentía (9 sellos + certificado)                    | Niño o niña                           | `src/lib/courageStamps.ts`  | Programas pediátricos tipo «Beads of Courage» (cada paso del tratamiento es una cuenta que se guarda)                                                                                                                                |
+| ¿Y tú, cómo estás? (clima semanal de quien cuida)                 | Las cinco                             | `src/lib/caregiverPulse.ts` | Intervenciones digitales para cuidadores: menos carga y estrés a corto plazo, efecto moderado; largo plazo incierto                                                                                                                  |
+
+Reglas propias:
+
+- **Rituales no clínicos.** Nada de medicamentos, dosis ni ejercicios prescritos; lo que depende del médico lo dice. Prueba automática.
+- **Ritual sin racha.** El contador solo suma, solo se marca el día de hoy y un día futuro no cuenta. En enfermedad, tono sobrio: «Un momento juntos», sin números ni signos de celebración.
+- **Plan «cuando… entonces…» organiza, no trata.** Las acciones registran u observan lo que el equipo de salud ya indicó. Catálogo cerrado (sin texto libre).
+- **Pasaporte del menor.** El certificado no lleva nombre, fechas, cifras ni datos de salud; el único número es la cantidad de sellos. Lo que falta aparece «por descubrir». Sin plan solo cuentan los días con servicio.
+- **Clima de quien cuida.** No es una escala clínica ni un tamizaje; es privado del navegador. Con tormenta muestra apoyo y el 123; con tormenta o dos semanas difíciles seguidas propone «Pedir un relevo al círculo» (lleva a `#ayuda-circulo`). No se cita una línea de salud mental específica hasta confirmarla con el equipo clínico.
+
+Pendiente: revisión clínica de los textos de rituales, acciones del plan y respuestas del clima; confirmar con el equipo clínico si se agrega una línea de apoyo en salud mental para Colombia junto al 123.
+
 ## 3. Principios de diseño (decisiones firmes)
 
 - **No diagnostica** ni interpreta síntomas, ni sugiere medicamentos o dosis. Solo ordena y sugiere qué comentar con el equipo de salud. Las señales de alarma son texto fijo y siempre llevan el 123.
@@ -64,4 +85,4 @@ Se revisaron tendencias de cuidado familiar (apps de coordinación de cuidadores
 
 ## 7. Pruebas
 
-`bun test` / `vitest` sobre `careJourney`, `careDays`, `careMoments`, `weeklyLetter` y `visitPrep` (188 casos, con `careMoments`, `careHomeReady`, `helpRequest` y `careChapter`): rutas, etapas, metas, umbrales, privacidad, tono, estabilidad del texto. Se verificó además por mutación manual (15 de 16 mutantes detectados; el sobreviviente quedó cubierto con una prueba de frontera).
+`bun test` / `vitest` sobre `careJourney`, `careDays`, `careMoments`, `weeklyLetter` y `visitPrep` (188 casos, con `careMoments`, `careHomeReady`, `helpRequest` y `careChapter`; más 54 casos de `careRituals`, `courageStamps` y `caregiverPulse`, revisados por mutación manual: 8 de 8 mutantes detectados tras añadir una prueba de frontera): rutas, etapas, metas, umbrales, privacidad, tono, estabilidad del texto. Se verificó además por mutación manual (15 de 16 mutantes detectados; el sobreviviente quedó cubierto con una prueba de frontera).

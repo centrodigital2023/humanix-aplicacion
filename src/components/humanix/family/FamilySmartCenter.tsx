@@ -1,5 +1,6 @@
 // Centro de cuidado inteligente del panel de familia: «Tu día, resuelto» para todas las familias y, con el plan
-// Esencial, informe de bienestar, comparador de postulaciones, presupuesto y radar de cobertura.
+// Esencial, informe de bienestar, comparador de postulaciones, presupuesto y radar de cobertura. La ruta de cuidado
+// suma «Rituales que unen» (ritual del día, plan «cuando… entonces…», pasaporte de valentía y el clima de quien cuida).
 //
 // Aquí solo se piden los datos (hooks de `use-family-intel`), se pasan a las funciones puras de `src/lib` y se
 // reparte el resultado en tarjetas. El plan se lee de `mp_subscriptions` (solo escribe el webhook de pagos); la puerta
@@ -49,6 +50,7 @@ import { CareBudgetCard } from "./CareBudgetCard";
 import { CareChapterCard } from "./CareChapterCard";
 import { CareHelpHomeCard } from "./CareHelpHomeCard";
 import { CareJourneyCard } from "./CareJourneyCard";
+import { CareRitualsCard } from "./CareRitualsCard";
 import { CoverageRadarCard, type RadarAnchor } from "./CoverageRadarCard";
 import { FamilyBriefCard } from "./FamilyBriefCard";
 import { PremiumPreview } from "@/components/humanix/premium/PremiumPreview";
@@ -387,7 +389,23 @@ export function FamilySmartCenter({
       {ready && route && <CareChapterCard route={route} bookings={wbBookings} now={now} />}
 
       {ready && route && (
-        <CareHelpHomeCard route={route} userId={userId} bookings={wbBookings} now={now} />
+        <div id="ayuda-circulo" className="scroll-mt-4">
+          <CareHelpHomeCard route={route} userId={userId} bookings={wbBookings} now={now} />
+        </div>
+      )}
+
+      {ready && route && (
+        <div id="rituales" className="scroll-mt-4">
+          <CareRitualsCard
+            route={route}
+            userId={userId}
+            bookings={wbBookings}
+            logs={premium ? careLogs : null}
+            premium={premium}
+            now={now}
+            onAskHelp={() => scrollToId("ayuda-circulo")}
+          />
+        </div>
       )}
 
       <div id="centro-herramientas" className="scroll-mt-4 space-y-2">
