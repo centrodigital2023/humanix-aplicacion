@@ -154,7 +154,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           urls.push(
             urlEntry(
               r.path === "/" ? `${SITE_URL}/` : `${SITE_URL}${r.path}`,
-              today,
+              undefined,
               r.changefreq,
               r.priority,
               r.path === "/",
