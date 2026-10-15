@@ -388,3 +388,102 @@ export type SubscriptionStatus = "trial" | "active" | "past_due" | "suspended" |
 export function isSubscriptionAccessible(status: SubscriptionStatus): boolean {
   return status === "trial" || status === "active" || status === "past_due";
 }
+
+// ── Estado del plan del usuario (lo que lee `usePlan`) ────────────────────────
+// Misma regla que `get_user_plan()` en SQL y que `activePaidPlan` en `planBilling`: plan de pago con estado
+// `active`/`approved` y sin vencer. Cualquier otra cosa es Free (sin perder el estado y la fecha para mostrarlos).
+
+export type SubscriptionSnapshot = {
+  plan: string | null;
+  status: string | null;
+  amount: number | null;
+  currency: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end?: boolean | null;
+};
+
+export type NormalizedPlan = {
+  plan: PlanKey;
+  status: string | null;
+  amount: number | null;
+  currency: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+};
+
+export function normalizeSubscription(
+  row: SubscriptionSnapshot | null | undefined,
+  now: number = Date.now(),
+): NormalizedPlan {
+  const free: NormalizedPlan = {
+    plan: "free",
+    status: row?.status ?? null,
+    amount: null,
+    currency: null,
+    currentPeriodEnd: row?.current_period_end ?? null,
+    cancelAtPeriodEnd: false,
+  };
+  if (!row) return { ...free, status: null, currentPeriodEnd: null };
+  const active = row.status === "active" || row.status === "approved";
+  const end = row.current_period_end ? Date.parse(row.current_period_end) : NaN;
+  const stillInPeriod = !row.current_period_end || !Number.isFinite(end) || end > now;
+  const known = typeof row.plan === "string" && row.plan in PLAN_CATALOG && row.plan !== "free";
+  if (!active || !stillInPeriod || !known) return free;
+  return {
+    plan: row.plan as PlanKey,
+    status: row.status,
+    amount: row.amount ?? null,
+    currency: row.currency ?? null,
+    currentPeriodEnd: row.current_period_end ?? null,
+    cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+  };
+}
+
+/** Días desde los que se recuerda renovar (no hay cobro automático: si nadie renueva, el plan pasa a Free). */
+export const RENEW_REMINDER_DAYS = 5;
+
+export type PlanValidity = {
+  /** Días que quedan (redondeo hacia arriba: el último día cuenta como 1); `null` si no hay plan o fecha. */
+  daysLeft: number | null;
+  /** Quedan `RENEW_REMINDER_DAYS` días o menos: momento de recordar con calma. */
+  renewSoon: boolean;
+  /** «Vigente hasta el 15 de noviembre» o `null`. */
+  line: string | null;
+};
+
+const MONTHS_LONG = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+/** «15 de noviembre», en hora de Colombia y sin depender del ICU del navegador. */
+export function longDateEs(t: number): string {
+  const d = new Date(t - 5 * 3_600_000);
+  return `${d.getUTCDate()} de ${MONTHS_LONG[d.getUTCMonth()]}`;
+}
+
+export function planValidity(
+  p: Pick<NormalizedPlan, "plan" | "currentPeriodEnd">,
+  now: number,
+): PlanValidity {
+  const end = p.currentPeriodEnd ? Date.parse(p.currentPeriodEnd) : NaN;
+  if (p.plan === "free" || !Number.isFinite(end) || end <= now) {
+    return { daysLeft: null, renewSoon: false, line: null };
+  }
+  const daysLeft = Math.ceil((end - now) / 86_400_000);
+  return {
+    daysLeft,
+    renewSoon: daysLeft <= RENEW_REMINDER_DAYS,
+    line: `Vigente hasta el ${longDateEs(end)}`,
+  };
+}

@@ -8,6 +8,12 @@ const corsHeaders = {
 };
 
 import { logExecution } from "../_shared/execLog.ts";
+import {
+  PLAN_LABEL,
+  statusAfterFailure,
+  subscriptionAfterApproval,
+  type SubscriptionRow,
+} from "../_shared/planBilling.ts";
 
 const MP_BASE = "https://api.mercadopago.com";
 
@@ -100,6 +106,14 @@ function resolveUserId(payment: Record<string, any>): string | null {
   const fromRef = ref.startsWith("credits:") ? ref.split(":")[1] : ref;
   const candidate = String(payment.metadata?.user_id ?? fromRef ?? "");
   return UUID_RE.test(candidate) ? candidate : null;
+}
+
+type RestFn = (path: string, init?: RequestInit & { allowConflict?: boolean }) => Promise<Response>;
+
+async function readSubscription(rest: RestFn, userId: string): Promise<SubscriptionRow | null> {
+  const res = await rest(`mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end`);
+  const rows = (await res.json()) as SubscriptionRow[];
+  return rows[0] ?? null;
 }
 
 Deno.serve(async (req) => {
@@ -254,30 +268,51 @@ Deno.serve(async (req) => {
           link: "/dashboard",
         });
       } else {
-        const periodEnd = new Date();
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-        await rest(`mp_subscriptions?user_id=eq.${userId}`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            status: "active",
-            current_period_end: periodEnd.toISOString(),
-            next_payment_at: periodEnd.toISOString(),
-            cancel_at_period_end: false,
-          }),
+        // Se activa el plan que se PAGÓ (fijado por nuestro servidor en la preferencia), con el monto verificado.
+        // Renovar suma desde el vencimiento; subir de plan convierte los días restantes. Ver _shared/planBilling.ts.
+        const current = await readSubscription(rest, userId);
+        const result = subscriptionAfterApproval({ row: current, payment, now: Date.now() });
+        if (!result.ok) {
+          // Pago aprobado que no corresponde a un plan válido: no se activa nada y queda registrado para revisión.
+          await rest(`payment_webhook_events?provider=eq.mercadopago&external_event_id=eq.${encodeURIComponent(eventId)}`, {
+            method: "PATCH",
+            body: JSON.stringify({ processed: true, processed_at: new Date().toISOString(), error_code: result.error }),
+          });
+          await logExecution({
+            functionName: "mp-webhook", triggerType: "webhook", status: "rejected",
+            startedAt, executionId, errorCode: result.error,
+          });
+          return new Response("ok", { status: 200, headers: corsHeaders });
+        }
+        await rest("mp_subscriptions?on_conflict=user_id", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify({ user_id: userId, ...result.patch }),
         });
+        const until = new Date(result.patch.current_period_end).toLocaleDateString("es-CO", {
+          day: "numeric", month: "long", timeZone: "America/Bogota",
+        });
+        const label = PLAN_LABEL[result.patch.plan];
         await notify({
           type: "payment_approved",
-          title: "✅ Suscripción Humanix activa",
-          body: "Tu suscripción mensual fue aprobada. ¡Ya puedes usar todas las funciones premium!",
+          title: result.kind === "renew" ? `✨ Renovaste ${label}` : `✨ Tu plan ${label} está activo`,
+          body: result.kind === "upgrade" && result.carriedDays > 0
+            ? `Vigente hasta el ${until}. Sumamos ${result.carriedDays} días por lo que te quedaba de tu plan anterior.`
+            : `Vigente hasta el ${until}. Sin cobros automáticos: tú decides cuándo renovar.`,
           link: "/dashboard",
         });
       }
     } else if (status === "rejected" || status === "cancelled") {
       if (!isCredits) {
-        await rest(`mp_subscriptions?user_id=eq.${userId}`, {
-          method: "PATCH",
-          body: JSON.stringify({ status }),
-        });
+        // Un intento fallido no le quita a nadie un plan que sigue vigente.
+        const current = await readSubscription(rest, userId);
+        const next = statusAfterFailure(current, status, Date.now());
+        if (next) {
+          await rest(`mp_subscriptions?user_id=eq.${userId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: next }),
+          });
+        }
       }
       await notify({
         type: `payment_${status}`,

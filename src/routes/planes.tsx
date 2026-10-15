@@ -21,13 +21,14 @@ import { Footer } from "@/components/humanix/Footer";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
 import { buildSeo, jsonLdString, faqLd, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { toast } from "sonner";
-import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
+import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
 import { usePlan } from "@/hooks/use-plan";
 import { PromoCodeRedeemCard } from "@/components/humanix/PromoCodeRedeemCard";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
 import type { Audience } from "@/lib/audience";
 import { computeCta } from "@/lib/planCta";
+import { LATER_MESSAGE, startCheckout } from "@/lib/checkout";
 
 const PLAN_FAQS = [
   {
@@ -382,7 +383,9 @@ function PlansPage() {
   const {
     plan: currentPlan,
     cancelAtPeriodEnd,
+    currentPeriodEnd,
     loading: planLoading,
+    error: planError,
     refresh: refreshPlan,
   } = usePlan(user?.id ?? null);
   const loading = userLoading || planLoading;
@@ -393,7 +396,8 @@ function PlansPage() {
   const [acting, setActing] = useState<PlanKey | null>(null);
   const autoTriggered = useRef(false);
 
-  const ctx = { userId: user?.id ?? null, currentPlan, cancelAtPeriodEnd };
+  const renewSoon = planValidity({ plan: currentPlan, currentPeriodEnd }, Date.now()).renewSoon;
+  const ctx = { userId: user?.id ?? null, currentPlan, cancelAtPeriodEnd, renewSoon };
 
   const choose = async (key: PlanKey) => {
     const cta = computeCta(key, ctx);
@@ -415,23 +419,29 @@ function PlansPage() {
       toast.info("Ya tienes este plan activo.");
       return;
     }
-    setActing(key);
-    try {
-      const def = PLAN_CATALOG[key];
-      const { data, error } = await supabase.functions.invoke("mp-create-subscription", {
-        body: { plan: key, amount: def.amountCOP, email: user?.email },
-      });
-      if (error) throw error;
-      const url =
-        (data as { init_point?: string; sandbox_init_point?: string })?.init_point ??
-        (data as { sandbox_init_point?: string })?.sandbox_init_point;
-      if (!url) throw new Error("No se pudo iniciar el checkout.");
-      window.location.href = url;
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al iniciar el pago");
-    } finally {
-      setActing(null);
+    if (cta.action.kind === "later") {
+      toast.info(LATER_MESSAGE);
+      return;
     }
+    if (planError) {
+      // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
+      toast("No pudimos confirmar tu plan ahora.", {
+        description: "Revisa tu conexión e inténtalo de nuevo.",
+      });
+      void refreshPlan();
+      return;
+    }
+    setActing(key);
+    const r = await startCheckout(supabase.functions.invoke.bind(supabase.functions), {
+      plan: key,
+      email: user?.email,
+    });
+    if (r.ok) {
+      window.location.href = r.url;
+      return;
+    }
+    toast(r.message);
+    setActing(null);
   };
 
   useEffect(() => {

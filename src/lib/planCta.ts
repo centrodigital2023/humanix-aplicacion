@@ -10,6 +10,11 @@ export type CtaContext = {
   currentPlan: PlanKey;
   /** Whether the active subscription has been scheduled to cancel. */
   cancelAtPeriodEnd: boolean;
+  /**
+   * Quedan pocos días del plan vigente (`planValidity().renewSoon`). No hay cobro automático: cada pago es un mes,
+   * así que la tarjeta del plan actual invita a renovar cuando se acerca el vencimiento.
+   */
+  renewSoon?: boolean;
 };
 
 export type CtaAction =
@@ -18,6 +23,7 @@ export type CtaAction =
   | { kind: "login"; redirectTo: string } // Send to /auth, resume on /planes
   | { kind: "checkout" } // Trigger MP checkout for this plan
   | { kind: "free" } // Free CTA: dashboard if logged in, /auth otherwise
+  | { kind: "later" } // Plan menor con uno vigente: se elige cuando termine (no se pierde lo pagado)
   | { kind: "sales" }; // Institution → mailto
 
 export type CtaPlan = {
@@ -48,10 +54,9 @@ export function computeCta(target: PlanKey, ctx: CtaContext): CtaPlan {
     if (isCurrent) {
       return { label: "Tu plan actual", action: { kind: "current" }, disabled: true };
     }
-    // User has a paid plan — going to Free means cancelling. We surface the
-    // dashboard where the cancel flow lives instead of pretending we can
-    // "subscribe" to Free.
-    return { label: "Bajar a Free", action: { kind: "free" }, disabled: false };
+    // Con un plan de pago no hay nada que «cancelar»: cada pago es un mes y, si no se renueva, el plan pasa solo
+    // a Free al vencer. Decirlo así es más honesto que ofrecer un botón que no hace nada.
+    return { label: "Al terminar tu plan", action: { kind: "later" }, disabled: true };
   }
 
   // Paid plan cards (essential / pro)
@@ -67,18 +72,19 @@ export function computeCta(target: PlanKey, ctx: CtaContext): CtaPlan {
   }
 
   if (isCurrent) {
-    if (ctx.cancelAtPeriodEnd) {
-      return {
-        label: "Reactivar renovación",
-        action: { kind: "reactivate" },
-        disabled: false,
-      };
+    if (ctx.cancelAtPeriodEnd || ctx.renewSoon) {
+      // Renovar suma un mes desde el vencimiento (no se pierden días). Ver planBilling.subscriptionAfterApproval.
+      return { label: "Renovar 1 mes", action: { kind: "reactivate" }, disabled: false };
     }
     return { label: "Tu plan actual", action: { kind: "current" }, disabled: true };
   }
 
   if (def.tier > currentTier) {
     return { label: `Mejorar a ${def.label}`, action: { kind: "checkout" }, disabled: false };
+  }
+  if (currentTier > 0) {
+    // Bajar de plan con uno vigente lo bloquea también el servidor (planBilling.checkoutDecision).
+    return { label: "Al terminar tu plan", action: { kind: "later" }, disabled: true };
   }
   return { label: `Cambiar a ${def.label}`, action: { kind: "checkout" }, disabled: false };
 }

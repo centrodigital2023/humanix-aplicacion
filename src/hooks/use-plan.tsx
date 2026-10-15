@@ -4,8 +4,10 @@ import {
   PLAN_CATALOG,
   type PlanKey,
   type PlanFeature,
+  type SubscriptionSnapshot,
   canUseFeature,
   hasAtLeast,
+  normalizeSubscription,
   tierOf,
 } from "@/lib/plans";
 
@@ -18,6 +20,11 @@ export type UserPlanState = {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   loading: boolean;
+  /**
+   * No se pudo leer el plan (red o servidor). Se conserva el último plan conocido en vez de mostrar «Free» a
+   * quien sí paga; la interfaz no debe ofrecer pagar de nuevo mientras esto sea `true`.
+   */
+  error: boolean;
   /** Minimum-tier check: `has("pro_monthly")` returns true if plan >= pro. */
   has: (min: PlanKey) => boolean;
   /** Feature-based check using FEATURE_MIN_PLAN. */
@@ -27,55 +34,6 @@ export type UserPlanState = {
   /** Force re-fetch. */
   refresh: () => Promise<void>;
 };
-
-const FREE_STATE = {
-  plan: "free" as PlanKey,
-  status: null,
-  amount: null,
-  currency: null,
-  currentPeriodEnd: null,
-  cancelAtPeriodEnd: false,
-};
-
-type SubRow = {
-  plan: string | null;
-  status: string | null;
-  amount: number | null;
-  currency: string | null;
-  current_period_end: string | null;
-  cancel_at_period_end?: boolean | null;
-};
-
-function normalizePlan(row: SubRow | null | undefined): {
-  plan: PlanKey;
-  status: string | null;
-  amount: number | null;
-  currency: string | null;
-  currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-} {
-  if (!row) return { ...FREE_STATE };
-  const active = row.status === "active" || row.status === "approved";
-  const stillInPeriod =
-    !row.current_period_end || new Date(row.current_period_end).getTime() > Date.now();
-  if (!active || !stillInPeriod) {
-    return {
-      ...FREE_STATE,
-      status: row.status ?? null,
-      currentPeriodEnd: row.current_period_end ?? null,
-    };
-  }
-  const rawPlan = (row.plan ?? "free") as PlanKey;
-  const plan: PlanKey = rawPlan in PLAN_CATALOG ? rawPlan : "free";
-  return {
-    plan,
-    status: row.status,
-    amount: row.amount ?? null,
-    currency: row.currency ?? null,
-    currentPeriodEnd: row.current_period_end ?? null,
-    cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
-  };
-}
 
 export function usePlan(userId: string | null | undefined): UserPlanState {
   const [state, setState] = useState<
@@ -91,24 +49,29 @@ export function usePlan(userId: string | null | undefined): UserPlanState {
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
     loading: true,
+    error: false,
   }));
 
   const load = useCallback(async () => {
     if (!userId) {
-      setState((s) => ({ ...s, plan: "free", tier: 0, loading: false }));
+      setState((s) => ({ ...s, plan: "free", tier: 0, loading: false, error: false }));
       return;
     }
-    const { data } = await supabase
-      .from("mp_subscriptions")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const norm = normalizePlan((data ?? null) as SubRow | null);
-    setState({
-      ...norm,
-      tier: tierOf(norm.plan),
-      loading: false,
-    });
+    // Un reintento corto antes de rendirse: un fallo de red no debe parecer «no tienes plan».
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { data, error } = await supabase
+        .from("mp_subscriptions")
+        .select("plan, status, amount, currency, current_period_end, cancel_at_period_end")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!error) {
+        const norm = normalizeSubscription((data ?? null) as SubscriptionSnapshot | null);
+        setState({ ...norm, tier: tierOf(norm.plan), loading: false, error: false });
+        return;
+      }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+    }
+    setState((s) => ({ ...s, loading: false, error: true }));
   }, [userId]);
 
   useEffect(() => {

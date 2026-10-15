@@ -1,14 +1,15 @@
-// Crea preferencia de Mercado Pago para suscripción mensual del profesional a Humanix.
-// Devuelve init_point para redirigir al checkout.
+// Crea la preferencia de Mercado Pago para pagar UN mes de un plan de Humanix (no es un cobro automático).
+// Devuelve init_point para redirigir al checkout. La lógica de qué se puede pagar vive en `_shared/planBilling.ts`
+// (probada con Vitest): abrir un pago nunca le quita a nadie un plan vigente y con un plan vigente no se baja de plan.
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
+import {
+  PLAN_TITLE,
+  checkoutDecision,
+  returnPathFor,
+  type SubscriptionRow,
+} from "../_shared/planBilling.ts";
 
 const MP_BASE = "https://api.mercadopago.com";
-
-const PRICE_BY_PLAN: Record<string, number> = {
-  essential_monthly: 9000,
-  pro_monthly: 29000,
-  institution_monthly: 299000, // COP 299.000 base — coincide con plans.ts y INSTITUTION_BILLING
-};
 
 Deno.serve(async (req) => {
   const cors = buildCorsHeaders(req);
@@ -23,10 +24,48 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const body = await req.json().catch(() => ({}));
-    const requestedPlan = typeof body.plan === "string" ? body.plan : "pro_monthly";
-    const plan = requestedPlan in PRICE_BY_PLAN ? requestedPlan : "pro_monthly";
-    const amount = PRICE_BY_PLAN[plan];
     const userId = auth.userId;
+    const json = (payload: unknown, status = 200) =>
+      new Response(JSON.stringify(payload), {
+        status,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    const srv = (path: string, init: RequestInit = {}) =>
+      fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        ...init,
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          ...(init.headers ?? {}),
+        },
+      });
+
+    // Suscripción actual y roles: leídos en el servidor, nunca del navegador.
+    const [subRes, rolesRes] = await Promise.all([
+      srv(`mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end`),
+      srv(`user_roles?user_id=eq.${userId}&select=role`),
+    ]);
+    if (!subRes.ok) throw new Error(`mp_subscriptions ${subRes.status}`);
+    const current = ((await subRes.json()) as SubscriptionRow[])[0] ?? null;
+    const roles = rolesRes.ok
+      ? ((await rolesRes.json()) as Array<{ role: string }>).map((r) => r.role)
+      : [];
+
+    const decision = checkoutDecision(current, body.plan, Date.now());
+    if (!decision.ok) {
+      return json(
+        decision.error === "downgrade_while_active"
+          ? {
+              error: "downgrade_while_active",
+              current_plan: decision.current,
+              ends_at: decision.endsAt,
+            }
+          : { error: "unknown_plan" },
+        decision.error === "downgrade_while_active" ? 409 : 400,
+      );
+    }
+    const { plan, amount } = decision;
     // Validación ligera del email: solo se usa como "payer hint" para MP.
     const emailRaw = typeof body.email === "string" ? body.email.trim().slice(0, 120) : "";
     const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)
@@ -40,19 +79,9 @@ Deno.serve(async (req) => {
       ? rawOrigin
       : "https://humanix.lat";
 
-    // Panel al que vuelve cada perfil tras pagar (lista cerrada, sin open-redirect).
-    const RETURN_PATHS = new Set(["/dashboard/profesional", "/dashboard/familia", "/dashboard/institucion"]);
-    const returnPath =
-      typeof body.return_to === "string" && RETURN_PATHS.has(body.return_to)
-        ? body.return_to
-        : "/dashboard/profesional";
-
-    const PLAN_TITLES: Record<string, string> = {
-      essential_monthly: "Humanix Esencial · Suscripción mensual",
-      pro_monthly: "Humanix Pro · Suscripción mensual",
-      institution_monthly: "Humanix IPS Mejorado · Suscripción mensual",
-    };
-    const title = PLAN_TITLES[plan] ?? "Humanix · Suscripción mensual";
+    // Panel al que vuelve cada perfil tras pagar: el de su rol (lista cerrada, sin open-redirect).
+    const returnPath = returnPathFor(roles, body.return_to);
+    const title = PLAN_TITLE[plan];
 
     // Preferencia simple (no recurrente). Para recurrente se usa /preapproval.
     const prefBody = {
@@ -75,7 +104,8 @@ Deno.serve(async (req) => {
       external_reference: userId,
       notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
       statement_descriptor: "HUMANIX",
-      metadata: { user_id: userId, plan },
+      // Lo que el webhook usa para activar: el plan y el precio que fijó este servidor.
+      metadata: { user_id: userId, plan, price_cop: amount },
     };
 
     const r = await fetch(`${MP_BASE}/checkout/preferences`, {
@@ -93,27 +123,25 @@ Deno.serve(async (req) => {
     }
     const pref = await r.json();
 
-    // Guardar/actualizar suscripción
-    await fetch(`${SUPABASE_URL}/rest/v1/mp_subscriptions?on_conflict=user_id`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates",
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        plan,
-        amount,
-        currency: "COP",
-        status: "pending",
-        mp_payer_email: email,
-      }),
-    });
+    // Marcar «pendiente» solo a quien no tiene un plan vigente: abrir un pago no puede quitar lo ya pagado.
+    if (decision.writePending) {
+      await srv("mp_subscriptions?on_conflict=user_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({
+          user_id: userId,
+          plan,
+          amount,
+          currency: "COP",
+          status: "pending",
+          mp_payer_email: email,
+        }),
+      });
+    }
 
     return new Response(
       JSON.stringify({
+        kind: decision.kind,
         init_point: pref.init_point,
         sandbox_init_point: pref.sandbox_init_point,
         preference_id: pref.id,
