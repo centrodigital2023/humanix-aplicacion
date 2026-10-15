@@ -264,6 +264,16 @@ function ContactStep({
           <p className="text-center text-[0.72rem] text-muted-foreground">
             Sin tarjeta de crédito. Sin compromiso. Tu información es privada.
           </p>
+          <p className="text-center text-[0.72rem] text-muted-foreground">
+            ¿Quieres el beneficio completo?{" "}
+            <a
+              href="/validacion"
+              className="font-semibold text-trust underline underline-offset-2"
+            >
+              Diligencia la encuesta de validación
+            </a>{" "}
+            (4 min) y gana 1 mes del plan Esencial.
+          </p>
         </div>
       )}
     </div>
@@ -291,6 +301,12 @@ function SuccessView() {
         className="inline-flex items-center gap-2 rounded-xl bg-trust px-6 py-3 text-sm font-bold text-trust-foreground hover:bg-trust/90 transition"
       >
         Crear cuenta ahora →
+      </a>
+      <a
+        href="/validacion"
+        className="text-sm font-semibold text-trust underline underline-offset-2"
+      >
+        O completa la encuesta de validación y gana 1 mes del plan Esencial →
       </a>
     </div>
   );
