@@ -438,7 +438,7 @@ describe("cadena drizzle/migrations (la que registra producción)", () => {
     for (const e of journal.entries) {
       expect(e.tag.startsWith(String(e.idx).padStart(4, "0") + "_")).toBe(true);
       expect(() =>
-        readFileSync(new URL(`meta/${String(e.idx).padStart(4, "0")}_snapshot.json`, DRIZZLE_DIR)),
+        readFileSync(require("node:path").join(DRIZZLE_DIR, `meta/${String(e.idx).padStart(4, "0")}_snapshot.json`)),
       ).not.toThrow();
     }
   });
