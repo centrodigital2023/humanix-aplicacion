@@ -17,18 +17,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/humanix/Logo";
+import { buildSeo } from "@/lib/seo";
 
 export const Route = createFileRoute("/eps-ips")({
-  head: () => ({
-    meta: [
-      { title: "Humanix para EPS e IPS · Gestión de personal de salud" },
-      {
-        name: "description",
-        content:
-          "Conecta tu EPS o IPS con el mejor talento en salud. Publica turnos, verifica documentos y gestiona tu equipo en un solo lugar.",
-      },
-    ],
-  }),
+  head: () =>
+    buildSeo({
+      title: "Humanix para EPS e IPS · Gestión de personal de salud",
+      path: "/eps-ips",
+      description:
+        "Conecta tu EPS o IPS con el mejor talento en salud. Publica turnos, verifica documentos y gestiona tu equipo en un solo lugar.",
+    }),
   component: EpsIpsLanding,
 });
 

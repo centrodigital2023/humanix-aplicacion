@@ -33,6 +33,7 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: "/cuidado-pediatrico", priority: 0.85, changefreq: "weekly" },
   { path: "/cuidado-paliativo", priority: 0.82, changefreq: "weekly" },
   { path: "/cuidador-domicilio", priority: 0.85, changefreq: "weekly" },
+  { path: "/fisioterapia-domicilio", priority: 0.85, changefreq: "weekly" },
   { path: "/auxiliar-enfermeria", priority: 0.82, changefreq: "weekly" },
   // City landings (existing individual routes)
   { path: "/enfermeria-bogota", priority: 0.9, changefreq: "weekly" },
