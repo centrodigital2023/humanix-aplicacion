@@ -56,6 +56,7 @@ import { LiveNearby } from "@/components/humanix/simple/LiveNearby";
 import { FamilyQuickActions } from "@/components/humanix/simple/FamilyQuickActions";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { FamilySmartCenter } from "@/components/humanix/family/FamilySmartCenter";
+import { CareRoutineCard } from "@/components/humanix/family/CareRoutineCard";
 import { SosFamiliarButton } from "@/components/humanix/SosFamiliarButton";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 
@@ -336,6 +337,9 @@ function FamilyDashboard() {
       <div className="space-y-6">
         {/* Acciones rápidas */}
         <FamilyQuickActions />
+
+        {/* Atajo anticipatorio: repetir la rutina de cuidado en un toque */}
+        {user?.id && <CareRoutineCard userId={user.id} />}
 
         {/* SOS: pedir ayuda con la ubicación y ver las alertas de mi círculo de cuidado */}
         {user?.id && (
