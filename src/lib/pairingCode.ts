@@ -9,7 +9,10 @@ export const PAIRING_CODE_LENGTH = 12;
 /** Llena el arreglo con bytes aleatorios (criptográficos en el navegador; inyectable en las pruebas). */
 export type FillRandom = (bytes: Uint8Array) => Uint8Array;
 
-const browserRandom: FillRandom = (bytes) => globalThis.crypto.getRandomValues(bytes);
+const browserRandom: FillRandom = (bytes) => {
+  globalThis.crypto.getRandomValues(bytes as Uint8Array<ArrayBuffer>);
+  return bytes;
+};
 
 /**
  * `256 % 32 === 0`: tomar los 5 bits bajos de cada byte reparte los 32 símbolos por igual (sin sesgo). Los códigos se generan en el
