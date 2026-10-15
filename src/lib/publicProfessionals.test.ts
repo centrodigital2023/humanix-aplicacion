@@ -10,7 +10,7 @@ import {
 } from "./publicProfessionals";
 
 const MIGRATION = readFileSync(
-  new URL("../../supabase/migrations/20261013100000_public_professionals.sql", import.meta.url),
+  require("node:path").resolve(process.cwd(), "supabase/migrations/20261013100000_public_professionals.sql"),
   "utf8",
 );
 

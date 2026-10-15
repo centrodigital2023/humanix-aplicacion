@@ -489,7 +489,7 @@ describe("las opciones coinciden con las etiquetas del resto de la app", () => {
 // Si alguien cambia una lista de valores en la migración (o en una opción de pantalla) sin cambiar la otra, esto falla.
 
 const SQL = readFileSync(
-  new URL("../../supabase/migrations/20261014100000_institution_care_core.sql", import.meta.url),
+  require("node:path").resolve(process.cwd(), "supabase/migrations/20261014100000_institution_care_core.sql"),
   "utf8",
 );
 

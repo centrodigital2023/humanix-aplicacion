@@ -23,7 +23,7 @@ import {
 } from "./liveMap";
 
 const MIGRATION = readFileSync(
-  new URL("../../supabase/migrations/20261012210000_live_map.sql", import.meta.url),
+  require("node:path").resolve(process.cwd(), "supabase/migrations/20261012210000_live_map.sql"),
   "utf8",
 );
 

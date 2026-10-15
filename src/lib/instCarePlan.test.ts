@@ -20,7 +20,7 @@ const CARE_FEATURES = [
 ] as const satisfies readonly PlanFeature[];
 
 const SQL = readFileSync(
-  new URL("../../supabase/migrations/20261014100000_institution_care_core.sql", import.meta.url),
+  require("node:path").resolve(process.cwd(), "supabase/migrations/20261014100000_institution_care_core.sql"),
   "utf8",
 );
 

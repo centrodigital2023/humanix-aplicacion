@@ -38,7 +38,7 @@ interface Vector {
 // implementaciones cambia un umbral, la otra deja de coincidir y una de las dos pruebas falla.
 const VECTORS = JSON.parse(
   readFileSync(
-    new URL("../../supabase/e2e/institution_care/news2_vectors.json", import.meta.url),
+    require("node:path").resolve(process.cwd(), "supabase/e2e/institution_care/news2_vectors.json"),
     "utf8",
   ),
 ) as Vector[];

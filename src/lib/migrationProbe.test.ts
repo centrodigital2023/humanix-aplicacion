@@ -337,11 +337,11 @@ describe("findUnguardedRedefinitions", () => {
 
 // ─── Los archivos reales del repositorio ───────────────────────────────────────
 
-const MIGRATIONS_DIR = new URL("../../supabase/migrations/", import.meta.url);
+const MIGRATIONS_DIR = require("node:path").resolve(process.cwd(), "supabase/migrations/");
 const real: MigrationFile[] = readdirSync(MIGRATIONS_DIR)
   .filter((f) => f.endsWith(".sql"))
   .sort()
-  .map((name) => ({ name, sql: readFileSync(new URL(name, MIGRATIONS_DIR), "utf8") }));
+  .map((name) => ({ name, sql: readFileSync(require("node:path").join(MIGRATIONS_DIR, name), "utf8") }));
 
 describe("cadena supabase/migrations (archivos reales)", () => {
   it("desde octubre cada archivo lleva versión de 14 dígitos y nombre en minúsculas; en toda la cadena las versiones no se repiten", () => {
@@ -423,8 +423,8 @@ describe("cadena supabase/migrations (archivos reales)", () => {
 
 // ─── La cadena de Drizzle (la que Lovable lleva y registra en producción) ──────
 
-const DRIZZLE_DIR = new URL("../../drizzle/migrations/", import.meta.url);
-const journal = JSON.parse(readFileSync(new URL("meta/_journal.json", DRIZZLE_DIR), "utf8")) as {
+const DRIZZLE_DIR = require("node:path").resolve(process.cwd(), "drizzle/migrations/");
+const journal = JSON.parse(readFileSync(require("node:path").join(DRIZZLE_DIR, "meta/_journal.json"), "utf8")) as {
   entries: { idx: number; when: number; tag: string }[];
 };
 
@@ -438,7 +438,7 @@ describe("cadena drizzle/migrations (la que registra producción)", () => {
     for (const e of journal.entries) {
       expect(e.tag.startsWith(String(e.idx).padStart(4, "0") + "_")).toBe(true);
       expect(() =>
-        readFileSync(new URL(`meta/${String(e.idx).padStart(4, "0")}_snapshot.json`, DRIZZLE_DIR)),
+        readFileSync(require("node:path").join(DRIZZLE_DIR, `meta/${String(e.idx).padStart(4, "0")}_snapshot.json`)),
       ).not.toThrow();
     }
   });
@@ -457,7 +457,7 @@ describe("cadena drizzle/migrations (la que registra producción)", () => {
       "0014_fix_function_search_path": "bb1a944aa890f280",
     };
     for (const [tag, hash16] of Object.entries(prod)) {
-      const sql = readFileSync(new URL(`${tag}.sql`, DRIZZLE_DIR));
+      const sql = readFileSync(require("node:path").join(DRIZZLE_DIR, `${tag}.sql`));
       expect(createHash("sha256").update(sql).digest("hex").slice(0, 16)).toBe(hash16);
     }
     expect(journal.entries.at(-1)?.when).toBeGreaterThanOrEqual(1791681088676);
