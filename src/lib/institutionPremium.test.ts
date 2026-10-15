@@ -15,6 +15,7 @@ const INSTITUTION_PREMIUM: PlanFeature[] = [
   "inst_team_reliability",
   "inst_coverage_forecast",
   "inst_executive_report",
+  "inst_agenda_insights",
 ];
 
 describe("funciones premium del panel de instituciones", () => {
@@ -47,6 +48,14 @@ describe("funciones premium del panel de instituciones", () => {
     for (const key of PLAN_ORDER.filter((k) => k !== "institution_monthly")) {
       for (const f of INSTITUTION_PREMIUM) expect(PLAN_CATALOG[key].features).not.toContain(f);
     }
+  });
+
+  it("la agenda inteligente se explica en la tarjeta de precios", () => {
+    const label = PLAN_CATALOG.institution_monthly.featuresLabel.find((l) =>
+      /Agenda inteligente/.test(l),
+    );
+    expect(label).toMatch(/inasistencia/);
+    expect(label).toMatch(/utilización/);
   });
 
   it("no cambió ningún precio", () => {
