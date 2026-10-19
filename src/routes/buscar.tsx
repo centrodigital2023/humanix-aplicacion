@@ -342,7 +342,7 @@ function BuscarPage() {
         if (loading) return "Cargando resultados…";
         const p = pros.map(
           (x) =>
-            `Profesional ${x.id}: ${x.profiles?.city ?? "Colombia"}${x.rethus_verified ? " · RETHUS" : ""}${x.available ? " · disponible" : ""}`,
+            `Profesional ${x.user_id}: ${x.specialty ?? "Salud"} · ${x.profiles?.city ?? "Colombia"}${x.rethus_verified ? " · RETHUS" : ""}${x.available ? " · disponible" : ""}`,
         );
         const o = offers.map((x) => `Oferta ${x.id}: ${x.title} · ${x.city} · ${COP(x.amount)}`);
         const all = [...p, ...o];
