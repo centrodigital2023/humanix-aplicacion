@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "sdk_version": "3.1.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ncyzoswhszhttdoxhqdh.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "humanix-aplicacion",
+      "version": "0.1.0",
+      "title": "Humanix Aplicacion"
+    },
+    "tools": [
+      {
+        "name": "list_my_notifications",
+        "title": "Mis notificaciones",
+        "description": "Lista las notificaciones más recientes de la cuenta de Humanix que inició sesión.",
+        "annotations": {
+          "readOnlyHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "unread_only": {
+              "description": "Solo notificaciones sin leer.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Máximo de resultados (1-50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_services",
+        "title": "Mis servicios",
+        "description": "Lista los servicios de cuidado de la cuenta que inició sesión (como familia o como profesional), con fecha, estado y valor.",
+        "annotations": {
+          "readOnlyHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "upcoming_only": {
+              "description": "Solo servicios programados desde hoy.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Máximo de resultados (1-50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_open_offers",
+        "title": "Ofertas abiertas",
+        "description": "Busca ofertas de trabajo en salud abiertas en Humanix, opcionalmente por ciudad.",
+        "annotations": {
+          "readOnlyHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "city": {
+              "description": "Ciudad, por ejemplo Bogotá.",
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "limit": {
+              "description": "Máximo de resultados (1-50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
