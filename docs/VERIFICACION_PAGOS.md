@@ -46,3 +46,35 @@ Migración `20261015150000_commission_and_ai_credits.sql`. Antes de aplicarla se
 - `guard_service_bookings_financials` impide cambiar precios, comisión o partes de un servicio después de creado.
 - `grant_ai_credits` es idempotente: índice único sobre `mp_payment_id`.
 - Firma HMAC del webhook, consulta directa a Mercado Pago e idempotencia por evento.
+
+## 5. Verificación de punta a punta de Mercado Pago (19 oct 2026)
+
+El recorrido completo es este: checkout, Mercado Pago, aviso al webhook, activación del plan o de los créditos y regreso a Humanix.
+
+### Corregido (`bd879d8`)
+
+| #   | Falla                                                                                                     | Efecto                                                                                                    | Corrección                                                                                                                                     |
+| --- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `/pago/exito` anunciaba «¡Pago exitoso! Tu suscripción está activa» solo por la URL                      | Cualquiera que abriera la dirección lo veía; quien pagaba lo veía aunque el plan aún no estuviera activo | El servidor consulta el pago en Mercado Pago (`confirmMercadoPagoPayment`) y la página muestra el resultado real                              |
+| 2   | Redirección abierta en `/pago/exito`: `from` aceptaba cualquier valor, incluido `javascript:`             | Un enlace de Humanix podía llevar a otro sitio o ejecutar código                                          | `safeReturnPath`: solo paneles y rutas internas conocidas                                                                                      |
+| 3   | La activación dependía solo del webhook                                                                   | Si el aviso no llegaba (secreto mal configurado, caída), la persona pagaba y no recibía nada              | Al volver del checkout el servidor aplica el pago con la misma lógica del webhook (`_shared/mpPayment.ts`)                                     |
+| 4   | Dos avisos simultáneos del mismo pago se procesaban los dos                                               | Una renovación podía sumar dos meses por un solo pago                                                     | Reclamo atómico de `mp_payments.paid_at` (`PATCH … paid_at=is.null`); se libera si la activación falla. Probado con dos conexiones en Postgres |
+| 5   | `mp_payments.status` es un enum sin `charged_back`, `in_mediation` ni `authorized`                        | Un contracargo o una mediación rompían el registro (400 → 500) y Mercado Pago reintentaba sin fin         | `dbPaymentStatus` guarda el equivalente; el estado original queda en `raw_payload`                                                             |
+| 6   | Sin `MERCADOPAGO_ACCESS_TOKEN` o `MERCADOPAGO_WEBHOOK_SECRET`, el webhook respondía 500 sin dejar rastro  | Una configuración incompleta era invisible                                                                | Queda en `function_execution_logs` (`missing_access_token` / `missing_webhook_secret`)                                                        |
+
+Hay 28 pruebas nuevas (`mpPayment.test.ts`, `paymentReturn.test.ts`). Cada una de las 5 salvaguardas se rompió a propósito y una prueba lo detectó.
+
+### Estado de producción observado
+
+- `mp-create-subscription` funciona: el 19 oct a las 11:42 (Bogotá) se creó una orden del plan Pro. La fila «pendiente» solo se escribe después de que Mercado Pago acepta la orden, así que el token de acceso está configurado y es válido.
+- No hay ningún registro de `mp-webhook` en `function_execution_logs` ni eventos en `payment_webhook_events`: Mercado Pago no ha llamado al webhook. Esto es normal si ese pago no se completó.
+- El catálogo `ai_credit_packs_catalog` está **vacío**, así que hoy no se pueden comprar créditos. Los paquetes previstos están en `20261007000000_ai_credits_topups.sql`.
+- humanix.lat sirve la aplicación, que es adonde vuelven las URLs de regreso.
+
+### Pendiente
+
+1. **Desplegar** `mp-webhook` y **publicar** la aplicación para que estos cambios lleguen a producción.
+2. **Comprobar el secreto del webhook:** el panel de Mercado Pago, en *Tus integraciones → Webhooks*, debe tener la URL `…/functions/v1/mp-webhook`, el evento «Pagos» y la misma clave secreta que `MERCADOPAGO_WEBHOOK_SECRET`.
+3. **Cargar los paquetes de créditos** (requiere aprobación).
+4. **Pago real de prueba** (el plan Esencial, $9.000) para cerrar el recorrido con dinero real.
+5. **Decisión de negocio:** ante un reembolso o un contracargo de un plan, el plan no se retira solo; hoy queda registrado para revisión.
