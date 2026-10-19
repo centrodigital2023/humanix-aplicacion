@@ -66,15 +66,14 @@ Hay 28 pruebas nuevas (`mpPayment.test.ts`, `paymentReturn.test.ts`). Cada una d
 
 ### Estado de producción observado
 
-- `mp-create-subscription` funciona: el 19 oct a las 11:42 (Bogotá) se creó una orden del plan Pro. La fila «pendiente» solo se escribe después de que Mercado Pago acepta la orden, así que el token de acceso está configurado y es válido.
+- `mp-create-subscription` funciona: el 19 oct a las 11:42 (Bogotá) se creó una orden del plan Pro (fue una prueba y no se pagó). La fila «pendiente» solo se escribe después de que Mercado Pago acepta la orden, así que el token de acceso está configurado y es válido.
 - No hay ningún registro de `mp-webhook` en `function_execution_logs` ni eventos en `payment_webhook_events`: Mercado Pago no ha llamado al webhook. Esto es normal si ese pago no se completó.
-- El catálogo `ai_credit_packs_catalog` está **vacío**, así que hoy no se pueden comprar créditos. Los paquetes previstos están en `20261007000000_ai_credits_topups.sql`.
+- El catálogo `ai_credit_packs_catalog` estaba **vacío**, así que no se podían comprar créditos. **Se cargó el 19 oct (aprobado)** con los 4 paquetes de `20261007000000_ai_credits_topups.sql`, tras un simulacro. `grant_ai_credits` se probó en producción con un pago ficticio y se revirtió: acredita 330 créditos, y un segundo aviso del mismo pago da `unique_violation` (409), que el código trata como «ya acreditado».
 - humanix.lat sirve la aplicación, que es adonde vuelven las URLs de regreso.
 
 ### Pendiente
 
 1. **Desplegar** `mp-webhook` y **publicar** la aplicación para que estos cambios lleguen a producción.
 2. **Comprobar el secreto del webhook:** el panel de Mercado Pago, en *Tus integraciones → Webhooks*, debe tener la URL `…/functions/v1/mp-webhook`, el evento «Pagos» y la misma clave secreta que `MERCADOPAGO_WEBHOOK_SECRET`.
-3. **Cargar los paquetes de créditos** (requiere aprobación).
-4. **Pago real de prueba** (el plan Esencial, $9.000) para cerrar el recorrido con dinero real.
-5. **Decisión de negocio:** ante un reembolso o un contracargo de un plan, el plan no se retira solo; hoy queda registrado para revisión.
+3. **Pago real de prueba** (el plan Esencial, $9.000) para cerrar el recorrido con dinero real.
+4. **Decisión de negocio:** ante un reembolso o un contracargo de un plan, el plan no se retira solo; hoy queda registrado para revisión.
