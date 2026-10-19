@@ -23,6 +23,7 @@ import { AUDIENCE_COPY, readStoredAudience, storeAudience, whatsappLink } from "
 import { CONTACT } from "@/lib/social";
 import { SocialIcons } from "@/components/humanix/SocialIcons";
 import { supabase } from "@/integrations/supabase/client";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -32,10 +33,8 @@ export const Route = createFileRoute("/auth")({
     const r = search.role;
     const role: Role | undefined =
       r === "professional" || r === "family" || r === "institution" ? r : undefined;
-    const redirect =
-      typeof search.redirect === "string" && search.redirect.startsWith("/")
-        ? search.redirect
-        : undefined;
+    const safe = oauthReturnPath(search.redirect);
+    const redirect = safe !== "/" ? safe : undefined;
     const m = search.mode;
     const mode: "signin" | "signup" | undefined = m === "signin" || m === "signup" ? m : undefined;
     const ref =
@@ -195,11 +194,16 @@ function AuthPage() {
     // If a specific ?redirect= was set (e.g. from superadmin layout bounce),
     // honour it immediately without role inference.
     if (search.redirect) {
+      const target = search.redirect;
+      const go = () =>
+        target.includes("?") || target.includes("#")
+          ? navigate({ href: target })
+          : navigate({ to: target as any });
       supabase.auth.getSession().then(({ data }) => {
-        if (data.session) navigate({ to: search.redirect as any });
+        if (data.session) go();
       });
       const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-        if (session) navigate({ to: search.redirect as any });
+        if (session) go();
       });
       return () => sub.subscription.unsubscribe();
     }

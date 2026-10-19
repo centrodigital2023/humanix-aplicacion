@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useCallback, useState } from "react";
+import { useWebMCP } from "use-webmcp-tool";
+import { runWebMCPTool } from "@/lib/webmcp-telemetry";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Search,
@@ -329,6 +331,24 @@ function BuscarPage() {
       void loadOffers();
     },
   );
+
+  useWebMCP({
+    name: "list_search_results",
+    description:
+      "Lista los profesionales y ofertas de salud que se muestran ahora en la página de búsqueda.",
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: () =>
+      runWebMCPTool("list_search_results", () => {
+        if (loading) return "Cargando resultados…";
+        const p = pros.map(
+          (x) =>
+            `Profesional ${x.user_id}: ${x.specialty ?? "Salud"} · ${x.profiles?.city ?? "Colombia"}${x.rethus_verified ? " · RETHUS" : ""}${x.available ? " · disponible" : ""}`,
+        );
+        const o = offers.map((x) => `Oferta ${x.id}: ${x.title} · ${x.city} · ${COP(x.amount)}`);
+        const all = [...p, ...o];
+        return all.length ? all.join("\n") : "No hay resultados en pantalla.";
+      }),
+  });
 
   const totalActive = useMemo(
     () =>

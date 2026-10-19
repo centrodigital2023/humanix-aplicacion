@@ -42,6 +42,7 @@ import { Route as EvaluadorRouteImport } from './routes/evaluador'
 import { Route as FamiliasRouteImport } from './routes/familias'
 import { Route as FisioterapiaDomicilioRouteImport } from './routes/fisioterapia-domicilio'
 import { Route as HabeasDataRouteImport } from './routes/habeas-data'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MensajesRouteImport } from './routes/mensajes'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PlanesRouteImport } from './routes/planes'
@@ -58,6 +59,7 @@ import { Route as TecnologiaRouteImport } from './routes/tecnologia'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as ValidacionRouteImport } from './routes/validacion'
 import { Route as VerificarRouteImport } from './routes/verificar'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as BBannerIdRouteImport } from './routes/b.$bannerId'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardEpsRouteImport } from './routes/dashboard.eps'
@@ -85,6 +87,7 @@ import { Route as SuperadminPublicidadRouteImport } from './routes/superadmin.pu
 import { Route as SuperadminResenasRouteImport } from './routes/superadmin.resenas'
 import { Route as SuperadminTestimoniosRouteImport } from './routes/superadmin.testimonios'
 import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -255,6 +258,11 @@ const HabeasDataRoute = HabeasDataRouteImport.update({
   path: '/habeas-data',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MensajesRoute = MensajesRouteImport.update({
   id: '/mensajes',
   path: '/mensajes',
@@ -335,6 +343,12 @@ const VerificarRoute = VerificarRouteImport.update({
   path: '/verificar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BBannerIdRoute = BBannerIdRouteImport.update({
   id: '/b/$bannerId',
   path: '/b/$bannerId',
@@ -470,6 +484,11 @@ const SuperadminValidacionRoute = SuperadminValidacionRouteImport.update({
   path: '/validacion',
   getParentRoute: () => SuperadminRoute,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardFamiliaOnboardingRoute =
   DashboardFamiliaOnboardingRouteImport.update({
     id: '/onboarding',
@@ -527,6 +546,7 @@ export interface FileRoutesByFullPath {
   '/familias': typeof FamiliasRoute
   '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
+  '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
@@ -543,6 +563,7 @@ export interface FileRoutesByFullPath {
   '/terminos': typeof TerminosRoute
   '/validacion': typeof ValidacionRoute
   '/verificar': typeof VerificarRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
@@ -570,6 +591,7 @@ export interface FileRoutesByFullPath {
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -608,6 +630,7 @@ export interface FileRoutesByTo {
   '/familias': typeof FamiliasRoute
   '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
+  '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
@@ -623,6 +646,7 @@ export interface FileRoutesByTo {
   '/terminos': typeof TerminosRoute
   '/validacion': typeof ValidacionRoute
   '/verificar': typeof VerificarRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
@@ -650,6 +674,7 @@ export interface FileRoutesByTo {
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/dashboard': typeof DashboardIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -690,6 +715,7 @@ export interface FileRoutesById {
   '/familias': typeof FamiliasRoute
   '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
+  '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
@@ -706,6 +732,7 @@ export interface FileRoutesById {
   '/terminos': typeof TerminosRoute
   '/validacion': typeof ValidacionRoute
   '/verificar': typeof VerificarRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
@@ -733,6 +760,7 @@ export interface FileRoutesById {
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -774,6 +802,7 @@ export interface FileRouteTypes {
     | '/familias'
     | '/fisioterapia-domicilio'
     | '/habeas-data'
+    | '/mcp'
     | '/mensajes'
     | '/pair'
     | '/planes'
@@ -790,6 +819,7 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/validacion'
     | '/verificar'
+    | '/.well-known/oauth-protected-resource'
     | '/b/$bannerId'
     | '/dashboard/eps'
     | '/dashboard/equipo'
@@ -817,6 +847,7 @@ export interface FileRouteTypes {
     | '/superadmin/validacion'
     | '/dashboard/'
     | '/superadmin/'
+    | '/.lovable/oauth/consent'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -855,6 +886,7 @@ export interface FileRouteTypes {
     | '/familias'
     | '/fisioterapia-domicilio'
     | '/habeas-data'
+    | '/mcp'
     | '/mensajes'
     | '/pair'
     | '/planes'
@@ -870,6 +902,7 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/validacion'
     | '/verificar'
+    | '/.well-known/oauth-protected-resource'
     | '/b/$bannerId'
     | '/dashboard/eps'
     | '/dashboard/equipo'
@@ -897,6 +930,7 @@ export interface FileRouteTypes {
     | '/superadmin/validacion'
     | '/dashboard'
     | '/superadmin'
+    | '/.lovable/oauth/consent'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -936,6 +970,7 @@ export interface FileRouteTypes {
     | '/familias'
     | '/fisioterapia-domicilio'
     | '/habeas-data'
+    | '/mcp'
     | '/mensajes'
     | '/pair'
     | '/planes'
@@ -952,6 +987,7 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/validacion'
     | '/verificar'
+    | '/.well-known/oauth-protected-resource'
     | '/b/$bannerId'
     | '/dashboard/eps'
     | '/dashboard/equipo'
@@ -979,6 +1015,7 @@ export interface FileRouteTypes {
     | '/superadmin/validacion'
     | '/dashboard/'
     | '/superadmin/'
+    | '/.lovable/oauth/consent'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -1019,6 +1056,7 @@ export interface RootRouteChildren {
   FamiliasRoute: typeof FamiliasRoute
   FisioterapiaDomicilioRoute: typeof FisioterapiaDomicilioRoute
   HabeasDataRoute: typeof HabeasDataRoute
+  McpRoute: typeof McpRoute
   MensajesRoute: typeof MensajesRoute
   PairRoute: typeof PairRoute
   PlanesRoute: typeof PlanesRoute
@@ -1035,6 +1073,7 @@ export interface RootRouteChildren {
   TerminosRoute: typeof TerminosRoute
   ValidacionRoute: typeof ValidacionRoute
   VerificarRoute: typeof VerificarRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BBannerIdRoute: typeof BBannerIdRoute
   InstitutionFormsRoute: typeof InstitutionFormsRoute
   InstitutionProfileRoute: typeof InstitutionProfileRoute
@@ -1043,6 +1082,7 @@ export interface RootRouteChildren {
   PagoFalloRoute: typeof PagoFalloRoute
   ProfesionalProIdRoute: typeof ProfesionalProIdRoute
   ServicioBookingIdRoute: typeof ServicioBookingIdRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
 }
@@ -1280,6 +1320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HabeasDataRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mensajes': {
       id: '/mensajes'
       path: '/mensajes'
@@ -1390,6 +1437,13 @@ declare module '@tanstack/react-router' {
       path: '/verificar'
       fullPath: '/verificar'
       preLoaderRoute: typeof VerificarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/b/$bannerId': {
@@ -1581,6 +1635,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperadminValidacionRouteImport
       parentRoute: typeof SuperadminRoute
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/familia/onboarding': {
       id: '/dashboard/familia/onboarding'
       path: '/onboarding'
@@ -1736,6 +1797,7 @@ const rootRouteChildren: RootRouteChildren = {
   FamiliasRoute: FamiliasRoute,
   FisioterapiaDomicilioRoute: FisioterapiaDomicilioRoute,
   HabeasDataRoute: HabeasDataRoute,
+  McpRoute: McpRoute,
   MensajesRoute: MensajesRoute,
   PairRoute: PairRoute,
   PlanesRoute: PlanesRoute,
@@ -1752,6 +1814,8 @@ const rootRouteChildren: RootRouteChildren = {
   TerminosRoute: TerminosRoute,
   ValidacionRoute: ValidacionRoute,
   VerificarRoute: VerificarRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BBannerIdRoute: BBannerIdRoute,
   InstitutionFormsRoute: InstitutionFormsRoute,
   InstitutionProfileRoute: InstitutionProfileRoute,
@@ -1760,6 +1824,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagoFalloRoute: PagoFalloRoute,
   ProfesionalProIdRoute: ProfesionalProIdRoute,
   ServicioBookingIdRoute: ServicioBookingIdRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
 }
