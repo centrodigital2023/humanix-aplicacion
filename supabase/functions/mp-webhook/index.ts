@@ -8,49 +8,10 @@ const corsHeaders = {
 };
 
 import { logExecution } from "../_shared/execLog.ts";
-import {
-  PLAN_LABEL,
-  creditsGrantFromPayment,
-  isPaymentTopic,
-  statusAfterFailure,
-  subscriptionAfterApproval,
-  type SubscriptionRow,
-} from "../_shared/planBilling.ts";
+import { isPaymentTopic } from "../_shared/planBilling.ts";
+import { makeRest, processMercadoPagoPayment } from "../_shared/mpPayment.ts";
 
 const MP_BASE = "https://api.mercadopago.com";
-
-// Acredita créditos IA via Supabase RPC (service role)
-async function grantCredits(
-  supabaseUrl: string,
-  srk: string,
-  userId: string,
-  packId: string | null,
-  credits: number,
-  priceCop: number,
-  mpPaymentId: string,
-  preferenceId: string | null,
-  validityDays: number,
-): Promise<void> {
-  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/grant_ai_credits`, {
-    method: "POST",
-    headers: {
-      apikey: srk,
-      Authorization: `Bearer ${srk}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      p_user_id: userId,
-      p_pack_id: packId,
-      p_credits: credits,
-      p_price_cop: priceCop,
-      p_mp_payment_id: mpPaymentId,
-      p_mp_preference_id: preferenceId,
-      p_validity_days: validityDays,
-    }),
-  });
-  // 409 = ya acreditado (índice único por mp_payment_id): idempotente.
-  if (!res.ok && res.status !== 409) throw new Error(`grant_ai_credits ${res.status}`);
-}
 
 // Verifica la firma del webhook de Mercado Pago.
 // Formato de header: `x-signature: ts=TIMESTAMP,v1=HASH`
@@ -94,30 +55,6 @@ async function verifyMpSignature(
   return diff === 0;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-async function sha256Hex(input: string): Promise<string> {
-  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
-  return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// El usuario sale de datos que fijó NUESTRO servidor al crear la preferencia
-// (metadata.user_id o external_reference), nunca del navegador.
-function resolveUserId(payment: Record<string, any>): string | null {
-  const ref = String(payment.external_reference ?? "");
-  const fromRef = ref.startsWith("credits:") ? ref.split(":")[1] : ref;
-  const candidate = String(payment.metadata?.user_id ?? fromRef ?? "");
-  return UUID_RE.test(candidate) ? candidate : null;
-}
-
-type RestFn = (path: string, init?: RequestInit & { allowConflict?: boolean }) => Promise<Response>;
-
-async function readSubscription(rest: RestFn, userId: string): Promise<SubscriptionRow | null> {
-  const res = await rest(`mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end`);
-  const rows = (await res.json()) as SubscriptionRow[];
-  return rows[0] ?? null;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const startedAt = Date.now();
@@ -128,24 +65,6 @@ Deno.serve(async (req) => {
     const MP_WEBHOOK_SECRET = Deno.env.get("MERCADOPAGO_WEBHOOK_SECRET");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!MP_TOKEN) return new Response("config", { status: 500 });
-
-    const rest = async (path: string, init: RequestInit & { allowConflict?: boolean } = {}) => {
-      const { allowConflict, ...rest } = init;
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-        ...rest,
-        headers: {
-          apikey: SRK,
-          Authorization: `Bearer ${SRK}`,
-          "Content-Type": "application/json",
-          ...(rest.headers ?? {}),
-        },
-      });
-      if (!res.ok && !(allowConflict && res.status === 409)) {
-        throw new Error(`rest ${path.split("?")[0]} ${res.status}`);
-      }
-      return res;
-    };
 
     const url = new URL(req.url);
     const topic = url.searchParams.get("type") ?? url.searchParams.get("topic");
@@ -162,8 +81,14 @@ Deno.serve(async (req) => {
     }
     executionId = String(paymentId);
 
-    if (!MP_WEBHOOK_SECRET) {
-      console.error("mp-webhook: MERCADOPAGO_WEBHOOK_SECRET no configurado");
+    // Sin claves no se puede procesar: queda en el registro (antes fallaba en silencio) y Mercado Pago reintenta.
+    if (!MP_TOKEN || !MP_WEBHOOK_SECRET) {
+      const missing = !MP_TOKEN ? "missing_access_token" : "missing_webhook_secret";
+      console.error(`mp-webhook: ${missing}`);
+      await logExecution({
+        functionName: "mp-webhook", triggerType: "webhook", status: "error",
+        startedAt, executionId, errorCode: missing,
+      });
       return new Response("config", { status: 500 });
     }
     const validSig = await verifyMpSignature(req, String(paymentId), MP_WEBHOOK_SECRET);
@@ -177,7 +102,7 @@ Deno.serve(async (req) => {
     }
 
     // Consulta directa a Mercado Pago: nunca se confía en el cuerpo del webhook.
-    const pr = await fetch(`${MP_BASE}/v1/payments/${paymentId}`, {
+    const pr = await fetch(`${MP_BASE}/v1/payments/${encodeURIComponent(String(paymentId))}`, {
       headers: { Authorization: `Bearer ${MP_TOKEN}` },
     });
     if (!pr.ok) {
@@ -189,157 +114,21 @@ Deno.serve(async (req) => {
       return new Response("retry", { status: 502 });
     }
     const payment = await pr.json();
-    const status = String(payment.status ?? "pending");
-    const eventId = `${payment.id}:${status}`;
 
-    // Idempotencia: un mismo (pago, estado) se procesa una sola vez.
-    const existing = await (await rest(
-      `payment_webhook_events?provider=eq.mercadopago&external_event_id=eq.${encodeURIComponent(eventId)}&select=processed`,
-    )).json();
-    if (existing?.[0]?.processed) {
-      await logExecution({
-        functionName: "mp-webhook", triggerType: "webhook", status: "duplicate",
-        startedAt, executionId, metadata: { status },
-      });
-      return new Response("ok", { status: 200, headers: corsHeaders });
-    }
-    if (!existing?.length) {
-      await rest("payment_webhook_events", {
-        method: "POST",
-        allowConflict: true,
-        body: JSON.stringify({
-          provider: "mercadopago",
-          external_event_id: eventId,
-          event_type: topic ?? "payment",
-          signature_valid: true,
-          payload_hash: await sha256Hex(JSON.stringify(payment)),
-        }),
-      });
-    }
-
-    const userId = resolveUserId(payment);
-    const extRef = String(payment.external_reference ?? "");
-    const isCredits = extRef.startsWith("credits:") || payment.metadata?.type === "credits";
-    const amount = Math.round(Number(payment.transaction_amount ?? 0));
-    const currency = String(payment.currency_id ?? "COP");
-
-    if (!userId) {
-      await rest(`payment_webhook_events?provider=eq.mercadopago&external_event_id=eq.${encodeURIComponent(eventId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ processed: true, processed_at: new Date().toISOString(), error_code: "unknown_user" }),
-      });
-      await logExecution({
-        functionName: "mp-webhook", triggerType: "webhook", status: "rejected",
-        startedAt, executionId, errorCode: "unknown_user",
-      });
-      return new Response("ok", { status: 200, headers: corsHeaders });
-    }
-
-    // on_conflict: el mismo pago llega varias veces (pendiente → aprobado); sin esto el segundo aviso chocaba con el
-    // índice único de mp_payment_id (409) y el webhook fallaba en cada reintento.
-    await rest("mp_payments?on_conflict=mp_payment_id", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates" },
-      body: JSON.stringify({
-        user_id: userId,
-        mp_payment_id: String(payment.id),
-        amount,
-        currency,
-        status,
-        description: payment.description ?? null,
-        raw_payload: payment,
-        paid_at: status === "approved" ? new Date().toISOString() : null,
-      }),
-    });
-
-    // Pago aprobado que no corresponde a lo vendido: no se acredita nada, queda registrado para revisión y se responde
-    // 200 (reintentar no lo arreglaría).
-    const rejectPayment = async (errorCode: string) => {
-      await rest(`payment_webhook_events?provider=eq.mercadopago&external_event_id=eq.${encodeURIComponent(eventId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ processed: true, processed_at: new Date().toISOString(), error_code: errorCode }),
-      });
-      await logExecution({
-        functionName: "mp-webhook", triggerType: "webhook", status: "rejected",
-        startedAt, executionId, errorCode,
-      });
-      return new Response("ok", { status: 200, headers: corsHeaders });
-    };
-
-    const notify = (row: Record<string, unknown>) =>
-      rest("notifications", { method: "POST", body: JSON.stringify({ user_id: userId, ...row }) });
-
-    if (status === "approved") {
-      if (currency !== "COP" || amount <= 0) return await rejectPayment("invalid_amount_or_currency");
-
-      if (isCredits) {
-        const credit = creditsGrantFromPayment(payment);
-        if (!credit.ok) return await rejectPayment(credit.error);
-        const { credits, packId, validityDays, priceCop } = credit.grant;
-        // Idempotente: índice único de ai_credit_topups.mp_payment_id (409 = ya acreditado).
-        await grantCredits(
-          SUPABASE_URL, SRK, userId, packId, credits, priceCop,
-          String(payment.id), payment.preference_id ?? null, validityDays,
-        );
-        await notify({
-          type: "credits_purchased",
-          title: "✅ Créditos IA acreditados",
-          body: `Se acreditaron ${credits} créditos IA en tu cuenta. ¡Empieza a usarlos!`,
-          link: "/dashboard",
-        });
-      } else {
-        // Se activa el plan que se PAGÓ (fijado por nuestro servidor en la preferencia), con el monto verificado.
-        // Renovar suma desde el vencimiento; subir de plan convierte los días restantes. Ver _shared/planBilling.ts.
-        const current = await readSubscription(rest, userId);
-        const result = subscriptionAfterApproval({ row: current, payment, now: Date.now() });
-        if (!result.ok) return await rejectPayment(result.error);
-        await rest("mp_subscriptions?on_conflict=user_id", {
-          method: "POST",
-          headers: { Prefer: "resolution=merge-duplicates" },
-          body: JSON.stringify({ user_id: userId, ...result.patch }),
-        });
-        const until = new Date(result.patch.current_period_end).toLocaleDateString("es-CO", {
-          day: "numeric", month: "long", timeZone: "America/Bogota",
-        });
-        const label = PLAN_LABEL[result.patch.plan];
-        await notify({
-          type: "payment_approved",
-          title: result.kind === "renew" ? `✨ Renovaste ${label}` : `✨ Tu plan ${label} está activo`,
-          body: result.kind === "upgrade" && result.carriedDays > 0
-            ? `Vigente hasta el ${until}. Sumamos ${result.carriedDays} días por lo que te quedaba de tu plan anterior.`
-            : `Vigente hasta el ${until}. Sin cobros automáticos: tú decides cuándo renovar.`,
-          link: "/dashboard",
-        });
-      }
-    } else if (status === "rejected" || status === "cancelled") {
-      if (!isCredits) {
-        // Un intento fallido no le quita a nadie un plan que sigue vigente.
-        const current = await readSubscription(rest, userId);
-        const next = statusAfterFailure(current, status, Date.now());
-        if (next) {
-          await rest(`mp_subscriptions?user_id=eq.${userId}`, {
-            method: "PATCH",
-            body: JSON.stringify({ status: next }),
-          });
-        }
-      }
-      await notify({
-        type: `payment_${status}`,
-        title: status === "rejected" ? "❌ Pago rechazado" : "Pago cancelado",
-        body: status === "rejected"
-          ? "No pudimos procesar tu pago con Mercado Pago. Puedes reintentar desde /planes."
-          : "Tu pago fue cancelado.",
-        link: "/planes",
-      });
-    }
-
-    await rest(`payment_webhook_events?provider=eq.mercadopago&external_event_id=eq.${encodeURIComponent(eventId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ processed: true, processed_at: new Date().toISOString(), error_code: null }),
+    // La misma lógica que la confirmación al volver del checkout (ver _shared/mpPayment.ts).
+    const outcome = await processMercadoPagoPayment(payment, {
+      rest: makeRest(SUPABASE_URL, SRK),
+      now: Date.now,
+      source: "webhook",
+      topic,
     });
     await logExecution({
-      functionName: "mp-webhook", triggerType: "webhook", status: "success",
-      startedAt, executionId, metadata: { status, kind: isCredits ? "credits" : "plan" },
+      functionName: "mp-webhook", triggerType: "webhook",
+      status: outcome.result === "rejected" ? "rejected"
+        : outcome.result === "already_applied" ? "duplicate" : "success",
+      startedAt, executionId,
+      errorCode: outcome.result === "rejected" ? outcome.error : undefined,
+      metadata: { status: String(payment.status ?? ""), result: outcome.result },
     });
     return new Response("ok", { status: 200, headers: corsHeaders });
   } catch (e) {

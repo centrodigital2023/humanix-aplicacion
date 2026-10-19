@@ -1,113 +1,185 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CheckCircle2, Sparkles, ArrowRight, Loader2, Clock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PLAN_CATALOG, longDateEs, type PlanKey } from "@/lib/plans";
+import { paymentIdFromSearch, safeReturnPath, type ConfirmResult } from "@/lib/paymentReturn";
+import { confirmMercadoPagoPayment } from "@/lib/payments.functions";
 
+// Regreso desde Mercado Pago. La página NO da un pago por hecho por lo que diga la URL: el servidor consulta el pago en
+// Mercado Pago, lo aplica si hace falta (misma lógica que el webhook) y aquí se muestra el resultado real.
 export const Route = createFileRoute("/pago/exito")({
-  head: () => ({ meta: [{ title: "Pago exitoso · Humanix" }] }),
+  head: () => ({ meta: [{ title: "Pago · Humanix" }, { name: "robots", content: "noindex" }] }),
   component: PagoExito,
 });
 
+const WA_SUPPORT =
+  "https://wa.me/573147444715?text=Hola%2C+mi+pago+en+Humanix+necesita+una+revisi%C3%B3n";
+
+type View =
+  | { kind: "checking" }
+  | { kind: "active"; plan: string; periodEnd: string | null }
+  | { kind: "credited"; credits: number | null }
+  | { kind: "pending" }
+  | { kind: "failed" }
+  | { kind: "review" }
+  | { kind: "unconfirmed" };
+
+function viewOf(result: ConfirmResult | undefined, loading: boolean, failed: boolean): View {
+  if (loading) return { kind: "checking" };
+  if (failed || !result) return { kind: "unconfirmed" };
+  if (!result.ok) return result.code === "review" ? { kind: "review" } : { kind: "unconfirmed" };
+  switch (result.state) {
+    case "active":
+      return { kind: "active", plan: result.plan, periodEnd: result.periodEnd };
+    case "credited":
+      return { kind: "credited", credits: result.credits };
+    case "pending":
+      return { kind: "pending" };
+    case "failed":
+      return { kind: "failed" };
+  }
+}
+
+function planLabel(plan: string): string {
+  return plan in PLAN_CATALOG ? PLAN_CATALOG[plan as PlanKey].label : plan;
+}
+
 function PagoExito() {
-  const search = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-  const tipo = search.get("tipo") ?? "plan";
-  const plan = search.get("plan") ?? "";
-  const creditos = search.get("creditos") ?? "";
-  const estado = search.get("estado") ?? "approved";
-  const from = search.get("from") ?? "/dashboard";
-  const isPending = estado === "pending";
+  const [search] = useState(
+    () => new URLSearchParams(typeof window !== "undefined" ? window.location.search : ""),
+  );
+  const tipo = search.get("tipo") === "creditos" ? "creditos" : "plan";
+  const from = safeReturnPath(search.get("from"));
+  const paymentId = paymentIdFromSearch(search);
+  const confirm = useServerFn(confirmMercadoPagoPayment);
+
+  const q = useQuery({
+    queryKey: ["mp-confirm", paymentId],
+    queryFn: () => confirm({ data: { paymentId: paymentId! } }),
+    enabled: !!paymentId,
+    retry: 1,
+    staleTime: Infinity,
+  });
+  const view = paymentId ? viewOf(q.data, q.isLoading, q.isError) : { kind: "unconfirmed" as const };
+  const confirmed = view.kind === "active" || view.kind === "credited";
 
   const [countdown, setCountdown] = useState(8);
-
   useEffect(() => {
-    if (isPending) return;
+    if (!confirmed) return;
     const t = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
           clearInterval(t);
-          window.location.href = decodeURIComponent(from);
+          window.location.assign(from);
           return 0;
         }
         return c - 1;
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [from, isPending]);
+  }, [confirmed, from]);
 
-  const PLAN_LABELS: Record<string, string> = {
-    essential_monthly: "Humanix Esencial",
-    pro_monthly: "Humanix Pro",
-    institution_monthly: "Humanix IPS Mejorado",
-  };
+  const retryTo = tipo === "creditos" ? "/creditos" : "/planes";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-emerald-500/5 to-biosensor/5 px-4">
-      <div className="max-w-md w-full text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {isPending ? (
-          <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3 inline-flex">
-            <Clock className="h-14 w-14 text-amber-500" />
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-3 inline-flex">
-            <CheckCircle2 className="h-14 w-14 text-emerald-500" />
-          </div>
-        )}
-
-        <div>
-          <h1 className="text-2xl font-bold mb-2">
-            {isPending ? "Pago en proceso" : "¡Pago exitoso!"}
-          </h1>
-          {tipo === "creditos" && !isPending && creditos && (
-            <p className="text-muted-foreground">
-              Se acreditaron{" "}
-              <strong className="text-biosensor">
-                {parseInt(creditos).toLocaleString("es-CO")} créditos IA
-              </strong>{" "}
-              en tu cuenta. Ya puedes usarlos.
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div
+        className="max-w-md w-full text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
+        aria-live="polite"
+      >
+        <div className="rounded-2xl bg-muted p-3 inline-flex">
+          {view.kind === "checking" && <Loader2 className="h-14 w-14 text-primary animate-spin" />}
+          {confirmed && <CheckCircle2 className="h-14 w-14 text-biosensor" />}
+          {(view.kind === "pending" || view.kind === "unconfirmed") && (
+            <Clock className="h-14 w-14 text-warn" />
           )}
-          {tipo === "plan" && !isPending && plan && (
-            <p className="text-muted-foreground">
-              Tu suscripción <strong>{PLAN_LABELS[plan] ?? plan}</strong> está activa. ¡Disfruta
-              todas las funciones premium!
-            </p>
-          )}
-          {isPending && (
-            <p className="text-muted-foreground">
-              Tu pago está siendo procesado por Mercado Pago. Te notificaremos cuando se confirme.
-              Esto puede tardar unos minutos.
-            </p>
+          {(view.kind === "failed" || view.kind === "review") && (
+            <AlertCircle className="h-14 w-14 text-destructive" />
           )}
         </div>
 
-        {!isPending && (
-          <>
-            <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
-              <Sparkles className="h-4 w-4 inline mr-1 text-biosensor" />
-              Redirigiendo en <strong>{countdown}s</strong>…
-            </div>
-            <div className="flex gap-3 justify-center flex-wrap">
-              <Button asChild variant="hero">
-                <Link to={decodeURIComponent(from) as "/"}>
-                  Ir al panel <ArrowRight className="h-4 w-4 ml-1.5" />
-                </Link>
-              </Button>
-              {tipo === "creditos" && (
-                <Button asChild variant="glass">
-                  <Link to={"/creditos" as "/"}>Ver mis créditos</Link>
-                </Button>
-              )}
-            </div>
-          </>
-        )}
+        <div>
+          <h1 className="text-2xl font-bold mb-2">
+            {view.kind === "checking" && "Confirmando tu pago…"}
+            {confirmed && "¡Pago confirmado!"}
+            {view.kind === "pending" && "Pago en proceso"}
+            {view.kind === "unconfirmed" && "Estamos confirmando tu pago"}
+            {view.kind === "failed" && "El pago no se completó"}
+            {view.kind === "review" && "Tu pago necesita una revisión"}
+          </h1>
+          <p className="text-muted-foreground">
+            {view.kind === "checking" && "Lo estamos verificando directamente con Mercado Pago."}
+            {view.kind === "active" && (
+              <>
+                Tu plan <strong className="text-foreground">{planLabel(view.plan)}</strong> está
+                activo
+                {view.periodEnd ? ` hasta el ${longDateEs(Date.parse(view.periodEnd))}` : ""}. Sin
+                cobros automáticos: tú decides cuándo renovar.
+              </>
+            )}
+            {view.kind === "credited" && (
+              <>
+                Se acreditaron{" "}
+                <strong className="text-biosensor">
+                  {view.credits ? `${view.credits.toLocaleString("es-CO")} créditos IA` : "tus créditos IA"}
+                </strong>{" "}
+                en tu cuenta. Ya puedes usarlos.
+              </>
+            )}
+            {view.kind === "pending" &&
+              "Mercado Pago aún lo está procesando (con PSE o efectivo puede tardar). Te avisaremos en la campana apenas se confirme."}
+            {view.kind === "unconfirmed" &&
+              "Todavía no tenemos la confirmación de Mercado Pago. Te avisaremos en la campana apenas llegue; no necesitas pagar de nuevo."}
+            {view.kind === "failed" &&
+              "Mercado Pago no aprobó el pago, así que no se activó nada. Puedes intentarlo otra vez."}
+            {view.kind === "review" &&
+              "El pago llegó, pero no coincide con lo que se compró. Escríbenos y lo resolvemos contigo."}
+          </p>
+        </div>
 
-        {isPending && (
-          <div className="flex gap-3 justify-center">
-            <Button asChild variant="glass">
-              <Link to="/dashboard">Ir al panel</Link>
-            </Button>
+        {confirmed && (
+          <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
+            <Sparkles className="h-4 w-4 inline mr-1 text-biosensor" />
+            Redirigiendo en <strong>{countdown}s</strong>…
           </div>
         )}
+
+        <div className="flex gap-3 justify-center flex-wrap">
+          {view.kind === "failed" ? (
+            <Button asChild variant="hero">
+              <Link to={retryTo as "/"}>Intentar de nuevo</Link>
+            </Button>
+          ) : (
+            <Button asChild variant={confirmed ? "hero" : "glass"}>
+              <Link to={from as "/"}>
+                Ir al panel <ArrowRight className="h-4 w-4 ml-1.5" />
+              </Link>
+            </Button>
+          )}
+          {view.kind === "credited" && (
+            <Button asChild variant="glass">
+              <Link to={"/creditos" as "/"}>Ver mis créditos</Link>
+            </Button>
+          )}
+          {view.kind === "review" && (
+            <Button asChild variant="hero">
+              <a href={WA_SUPPORT} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-4 w-4 mr-1.5" /> Escribir a soporte
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
