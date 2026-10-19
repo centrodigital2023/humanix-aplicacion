@@ -14,6 +14,7 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 ## Rules
 - UI only with shadcn/Radix/Tailwind; icons from lucide-react; semantic color tokens, no arbitrary hex in new code — keeps theming consistent.
 - Business logic as pure functions in `src/lib/` with Vitest tests — testable without the DB.
+- Search cards, map and agent results share validated directory rows from `searchProfessionalDetails`; display only server-authorized names so incomplete data and privacy rules stay consistent.
 - Async data via TanStack Query; live updates via Supabase Realtime, not polling.
 - Forms use react-hook-form + Zod — single validation path.
 - Roles live only in `public.user_roles`; check with `has_role()` / `is_staff()` — prevents privilege escalation.
