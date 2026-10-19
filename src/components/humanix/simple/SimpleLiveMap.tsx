@@ -24,6 +24,8 @@ export type MapPin = {
   trust?: string | null;
   /** «Disponible», «Ocupado»…: el estado ya redactado. */
   statusLabel?: string;
+  /** «Disponible · se conectó hace 3 horas»: disponible sigue encendido aunque el profesional no tenga Humanix abierto. */
+  presence?: string | null;
   raw?: unknown;
 };
 

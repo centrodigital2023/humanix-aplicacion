@@ -2,9 +2,17 @@
 // `public_professionals`; migraciones 20261012210000 y 20261013100000): aparece quien tiene el perfil PUBLICADO, la cuenta activa y no
 // bloqueada; con ubicación guardada sale como punto en el mapa (siempre aproximada, ~1 km); sin ella igual cuenta y sale en el buscador.
 // «Disponible» no lo oculta: lo marca (verde) o lo deja como «no disponible». Aquí solo se explica; la base es la que decide.
+// Familias e IPS/EPS solo ven perfiles con los datos validados del buscador (`searchProfessionalDetails`: nombre, ciudad y turnos), así que
+// la ciudad es un paso más. «Disponible» se guarda en el perfil: sigue encendido aunque se cierre Humanix o se apague el celular.
 
 export type VisibilityStatus = "visible" | "hidden" | "blocked";
-export type VisibilityStepKey = "active" | "published" | "location" | "available" | "offer";
+export type VisibilityStepKey =
+  | "active"
+  | "published"
+  | "city"
+  | "location"
+  | "available"
+  | "offer";
 export type VisibilityAction = "show" | "profile" | "availability" | "offer";
 
 export interface ProVisibilityInput {
@@ -14,6 +22,8 @@ export interface ProVisibilityInput {
   active: boolean | null;
   /** El equipo de Humanix puso la cuenta en revisión. */
   blocked: boolean;
+  /** Tiene ciudad base o de servicio (sin ella no pasa la validación del buscador ni del mapa). */
+  hasCity: boolean;
   /** Guardó su zona (`lat` y `lng`). */
   hasLocation: boolean;
   /** `professional_profiles.available`: el interruptor «Disponible». */
@@ -44,7 +54,7 @@ export interface ProVisibility {
 
 export function proVisibility(i: ProVisibilityInput): ProVisibility {
   const active = i.active !== false;
-  const searchable = i.published && active && !i.blocked;
+  const searchable = i.published && active && !i.blocked && i.hasCity;
   const onMap = searchable && i.hasLocation;
 
   const steps: VisibilityStep[] = [];
@@ -66,6 +76,15 @@ export function proVisibility(i: ProVisibilityInput): ProVisibility {
       action: i.published ? null : "profile",
     },
     {
+      key: "city",
+      label: "Ciudad de servicio",
+      done: i.hasCity,
+      hint: i.hasCity
+        ? null
+        : "Escribe tu ciudad en tu perfil: familias e IPS solo ven perfiles con ciudad.",
+      action: i.hasCity ? null : "profile",
+    },
+    {
       key: "location",
       label: "Zona guardada",
       done: i.hasLocation,
@@ -80,7 +99,7 @@ export function proVisibility(i: ProVisibilityInput): ProVisibility {
       done: i.available,
       hint: i.available
         ? null
-        : "Actívalo para recibir propuestas. Si lo apagas, sigues visible pero marcado como no disponible.",
+        : "Actívalo para recibir propuestas. Queda encendido aunque cierres Humanix o apagues el celular; si lo apagas, sigues visible pero marcado como no disponible.",
       action: i.available ? null : "availability",
     },
     {
@@ -125,7 +144,7 @@ export function proVisibility(i: ProVisibilityInput): ProVisibility {
       ? "Te ven en el mapa: disponible"
       : "Estás en el mapa, marcado como no disponible",
     detail: i.available
-      ? "Familias e instituciones cercanas te ven con tu zona aproximada y pueden proponerte servicios."
+      ? "Familias e instituciones cercanas te ven con tu zona aproximada y pueden proponerte servicios. Sigues disponible aunque cierres Humanix o apagues el celular; el punto «en vivo» solo aparece mientras tengas la app abierta."
       : "Familias e instituciones te ven, pero saben que ahora no estás disponible.",
     steps,
   };

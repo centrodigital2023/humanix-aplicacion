@@ -40,7 +40,7 @@ import {
   useLiveCounts,
   useMapDemand,
   useMapInstitutions,
-  useMapProfessionals,
+  useValidatedMapProfessionals,
 } from "@/hooks/use-live-map";
 import { counterItems, demandHeadline, EMPTY_COUNTS, withPosition } from "@/lib/liveMap";
 import { toCell } from "@/lib/presence";
@@ -398,7 +398,8 @@ export function LiveMarketplaceMap({
   const authed = !isGuest;
   const showPros = effectiveRole !== "professional";
   const showFamilies = authed && effectiveRole === "professional";
-  const prosQ = useMapProfessionals({ authed, enabled: showPros });
+  // Solo profesionales con los datos validados del buscador (nombre autorizado, ciudad y turnos): ver `lib/mapDirectory.ts`.
+  const prosQ = useValidatedMapProfessionals({ authed, enabled: showPros });
   const demandQ = useMapDemand({ authed, enabled: showFamilies });
   const instQ = useMapInstitutions({ authed });
   const countsQ = useLiveCounts({ authed });
@@ -507,7 +508,15 @@ export function LiveMarketplaceMap({
       }
       if (error) throw error;
       setAvailable(next);
-      toast.success(next ? "Estás visible en el mapa" : "Te ocultaste del mapa");
+      toast.success(
+        effectiveRole === "professional"
+          ? next
+            ? "Estás disponible. Sigue así aunque cierres Humanix o apagues el celular."
+            : "Quedaste como no disponible: sigues en el mapa, marcado así."
+          : next
+            ? "Estás visible en el mapa"
+            : "Te ocultaste del mapa",
+      );
       void qc.invalidateQueries({ queryKey: liveMapKeys.all });
     } catch (e: any) {
       toast.error("No se pudo actualizar disponibilidad");

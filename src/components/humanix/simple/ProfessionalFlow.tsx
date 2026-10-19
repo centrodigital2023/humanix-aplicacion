@@ -153,7 +153,9 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
       say("No se pudo cambiar. Intenta otra vez.");
       return;
     }
-    const msg = next ? "¡Listo! Ya te pueden encontrar." : "Listo. Descansa.";
+    const msg = next
+      ? "¡Listo! Ya te pueden encontrar, aunque apagues el celular."
+      : "Listo. Descansa.";
     setStatusMsg(msg);
     say(msg);
   };

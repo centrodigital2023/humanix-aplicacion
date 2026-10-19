@@ -379,10 +379,10 @@ export function withPosition<T extends Positioned>(
 const STATUS_RANK: Record<PinStatus, number> = { available: 0, busy: 1, unavailable: 2 };
 
 /** Más cercano primero (si hay punto de partida); sin posición, al final. Disponible antes que ocupado a igual distancia. */
-export function sortProfessionals(
-  list: MapProfessional[],
+export function sortProfessionals<T extends MapProfessional>(
+  list: readonly T[],
   origin: LatLng | null,
-): MapProfessional[] {
+): T[] {
   const km = (p: MapProfessional) =>
     origin && hasPosition(p) ? distanceKm(origin, p) : Number.POSITIVE_INFINITY;
   return [...list].sort(

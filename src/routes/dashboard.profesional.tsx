@@ -474,7 +474,7 @@ function ProDashboard() {
       setProfile((prev) => (prev ? { ...prev, available: next } : prev));
       toast.success(
         next
-          ? "¡Estás disponible! Las familias te ven disponible en el mapa."
+          ? "¡Estás disponible! Familias e IPS te ven disponible en el mapa, aunque cierres Humanix o apagues el celular."
           : "Cambiaste a no disponible: sigues en el mapa, marcado como no disponible.",
       );
     } catch {

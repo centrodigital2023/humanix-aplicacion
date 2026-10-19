@@ -8,10 +8,11 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2, LocateFixed, X } from "lucide-react";
 import { useSession } from "@/hooks/use-has-session";
-import { useMapDemand, useMapProfessionals } from "@/hooks/use-live-map";
+import { useMapDemand, useValidatedMapProfessionals } from "@/hooks/use-live-map";
 import { BOGOTA, distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
 import { demandHeadline, STATUS_LABEL, withPosition } from "@/lib/liveMap";
 import { trustBadgeText } from "@/lib/trustScore";
+import { presenceLine, proSubtitle } from "@/lib/mapDirectory";
 import { useVoice } from "./voice";
 import type { MapPin, SimpleLiveMapProps } from "./SimpleLiveMap";
 
@@ -88,12 +89,14 @@ export function SimpleLiveMap({
   const session = useSession();
 
   // Profesionales (familias e instituciones) u oferta abierta (profesionales). Solo se pide lo que ese mapa necesita.
-  const prosQ = useMapProfessionals({ authed: session.has, enabled: mode === "pros" });
+  // Los profesionales llegan con los datos validados del buscador: sin nombre, ciudad o turnos no hay pin.
+  const prosQ = useValidatedMapProfessionals({ authed: session.has, enabled: mode === "pros" });
   const demandQ = useMapDemand({ authed: session.has, enabled: mode === "offers" && session.has });
 
   const pins = useMemo<MapPin[] | null>(() => {
     if (mode === "pros") {
       if (!prosQ.data) return null;
+      const now = Date.now();
       return withPosition(prosQ.data).map(
         (p) =>
           ({
@@ -102,7 +105,7 @@ export function SimpleLiveMap({
             lng: p.lng,
             emoji: "👩‍⚕️",
             title: p.name,
-            subtitle: p.specialty ?? "Cuidado en casa",
+            subtitle: proSubtitle(p),
             avatarUrl: p.avatarUrl,
             price: p.hourlyRate ? `${COP(p.hourlyRate)} / hora` : null,
             rating: p.rating,
@@ -111,6 +114,7 @@ export function SimpleLiveMap({
             live: p.live,
             trust: p.trust.score != null ? trustBadgeText(p.trust) : null,
             statusLabel: STATUS_LABEL[p.status],
+            presence: presenceLine(p, now),
             raw: p,
           }) satisfies MapPin,
       );
@@ -316,6 +320,9 @@ export function SimpleLiveMap({
                 {me && <span>📍 {formatKm(distanceKm(me, selected))}</span>}
                 {selected.live && <span className="text-emerald-700">📡 En vivo</span>}
               </p>
+              {selected.presence && !selected.live && (
+                <p className="mt-1 text-sm text-gray-600">{selected.presence}</p>
+              )}
             </div>
           </div>
           {selected.price && <p className="mt-3 text-2xl font-bold">{selected.price}</p>}

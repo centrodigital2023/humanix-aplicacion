@@ -30,6 +30,12 @@ import {
   type MapProfessionalRow,
 } from "@/lib/liveMap";
 import { PRESENCE_TTL_MS, nextLiveExpiry, toCell } from "@/lib/presence";
+import {
+  directoryIdsKey,
+  validatedMapProfessionals,
+  type ValidatedMapProfessional,
+} from "@/lib/mapDirectory";
+import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -42,6 +48,8 @@ export const liveMapKeys = {
   demand: (o: string) => [...ROOT, "demand", o] as const,
   institutions: [...ROOT, "institutions"] as const,
   counts: [...ROOT, "counts"] as const,
+  /** Bajo la misma raíz: el aviso en vivo del mapa también recarga los datos validados del directorio. */
+  directory: (ids: string) => [...ROOT, "directory", ids] as const,
 };
 
 /** Códigos que no son un fallo para la persona: sin sesión, sin permiso o la función aún no está en la base. */
@@ -190,6 +198,34 @@ export function useMapProfessionals(opts: MapQueryOptions = {}) {
   });
   useExpiryRefetch(query.data, query.refetch);
   return query;
+}
+
+/**
+ * Profesionales del mapa para familias e IPS/EPS, solo con los datos validados del buscador (`searchProfessionalDetails`): nombre
+ * autorizado, ciudad y turnos. Quien no los tiene no aparece (ver `lib/mapDirectory.ts`). Se actualiza con el mismo aviso en vivo.
+ */
+export function useValidatedMapProfessionals(opts: MapQueryOptions = {}) {
+  const enabled = opts.enabled ?? true;
+  const prosQ = useMapProfessionals(opts);
+  const pros = prosQ.data;
+  const idsKey = useMemo(() => (pros ? directoryIdsKey(pros) : ""), [pros]);
+  const dirQ = useQuery({
+    queryKey: liveMapKeys.directory(idsKey),
+    enabled: enabled && idsKey !== "",
+    staleTime: 20_000,
+    queryFn: () => {
+      const ids = idsKey.split(",");
+      return fetchPublicProfessionals({ ids, limit: ids.length });
+    },
+  });
+  const data = useMemo<ValidatedMapProfessional[] | undefined>(() => {
+    if (!pros) return undefined;
+    if (pros.length === 0) return [];
+    // Si el directorio falla no se muestra nada sin validar.
+    if (dirQ.isError) return [];
+    return dirQ.data ? validatedMapProfessionals(pros, dirQ.data) : undefined;
+  }, [pros, dirQ.data, dirQ.isError]);
+  return { data, isLoading: data === undefined && enabled, isError: prosQ.isError };
 }
 
 /** Familias e instituciones con ofertas u horas abiertas, un pin por quien publica. Solo para profesionales y personal. */

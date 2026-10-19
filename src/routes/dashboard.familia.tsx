@@ -6,7 +6,6 @@ import {
   Search,
   LayoutDashboard,
   FileText,
-  Users,
   Sparkles,
   Calendar,
   ShieldCheck,
@@ -14,7 +13,6 @@ import {
   Crown,
   Phone,
   MapPin,
-  Star,
   Inbox,
   ChevronRight,
   Activity,
@@ -43,16 +41,13 @@ import { TrustedTeamCard } from "@/components/humanix/care/TrustedTeamCard";
 import { useActiveServices } from "@/hooks/use-care-loop";
 import { ClinicalMonitor } from "@/components/humanix/ClinicalMonitor";
 import { WearableConnections } from "@/components/humanix/WearableConnections";
-import { formatKm } from "@/lib/geo";
-import { kmTo, sortProfessionals, STATUS_LABEL } from "@/lib/liveMap";
-import { trustBadgeText } from "@/lib/trustScore";
-import { useMapProfessionals } from "@/hooks/use-live-map";
 import { FamilyMapVisibility } from "@/components/humanix/family/FamilyMapVisibility";
 import { ServiceOffersFeed } from "@/components/humanix/service/ServiceOffersFeed";
 import { toast } from "sonner";
 import { useAppUser } from "@/hooks/use-app-user";
 import { MyBookings } from "@/components/humanix/simple/MyBookings";
 import { LiveNearby } from "@/components/humanix/simple/LiveNearby";
+import { NearbyProsList } from "@/components/humanix/NearbyProsList";
 import { FamilyQuickActions } from "@/components/humanix/simple/FamilyQuickActions";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { FamilySmartCenter } from "@/components/humanix/family/FamilySmartCenter";
@@ -127,12 +122,6 @@ function FamilyDashboard() {
     familyCoords.lat != null && familyCoords.lng != null
       ? { lat: familyCoords.lat, lng: familyCoords.lng }
       : null;
-  const prosQ = useMapProfessionals({ authed: !!user, enabled: !!user });
-  const nearbyPros = useMemo(
-    () => sortProfessionals(prosQ.data ?? [], origin).slice(0, 8),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [prosQ.data, familyCoords.lat, familyCoords.lng],
-  );
 
   useEffect(() => {
     if (!user) return;
@@ -551,91 +540,9 @@ function FamilyDashboard() {
               <ClinicalMonitor patientId={user.id} showDeviceGuide={false} compact />
             </section>
 
-            {/* Profesionales cercanos */}
+            {/* Profesionales cercanos: la misma fuente validada del mapa (nombre, ciudad y turnos), en vivo */}
             <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display text-base font-semibold flex items-center gap-2">
-                  <Users className="h-4 w-4 text-fuchsia-neural" /> Profesionales cercanos
-                </h2>
-                <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">
-                  Ver todos →
-                </Link>
-              </div>
-              {nearbyPros.length === 0 ? (
-                <Card className="p-6 text-center text-sm text-muted-foreground">
-                  Aún no hay profesionales publicados en el mapa.
-                </Card>
-              ) : (
-                <div className="grid gap-2">
-                  {nearbyPros.map((p) => {
-                    const km = kmTo(origin, p);
-                    return (
-                      <Card key={`np-${p.id}`} className="p-3 flex items-center gap-3">
-                        <div className="relative shrink-0">
-                          {p.avatarUrl ? (
-                            <img
-                              src={p.avatarUrl}
-                              alt=""
-                              className="h-10 w-10 rounded-full object-cover border border-border"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
-                              {p.name.slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                          <span
-                            title={STATUS_LABEL[p.status]}
-                            className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${
-                              p.status === "available"
-                                ? p.live
-                                  ? "bg-ok animate-pulse"
-                                  : "bg-ok"
-                                : p.status === "busy"
-                                  ? "bg-warn"
-                                  : "bg-muted-foreground/40"
-                            }`}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{p.name}</p>
-                          <p className="text-[11px] text-muted-foreground truncate">
-                            {STATUS_LABEL[p.status]}
-                            {p.live ? " · en vivo" : ""} · {p.specialty ?? "Salud"} ·{" "}
-                            {p.city ?? "—"}
-                            {p.rating != null && (
-                              <>
-                                {" "}
-                                · <Star className="h-2.5 w-2.5 inline fill-copper text-copper" />{" "}
-                                {p.rating.toFixed(1)}
-                              </>
-                            )}
-                            {p.trust.score != null && <> · Confianza {trustBadgeText(p.trust)}</>}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          {km != null ? (
-                            <span className="text-xs font-semibold text-biosensor">
-                              ~{formatKm(km)}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">—</span>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="block mt-1 text-xs h-7"
-                            asChild
-                          >
-                            <Link to="/profesional/$proId" params={{ proId: p.id }}>
-                              Ver
-                            </Link>
-                          </Button>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+              <NearbyProsList origin={origin} />
               {nearby.length > 0 && (
                 <p className="text-[11px] text-muted-foreground mt-3">
                   {nearby.length} solicitud{nearby.length !== 1 ? "es" : ""} activa

@@ -42,6 +42,7 @@ import { EnhancedReportsWithCRMModule } from "@/components/humanix/EnhancedRepor
 import { TalentTab, type ProSummary } from "@/components/humanix/TalentTab";
 import { ServiceOffersFeed } from "@/components/humanix/service/ServiceOffersFeed";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
+import { NearbyProsList } from "@/components/humanix/NearbyProsList";
 import { EnhancedInstitutionOperations } from "@/components/humanix/EnhancedInstitutionOperations";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
@@ -733,6 +734,9 @@ function InstitutionDashboard() {
 
             {/* Contadores reales en vivo: profesionales disponibles, en vivo y ocupados, e instituciones con ofertas abiertas */}
             <LivePulseBar role="institution" />
+
+            {/* Profesionales disponibles: misma fuente validada que el mapa (pestaña Talento), en vivo */}
+            <NearbyProsList title="Profesionales disponibles" limit={6} />
 
             {/* SOS: alertas de mis servicios y botón para pedir ayuda en uno de ellos (solo aparece la lista si hay alguna) */}
             <SosAlertsPanel userId={user.id} />

@@ -10,6 +10,7 @@ import {
   type VisibilityAction,
   type VisibilityStatus,
 } from "@/lib/proVisibility";
+import { proCity } from "@/lib/publicProfessionals";
 import { cn } from "@/lib/utils";
 
 export interface ProMapVisibilityProfile {
@@ -19,6 +20,8 @@ export interface ProMapVisibilityProfile {
   lat: number | null;
   lng: number | null;
   available: boolean | null;
+  home_city?: string | null;
+  service_cities?: string[] | null;
 }
 
 const ACTION_LABEL: Record<VisibilityAction, string> = {
@@ -53,6 +56,10 @@ export function ProMapVisibility({
     published: !!profile.published,
     active: profile.active,
     blocked: !!profile.blocked,
+    hasCity: !!proCity({
+      home_city: profile.home_city ?? null,
+      service_cities: profile.service_cities ?? null,
+    }),
     hasLocation: profile.lat != null && profile.lng != null,
     available: !!profile.available,
     hasVisibleServiceOffer: (offers.data ?? []).some((o) => o.visible),

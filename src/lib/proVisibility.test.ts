@@ -5,6 +5,7 @@ const full: ProVisibilityInput = {
   published: true,
   active: true,
   blocked: false,
+  hasCity: true,
   hasLocation: true,
   available: true,
   hasVisibleServiceOffer: true,
@@ -12,13 +13,13 @@ const full: ProVisibilityInput = {
 const v = (over: Partial<ProVisibilityInput>) => proVisibility({ ...full, ...over });
 
 describe("¿me ven en el mapa?", () => {
-  it("todo en orden: visible, disponible, con los 4 pasos completos", () => {
+  it("todo en orden: visible, disponible, con los 5 pasos completos", () => {
     const r = v({});
     expect(r.status).toBe("visible");
     expect(r.onMap).toBe(true);
     expect(r.searchable).toBe(true);
     expect(r.headline).toBe("Te ven en el mapa: disponible");
-    expect(visibilityProgress(r)).toEqual({ done: 4, total: 4 });
+    expect(visibilityProgress(r)).toEqual({ done: 5, total: 5 });
     expect(r.steps.every((s) => s.done && s.hint === null && s.action === null)).toBe(true);
   });
 
@@ -56,7 +57,7 @@ describe("¿me ven en el mapa?", () => {
     expect(r.status).toBe("hidden");
     expect(r.searchable).toBe(false);
     expect(r.steps[0]).toMatchObject({ key: "active", done: false, action: "show" });
-    expect(visibilityProgress(r)).toEqual({ done: 4, total: 5 });
+    expect(visibilityProgress(r)).toEqual({ done: 5, total: 6 });
     // Nulo se lee como activo (igual que COALESCE(active, true) en la base).
     expect(v({ active: null }).status).toBe("visible");
     expect(v({ active: null }).steps.some((s) => s.key === "active")).toBe(false);
@@ -75,17 +76,40 @@ describe("¿me ven en el mapa?", () => {
     const r = v({ hasVisibleServiceOffer: false });
     expect(r.status).toBe("visible");
     expect(r.steps.find((s) => s.key === "offer")).toMatchObject({ done: false, action: "offer" });
-    expect(visibilityProgress(r)).toEqual({ done: 3, total: 4 });
+    expect(visibilityProgress(r)).toEqual({ done: 4, total: 5 });
   });
 
   it("perfil nuevo: todo pendiente y cada paso apunta a una acción distinta", () => {
     const r = v({
       published: false,
+      hasCity: false,
       hasLocation: false,
       available: false,
       hasVisibleServiceOffer: false,
     });
-    expect(visibilityProgress(r)).toEqual({ done: 0, total: 4 });
-    expect(r.steps.map((s) => s.action)).toEqual(["profile", "profile", "availability", "offer"]);
+    expect(visibilityProgress(r)).toEqual({ done: 0, total: 5 });
+    expect(r.steps.map((s) => s.action)).toEqual([
+      "profile",
+      "profile",
+      "profile",
+      "availability",
+      "offer",
+    ]);
+  });
+
+  it("sin ciudad: publicado pero invisible para familias e IPS, y lo explica", () => {
+    const r = v({ hasCity: false });
+    expect(r.status).toBe("hidden");
+    expect(r.onMap).toBe(false);
+    expect(r.searchable).toBe(false);
+    expect(r.steps.find((s) => s.key === "city")).toMatchObject({ done: false, action: "profile" });
+    expect(r.steps.find((s) => s.key === "city")?.hint).toMatch(/ciudad/);
+  });
+
+  it("«Disponible» se explica como persistente aunque se apague el celular", () => {
+    expect(v({}).detail).toMatch(/apagues el celular/);
+    expect(v({ available: false }).steps.find((s) => s.key === "available")?.hint).toMatch(
+      /aunque cierres Humanix/,
+    );
   });
 });
