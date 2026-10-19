@@ -85,6 +85,7 @@ import { Route as SuperadminPublicidadRouteImport } from './routes/superadmin.pu
 import { Route as SuperadminResenasRouteImport } from './routes/superadmin.resenas'
 import { Route as SuperadminTestimoniosRouteImport } from './routes/superadmin.testimonios'
 import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -470,6 +471,11 @@ const SuperadminValidacionRoute = SuperadminValidacionRouteImport.update({
   path: '/validacion',
   getParentRoute: () => SuperadminRoute,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardFamiliaOnboardingRoute =
   DashboardFamiliaOnboardingRouteImport.update({
     id: '/onboarding',
@@ -570,6 +576,7 @@ export interface FileRoutesByFullPath {
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -650,6 +657,7 @@ export interface FileRoutesByTo {
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/dashboard': typeof DashboardIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -733,6 +741,7 @@ export interface FileRoutesById {
   '/superadmin/validacion': typeof SuperadminValidacionRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -817,6 +826,7 @@ export interface FileRouteTypes {
     | '/superadmin/validacion'
     | '/dashboard/'
     | '/superadmin/'
+    | '/.lovable/oauth/consent'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -897,6 +907,7 @@ export interface FileRouteTypes {
     | '/superadmin/validacion'
     | '/dashboard'
     | '/superadmin'
+    | '/.lovable/oauth/consent'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -979,6 +990,7 @@ export interface FileRouteTypes {
     | '/superadmin/validacion'
     | '/dashboard/'
     | '/superadmin/'
+    | '/.lovable/oauth/consent'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -1043,6 +1055,7 @@ export interface RootRouteChildren {
   PagoFalloRoute: typeof PagoFalloRoute
   ProfesionalProIdRoute: typeof ProfesionalProIdRoute
   ServicioBookingIdRoute: typeof ServicioBookingIdRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
 }
@@ -1581,6 +1594,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperadminValidacionRouteImport
       parentRoute: typeof SuperadminRoute
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/familia/onboarding': {
       id: '/dashboard/familia/onboarding'
       path: '/onboarding'
@@ -1760,6 +1780,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagoFalloRoute: PagoFalloRoute,
   ProfesionalProIdRoute: ProfesionalProIdRoute,
   ServicioBookingIdRoute: ServicioBookingIdRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
 }

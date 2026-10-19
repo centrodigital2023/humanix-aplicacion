@@ -5,6 +5,7 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 import { loadEnv } from "vite";
 import path from "path";
 
@@ -17,6 +18,7 @@ const rootDir = import.meta.dirname;
 
 export default defineConfig({
   vite: {
+    plugins: [mcpPlugin()],
     resolve: {
       alias: {
         // Pin entities to the hoisted v4.5.0 copy; nested v7 breaks SSR.
