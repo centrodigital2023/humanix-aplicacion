@@ -114,6 +114,19 @@ export function proCity(
   return first ?? null;
 }
 
+/** Datos mínimos para mostrar una tarjeta del buscador, sin sustituir datos faltantes. */
+export function searchProfessionalDetails(
+  p: Pick<PublicProfessional, "full_name" | "home_city" | "service_cities" | "total_jobs">,
+): { name: string; city: string; turns: number } | null {
+  const name = (p.full_name ?? "").trim();
+  const city = proCity(p);
+  const genericNames = /^(profesional(?: humanix| de salud)?|usuario|humanix)$/i;
+  if (!name || genericNames.test(name) || !city || /^colombia$/i.test(city)) return null;
+  const turns = p.total_jobs;
+  if (turns == null || !Number.isInteger(turns) || turns < 0) return null;
+  return { name, city, turns };
+}
+
 /** Cuántos profesionales distintos hay entre varias listas (uno puede coincidir con más de un término de búsqueda). */
 export function uniqueProfessionalCount(
   lists: ReadonlyArray<ReadonlyArray<{ user_id: string }>>,

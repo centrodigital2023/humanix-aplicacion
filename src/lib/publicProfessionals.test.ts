@@ -5,6 +5,7 @@ import {
   PUBLIC_PROS_MAX_LIMIT,
   isEmptyIdLookup,
   proCity,
+  searchProfessionalDetails,
   publicProfessionalsArgs,
   uniqueProfessionalCount,
 } from "./publicProfessionals";
@@ -108,6 +109,37 @@ describe("proCity", () => {
     expect(proCity({ home_city: " Bogotá ", service_cities: ["Soacha"] })).toBe("Bogotá");
     expect(proCity({ home_city: null, service_cities: ["", " Cali "] })).toBe("Cali");
     expect(proCity({ home_city: "  ", service_cities: null })).toBeNull();
+  });
+});
+
+describe("searchProfessionalDetails", () => {
+  const complete = { full_name: " Ana Pérez ", home_city: " Bogotá ", service_cities: null, total_jobs: 12 };
+
+  it("conserva el nombre autorizado, la ciudad real y los turnos registrados", () => {
+    expect(searchProfessionalDetails(complete)).toEqual({ name: "Ana Pérez", city: "Bogotá", turns: 12 });
+    expect(searchProfessionalDetails({ ...complete, full_name: "Ana P." })?.name).toBe("Ana P.");
+  });
+
+  it("oculta perfiles sin nombre o con nombre genérico", () => {
+    for (const full_name of [null, " ", "Profesional Humanix", " profesional ", "Profesional de salud"]) {
+      expect(searchProfessionalDetails({ ...complete, full_name })).toBeNull();
+    }
+  });
+
+  it("oculta perfiles sin ciudad y no usa el país como ciudad", () => {
+    expect(searchProfessionalDetails({ ...complete, home_city: null })).toBeNull();
+    expect(searchProfessionalDetails({ ...complete, home_city: "Colombia" })).toBeNull();
+    expect(searchProfessionalDetails({ ...complete, home_city: null, service_cities: ["", "Cali"] })?.city).toBe("Cali");
+  });
+
+  it("no inventa cero turnos cuando falta el dato", () => {
+    for (const total_jobs of [null, -1, 1.5, NaN, Infinity]) {
+      expect(searchProfessionalDetails({ ...complete, total_jobs })).toBeNull();
+    }
+  });
+
+  it("mantiene profesionales nuevos con cero turnos registrados", () => {
+    expect(searchProfessionalDetails({ ...complete, total_jobs: 0 })?.turns).toBe(0);
   });
 });
 

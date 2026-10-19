@@ -31,12 +31,10 @@ import { BookNowButton } from "@/components/humanix/BookNowButton";
 import { distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { buildSeo } from "@/lib/seo";
-import { usePlan } from "@/hooks/use-plan";
 import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
-import { proCity } from "@/lib/publicProfessionals";
+import { searchProfessionalDetails } from "@/lib/publicProfessionals";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
-import { PlanNameGate } from "@/components/humanix/PlanNameGate";
 
 type SearchParams = {
   tab?: "profesionales" | "ofertas";
@@ -101,14 +99,14 @@ type Pro = {
   avg_rating: number | null;
   verified: boolean | null;
   rethus_verified: boolean | null;
-  total_jobs: number | null;
+  total_jobs: number;
   ai_summary: string | null;
   available: boolean | null;
   reserved_until: string | null;
   active: boolean | null;
   lat: number | null;
   lng: number | null;
-  profiles: { full_name: string | null; city: string | null; avatar_url: string | null } | null;
+  profiles: { full_name: string; city: string; avatar_url: string | null };
 };
 
 type Offer = {
@@ -157,10 +155,8 @@ function BuscarPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigate = Route.useNavigate() as any;
 
-  // Plan check — silencioso, no redirige si no está logueado
+  // El servidor decide si entrega el nombre completo o abreviado según la sesión.
   const { user: appUser } = useAppUser({ requireAuth: false });
-  const { can: canPlan } = usePlan(appUser?.id ?? null);
-  const canViewNames = canPlan("view_full_names");
 
   const [pros, setPros] = useState<Pro[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -207,7 +203,10 @@ function BuscarPage() {
         minRating: search.rating,
         limit: 60,
       });
-      rows = found.map((r) => ({
+      rows = found.flatMap((r) => {
+        const details = searchProfessionalDetails(r);
+        if (!details) return [];
+        return [{
         user_id: r.user_id,
         specialty: r.specialty,
         years_experience: r.years_experience,
@@ -219,15 +218,16 @@ function BuscarPage() {
         avg_rating: r.avg_rating,
         verified: r.verified,
         rethus_verified: r.rethus_verified,
-        total_jobs: r.total_jobs,
+        total_jobs: details.turns,
         ai_summary: r.ai_summary,
         available: r.available,
         reserved_until: r.reserved_until,
         active: r.active,
         lat: r.lat,
         lng: r.lng,
-        profiles: { full_name: r.full_name, city: proCity(r), avatar_url: r.avatar_url },
-      }));
+        profiles: { full_name: details.name, city: details.city, avatar_url: r.avatar_url },
+        }];
+      });
     } catch (error) {
       console.error(error);
       setPros([]);
@@ -247,6 +247,7 @@ function BuscarPage() {
     setLoading(false);
   }, [
     tab,
+    appUser?.id,
     search.q,
     search.specialty,
     search.city,
@@ -342,7 +343,7 @@ function BuscarPage() {
         if (loading) return "Cargando resultados…";
         const p = pros.map(
           (x) =>
-            `Profesional ${x.user_id}: ${x.specialty ?? "Salud"} · ${x.profiles?.city ?? "Colombia"}${x.rethus_verified ? " · RETHUS" : ""}${x.available ? " · disponible" : ""}`,
+            `Profesional ${x.user_id}: ${x.profiles.full_name} · ${x.specialty ?? "Salud"} · ${x.profiles.city} · ${x.total_jobs} turnos${x.rethus_verified ? " · RETHUS" : ""}${x.available ? " · disponible" : ""}`,
         );
         const o = offers.map((x) => `Oferta ${x.id}: ${x.title} · ${x.city} · ${COP(x.amount)}`);
         const all = [...p, ...o];
@@ -626,16 +627,17 @@ function BuscarPage() {
                 height={520}
                 points={
                   tab === "profesionales"
-                    ? pros
-                        .filter((p) => p.lat && p.lng)
-                        .map<MapPoint>((p) => ({
+                    ? pros.flatMap<MapPoint>((p) => {
+                          if (p.lat == null || p.lng == null) return [];
+                          return [{
                           id: p.user_id,
-                          lat: p.lat!,
-                          lng: p.lng!,
-                          title: p.profiles?.full_name ?? "Profesional",
-                          subtitle: p.specialty ?? undefined,
+                          lat: p.lat,
+                          lng: p.lng,
+                          title: p.profiles.full_name,
+                          subtitle: `${p.profiles.city} · ${p.total_jobs} turnos`,
                           status: deriveProStatus(p) === "reserved" ? "reserved" : "available",
-                        }))
+                          }];
+                        })
                     : offers
                         .filter((o) => o.lat && o.lng)
                         .map<MapPoint>((o) => ({
@@ -662,7 +664,6 @@ function BuscarPage() {
                       key={`pro-${p.user_id}`}
                       pro={p}
                       userLoc={userLoc}
-                      canViewNames={canViewNames}
                     />
                   ))}
                 </div>
@@ -673,7 +674,6 @@ function BuscarPage() {
                       key={`pro-${p.user_id}`}
                       pro={p}
                       userLoc={userLoc}
-                      canViewNames={canViewNames}
                     />
                   ))}
                 </div>
@@ -708,14 +708,12 @@ function BuscarPage() {
 function ProCard({
   pro,
   userLoc,
-  canViewNames,
 }: {
   pro: Pro;
   userLoc: LatLng | null;
-  canViewNames: boolean;
 }) {
-  const name = pro.profiles?.full_name ?? "Profesional Humanix";
-  const city = pro.profiles?.city ?? pro.service_cities?.[0] ?? "Colombia";
+  const name = pro.profiles.full_name;
+  const city = pro.profiles.city;
   const rating = Number(pro.avg_rating ?? 0);
   const status = deriveProStatus(pro);
   const km =
@@ -738,13 +736,9 @@ function ProCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold truncate">
-              <PlanNameGate
-                name={pro.profiles?.full_name ?? null}
-                canView={canViewNames}
-                fallback="Profesional Humanix"
-              />
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="min-w-0 break-words font-semibold">
+              {name}
             </h3>
             {pro.verified && <CheckCircle2 className="h-4 w-4 text-biosensor shrink-0" />}
             <StatusBadge status={status} reservedUntil={pro.reserved_until} />
@@ -755,7 +749,7 @@ function ProCard({
           <div className="mt-1.5 flex items-center gap-2">
             <Stars value={rating} />
             <span className="text-xs text-muted-foreground">
-              {rating > 0 ? rating.toFixed(1) : "Nuevo"} · {pro.total_jobs ?? 0} turnos
+              {rating > 0 ? rating.toFixed(1) : "Nuevo"} · {pro.total_jobs} turnos
             </span>
           </div>
         </div>
@@ -959,14 +953,12 @@ function OfferCard({ offer, userLoc }: { offer: Offer; userLoc: LatLng | null })
 function ProCardRow({
   pro,
   userLoc,
-  canViewNames,
 }: {
   pro: Pro;
   userLoc: LatLng | null;
-  canViewNames: boolean;
 }) {
-  const name = pro.profiles?.full_name ?? "Profesional Humanix";
-  const city = pro.profiles?.city ?? pro.service_cities?.[0] ?? "Colombia";
+  const name = pro.profiles.full_name;
+  const city = pro.profiles.city;
   const rating = Number(pro.avg_rating ?? 0);
   const status = deriveProStatus(pro);
   const km =
@@ -989,12 +981,7 @@ function ProCardRow({
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <PlanNameGate
-            name={pro.profiles?.full_name ?? null}
-            canView={canViewNames}
-            fallback="Profesional Humanix"
-            className="font-semibold truncate"
-          />
+          <span className="min-w-0 break-words font-semibold">{name}</span>
           {pro.verified && <CheckCircle2 className="h-3.5 w-3.5 text-biosensor shrink-0" />}
           <StatusBadge status={status} reservedUntil={pro.reserved_until} />
         </div>
@@ -1009,7 +996,7 @@ function ProCardRow({
         <div className="mt-1 flex items-center gap-2">
           <Stars value={rating} />
           <span className="text-xs text-muted-foreground">
-            {rating > 0 ? rating.toFixed(1) : "Nuevo"} · {pro.total_jobs ?? 0} turnos
+            {rating > 0 ? rating.toFixed(1) : "Nuevo"} · {pro.total_jobs} turnos
           </span>
         </div>
       </div>
