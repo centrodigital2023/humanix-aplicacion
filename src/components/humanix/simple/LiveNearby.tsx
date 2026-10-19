@@ -1,7 +1,8 @@
 // Sección "Cerca de ti, en vivo" para cada perfil.
 //  - Familias: profesionales → "Pedir" abre la reserva en un toque.
 //  - IPS/EPS: profesionales → "Ver perfil".
-//  - Profesionales: ofertas abiertas → "Ver oferta" + compartir mi ubicación en vivo.
+//  - Profesionales: familias e instituciones con ofertas abiertas → "Ver oferta" (las instituciones sin turnos, atenuadas) +
+//    compartir mi ubicación en vivo; las solicitudes sin ubicación van en una lista debajo del mapa.
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { AppUser } from "@/hooks/use-app-user";
@@ -11,6 +12,7 @@ import type { MapDemand, MapProfessional } from "@/lib/liveMap";
 import { whatsappLink } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
 import { SimpleLiveMap, type MapPin } from "./SimpleLiveMap";
+import { UnplacedDemandList } from "@/components/humanix/UnplacedDemandList";
 import { QuickBooking, type BookablePro } from "./QuickBooking";
 import { useVoice } from "./voice";
 
@@ -83,6 +85,7 @@ export function LiveNearby({ audience, user }: { audience: Audience; user: AppUs
             else navigate({ to: "/dashboard/profesional" });
           }}
         />
+        {user && isPro && <UnplacedDemandList />}
       </div>
     );
   }

@@ -8,11 +8,16 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2, LocateFixed, X } from "lucide-react";
 import { useSession } from "@/hooks/use-has-session";
-import { useMapDemand, useValidatedMapProfessionals } from "@/hooks/use-live-map";
+import {
+  useMapDemand,
+  useMapInstitutions,
+  useValidatedMapProfessionals,
+} from "@/hooks/use-live-map";
 import { BOGOTA, distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
-import { demandHeadline, STATUS_LABEL, withPosition } from "@/lib/liveMap";
+import { demandHeadline, STATUS_LABEL, withPosition, type MapDemand } from "@/lib/liveMap";
 import { trustBadgeText } from "@/lib/trustScore";
 import { presenceLine, proSubtitle } from "@/lib/mapDirectory";
+import { displayCity, idleInstitutions } from "@/lib/proMapDemand";
 import { useVoice } from "./voice";
 import type { MapPin, SimpleLiveMapProps } from "./SimpleLiveMap";
 
@@ -73,6 +78,26 @@ function ClickAway({ onClick }: { onClick: () => void }) {
   return null;
 }
 
+/** Familias e instituciones con solicitud abierta y ubicación (las demás van a la lista «sin ubicación»). */
+function demandPins(list: MapDemand[]): MapPin[] {
+  return withPosition(list).map(
+    (d) =>
+      ({
+        // Con oferta, el pin abre esa oferta; con horas sueltas, abre las oportunidades.
+        id: d.offerId ?? d.id,
+        lat: d.lat,
+        lng: d.lng,
+        emoji: d.kind === "institution" ? "🏥" : "🏠",
+        title: d.kind === "institution" ? d.name : `Familia ${d.name}`,
+        subtitle: demandHeadline(d),
+        price: d.topHourly ? `Hasta ${COP(d.topHourly)} / hora` : null,
+        badge: d.topHourly ? `${Math.round(d.topHourly / 1000)}k` : undefined,
+        trust: d.trust.score != null ? trustBadgeText(d.trust) : null,
+        raw: d,
+      }) satisfies MapPin,
+  );
+}
+
 export function SimpleLiveMap({
   mode,
   height = 420,
@@ -92,6 +117,8 @@ export function SimpleLiveMap({
   // Los profesionales llegan con los datos validados del buscador: sin nombre, ciudad o turnos no hay pin.
   const prosQ = useValidatedMapProfessionals({ authed: session.has, enabled: mode === "pros" });
   const demandQ = useMapDemand({ authed: session.has, enabled: mode === "offers" && session.has });
+  // Instituciones visibles sin turnos abiertos: también salen en el mapa del profesional (atenuadas). Las familias, solo con solicitud.
+  const instQ = useMapInstitutions({ authed: session.has, enabled: mode === "offers" && session.has });
 
   const pins = useMemo<MapPin[] | null>(() => {
     if (mode === "pros") {
@@ -121,23 +148,23 @@ export function SimpleLiveMap({
     }
     if (!session.has) return session.ready ? [] : null;
     if (!demandQ.data) return null;
-    return withPosition(demandQ.data).map(
-      (d) =>
+    const idle = idleInstitutions(instQ.data ?? [], demandQ.data).map(
+      (i) =>
         ({
-          // Con oferta, el pin abre esa oferta; con horas sueltas, abre las oportunidades.
-          id: d.offerId ?? d.id,
-          lat: d.lat,
-          lng: d.lng,
-          emoji: d.kind === "institution" ? "🏥" : "🏠",
-          title: d.kind === "institution" ? d.name : `Familia ${d.name}`,
-          subtitle: demandHeadline(d),
-          price: d.topHourly ? `Hasta ${COP(d.topHourly)} / hora` : null,
-          badge: d.topHourly ? `${Math.round(d.topHourly / 1000)}k` : undefined,
-          trust: d.trust.score != null ? trustBadgeText(d.trust) : null,
-          raw: d,
+          id: `inst-${i.id}`,
+          lat: i.lat as number,
+          lng: i.lng as number,
+          emoji: "🏥",
+          title: i.name,
+          subtitle: [displayCity(i.city), "Sin turnos abiertos ahora"].filter(Boolean).join(" · "),
+          dim: true,
+          live: i.live,
+          verified: i.verified,
+          raw: { offerId: null, kind: "institution", id: i.id },
         }) satisfies MapPin,
     );
-  }, [mode, prosQ.data, demandQ.data, session.has, session.ready]);
+    return [...demandPins(demandQ.data), ...idle];
+  }, [mode, prosQ.data, demandQ.data, instQ.data, session.has, session.ready]);
 
   const merged = useMemo(() => pins ?? [], [pins]);
 
@@ -217,7 +244,7 @@ export function SimpleLiveMap({
             ? "Cargando…"
             : mode === "pros"
               ? `${activeCount} disponibles`
-              : `${merged.length} ${merged.length === 1 ? "solicitud" : "solicitudes"}`}
+              : `${activeCount} ${activeCount === 1 ? "solicitud" : "solicitudes"}`}
         </span>
         {liveCount > 0 && (
           <span className="rounded-full bg-emerald-600 px-3.5 py-2 text-sm font-bold text-white shadow-md">
@@ -266,7 +293,7 @@ export function SimpleLiveMap({
                 🏠 Familia
               </span>
               <span className="rounded-full bg-white/95 px-3 py-1.5 text-trust-deep shadow">
-                🏥 IPS
+                🏥 EPS / IPS / clínica
               </span>
             </>
           )}

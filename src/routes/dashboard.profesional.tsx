@@ -48,6 +48,7 @@ import { OnboardingTour } from "@/components/humanix/OnboardingTour";
 import { AiFingerprintCard } from "@/components/humanix/AiFingerprintCard";
 import { SemanticOffers } from "@/components/humanix/SemanticOffers";
 import { LiveMapSection } from "@/components/humanix/LiveMapSection";
+import { UnplacedDemandList } from "@/components/humanix/UnplacedDemandList";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
 import { toCell } from "@/lib/presence";
 import { ReferencesManager } from "@/components/humanix/ReferencesManager";
@@ -1865,8 +1866,9 @@ function ProDashboard() {
               </div>
             )}
 
-            {/* Map */}
+            {/* Map: familias e instituciones; las solicitudes sin ubicación, en la lista de abajo */}
             {userId && (
+              <>
               <LiveMapSection
                 role="professional"
                 userId={userId}
@@ -1892,6 +1894,8 @@ function ProDashboard() {
                   },
                 }}
               />
+              <UnplacedDemandList />
+              </>
             )}
           </div>
         )}
