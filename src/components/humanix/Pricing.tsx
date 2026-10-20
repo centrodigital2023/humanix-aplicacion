@@ -44,7 +44,7 @@ export function Pricing() {
             Un plan para cada <span className="text-gradient-bio">historia humana</span>.
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Pagos en pesos colombianos. Sin permanencia. Cancela cuando quieras.
+            Los pagos en línea no están disponibles.
           </p>
         </div>
 
@@ -91,10 +91,10 @@ export function Pricing() {
                   variant={d.variant}
                   size="lg"
                   className="mt-8 w-full"
-                  disabled={cta.disabled}
-                  asChild={!cta.disabled}
+                  disabled={cta.disabled || p.amountCOP > 0}
+                  asChild={!cta.disabled && p.amountCOP === 0}
                 >
-                  {cta.disabled ? <span>{cta.label}</span> : <a href={href}>{cta.label}</a>}
+                  {p.amountCOP > 0 ? <span>{cta.action.kind === "current" ? cta.label : "No disponible"}</span> : cta.disabled ? <span>{cta.label}</span> : <a href={href}>{cta.label}</a>}
                 </Button>
               </div>
             );

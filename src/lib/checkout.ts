@@ -37,7 +37,7 @@ export function checkoutErrorMessage(
     return "Tu plan ya se renueva solo cada mes: no hace falta pagarlo de nuevo.";
   }
   if (payload?.error === "missing_email") {
-    return "Mercado Pago necesita el correo de tu cuenta para la suscripción. Revisa tu perfil e inténtalo de nuevo.";
+    return "Se necesita el correo de tu cuenta para la suscripción. Revisa tu perfil e inténtalo de nuevo.";
   }
   if (payload?.error === "unknown_plan")
     return "Ese plan no está disponible. Elige uno de la lista.";
@@ -76,40 +76,9 @@ export async function startCheckout(
     startOnce?: StartOnce;
   },
 ): Promise<CheckoutResult> {
-  if ((input.mode ?? "once") === "once" && input.startOnce) {
-    try {
-      const r = await input.startOnce({ plan: input.plan, returnTo: input.returnTo ?? null });
-      if (r.ok) return { ok: true, url: r.url };
-      if (r.error !== "not_configured" && r.error !== "mp_error") {
-        return { ok: false, message: checkoutErrorMessage(r, input.plan) };
-      }
-    } catch {
-      // Sigue con la Edge Function.
-    }
-  }
-  try {
-    const { data, error } = await invoke("mp-create-subscription", {
-      body: {
-        plan: input.plan,
-        amount: PLAN_CATALOG[input.plan].amountCOP,
-        email: input.email ?? undefined,
-        return_to: input.returnTo ?? undefined,
-        mode: input.mode ?? "once",
-      },
-    });
-    if (error) {
-      return {
-        ok: false,
-        message: checkoutErrorMessage(await readErrorPayload(error), input.plan),
-      };
-    }
-    const d = data as { init_point?: string; sandbox_init_point?: string } | null;
-    const url = d?.init_point ?? d?.sandbox_init_point;
-    if (!url) return { ok: false, message: checkoutErrorMessage(null, input.plan) };
-    return { ok: true, url };
-  } catch {
-    return { ok: false, message: checkoutErrorMessage(null, input.plan) };
-  }
+  void invoke;
+  void input;
+  return { ok: false, message: "Los pagos en línea no están disponibles." };
 }
 
 /** Mensaje de la acción «later» (plan menor con uno vigente) para quien toca una tarjeta deshabilitada. */

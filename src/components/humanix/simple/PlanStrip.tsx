@@ -3,14 +3,11 @@
 // Precio visible antes de pagar, sin casillas preseleccionadas.
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { pathForRole, type AppUser } from "@/hooks/use-app-user";
+import { type AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
 import { computeCta } from "@/lib/planCta";
-import { startPlanPayment } from "@/lib/payments.functions";
-import { LATER_MESSAGE, startCheckout } from "@/lib/checkout";
+import { LATER_MESSAGE } from "@/lib/checkout";
 import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
 import { AUDIENCE_COPY, type Audience } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
@@ -54,7 +51,6 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
   const navigate = useNavigate();
   const { say } = useVoice();
   const plan = usePlan(user?.id);
-  const startPayment = useServerFn(startPlanPayment);
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const renewSoon = planValidity(plan, Date.now()).renewSoon;
@@ -104,27 +100,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
       });
       return;
     }
-    // checkout / reactivate → Mercado Pago (solo en la web)
-    if (plan.error) {
-      // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
-      setError("No pudimos confirmar tu plan ahora. Revisa tu conexión e inténtalo de nuevo.");
-      void plan.refresh();
-      return;
-    }
-    setBusy(key);
-    say("Te llevamos a pagar de forma segura.");
-    const r = await startCheckout(supabase.functions.invoke.bind(supabase.functions), {
-      startOnce: (i) => startPayment({ data: i }),
-      plan: key,
-      email: user?.email,
-      returnTo: user ? pathForRole(user.primaryRole) : null,
-    });
-    if (r.ok) {
-      window.location.href = r.url;
-      return;
-    }
-    setError(r.message);
-    setBusy(null);
+    setError("Los pagos en línea no están disponibles.");
   };
 
   return (
@@ -169,19 +145,15 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
               <button
                 type="button"
                 onClick={() => act(c.key)}
-                disabled={cta.disabled || busy !== null}
+                disabled={paid || cta.disabled || busy !== null}
                 className={`mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl px-4 text-lg font-bold transition active:scale-[0.98] disabled:opacity-60 ${
                   paid ? "bg-white text-trust-deep" : "bg-trust text-trust-foreground"
                 }`}
               >
                 {busy === c.key && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
-                {cta.label}
+                {paid && cta.action.kind !== "current" ? "No disponible" : cta.label}
               </button>
-              {paid && c.key !== "institution_monthly" && (
-                <p className="mt-2 text-center text-sm opacity-85">
-                  🔒 Mercado Pago · PSE, Nequi o tarjeta
-                </p>
-              )}
+
             </li>
           );
         })}
