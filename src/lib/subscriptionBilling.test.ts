@@ -398,3 +398,13 @@ describe("vigencia con renovación automática", () => {
     expect(planValidity({ ...norm, autoRenew: false }, NOW).renewSoon).toBe(true);
   });
 });
+
+describe("searchParamsOf — búsqueda del router", () => {
+  it("convierte lo que interpretó el router (números incluidos) sin perder ids", async () => {
+    const { searchParamsOf, paymentIdFromSearch } = await import("./paymentReturn");
+    const s = searchParamsOf({ payment_id: 123456789012, tipo: "plan", vacio: undefined });
+    expect(paymentIdFromSearch(s)).toBe("123456789012");
+    expect(s.get("tipo")).toBe("plan");
+    expect(s.has("vacio")).toBe(false);
+  });
+});

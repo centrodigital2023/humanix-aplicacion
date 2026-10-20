@@ -3,11 +3,13 @@
 // Precio visible antes de pagar, sin casillas preseleccionadas.
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { pathForRole, type AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
 import { computeCta } from "@/lib/planCta";
+import { startPlanPayment } from "@/lib/payments.functions";
 import { LATER_MESSAGE, startCheckout } from "@/lib/checkout";
 import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
 import { AUDIENCE_COPY, type Audience } from "@/lib/audience";
@@ -52,6 +54,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
   const navigate = useNavigate();
   const { say } = useVoice();
   const plan = usePlan(user?.id);
+  const startPayment = useServerFn(startPlanPayment);
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const renewSoon = planValidity(plan, Date.now()).renewSoon;
@@ -111,6 +114,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
     setBusy(key);
     say("Te llevamos a pagar de forma segura.");
     const r = await startCheckout(supabase.functions.invoke.bind(supabase.functions), {
+      startOnce: (i) => startPayment({ data: i }),
       plan: key,
       email: user?.email,
       returnTo: user ? pathForRole(user.primaryRole) : null,

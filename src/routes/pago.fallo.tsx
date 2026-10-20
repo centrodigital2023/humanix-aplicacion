@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { XCircle, RotateCcw, MessageCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { searchParamsOf } from "@/lib/paymentReturn";
 
 export const Route = createFileRoute("/pago/fallo")({
+  validateSearch: (s: Record<string, unknown>) => s,
   head: () => ({ meta: [{ title: "Pago no procesado · Humanix" }] }),
   component: PagoFallo,
 });
@@ -11,7 +13,8 @@ const WA_SUPPORT =
   "https://wa.me/573147444715?text=Hola%2C+tuve+un+problema+con+mi+pago+en+Humanix";
 
 function PagoFallo() {
-  const search = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  // La búsqueda del router, igual en el servidor y en el navegador (sin error de hidratación).
+  const search = searchParamsOf(Route.useSearch());
   const tipo = search.get("tipo") ?? "plan";
   const plan = search.get("plan") ?? "";
 

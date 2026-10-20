@@ -105,3 +105,44 @@ describe("mensajes del servidor", () => {
     ).toBeNull();
   });
 });
+
+describe("pago único por la acción de servidor (PSE)", () => {
+  it("usa la acción de servidor y no la Edge Function", async () => {
+    const invoke = vi.fn();
+    const startOnce = vi.fn().mockResolvedValue({ ok: true, url: "https://mp/pse" });
+    const r = await startCheckout(invoke, { plan: "essential_monthly", returnTo: null, startOnce });
+    expect(r).toEqual({ ok: true, url: "https://mp/pse" });
+    expect(startOnce).toHaveBeenCalledWith({ plan: "essential_monthly", returnTo: null });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("muestra el motivo del servidor (p. ej. bajar de plan con uno vigente)", async () => {
+    const invoke = vi.fn();
+    const startOnce = vi.fn().mockResolvedValue({ ok: false, error: "downgrade_while_active" });
+    const r = await startCheckout(invoke, { plan: "essential_monthly", startOnce });
+    expect(r).toMatchObject({ ok: false, message: expect.stringMatching(/sigue vigente/) });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("si no está configurada o falla, usa la Edge Function", async () => {
+    for (const fail of [
+      () => Promise.resolve({ ok: false, error: "not_configured" }),
+      () => Promise.reject(new Error("x")),
+    ]) {
+      const invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { init_point: "https://mp/ef" }, error: null });
+      const r = await startCheckout(invoke, { plan: "pro_monthly", startOnce: fail as never });
+      expect(r).toEqual({ ok: true, url: "https://mp/ef" });
+    }
+  });
+
+  it("la suscripción siempre va por la Edge Function", async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValue({ data: { init_point: "https://mp/sub" }, error: null });
+    const startOnce = vi.fn();
+    await startCheckout(invoke, { plan: "pro_monthly", mode: "recurring", startOnce });
+    expect(startOnce).not.toHaveBeenCalled();
+  });
+});

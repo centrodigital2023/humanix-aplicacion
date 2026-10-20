@@ -3,6 +3,7 @@
 // El servidor consulta el pago directamente en Mercado Pago y lo aplica con la misma lógica del webhook
 // (`supabase/functions/_shared/mpPayment.ts`). Solo la dueña del pago puede confirmarlo. Ver `paymentReturn.ts`.
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -10,7 +11,13 @@ import {
   confirmReturnedSubscription,
   type ConfirmResult,
 } from "./paymentReturn";
-import type { MpPreapproval } from "./planBilling";
+import {
+  checkoutDecision,
+  preferenceRequest,
+  returnPathFor,
+  type MpPreapproval,
+  type SubscriptionRow,
+} from "./planBilling";
 import { makeRest, type MpPayment } from "../../supabase/functions/_shared/mpPayment";
 
 const input = z.object({ paymentId: z.string().regex(/^\d{1,20}$/) });
@@ -131,4 +138,105 @@ export const cancelMercadoPagoRenewal = createServerFn({ method: "POST" })
       },
     );
     return { ok: true };
+  });
+
+export type StartPaymentResult =
+  | { ok: true; url: string }
+  | {
+      ok: false;
+      error:
+        | "not_configured"
+        | "unknown_plan"
+        | "already_subscribed"
+        | "downgrade_while_active"
+        | "mp_error";
+      current_plan?: string;
+      ends_at?: string | null;
+    };
+
+const startInput = z.object({
+  plan: z.string().max(40),
+  returnTo: z.string().max(60).nullish(),
+});
+
+/**
+ * Abre el pago único de UN mes de un plan (Checkout Pro: PSE, Nequi, tarjeta, efectivo). Misma regla que la Edge
+ * Function `mp-create-subscription` en modo "once" (`checkoutDecision` + `preferenceRequest`), pero como acción de
+ * servidor para que el pago con PSE salga con la app publicada.
+ */
+export const startPlanPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => startInput.parse(data ?? {}))
+  .handler(async ({ data, context }): Promise<StartPaymentResult> => {
+    const cfg = serverConfig();
+    if (!cfg) return { ok: false, error: "not_configured" };
+    const rest = makeRest(cfg.supabaseUrl, cfg.serviceKey);
+    const userId = context.userId;
+
+    const [subs, roles] = await Promise.all([
+      rest(
+        `mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end,mp_preapproval_id`,
+      ).then((r) => r.json() as Promise<SubscriptionRow[]>),
+      rest(`user_roles?user_id=eq.${userId}&select=role`)
+        .then((r) => r.json() as Promise<Array<{ role: string }>>)
+        .catch(() => []),
+    ]);
+    const decision = checkoutDecision(subs[0] ?? null, data.plan, Date.now());
+    if (!decision.ok) {
+      return decision.error === "unknown_plan"
+        ? { ok: false, error: "unknown_plan" }
+        : {
+            ok: false,
+            error: decision.error,
+            current_plan: decision.current,
+            ends_at: decision.endsAt,
+          };
+    }
+
+    const rawOrigin = getRequestHeader("origin") ?? "";
+    const origin = /^https:\/\/([a-z0-9-]+\.)?humanix\.lat$/i.test(rawOrigin)
+      ? rawOrigin
+      : "https://humanix.lat";
+    const claimEmail = typeof context.claims.email === "string" ? context.claims.email : "";
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claimEmail) ? claimEmail : null;
+
+    const pref = await mpFetch<{ init_point?: string; sandbox_init_point?: string }>(
+      cfg.token,
+      "/checkout/preferences",
+      {
+        method: "POST",
+        body: JSON.stringify(
+          preferenceRequest({
+            userId,
+            plan: decision.plan,
+            email,
+            origin,
+            returnPath: returnPathFor(
+              roles.map((r) => r.role),
+              data.returnTo,
+            ),
+            notificationUrl: `${cfg.supabaseUrl}/functions/v1/mp-webhook`,
+          }),
+        ),
+      },
+    ).catch(() => null);
+    const url = pref?.init_point ?? pref?.sandbox_init_point;
+    if (!url) return { ok: false, error: "mp_error" };
+
+    // Marcar «pendiente» solo a quien no tiene un plan vigente: abrir un pago no puede quitar lo ya pagado.
+    if (decision.writePending) {
+      await rest("mp_subscriptions?on_conflict=user_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({
+          user_id: userId,
+          plan: decision.plan,
+          amount: decision.amount,
+          currency: "COP",
+          status: "pending",
+          mp_payer_email: email,
+        }),
+      }).catch(() => undefined);
+    }
+    return { ok: true, url };
   });

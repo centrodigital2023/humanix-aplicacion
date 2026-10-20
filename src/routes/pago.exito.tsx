@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -17,6 +17,7 @@ import {
   paymentIdFromSearch,
   preapprovalIdFromSearch,
   safeReturnPath,
+  searchParamsOf,
   type ConfirmResult,
 } from "@/lib/paymentReturn";
 import {
@@ -27,6 +28,7 @@ import {
 // Regreso desde Mercado Pago. La página NO da un pago por hecho por lo que diga la URL: el servidor consulta el pago en
 // Mercado Pago, lo aplica si hace falta (misma lógica que el webhook) y aquí se muestra el resultado real.
 export const Route = createFileRoute("/pago/exito")({
+  validateSearch: (s: Record<string, unknown>) => s,
   head: () => ({ meta: [{ title: "Pago · Humanix" }, { name: "robots", content: "noindex" }] }),
   component: PagoExito,
 });
@@ -64,9 +66,8 @@ function planLabel(plan: string): string {
 }
 
 function PagoExito() {
-  const [search] = useState(
-    () => new URLSearchParams(typeof window !== "undefined" ? window.location.search : ""),
-  );
+  const rawSearch = Route.useSearch();
+  const search = useMemo(() => searchParamsOf(rawSearch), [rawSearch]);
   const tipo = search.get("tipo") === "creditos" ? "creditos" : "plan";
   const from = safeReturnPath(search.get("from"));
   const paymentId = paymentIdFromSearch(search);

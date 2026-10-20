@@ -56,6 +56,15 @@ export async function readErrorPayload(err: unknown): Promise<CheckoutErrorPaylo
   }
 }
 
+/** Respuesta de la acción de servidor `startPlanPayment` (pago único de un mes). */
+export type StartOnceResult =
+  | { ok: true; url: string }
+  | ({ ok: false; error: string } & CheckoutErrorPayload);
+export type StartOnce = (input: {
+  plan: PlanKey;
+  returnTo: string | null;
+}) => Promise<StartOnceResult>;
+
 export async function startCheckout(
   invoke: Invoke,
   input: {
@@ -63,8 +72,21 @@ export async function startCheckout(
     email?: string | null;
     returnTo?: string | null;
     mode?: "once" | "recurring";
+    /** Pago único por la acción de servidor (PSE). Si no está configurada, se usa la Edge Function. */
+    startOnce?: StartOnce;
   },
 ): Promise<CheckoutResult> {
+  if ((input.mode ?? "once") === "once" && input.startOnce) {
+    try {
+      const r = await input.startOnce({ plan: input.plan, returnTo: input.returnTo ?? null });
+      if (r.ok) return { ok: true, url: r.url };
+      if (r.error !== "not_configured" && r.error !== "mp_error") {
+        return { ok: false, message: checkoutErrorMessage(r, input.plan) };
+      }
+    } catch {
+      // Sigue con la Edge Function.
+    }
+  }
   try {
     const { data, error } = await invoke("mp-create-subscription", {
       body: {
