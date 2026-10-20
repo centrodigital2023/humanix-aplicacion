@@ -11,7 +11,7 @@ Estado verificado leyendo el código, `supabase/config.toml` y `supabase/migrati
 | `care-alerts` | Trigger SQL `care_logs_alert_webhook` vía `pg_net` | Migración `20261007170000` | Conectado si existe el secreto de Vault `internal_webhook_secret` | Alto | Pendiente |
 | `clinical-alert-notify` | Trigger SQL `clinical_alerts_notify_webhook` vía `pg_net` | Migración `20261007170000` | Igual que la anterior | Alto | Pendiente |
 | `rethus-weekly-check` | `pg_cron` semanal (lunes 9:00 UTC) | Migración `20261007170000` (corrige URL de otro proyecto) | Conectado si existe el secreto `rethus_cron_secret` | Medio | Pendiente |
-| `apply-referral-reward` | Llamada manual de superadmin o interna con `INTERNAL_WEBHOOK_SECRET` | Código | **Huérfana**: ningún proceso la invoca. `mp-webhook` no la llama | Medio | Pendiente |
+| `apply-referral-reward` | — | — | **Retirada (20 oct 2026)**: la recompensa la aplica el cobro (`_shared/mpPayment.ts` → `applyReferralReward`) sobre `mp_subscriptions` | — | Hecho |
 | `bootstrap-superadmin` | — | — | **Eliminada** | — | — |
 | `humanix-ai-chat` | — | — | **No existía**. El módulo de agenda usa `humanix-assistant` | — | — |
 

@@ -11,11 +11,14 @@
 // - Un estado que no existe en el enum `mp_payment_status` de producción (authorized, in_mediation, charged_back) se
 //   guarda con su equivalente: antes rompía la escritura y Mercado Pago reintentaba sin fin.
 // - Una notificación al usuario que falla no deshace ni repite una activación.
+// - El primer plan que paga una persona referida le da un mes de Esencial a quien la refirió (`applyReferralReward`),
+//   una sola vez por persona referida. Si falla, el pago de la persona referida sigue aplicado.
 import {
   PLAN_LABEL,
   creditsGrantFromPayment,
   statusAfterFailure,
   subscriptionAfterApproval,
+  subscriptionAfterReferralReward,
   type PaidPayment,
   type SubscriptionRow,
 } from "./planBilling.ts";
@@ -213,11 +216,14 @@ export async function processMercadoPagoPayment(
     const credit = isCredits ? creditsGrantFromPayment(payment) : null;
     if (credit && !credit.ok) return reject(credit.error);
 
-    const claimRes = await rest(`mp_payments?mp_payment_id=eq.${encodeURIComponent(paymentId)}&paid_at=is.null`, {
-      method: "PATCH",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ paid_at: new Date(now()).toISOString() }),
-    });
+    const claimRes = await rest(
+      `mp_payments?mp_payment_id=eq.${encodeURIComponent(paymentId)}&paid_at=is.null`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ paid_at: new Date(now()).toISOString() }),
+      },
+    );
     const claimed = ((await claimRes.json()) as unknown[]).length > 0;
     if (!claimed) {
       await markProcessed(null);
@@ -291,13 +297,19 @@ export async function processMercadoPagoPayment(
       const label = PLAN_LABEL[outcome.plan as keyof typeof PLAN_LABEL] ?? outcome.plan;
       await notify({
         type: "payment_approved",
-        title: outcome.kind === "renew" ? `✨ Renovaste ${label}` : `✨ Tu plan ${label} está activo`,
+        title:
+          outcome.kind === "renew" ? `✨ Renovaste ${label}` : `✨ Tu plan ${label} está activo`,
         body:
           outcome.carriedDays > 0
             ? `Vigente hasta el ${until}. Sumamos ${outcome.carriedDays} días por lo que te quedaba de tu plan anterior.`
             : `Vigente hasta el ${until}. Sin cobros automáticos: tú decides cuándo renovar.`,
         link: "/dashboard",
       });
+      try {
+        await applyReferralReward(userId, paymentId, deps);
+      } catch {
+        // La recompensa no deshace el pago de quien pagó; la fila del referido queda «registered» para reintentar.
+      }
     }
     await markProcessed(null);
     return outcome;
@@ -339,4 +351,78 @@ export async function processMercadoPagoPayment(
   // pending, in_process, authorized, in_mediation: se espera el siguiente aviso.
   await markProcessed(null);
   return { result: "pending", status };
+}
+
+export type ReferralRewardOutcome =
+  | { result: "rewarded"; referrerId: string; kind: "new" | "extend" | "convert"; days: number }
+  | { result: "none" };
+
+/**
+ * Recompensa a quien refirió a `referredId` cuando este paga su primer plan. Una sola vez por persona referida: la fila
+ * de `referrals` se reclama con un PATCH condicional (`status=eq.registered`), igual que `mp_payments.paid_at`. Si
+ * escribir el plan falla, el reclamo se libera y el error sube.
+ */
+export async function applyReferralReward(
+  referredId: string,
+  paymentId: string,
+  deps: Pick<ProcessDeps, "rest" | "now">,
+): Promise<ReferralRewardOutcome> {
+  const { rest, now } = deps;
+  const at = new Date(now()).toISOString();
+  const claimRes = await rest(
+    `referrals?referred_id=eq.${encodeURIComponent(referredId)}&status=eq.registered`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        status: "rewarded",
+        rewarded_at: at,
+        reward_mp_payment_id: paymentId,
+      }),
+    },
+  );
+  const claimed = (await claimRes.json()) as Array<{ referrer_id: string }>;
+  const referrerId = claimed[0]?.referrer_id;
+  if (!referrerId) return { result: "none" };
+
+  try {
+    const rows = (await (
+      await rest(`mp_subscriptions?user_id=eq.${referrerId}&select=plan,status,current_period_end`)
+    ).json()) as SubscriptionRow[];
+    const reward = subscriptionAfterReferralReward(rows[0] ?? null, now());
+    await rest("mp_subscriptions?on_conflict=user_id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({ user_id: referrerId, ...reward.patch }),
+    });
+    try {
+      const until = new Date(reward.patch.current_period_end).toLocaleDateString("es-CO", {
+        day: "numeric",
+        month: "long",
+        timeZone: "America/Bogota",
+      });
+      await rest("notifications", {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: referrerId,
+          type: "referral_reward",
+          title: "🎁 Ganaste un mes gratis",
+          body:
+            reward.kind === "convert"
+              ? `Alguien que invitaste se suscribió. Sumamos ${reward.days} días a tu plan, vigente hasta el ${until}.`
+              : `Alguien que invitaste se suscribió. Tu plan Esencial queda vigente hasta el ${until}.`,
+          link: "/dashboard",
+        }),
+      });
+    } catch {
+      // Una notificación fallida no deshace la recompensa.
+    }
+    return { result: "rewarded", referrerId, kind: reward.kind, days: reward.days };
+  } catch (e) {
+    await rest(`referrals?referred_id=eq.${encodeURIComponent(referredId)}&status=eq.rewarded`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "registered", rewarded_at: null, reward_mp_payment_id: null }),
+    }).catch(() => undefined);
+    throw e;
+  }
 }

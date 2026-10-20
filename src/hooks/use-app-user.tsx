@@ -3,6 +3,20 @@ import { useNavigate } from "@tanstack/react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { parseStaffContext, type StaffContext } from "@/lib/staffPanel";
+import { applyStoredReferralCode, type ApplyReferralRpc } from "@/lib/referralCode";
+
+/** `apply_referral_code` siempre registra a auth.uid(): el navegador solo manda el código. */
+export const applyReferralRpc: ApplyReferralRpc = async (code) =>
+  (supabase as unknown as SupabaseClient).rpc("apply_referral_code", { p_code: code });
+
+/** Código de referido guardado al llegar con `?ref=`: se aplica apenas hay sesión (también tras confirmar el correo). */
+function applyPendingReferral() {
+  try {
+    void applyStoredReferralCode(localStorage, applyReferralRpc);
+  } catch {
+    /* sin almacenamiento no hay código pendiente */
+  }
+}
 
 /**
  * `institution_staff` no es un rol de `user_roles` (el personal nunca tiene uno): es la etiqueta de pantalla de quien entra con el
@@ -216,6 +230,7 @@ export function useAppUser(options: { requireAuth?: boolean; allow?: AppRole[] }
       setTimeout(() => {
         if (!active) return;
         loadUser(session.user.id, session.user.email ?? "");
+        applyPendingReferral();
       }, 0);
     });
 
@@ -230,6 +245,7 @@ export function useAppUser(options: { requireAuth?: boolean; allow?: AppRole[] }
           return;
         }
         loadUser(data.session.user.id, data.session.user.email ?? "");
+        applyPendingReferral();
       })
       .catch((err) => {
         console.error("[useAppUser] getSession failed:", err);

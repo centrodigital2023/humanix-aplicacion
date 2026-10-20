@@ -9,10 +9,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const sb = supabase as unknown as SupabaseClient;
 
 type ReferralStats = {
-  pending: number;
   registered: number;
   rewarded: number;
-  months_earned: number;
 };
 
 type Props = {
@@ -21,12 +19,7 @@ type Props = {
 
 export function ReferralCard({ userId }: Props) {
   const [code, setCode] = useState<string | null>(null);
-  const [stats, setStats] = useState<ReferralStats>({
-    pending: 0,
-    registered: 0,
-    rewarded: 0,
-    months_earned: 0,
-  });
+  const [stats, setStats] = useState<ReferralStats>({ registered: 0, rewarded: 0 });
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -39,26 +32,15 @@ export function ReferralCard({ userId }: Props) {
     if (!userId) return;
     setLoading(true);
     try {
-      // Obtener o crear código de referido
-      const { data: codeData, error: codeErr } = await sb.rpc("get_or_create_referral_code", {
-        p_user_id: userId,
-      });
+      // Código propio (lo crea la base para auth.uid()) y conteos sin datos de quién se registró.
+      const { data: codeData, error: codeErr } = await sb.rpc("get_or_create_referral_code");
       if (codeErr) throw codeErr;
       setCode(codeData as string);
 
-      // Estadísticas del referidor
-      const { data: rows } = await sb.from("referrals").select("status").eq("referrer_id", userId);
-
-      if (rows) {
-        const rewarded = rows.filter((r: { status: string }) => r.status === "rewarded").length;
-        setStats({
-          pending: rows.filter((r: { status: string }) => r.status === "pending").length,
-          registered: rows.filter((r: { status: string }) => r.status === "registered").length,
-          rewarded,
-          months_earned: rewarded,
-        });
-      }
-    } catch (err) {
+      const { data: summary } = await sb.rpc("my_referral_summary");
+      const row = (summary as Array<{ registered: number; rewarded: number }> | null)?.[0];
+      if (row) setStats({ registered: row.registered, rewarded: row.rewarded });
+    } catch {
       // Silencio — la tarjeta simplemente no muestra código si falla
     } finally {
       setLoading(false);
@@ -125,7 +107,7 @@ export function ReferralCard({ userId }: Props) {
       <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border/40">
         <div className="text-center">
           <Users className="h-4 w-4 text-muted-foreground mx-auto mb-0.5" />
-          <p className="text-xl font-bold font-display">{stats.pending + stats.registered}</p>
+          <p className="text-xl font-bold font-display">{stats.registered + stats.rewarded}</p>
           <p className="text-[10px] text-muted-foreground">Invitados</p>
         </div>
         <div className="text-center">
@@ -135,7 +117,7 @@ export function ReferralCard({ userId }: Props) {
         </div>
         <div className="text-center">
           <CalendarDays className="h-4 w-4 text-copper mx-auto mb-0.5" />
-          <p className="text-xl font-bold font-display text-copper">{stats.months_earned}</p>
+          <p className="text-xl font-bold font-display text-copper">{stats.rewarded}</p>
           <p className="text-[10px] text-muted-foreground">Meses ganados</p>
         </div>
       </div>

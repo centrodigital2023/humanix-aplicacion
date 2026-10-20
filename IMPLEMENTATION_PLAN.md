@@ -11,7 +11,7 @@
 - [ ] Pruebas con sandbox de Mercado Pago
 - [ ] Pruebas automatizadas de RLS
 - [ ] `EPSDashboard` con datos reales; retirar `VitalSignsMonitor` simulado
-- [ ] Decidir el disparador de `apply-referral-reward`
+- [x] Disparador de la recompensa por referido: el cobro (`applyReferralReward`); `apply-referral-reward` retirada
 
 ## Fase 2 — Confianza y operación
 Recontratación, favoritos, doble reserva, contacto protegido, calificaciones por dimensiones.

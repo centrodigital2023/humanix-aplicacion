@@ -140,7 +140,6 @@ Subrutas: `fraude`, `auditoria`, `publicidad`, `marketing`, `crm`, `marketplace`
 | `hiring-copilot`, `chat-copilot` | Copilotos de contratación y chat | Familia / IPS |
 | `analyze-rating-voice` | Transcribe y clasifica valoración por voz | Valoraciones |
 | `mp-create-subscription`, `mp-create-credits-checkout`, `mp-webhook` | Pagos Mercado Pago | Planes / créditos |
-| `apply-referral-reward` | Recompensa por referido | Interna (webhook) |
 | `send-campaign`, `crm-segment-ai`, `ad-recommender`, `pqrs-classifier`, `promo-image-gen` | CRM, marketing, publicidad | Superadmin |
 | `whatsapp-webhook`, `whatsapp-send`, `care-alerts`, `clinical-alert-notify` | WhatsApp y alertas | Webhooks / CRM |
 | `generate-contract` | Contrato y OTP de firma | Interna |
@@ -168,7 +167,7 @@ Para que el acceso de administrador funcione hay que, además: desplegar `verify
    - `PatientRiskCard.tsx:241` usa una puntuación de riesgo simulada cuando la función no responde ("Edge function may not exist yet").
    - `EnhancedReportsWithCRMModule.tsx:319` genera `open_rate` con `Math.random()`.
    Ambos muestran números que no son reales.
-3. **Funciones sin llamada desde el frontend:** `apply-referral-reward`, `care-alerts`, `clinical-alert-notify`, `fraud-detector`, `generate-contract`, `mp-webhook`, `rethus-weekly-check`. Algunas son legítimas (webhooks y cron), pero requieren que esos disparadores estén configurados en Supabase. Si no lo están, esas funciones nunca se ejecutan: `fraud-detector` y `generate-contract` en particular no tienen disparador visible en el código.
+3. **Funciones sin llamada desde el frontend:** `care-alerts`, `clinical-alert-notify`, `fraud-detector`, `generate-contract`, `mp-webhook`, `rethus-weekly-check`. Algunas son legítimas (webhooks y cron), pero requieren que esos disparadores estén configurados en Supabase. Si no lo están, esas funciones nunca se ejecutan: `fraud-detector` y `generate-contract` en particular no tienen disparador visible en el código.
 4. **Regla de pagos por WhatsApp.** Los pagos se hacen en la web. Los enlaces de WhatsApp encontrados son de soporte (`pago.fallo.tsx`) y de consulta del Plan Institución (`planes.tsx:651`); ninguno cobra. Conviene revisar el segundo y las respuestas automáticas de `whatsapp-webhook` para asegurar que nunca envíen enlaces de pago.
 5. **`bootstrap-superadmin`** sigue activa como segunda vía para crear superadmin; está protegida por `SUPERADMIN_BOOTSTRAP_SECRET`. Si no se usa, conviene retirarla.
 6. **`vitest.config.ts`** carga el paquete `vitest`, que no está instalado en este entorno (ver sección 9).

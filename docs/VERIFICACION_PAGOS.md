@@ -33,11 +33,14 @@ Migración `20261015150000_commission_and_ai_credits.sql`. Antes de aplicarla se
 ## 3. Pendiente: requiere cambios en la base de producción (con aprobación)
 
 1. **Otras tablas o funciones que el código usa y no existen:** `health_compliance`, `patient_risk_scores`, `vital_signs`, `service_checkins`, `service_contracts`, `rethus_checks`, `alert_thresholds`, `flag_rating`, `respond_to_rating`. No tocan pagos, pero esas tarjetas fallan.
-2. **Referidos** (`referrals`, `apply_referral_code`, `get_or_create_referral_code`). Además, el diseño del repositorio tiene fallas que habría que corregir antes de aplicarlo:
-   - un mismo código solo sirve para una persona;
-   - `apply_referral_code` acepta cualquier id de usuario en lugar de `auth.uid()`;
-   - quien refiere puede editar sus propias filas;
-   - `apply-referral-reward` extiende la tabla vieja `subscriptions` en lugar de `mp_subscriptions`.
+2. **Referidos** (`referrals`, `referral_codes`, `apply_referral_code`, `get_or_create_referral_code`, `my_referral_summary`).
+   Las cuatro fallas del diseño viejo se corrigieron en el repositorio el 20 oct 2026 (`20261020100000_referrals_v2.sql`,
+   probada en `supabase/e2e/referrals/`); falta aplicarla en producción y desplegar `mp-webhook`:
+   - un código por cuenta, reutilizable por varias personas;
+   - `apply_referral_code(p_code)` registra solo a `auth.uid()` (cuenta de menos de 7 días, sin plan pagado antes, sin círculos);
+   - nadie escribe las tablas desde el navegador ni lee quién se registró (`my_referral_summary` da solo conteos);
+   - la recompensa (un mes de Esencial) la aplica el cobro sobre `mp_subscriptions` (`applyReferralReward`), una vez por
+     persona referida; `apply-referral-reward` se retiró.
 
 ## 4. Lo que está bien en producción
 
