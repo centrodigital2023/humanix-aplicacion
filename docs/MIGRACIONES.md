@@ -94,8 +94,7 @@ hoy y no existe en producción:
 | Estadísticas públicas (`usePublicStats`)                                                          | Vista `public_stats`                                                                                                                                  | Contadores en 0 (existen `get_platform_counts` y `get_live_counts`)                    |
 | Verificación semanal de RETHUS (`rethus-weekly-check`)                                            | `rethus_checks`                                                                                                                                       | La función falla; la verificación vigente es `verifyRethus` (una vez por profesional)  |
 
-`RatingCard` (`respond_to_rating`, `flag_rating`) y `CheckInOut` (`service_checkins`) no estaban montados en ninguna pantalla y se
-retiraron del código el 20 oct 2026 (`StarDisplay` quedó en su propio archivo).
+`RatingCard` (`respond_to_rating`, `flag_rating`) y `CheckInOut` (`service_checkins`) no están montados en ninguna pantalla.
 
 **Realtime.** El código se suscribe (`postgres_changes`) a 38 tablas; **20 no están en la publicación `supabase_realtime` de producción**
 y esas suscripciones nunca reciben eventos: `ad_banners`, `ai_credit_topups`, `ai_credits_ledger`, `audit_log`, `community_testimonials`,
