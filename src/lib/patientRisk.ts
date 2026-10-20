@@ -6,6 +6,39 @@ export interface VitalReading {
   recorded_at: string;
 }
 
+/** Fila de `vital_signs_readings` (la tabla de signos vitales de producción). */
+export interface StoredVitalReading {
+  reading_type: string;
+  value: number;
+  value_secondary?: number | null;
+  recorded_at: string;
+}
+
+/**
+ * Convierte las mediciones guardadas al formato del cálculo de riesgo. La presión se guarda en una sola fila
+ * (sistólica en `value`, diastólica en `value_secondary`) y la frecuencia respiratoria se llama `respiratory_rate`.
+ */
+export function toVitalReadings(rows: readonly StoredVitalReading[]): VitalReading[] {
+  const out: VitalReading[] = [];
+  for (const r of rows) {
+    if (!Number.isFinite(r.value)) continue;
+    const type = r.reading_type === "respiratory_rate" ? "respiration_rate" : r.reading_type;
+    out.push({ type, value: r.value, recorded_at: r.recorded_at });
+    if (
+      r.reading_type === "blood_pressure_sys" &&
+      r.value_secondary != null &&
+      Number.isFinite(r.value_secondary)
+    ) {
+      out.push({
+        type: "blood_pressure_dia",
+        value: r.value_secondary,
+        recorded_at: r.recorded_at,
+      });
+    }
+  }
+  return out;
+}
+
 export interface RiskFactor {
   name: string;
   weight: number;

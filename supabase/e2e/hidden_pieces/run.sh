@@ -12,12 +12,11 @@ declare -A MIGS=(
   [health]=20261020110000_health_compliance.sql
   [branches]=20261020120000_institution_branches.sql
   [wallet]=20261020130000_wallet_ledger.sql
-  [contracts]=20261020140000_service_contracts.sql
   [clinical]=20261020150000_clinical_monitoring_core.sql
   [ratings]=20261020160000_rating_responses.sql
   [rethus]=20261020170000_rethus_checks.sql
 )
-PIECES=("$@"); [ ${#PIECES[@]} -gt 0 ] || PIECES=(health branches wallet contracts clinical ratings rethus)
+PIECES=("$@"); [ ${#PIECES[@]} -gt 0 ] || PIECES=(health branches wallet clinical ratings rethus)
 if [ "${HX_SKIP_BASE:-}" = "1" ] && [ "$(psql -Atq -d postgres -c "SELECT count(*) FROM pg_database WHERE datname = 'hx_replica_base'")" = "1" ]; then
   echo "[piezas] reutilizando hx_replica_base"
 else

@@ -4,7 +4,7 @@
  */
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { computeRisk, type VitalReading } from "@/lib/patientRisk";
+import { computeRisk, toVitalReadings, type StoredVitalReading } from "@/lib/patientRisk";
 import { toast } from "sonner";
 import {
   ShieldCheck,
@@ -192,7 +192,7 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
   const [generating, setGenerating] = useState(false);
   const [showFactors, setShowFactors] = useState(!compact);
   const [showRecommendations, setShowRecommendations] = useState(!compact);
-  // `patient_risk_scores` / `vital_signs` aún no existen en producción: la tarjeta no se muestra en vez de ofrecer un cálculo que falla.
+  // Si `patient_risk_scores` aún no existe (migración 20261020150000 sin aplicar), la tarjeta no se muestra en vez de ofrecer un cálculo que falla.
   const [unavailable, setUnavailable] = useState(false);
 
   const loadLatestScore = useCallback(async () => {
@@ -225,16 +225,19 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
     try {
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: readings, error: rErr } = await sb
-        .from("vital_signs")
-        .select("type, value, recorded_at")
-        .eq("patient_id", patientId)
+        .from("vital_signs_readings")
+        .select("reading_type, value, value_secondary, recorded_at")
+        .eq("family_user_id", patientId)
         .gte("recorded_at", since)
         .order("recorded_at", { ascending: false })
         .limit(500);
       if (rErr) throw rErr;
 
       const previousScore = riskData?.score ?? null;
-      const result = computeRisk((readings ?? []) as VitalReading[], previousScore);
+      const result = computeRisk(
+        toVitalReadings((readings ?? []) as StoredVitalReading[]),
+        previousScore,
+      );
       if (!result) {
         toast.info("Sin mediciones de los últimos 7 días para calcular el riesgo.");
         return;
