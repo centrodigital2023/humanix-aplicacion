@@ -1,5 +1,6 @@
 // Invitación en el momento más cálido (después de dar las gracias): comparte tu enlace de referido por WhatsApp o
-// cópialo. El código lo genera el servidor (`get_or_create_referral_code`); aquí no se paga ni se cobra nada.
+// cópialo. El código lo genera el servidor (`get_or_create_referral_code`, siempre el de auth.uid()); aquí no se paga
+// ni se cobra nada.
 import { useQuery } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +21,7 @@ export function InviteFriendInline({
     staleTime: 10 * 60_000,
     retry: false,
     queryFn: async () => {
-      const { data, error } = await sb.rpc("get_or_create_referral_code", { p_user_id: userId });
+      const { data, error } = await sb.rpc("get_or_create_referral_code");
       if (error) throw error;
       return data as string;
     },

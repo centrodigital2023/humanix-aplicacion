@@ -2824,10 +2824,12 @@ function DocsTab({ reviewerId }: { reviewerId: string }) {
       .eq("id", doc.id);
     if (error) return toast.error(friendlyError(error));
     if (status === "approved" && doc.doc_type === "rethus") {
-      await supabase
+      // `rethus_verified_at` no existe en producción: con esa columna la actualización fallaba en silencio.
+      const { error: profileError } = await supabase
         .from("professional_profiles")
-        .update({ rethus_verified: true, rethus_verified_at: new Date().toISOString() } as never)
+        .update({ rethus_verified: true, rethus_checked_at: new Date().toISOString() })
         .eq("user_id", doc.user_id);
+      if (profileError) return toast.error(friendlyError(profileError));
     }
     toast.success(status === "approved" ? "Aprobado" : "Rechazado");
     load();

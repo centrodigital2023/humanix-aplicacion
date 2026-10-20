@@ -26,6 +26,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
 import { toast } from "sonner";
 import { friendlyAuthError } from "@/lib/friendlyError";
+import { applyStoredReferralCode, rememberReferralCode } from "@/lib/referralCode";
+import { applyReferralRpc } from "@/hooks/use-app-user";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (
@@ -178,15 +180,12 @@ function AuthPage() {
   // Referral code: from URL param or localStorage
   const [refCode, setRefCode] = useState<string | null>(null);
 
-  // Capture referral code on mount
+  // Capture referral code on mount (se aplica en la base apenas haya sesión: `useAppUser`).
   useEffect(() => {
-    const fromUrl = search.ref;
-    if (fromUrl) {
-      localStorage.setItem("humanix_ref_code", fromUrl);
-      setRefCode(fromUrl);
-    } else {
-      const stored = localStorage.getItem("humanix_ref_code");
-      if (stored) setRefCode(stored);
+    try {
+      setRefCode(rememberReferralCode(localStorage, search.ref));
+    } catch {
+      /* almacenamiento bloqueado: se entra sin referido */
     }
   }, [search.ref]);
 
@@ -258,23 +257,9 @@ function AuthPage() {
         });
         if (error) throw error;
 
-        // Aplicar código de referido si existe (fire-and-forget, sin bloquear el flujo)
-        if (refCode && data.user?.id) {
-          const _code = refCode;
-          const _uid = data.user.id;
-          void (async () => {
-            try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await (supabase as any).rpc("apply_referral_code", {
-                p_code: _code,
-                p_new_user_id: _uid,
-              });
-              localStorage.removeItem("humanix_ref_code");
-            } catch {
-              /* silencio — no bloquear el registro */
-            }
-          })();
-        }
+        // Con la sesión abierta se aplica ya el código de referido; si falta confirmar el correo, lo aplica `useAppUser`
+        // al entrar. Sin bloquear el registro.
+        if (refCode && data.session) void applyStoredReferralCode(localStorage, applyReferralRpc);
 
         // If Supabase project has "Confirm email" enabled, session will be
         // null and user must verify via the OTP code we just emailed.

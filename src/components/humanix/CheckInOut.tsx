@@ -176,6 +176,7 @@ function getGeoPosition(): Promise<GeolocationPosition> {
 }
 
 // ─── Upload evidence to Supabase Storage ─────────────────────────────────────
+// The "evidence" bucket is private: store the object path and read it back with a signed URL.
 
 async function uploadEvidence(
   file: File,
@@ -183,14 +184,13 @@ async function uploadEvidence(
   professionalId: string,
 ): Promise<string> {
   const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `checkins/${bookingId}/${professionalId}/${Date.now()}.${ext}`;
+  const path = `checkins/${bookingId}/${professionalId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
   const { error } = await sb.storage.from("evidence").upload(path, file, {
     cacheControl: "3600",
     upsert: false,
   });
   if (error) throw error;
-  const { data } = sb.storage.from("evidence").getPublicUrl(path);
-  return data.publicUrl;
+  return path;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import type { MpPayment, RestFn } from "../../supabase/functions/_shared/mpPayme
 // - payment_webhook_events: único (provider, external_event_id) → 409.
 // - mp_payments: único mp_payment_id; status solo del enum de producción (si no, 400 como PostgREST).
 // - PATCH con filtros eq./is.null es atómico (como una fila bloqueada en Postgres).
+// - referrals: el cobro solo la toca con PATCH condicionales (reclamar y liberar la recompensa).
 
 const ENUM = new Set(["pending", "approved", "rejected", "cancelled", "refunded", "in_process"]);
 type Row = Record<string, unknown>;
@@ -16,6 +17,7 @@ export function fakeDb(opts: { failOn?: (path: string, method: string) => boolea
     mp_subscriptions: [],
     notifications: [],
     ai_credit_topups: [],
+    referrals: [],
   };
   const calls: string[] = [];
 
@@ -127,4 +129,3 @@ export const deps = (rest: RestFn, now = NOW, source: "webhook" | "return" = "we
   source,
   topic: "payment",
 });
-

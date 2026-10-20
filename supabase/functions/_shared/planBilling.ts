@@ -243,6 +243,73 @@ export function statusAfterFailure(
   return activePaidPlan(row, now) ? null : status;
 }
 
+// ─── Recompensa por referido ───────────────────────────────────────────────────
+
+/** Lo que gana quien refiere cuando la persona referida paga su primer plan: un mes del plan Esencial. */
+export const REFERRAL_REWARD_PLAN: PaidPlan = "essential_monthly";
+
+export interface ReferralRewardPatch {
+  plan: PaidPlan;
+  status: "active";
+  current_period_end: string;
+  next_payment_at: string;
+  /** Solo cuando se crea el plan de cero: un plan regalado no cobró nada. */
+  amount?: 0;
+  currency?: "COP";
+}
+
+/**
+ * Cómo queda el plan de quien refiere tras ganar la recompensa (un mes de Esencial).
+ *  - Sin plan vigente: Esencial por un mes desde hoy.
+ *  - Con Esencial vigente: un mes más desde el vencimiento.
+ *  - Con un plan mayor vigente: se conserva ese plan y se suman los días que vale un mes de Esencial al precio de
+ *    ese plan (misma conversión que al subir de plan, con un mes de 30 días). Un mes de Esencial en Pro son 9 días.
+ */
+export function subscriptionAfterReferralReward(
+  row: SubscriptionRow | null | undefined,
+  now: number,
+): { patch: ReferralRewardPatch; kind: "new" | "extend" | "convert"; days: number } {
+  const current = activePaidPlan(row, now);
+  const end = ms(row?.current_period_end);
+  const iso = (t: number) => new Date(t).toISOString();
+  if (!current) {
+    const t = addOneMonth(now);
+    return {
+      kind: "new",
+      days: Math.round((t - now) / DAY_MS),
+      patch: {
+        plan: REFERRAL_REWARD_PLAN,
+        status: "active",
+        amount: 0,
+        currency: "COP",
+        current_period_end: iso(t),
+        next_payment_at: iso(t),
+      },
+    };
+  }
+  const from = Number.isFinite(end) && end > now ? end : now;
+  if (current === REFERRAL_REWARD_PLAN) {
+    const t = addOneMonth(from);
+    return {
+      kind: "extend",
+      days: Math.round((t - from) / DAY_MS),
+      patch: {
+        plan: current,
+        status: "active",
+        current_period_end: iso(t),
+        next_payment_at: iso(t),
+      },
+    };
+  }
+  const days = carryOverDays(REFERRAL_REWARD_PLAN, current, 30 * DAY_MS);
+  const t = from + days * DAY_MS;
+  return {
+    kind: "convert",
+    days,
+    patch: { plan: current, status: "active", current_period_end: iso(t), next_payment_at: iso(t) },
+  };
+}
+
 // ─── A qué panel vuelve cada perfil ────────────────────────────────────────────
 
 export const RETURN_PATHS = [
