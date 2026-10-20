@@ -13,8 +13,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLAN_CATALOG, longDateEs, type PlanKey } from "@/lib/plans";
-import { paymentIdFromSearch, safeReturnPath, type ConfirmResult } from "@/lib/paymentReturn";
-import { confirmMercadoPagoPayment } from "@/lib/payments.functions";
+import {
+  paymentIdFromSearch,
+  preapprovalIdFromSearch,
+  safeReturnPath,
+  type ConfirmResult,
+} from "@/lib/paymentReturn";
+import {
+  confirmMercadoPagoPayment,
+  confirmMercadoPagoSubscription,
+} from "@/lib/payments.functions";
 
 // Regreso desde Mercado Pago. La página NO da un pago por hecho por lo que diga la URL: el servidor consulta el pago en
 // Mercado Pago, lo aplica si hace falta (misma lógica que el webhook) y aquí se muestra el resultado real.
@@ -62,16 +70,25 @@ function PagoExito() {
   const tipo = search.get("tipo") === "creditos" ? "creditos" : "plan";
   const from = safeReturnPath(search.get("from"));
   const paymentId = paymentIdFromSearch(search);
+  // Al volver de una suscripción Mercado Pago agrega `preapproval_id` (y no siempre un `payment_id`).
+  const preapprovalId = paymentId ? null : preapprovalIdFromSearch(search);
   const confirm = useServerFn(confirmMercadoPagoPayment);
+  const confirmSub = useServerFn(confirmMercadoPagoSubscription);
 
   const q = useQuery({
-    queryKey: ["mp-confirm", paymentId],
-    queryFn: () => confirm({ data: { paymentId: paymentId! } }),
-    enabled: !!paymentId,
+    queryKey: ["mp-confirm", paymentId, preapprovalId],
+    queryFn: () =>
+      paymentId
+        ? confirm({ data: { paymentId } })
+        : confirmSub({ data: { preapprovalId: preapprovalId! } }),
+    enabled: !!paymentId || !!preapprovalId,
     retry: 1,
     staleTime: Infinity,
   });
-  const view = paymentId ? viewOf(q.data, q.isLoading, q.isError) : { kind: "unconfirmed" as const };
+  const view =
+    paymentId || preapprovalId
+      ? viewOf(q.data, q.isLoading, q.isError)
+      : { kind: "unconfirmed" as const };
   const confirmed = view.kind === "active" || view.kind === "credited";
 
   const [countdown, setCountdown] = useState(8);
@@ -124,15 +141,19 @@ function PagoExito() {
               <>
                 Tu plan <strong className="text-foreground">{planLabel(view.plan)}</strong> está
                 activo
-                {view.periodEnd ? ` hasta el ${longDateEs(Date.parse(view.periodEnd))}` : ""}. Sin
-                cobros automáticos: tú decides cuándo renovar.
+                {view.periodEnd ? ` hasta el ${longDateEs(Date.parse(view.periodEnd))}` : ""}.
+                {preapprovalId
+                  ? " Se renueva solo cada mes y puedes cancelar la renovación desde tu panel."
+                  : " Sin cobros automáticos: tú decides cuándo renovar."}
               </>
             )}
             {view.kind === "credited" && (
               <>
                 Se acreditaron{" "}
                 <strong className="text-biosensor">
-                  {view.credits ? `${view.credits.toLocaleString("es-CO")} créditos IA` : "tus créditos IA"}
+                  {view.credits
+                    ? `${view.credits.toLocaleString("es-CO")} créditos IA`
+                    : "tus créditos IA"}
                 </strong>{" "}
                 en tu cuenta. Ya puedes usarlos.
               </>

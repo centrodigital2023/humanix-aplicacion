@@ -13,9 +13,12 @@
 // - Una notificación al usuario que falla no deshace ni repite una activación.
 // - El primer plan que paga una persona referida le da un mes de Esencial a quien la refirió (`applyReferralReward`),
 //   una sola vez por persona referida. Si falla, el pago de la persona referida sigue aplicado.
+// - Los cobros de una suscripción (`/preapproval`) llegan aquí con la metadata que les pone el servidor
+//   (`withSubscriptionMetadata`). Al cambiar de plan, la suscripción anterior se cancela para no cobrar dos veces.
 import {
   PLAN_LABEL,
   creditsGrantFromPayment,
+  parsePreapprovalReference,
   statusAfterFailure,
   subscriptionAfterApproval,
   subscriptionAfterReferralReward,
@@ -57,7 +60,9 @@ export interface MpPayment extends PaidPayment {
 /** El usuario sale de lo que fijó NUESTRO servidor al crear la preferencia (metadata o external_reference). */
 export function resolveUserId(payment: MpPayment): string | null {
   const ref = String(payment.external_reference ?? "");
-  const fromRef = ref.startsWith("credits:") ? ref.split(":")[1] : ref;
+  const fromRef = ref.startsWith("credits:")
+    ? ref.split(":")[1]
+    : (parsePreapprovalReference(ref)?.userId ?? ref);
   const candidate = String(payment.metadata?.user_id ?? fromRef ?? "");
   return UUID_RE.test(candidate) ? candidate : null;
 }
@@ -101,6 +106,8 @@ export type ProcessOutcome =
       plan: string;
       periodEnd: string;
       carriedDays: number;
+      /** El plan queda con cobro automático mensual (suscripción). */
+      recurring?: boolean;
     }
   | { result: "credited"; credits: number }
   | { result: "already_applied" }
@@ -115,6 +122,8 @@ export interface ProcessDeps {
   /** "webhook": firma verificada · "return": la persona volvió del checkout y el servidor consultó el pago. */
   source: "webhook" | "return";
   topic?: string | null;
+  /** Cancela una suscripción en Mercado Pago (la del plan anterior, al cambiar de plan). */
+  cancelPreapproval?: (id: string) => Promise<void>;
 }
 
 async function sha256Hex(input: string): Promise<string> {
@@ -236,6 +245,7 @@ export async function processMercadoPagoPayment(
       }).catch(() => undefined);
 
     let outcome: ProcessOutcome;
+    let previousPreapproval: string | null = null;
     try {
       if (credit && credit.ok) {
         const g = credit.grant;
@@ -256,8 +266,11 @@ export async function processMercadoPagoPayment(
         outcome = { result: "credited", credits: g.credits };
       } else {
         const rows = (await (
-          await rest(`mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end`)
+          await rest(
+            `mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end,mp_preapproval_id`,
+          )
         ).json()) as SubscriptionRow[];
+        previousPreapproval = rows[0]?.mp_preapproval_id ?? null;
         const result = subscriptionAfterApproval({ row: rows[0] ?? null, payment, now: now() });
         if (!result.ok) {
           await release();
@@ -274,7 +287,17 @@ export async function processMercadoPagoPayment(
           plan: result.patch.plan,
           periodEnd: result.patch.current_period_end,
           carriedDays: result.carriedDays,
+          recurring: Boolean(result.patch.mp_preapproval_id),
         };
+        const newPreapproval = result.patch.mp_preapproval_id;
+        if (newPreapproval && previousPreapproval && previousPreapproval !== newPreapproval) {
+          // Cambio de plan: la suscripción anterior dejaría de servir pero seguiría cobrando.
+          try {
+            await deps.cancelPreapproval?.(previousPreapproval);
+          } catch {
+            // No deshace el plan nuevo; queda en el registro de Mercado Pago para cancelarla a mano.
+          }
+        }
       }
     } catch (e) {
       await release();
@@ -302,7 +325,9 @@ export async function processMercadoPagoPayment(
         body:
           outcome.carriedDays > 0
             ? `Vigente hasta el ${until}. Sumamos ${outcome.carriedDays} días por lo que te quedaba de tu plan anterior.`
-            : `Vigente hasta el ${until}. Sin cobros automáticos: tú decides cuándo renovar.`,
+            : outcome.recurring
+              ? `Vigente hasta el ${until}. Se renueva solo cada mes; puedes cancelarlo cuando quieras.`
+              : `Vigente hasta el ${until}. Sin cobros automáticos: tú decides cuándo renovar.`,
         link: "/dashboard",
       });
       try {

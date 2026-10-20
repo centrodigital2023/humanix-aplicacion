@@ -19,6 +19,8 @@ export type UserPlanState = {
   currency: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  /** El plan se cobra solo cada mes (suscripción de Mercado Pago). */
+  autoRenew: boolean;
   loading: boolean;
   /**
    * No se pudo leer el plan (red o servidor). Se conserva el último plan conocido en vez de mostrar «Free» a
@@ -48,6 +50,7 @@ export function usePlan(userId: string | null | undefined): UserPlanState {
     currency: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
+    autoRenew: false,
     loading: true,
     error: false,
   }));

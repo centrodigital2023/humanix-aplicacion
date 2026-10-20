@@ -1,5 +1,7 @@
 # Planes y eliminación de cuenta
 
+> **20 oct 2026: los planes pasan a Suscripciones de Mercado Pago** (`/preapproval`, cobro mensual en COP, sin plan asociado y con `external_reference = sub:<user_id>:<plan>`). Cada cobro aprobado suma un mes con la misma lógica de abajo; `mp_subscriptions.mp_preapproval_id` guarda la suscripción que renueva el plan y se borra al cancelarla (el plan sigue hasta su vencimiento). El webhook atiende `payment`, `subscription_authorized_payment` y `subscription_preapproval`: hay que activar esos eventos en el panel de Mercado Pago → Webhooks con la URL de `mp-webhook`. Lo que sigue describe el pago único anterior.
+
 Estado: rama `fix/planes-y-eliminacion-discreta`. Sin migración, sin Edge Function nueva y sin cambio de precios. Se tocaron solo Edge Functions existentes (`mp-create-subscription`, `mp-webhook`, `delete-account`).
 
 ## 1. Cómo se cobra un plan

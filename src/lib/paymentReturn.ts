@@ -6,7 +6,14 @@
 // - `confirmReturnedPayment`: el servidor consulta el pago en Mercado Pago y lo aplica con la MISMA lógica del
 //   webhook. Así el plan o los créditos se activan aunque el aviso de Mercado Pago tarde o no llegue, y la página
 //   muestra lo que de verdad pasó, no lo que dice la URL.
-import { RETURN_PATHS } from "./planBilling";
+// - `confirmReturnedSubscription`: lo mismo al volver de una suscripción (`preapproval_id` en la URL): se consulta la
+//   suscripción y su último cobro, y el cobro se aplica con la metadata que le pone el servidor.
+import {
+  RETURN_PATHS,
+  parsePreapprovalReference,
+  withSubscriptionMetadata,
+  type MpPreapproval,
+} from "./planBilling";
 import {
   isCreditsPayment,
   processMercadoPagoPayment,
@@ -39,6 +46,13 @@ export function paymentIdFromSearch(search: URLSearchParams): string | null {
   return null;
 }
 
+const PREAPPROVAL_ID_RE = /^[0-9a-z]{8,64}$/i;
+
+export function preapprovalIdFromSearch(search: URLSearchParams): string | null {
+  const v = (search.get("preapproval_id") ?? "").trim();
+  return PREAPPROVAL_ID_RE.test(v) ? v : null;
+}
+
 export type ConfirmResult =
   | { ok: true; state: "active"; plan: string; periodEnd: string | null }
   | { ok: true; state: "credited"; credits: number | null }
@@ -61,10 +75,51 @@ export async function confirmReturnedPayment(input: {
   // Solo la dueña del pago puede confirmarlo: el usuario lo fijó nuestro servidor al crear la preferencia.
   if (resolveUserId(payment) !== input.userId) return { ok: false, code: "forbidden" };
 
+  return applyReturned(payment, input);
+}
+
+export async function confirmReturnedSubscription(input: {
+  preapprovalId: unknown;
+  userId: string;
+  fetchPreapproval: (id: string) => Promise<MpPreapproval | null>;
+  /** Último cobro de la suscripción ya consultado en Mercado Pago, o `null` si aún no hay. */
+  fetchLatestPayment: (preapprovalId: string) => Promise<MpPayment | null>;
+  cancelPreapproval?: (id: string) => Promise<void>;
+  rest: RestFn;
+  now: () => number;
+}): Promise<ConfirmResult> {
+  const id = String(input.preapprovalId ?? "");
+  if (!PREAPPROVAL_ID_RE.test(id)) return { ok: false, code: "invalid" };
+
+  const pre = await input.fetchPreapproval(id);
+  if (!pre) return { ok: false, code: "not_found" };
+  // Solo la dueña de la suscripción puede confirmarla: la fijó nuestro servidor en `external_reference`.
+  if (parsePreapprovalReference(pre.external_reference)?.userId !== input.userId) {
+    return { ok: false, code: "forbidden" };
+  }
+  if (pre.status === "cancelled") return { ok: true, state: "failed" };
+
+  const payment = await input.fetchLatestPayment(id);
+  if (!payment) return { ok: true, state: "pending" }; // Mercado Pago aún no intenta el primer cobro.
+  const enriched = withSubscriptionMetadata(payment, pre);
+  if (!enriched) return { ok: false, code: "review" };
+  return applyReturned(enriched, input);
+}
+
+async function applyReturned(
+  payment: MpPayment,
+  input: {
+    userId: string;
+    rest: RestFn;
+    now: () => number;
+    cancelPreapproval?: (id: string) => Promise<void>;
+  },
+): Promise<ConfirmResult> {
   const outcome = await processMercadoPagoPayment(payment, {
     rest: input.rest,
     now: input.now,
     source: "return",
+    cancelPreapproval: input.cancelPreapproval,
   });
 
   switch (outcome.result) {

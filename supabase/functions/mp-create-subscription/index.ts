@@ -1,10 +1,11 @@
-// Crea la preferencia de Mercado Pago para pagar UN mes de un plan de Humanix (no es un cobro automático).
-// Devuelve init_point para redirigir al checkout. La lógica de qué se puede pagar vive en `_shared/planBilling.ts`
-// (probada con Vitest): abrir un pago nunca le quita a nadie un plan vigente y con un plan vigente no se baja de plan.
+// Crea la suscripción de Mercado Pago (`/preapproval`, cobro mensual en COP) de un plan de Humanix.
+// Devuelve init_point para redirigir al checkout, donde la persona elige el medio de pago y autoriza el cobro.
+// La lógica de qué se puede pagar vive en `_shared/planBilling.ts` (probada con Vitest): abrir un pago nunca le quita
+// a nadie un plan vigente, con un plan vigente no se baja de plan y no se abre una segunda suscripción del mismo plan.
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 import {
-  PLAN_TITLE,
   checkoutDecision,
+  preapprovalRequest,
   returnPathFor,
   type SubscriptionRow,
 } from "../_shared/planBilling.ts";
@@ -43,7 +44,9 @@ Deno.serve(async (req) => {
 
     // Suscripción actual y roles: leídos en el servidor, nunca del navegador.
     const [subRes, rolesRes] = await Promise.all([
-      srv(`mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end`),
+      srv(
+        `mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end,mp_preapproval_id`,
+      ),
       srv(`user_roles?user_id=eq.${userId}&select=role`),
     ]);
     if (!subRes.ok) throw new Error(`mp_subscriptions ${subRes.status}`);
@@ -55,22 +58,19 @@ Deno.serve(async (req) => {
     const decision = checkoutDecision(current, body.plan, Date.now());
     if (!decision.ok) {
       return json(
-        decision.error === "downgrade_while_active"
-          ? {
-              error: "downgrade_while_active",
-              current_plan: decision.current,
-              ends_at: decision.endsAt,
-            }
-          : { error: "unknown_plan" },
-        decision.error === "downgrade_while_active" ? 409 : 400,
+        decision.error === "unknown_plan"
+          ? { error: "unknown_plan" }
+          : { error: decision.error, current_plan: decision.current, ends_at: decision.endsAt },
+        decision.error === "unknown_plan" ? 400 : 409,
       );
     }
     const { plan, amount } = decision;
-    // Validación ligera del email: solo se usa como "payer hint" para MP.
-    const emailRaw = typeof body.email === "string" ? body.email.trim().slice(0, 120) : "";
-    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)
-      ? emailRaw
-      : "comprador@humanix.lat";
+    // Mercado Pago exige el correo de quien paga en una suscripción: el de la cuenta (servidor) o el que envió la web.
+    const emailRaw = (auth.email ?? (typeof body.email === "string" ? body.email : ""))
+      .trim()
+      .slice(0, 120);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) return json({ error: "missing_email" }, 400);
+    const email = emailRaw;
 
     // Anti open-redirect: solo se aceptan orígenes de humanix.lat. Si el
     // header Origin viene de otro dominio, forzamos el canónico.
@@ -81,51 +81,29 @@ Deno.serve(async (req) => {
 
     // Panel al que vuelve cada perfil tras pagar: el de su rol (lista cerrada, sin open-redirect).
     const returnPath = returnPathFor(roles, body.return_to);
-    const title = PLAN_TITLE[plan];
 
-    // Preferencia simple (no recurrente). Para recurrente se usa /preapproval.
-    const prefBody = {
-      items: [
-        {
-          id: plan,
-          title,
-          quantity: 1,
-          unit_price: amount,
-          currency_id: "COP",
-        },
-      ],
-      payer: { email },
-      back_urls: {
-        success: `${origin}/pago/exito?tipo=plan&plan=${plan}&from=${encodeURIComponent(returnPath)}`,
-        failure: `${origin}/pago/fallo?tipo=plan&plan=${plan}&from=${encodeURIComponent(returnPath)}`,
-        pending: `${origin}/pago/exito?tipo=plan&plan=${plan}&estado=pending&from=${encodeURIComponent(returnPath)}`,
-      },
-      auto_return: "approved",
-      // Pago como invitado (sin cuenta de Mercado Pago): PSE abierto por defecto, sin excluir medios.
-      // binary_mode false: PSE queda "pendiente" mientras el banco confirma.
-      payment_methods: { excluded_payment_types: [], installments: 1 },
-      binary_mode: false,
-      external_reference: userId,
-      notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
-      statement_descriptor: "HUMANIX",
-      // Lo que el webhook usa para activar: el plan y el precio que fijó este servidor.
-      metadata: { user_id: userId, plan, price_cop: amount },
-    };
+    // Suscripción sin plan asociado: Mercado Pago agrega `preapproval_id` a esta URL al volver.
+    const preBody = preapprovalRequest({
+      userId,
+      plan,
+      email,
+      backUrl: `${origin}/pago/exito?tipo=plan&plan=${plan}&from=${encodeURIComponent(returnPath)}`,
+    });
 
-    const r = await fetch(`${MP_BASE}/checkout/preferences`, {
+    const r = await fetch(`${MP_BASE}/preapproval`, {
       method: "POST",
       headers: { Authorization: `Bearer ${MP_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify(prefBody),
+      body: JSON.stringify(preBody),
     });
     if (!r.ok) {
       const t = await r.text();
-      console.error("MP preference error:", r.status, t);
+      console.error("MP preapproval error:", r.status, t);
       return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
         status: 500,
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
-    const pref = await r.json();
+    const pre = await r.json();
 
     // Marcar «pendiente» solo a quien no tiene un plan vigente: abrir un pago no puede quitar lo ya pagado.
     if (decision.writePending) {
@@ -146,9 +124,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         kind: decision.kind,
-        init_point: pref.init_point,
-        sandbox_init_point: pref.sandbox_init_point,
-        preference_id: pref.id,
+        init_point: pre.init_point,
+        sandbox_init_point: pre.sandbox_init_point,
+        preapproval_id: pre.id,
       }),
       { headers: { ...cors, "Content-Type": "application/json" } },
     );

@@ -1,13 +1,15 @@
 // Tarjeta «Tu plan Humanix» de los paneles.
 //
-// Cómo se cobra (ver `supabase/functions/_shared/planBilling.ts`): cada pago es UN mes en Mercado Pago, en la web;
-// no hay cobros automáticos. Por eso la tarjeta dice «vigente hasta», recuerda renovar en los últimos días y no
-// ofrece «cancelar» (no hay nada que cancelar: si no se renueva, el plan pasa solo a Free al vencer).
-//  - Renovar el mismo plan suma un mes desde el vencimiento: no se pierde ningún día.
+// Cómo se cobra (ver `supabase/functions/_shared/planBilling.ts`): cada plan es una suscripción de Mercado Pago que
+// cobra un mes cada mes, en la web. La tarjeta dice «se renueva el …» y ofrece cancelar la renovación (el plan sigue
+// vigente hasta el vencimiento). Un plan sin renovación automática (pago único antiguo o renovación cancelada) dice
+// «vigente hasta», recuerda renovar en los últimos días y ofrece volver a suscribirse.
+//  - Suscribirse al mismo plan con uno vigente suma un mes desde el vencimiento: no se pierde ningún día.
 //  - Subir de plan convierte los días que quedaban al valor del plan nuevo.
 //  - Con un plan vigente no se baja de plan (lo bloquea también el servidor); se elige cuando termine.
 //  - Si no se pudo leer el plan, no se ofrece pagar: podría ser un cobro repetido.
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import {
   CalendarClock,
   CheckCircle2,
@@ -24,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { PlanBadge } from "@/components/humanix/PlanGate";
 import { usePlan } from "@/hooks/use-plan";
 import { startCheckout } from "@/lib/checkout";
+import { cancelMercadoPagoRenewal } from "@/lib/payments.functions";
 import { PLAN_CATALOG, COP, planValidity, tierOf, type PlanKey } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +50,9 @@ export function MercadoPagoSubscription({
   plans?: PlanKey[];
 }) {
   const plan = usePlan(userId);
+  const cancelRenewal = useServerFn(cancelMercadoPagoRenewal);
   const [busy, setBusy] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [selected, setSelected] = useState<PlanKey>(defaultPlan);
   const [now, setNow] = useState(() => Date.now());
 
@@ -91,6 +96,7 @@ export function MercadoPagoSubscription({
   const currentTier = tierOf(plan.plan);
   const selectedDef = PLAN_CATALOG[selected];
   const isRenew = isActive && selected === plan.plan;
+  const autoRenewing = isRenew && plan.autoRenew;
   const isUpgrade = isActive && selectedDef.tier > currentTier;
   const isLater = isActive && selectedDef.tier < currentTier;
 
@@ -108,6 +114,27 @@ export function MercadoPagoSubscription({
     }
     toast(r.message);
     setBusy(false);
+  };
+
+  const stopRenewal = async () => {
+    if (
+      !window.confirm("¿Cancelar la renovación automática? Conservas tu plan hasta el vencimiento.")
+    )
+      return;
+    setCancelling(true);
+    try {
+      const r = await cancelRenewal();
+      toast(
+        r.ok
+          ? "Listo: tu plan ya no se cobrará el próximo mes. Sigue activo hasta el vencimiento."
+          : "No encontramos una renovación automática activa.",
+      );
+      await plan.refresh();
+    } catch {
+      toast("No pudimos cancelar la renovación ahora. Inténtalo de nuevo en un momento.");
+    } finally {
+      setCancelling(false);
+    }
   };
 
   return (
@@ -158,7 +185,7 @@ export function MercadoPagoSubscription({
       ) : (
         <p className="text-sm text-muted-foreground">
           Estás en el plan <strong className="text-foreground">Free</strong>. Elige un plan y
-          desbloquea todo lo premium: pagas un mes y tú decides si renuevas.
+          desbloquea todo lo premium: se cobra cada mes y cancelas cuando quieras.
         </p>
       )}
 
@@ -211,36 +238,50 @@ export function MercadoPagoSubscription({
           ? `Tu plan ${currentDef.label} sigue ${validity.line ? validity.line.toLowerCase() : "vigente"}. Cuando termine podrás pasar a ${selectedDef.label}.`
           : isUpgrade
             ? "Los días que te quedan se convierten a tu nuevo plan: no pierdes lo que ya pagaste."
-            : isRenew
-              ? "Sumamos un mes desde tu vencimiento."
-              : null}
+            : autoRenewing
+              ? "Tu plan se cobra solo cada mes. Si cancelas la renovación, lo conservas hasta el vencimiento."
+              : isRenew
+                ? "Al suscribirte sumamos un mes desde tu vencimiento y después se renueva solo."
+                : null}
       </p>
 
       <div className="mt-2 flex flex-wrap gap-2">
-        <Button
-          onClick={() => void pay()}
-          disabled={busy || isLater}
-          variant="hero"
-          className="min-w-[180px] flex-1"
-        >
-          {busy ? (
-            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <CreditCard className="mr-1.5 h-4 w-4" aria-hidden="true" />
-          )}
-          {!isActive
-            ? `Activar ${selectedDef.label}`
-            : isRenew
-              ? "Renovar 1 mes"
-              : isUpgrade
-                ? `Mejorar a ${selectedDef.label}`
-                : "Disponible al terminar tu plan"}
-          {!isLater && <ExternalLink className="ml-1.5 h-3 w-3" aria-hidden="true" />}
-        </Button>
+        {autoRenewing ? (
+          <Button
+            onClick={() => void stopRenewal()}
+            disabled={cancelling}
+            variant="outline"
+            className="min-w-[180px] flex-1"
+          >
+            {cancelling && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
+            Cancelar renovación automática
+          </Button>
+        ) : (
+          <Button
+            onClick={() => void pay()}
+            disabled={busy || isLater}
+            variant="hero"
+            className="min-w-[180px] flex-1"
+          >
+            {busy ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <CreditCard className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            )}
+            {!isActive
+              ? `Activar ${selectedDef.label}`
+              : isRenew
+                ? "Activar renovación mensual"
+                : isUpgrade
+                  ? `Mejorar a ${selectedDef.label}`
+                  : "Disponible al terminar tu plan"}
+            {!isLater && <ExternalLink className="ml-1.5 h-3 w-3" aria-hidden="true" />}
+          </Button>
+        )}
       </div>
 
       <p className="mt-3 text-center text-[11px] text-muted-foreground">
-        Pago seguro en la web · Tarjeta, PSE, Nequi, Daviplata, Bancolombia · Sin cobros automáticos
+        Pago seguro en la web con Mercado Pago · Cobro mensual · Cancela cuando quieras
       </p>
     </div>
   );
