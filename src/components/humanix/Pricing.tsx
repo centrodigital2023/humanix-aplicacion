@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
 import { usePlan } from "@/hooks/use-plan";
 import { useAppUser } from "@/hooks/use-app-user";
+import { payPageHref } from "@/lib/checkout";
 import { computeCta, type CtaAction } from "@/lib/planCta";
 
 const DISPLAY: { key: PlanKey; variant: "glass" | "hero" | "copper" }[] = [
@@ -26,7 +27,7 @@ export function Pricing() {
         return `/auth?redirect=${encodeURIComponent(action.redirectTo)}`;
       case "checkout":
       case "reactivate":
-        return `/planes?plan=${key}`;
+        return payPageHref(key);
       case "current":
       default:
         return "/planes";
@@ -44,7 +45,7 @@ export function Pricing() {
             Un plan para cada <span className="text-gradient-bio">historia humana</span>.
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Los pagos en línea no están disponibles.
+            Pagos en pesos colombianos. Sin permanencia. Cancela cuando quieras.
           </p>
         </div>
 
@@ -91,16 +92,10 @@ export function Pricing() {
                   variant={d.variant}
                   size="lg"
                   className="mt-8 w-full"
-                  disabled={cta.disabled || p.amountCOP > 0}
-                  asChild={!cta.disabled && p.amountCOP === 0}
+                  disabled={cta.disabled}
+                  asChild={!cta.disabled}
                 >
-                  {p.amountCOP > 0 ? (
-                    <span>{cta.action.kind === "current" ? cta.label : "No disponible"}</span>
-                  ) : cta.disabled ? (
-                    <span>{cta.label}</span>
-                  ) : (
-                    <a href={href}>{cta.label}</a>
-                  )}
+                  {cta.disabled ? <span>{cta.label}</span> : <a href={href}>{cta.label}</a>}
                 </Button>
               </div>
             );

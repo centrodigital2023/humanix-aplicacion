@@ -52,7 +52,7 @@ import { UnplacedDemandList } from "@/components/humanix/UnplacedDemandList";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
 import { toCell } from "@/lib/presence";
 import { ReferencesManager } from "@/components/humanix/ReferencesManager";
-import { PlanStatus } from "@/components/humanix/PlanStatus";
+import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
@@ -1217,7 +1217,7 @@ function ProDashboard() {
             {/* Suscripción */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
-                <PlanStatus userId={userId} />
+                <MercadoPagoSubscription userId={userId} />
               </div>
             )}
           </div>

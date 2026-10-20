@@ -29,6 +29,7 @@
     "@lovable.dev/email-js": "0.3.1",
     "@lovable.dev/mcp-js": "^3.1.1",
     "@lovable.dev/webhooks-js": "^0.0.3",
+    "@mercadopago/sdk-react": "^1.0.7",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",

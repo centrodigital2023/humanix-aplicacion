@@ -24,7 +24,7 @@ import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
 import { OffersMap, type MapPoint } from "@/components/humanix/OffersMap";
 import { LiveMapSection } from "@/components/humanix/LiveMapSection";
-import { PlanStatus } from "@/components/humanix/PlanStatus";
+import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { SmartFamilyProfileForm } from "@/components/humanix/SmartFamilyProfileForm";
 
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
@@ -459,7 +459,13 @@ function FamilyDashboard() {
               Ver planes <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          {user?.id && <PlanStatus userId={user.id} />}
+          {user?.id && (
+            <MercadoPagoSubscription
+              userId={user.id}
+              defaultPlan="essential_monthly"
+              plans={["essential_monthly"]}
+            />
+          )}
         </section>
 
         {/* ── PERFIL ──────────────────────────────────────── */}

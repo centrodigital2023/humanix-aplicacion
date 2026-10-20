@@ -20,7 +20,7 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - Roles live only in `public.user_roles`; check with `has_role()` / `is_staff()` — prevents privilege escalation.
 - Every new public table: GRANTs + RLS in the same migration — Data API needs both.
 - Sensitive profile fields (verification, trust, ratings) are written only by service-role code; a BEFORE UPDATE trigger preserves them for clients — users must not self-verify.
-- Read existing entitlements from `mp_subscriptions` without client writes; retain legacy payment history. Payment integrations and checkout endpoints are removed to prevent new provider charges.
+- Plan/payment state is read from `mp_subscriptions`, which only server code writes (`processMercadoPagoPayment`, from the webhook `/api/mercadopago/webhook` or the in-app checkout `/pagar`) — client rows are untrusted. Payments run inside Humanix with Mercado Pago Bricks; keep the gateway unless the user explicitly asks to remove it.
 - Payments happen only on the web checkout, never via WhatsApp — business/compliance rule.
 - `/superadmin/*` uses only `useSuperadmin`, redirecting to `/admin` — keeps admin flow isolated.
 - Admin access code is validated server-side only (`verify-admin-access`) — never in frontend.

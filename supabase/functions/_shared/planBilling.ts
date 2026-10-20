@@ -440,9 +440,7 @@ export function preapprovalReference(userId: string, plan: PaidPlan): string {
   return `sub:${userId}:${plan}`;
 }
 
-export function parsePreapprovalReference(
-  ref: unknown,
-): { userId: string; plan: PaidPlan } | null {
+export function parsePreapprovalReference(ref: unknown): { userId: string; plan: PaidPlan } | null {
   const parts = typeof ref === "string" ? ref.split(":") : [];
   if (parts.length !== 3 || parts[0] !== "sub") return null;
   const [, userId, plan] = parts;
@@ -492,7 +490,13 @@ export function preferenceRequest(input: {
   const from = encodeURIComponent(input.returnPath);
   return {
     items: [
-      { id: plan, title: PLAN_TITLE_ONCE[plan], quantity: 1, unit_price: amount, currency_id: "COP" },
+      {
+        id: plan,
+        title: PLAN_TITLE_ONCE[plan],
+        quantity: 1,
+        unit_price: amount,
+        currency_id: "COP",
+      },
     ],
     // Sin `payer`: un correo prellenado que tenga cuenta en Mercado Pago obliga a iniciar sesión y bloquea el botón
     // de pagar. Sin él, PSE, tarjeta y efectivo se pagan como invitado.
@@ -582,4 +586,226 @@ export function subscriptionAfterPreapprovalStatus(
     return { mp_preapproval_id: preapproval.id };
   }
   return null;
+}
+
+// ─── Pago dentro de Humanix (Checkout Bricks) ─────────────────────────────────
+//
+// La persona paga en /pagar con los formularios de Mercado Pago (Payment Brick y Card Payment Brick). El navegador
+// solo manda lo que el formulario recogió (token de la tarjeta, banco de PSE, documento); el servidor arma el cobro
+// con el plan, el precio y la referencia que fija él mismo. Nunca se usa un monto que venga del navegador.
+
+/** Cuerpo de `POST /preapproval_plan`: el plan de suscripción de Mercado Pago para un plan de Humanix. */
+export function subscriptionPlanRequest(plan: PaidPlan, backUrl: string) {
+  return {
+    reason: PLAN_TITLE[plan],
+    auto_recurring: {
+      frequency: 1,
+      frequency_type: "months",
+      transaction_amount: PLAN_PRICE_COP[plan],
+      currency_id: "COP",
+    },
+    back_url: backUrl,
+  };
+}
+
+/** Lo que importa de un plan de suscripción de Mercado Pago (`/preapproval_plan`). */
+export interface MpSubscriptionPlan {
+  id?: unknown;
+  status?: unknown;
+  reason?: unknown;
+  date_created?: unknown;
+  auto_recurring?: { transaction_amount?: unknown; currency_id?: unknown } | null;
+}
+
+/**
+ * El plan de suscripción ya creado para `plan`: activo, con el mismo nombre, precio y moneda. Si hubiera varios
+ * (dos personas lo crearon a la vez), siempre el más antiguo, para que todas las suscripciones queden en uno.
+ */
+export function findSubscriptionPlan(
+  results: readonly MpSubscriptionPlan[] | null | undefined,
+  plan: PaidPlan,
+): string | null {
+  const match = (results ?? [])
+    .filter(
+      (p) =>
+        typeof p.id === "string" &&
+        p.id &&
+        p.status === "active" &&
+        p.reason === PLAN_TITLE[plan] &&
+        Number(p.auto_recurring?.transaction_amount) === PLAN_PRICE_COP[plan] &&
+        String(p.auto_recurring?.currency_id ?? "") === "COP",
+    )
+    .sort((a, b) => String(a.date_created ?? "").localeCompare(String(b.date_created ?? "")));
+  return (match[0]?.id as string | undefined) ?? null;
+}
+
+/**
+ * Cuerpo de `POST /preapproval` con plan asociado: la tarjeta ya viene como token del formulario de Mercado Pago y
+ * la suscripción nace autorizada, sin que la persona tenga que entrar a su cuenta de Mercado Pago.
+ */
+export function cardSubscriptionRequest(input: {
+  subscriptionPlanId: string;
+  userId: string;
+  plan: PaidPlan;
+  email: string;
+  cardTokenId: string;
+  backUrl: string;
+}) {
+  return {
+    preapproval_plan_id: input.subscriptionPlanId,
+    reason: PLAN_TITLE[input.plan],
+    external_reference: preapprovalReference(input.userId, input.plan),
+    payer_email: input.email,
+    card_token_id: input.cardTokenId,
+    back_url: input.backUrl,
+    status: "authorized",
+  };
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const TOKEN_RE = /^[0-9a-zA-Z_-]{8,128}$/;
+const METHOD_RE = /^[a-z0-9_]{2,40}$/;
+
+export function isEmail(v: unknown): v is string {
+  return typeof v === "string" && v.length <= 254 && EMAIL_RE.test(v);
+}
+
+export function isCardToken(v: unknown): v is string {
+  return typeof v === "string" && TOKEN_RE.test(v);
+}
+
+const str = (v: unknown, max = 120): string | undefined =>
+  typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined;
+
+/** Medio de pago de un mes según lo que mandó el formulario. */
+export type BrickMethod = "card" | "pse" | "ticket";
+
+export function brickMethodOf(form: Record<string, unknown>): BrickMethod | null {
+  const method = str(form.payment_method_id, 40) ?? "";
+  if (!METHOD_RE.test(method)) return null;
+  if (method === "pse") return "pse";
+  if (isCardToken(form.token)) return "card";
+  // Efecty y otros pagos en efectivo: sin token ni banco.
+  return "ticket";
+}
+
+export type BrickPaymentBuild =
+  | { ok: true; method: BrickMethod; body: Record<string, unknown> }
+  | { ok: false; error: "invalid_form" };
+
+/**
+ * Cuerpo de `POST /v1/payments` para pagar UN mes desde el Payment Brick. Del formulario solo se toman los datos del
+ * medio de pago y de quien paga; el plan, el precio, la referencia y los avisos los fija el servidor.
+ * PSE además necesita la IP de quien paga y una URL de regreso: el banco abre su propia página y luego vuelve.
+ */
+export function brickPaymentRequest(input: {
+  form: Record<string, unknown>;
+  userId: string;
+  plan: PaidPlan;
+  accountEmail: string | null;
+  ip: string;
+  callbackUrl: string;
+  notificationUrl: string;
+}): BrickPaymentBuild {
+  const { form, plan, userId } = input;
+  const method = brickMethodOf(form);
+  if (!method) return { ok: false, error: "invalid_form" };
+  const payerIn = (form.payer ?? {}) as Record<string, unknown>;
+  const idIn = (payerIn.identification ?? {}) as Record<string, unknown>;
+  const email = isEmail(payerIn.email) ? payerIn.email : input.accountEmail;
+  if (!email) return { ok: false, error: "invalid_form" };
+
+  const payer: Record<string, unknown> = { email };
+  const idType = str(idIn.type, 20);
+  const idNumber = str(idIn.number, 30);
+  if (idType && idNumber) payer.identification = { type: idType, number: idNumber };
+  const firstName = str(payerIn.first_name, 60);
+  const lastName = str(payerIn.last_name, 60);
+  if (firstName) payer.first_name = firstName;
+  if (lastName) payer.last_name = lastName;
+
+  const amount = PLAN_PRICE_COP[plan];
+  const body: Record<string, unknown> = {
+    transaction_amount: amount,
+    description: PLAN_TITLE_ONCE[plan],
+    payment_method_id: str(form.payment_method_id, 40),
+    payer,
+    external_reference: userId,
+    notification_url: input.notificationUrl,
+    statement_descriptor: "HUMANIX",
+    binary_mode: false,
+    metadata: { user_id: userId, plan, price_cop: amount },
+  };
+
+  if (method === "card") {
+    const installments = Math.trunc(Number(form.installments ?? 1));
+    body.token = form.token;
+    body.installments = installments >= 1 && installments <= 36 ? installments : 1;
+    const issuer = str(form.issuer_id, 20);
+    if (issuer) body.issuer_id = issuer;
+  }
+
+  if (method === "pse") {
+    const details = (form.transaction_details ?? {}) as Record<string, unknown>;
+    const bank = str(details.financial_institution, 20);
+    const entity = payerIn.entity_type === "association" ? "association" : "individual";
+    if (!bank || !idType || !idNumber || !firstName || !lastName) {
+      return { ok: false, error: "invalid_form" };
+    }
+    payer.entity_type = entity;
+    const address = (payerIn.address ?? {}) as Record<string, unknown>;
+    const addr: Record<string, string> = {};
+    for (const k of [
+      "zip_code",
+      "street_name",
+      "street_number",
+      "neighborhood",
+      "city",
+      "federal_unit",
+    ]) {
+      const v = str(address[k], 80);
+      if (v) addr[k] = v;
+    }
+    if (Object.keys(addr).length) payer.address = addr;
+    const phone = (payerIn.phone ?? {}) as Record<string, unknown>;
+    const phoneNumber = str(phone.number, 20);
+    if (phoneNumber)
+      payer.phone = { area_code: str(phone.area_code, 6) ?? "57", number: phoneNumber };
+    body.transaction_details = { financial_institution: bank };
+    body.additional_info = { ip_address: input.ip };
+    body.callback_url = input.callbackUrl;
+  }
+
+  return { ok: true, method, body };
+}
+
+/** Lo que la página /pagar necesita saber del pago recién creado. */
+export interface BrickPaymentView {
+  paymentId: string;
+  status: string;
+  statusDetail: string | null;
+  /** PSE: la página del banco. */
+  redirectUrl: string | null;
+  /** Efectivo: el código o recibo para pagar en un punto. */
+  voucherUrl: string | null;
+}
+
+export function brickPaymentView(
+  payment: {
+    id?: unknown;
+    status?: unknown;
+    status_detail?: unknown;
+    transaction_details?: { external_resource_url?: unknown } | null;
+  },
+  method: BrickMethod,
+): BrickPaymentView {
+  const url = payment.transaction_details?.external_resource_url;
+  const safe = typeof url === "string" && /^https:\/\//.test(url) ? url : null;
+  return {
+    paymentId: String(payment.id ?? ""),
+    status: String(payment.status ?? "pending"),
+    statusDetail: typeof payment.status_detail === "string" ? payment.status_detail : null,
+    redirectUrl: method === "pse" ? safe : null,
+    voucherUrl: method === "ticket" ? safe : null,
+  };
 }
