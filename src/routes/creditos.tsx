@@ -5,7 +5,13 @@ import { buildSeo } from "@/lib/seo";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/creditos")({
-  head: () => buildSeo({ title: "Créditos IA · Humanix", path: "/creditos", description: "Consulta el saldo y la vigencia de tus créditos de inteligencia artificial en Humanix." }),
+  head: () =>
+    buildSeo({
+      title: "Créditos IA · Humanix",
+      path: "/creditos",
+      description:
+        "Consulta el saldo y la vigencia de tus créditos de inteligencia artificial en Humanix.",
+    }),
   component: CreditosPage,
 });
 

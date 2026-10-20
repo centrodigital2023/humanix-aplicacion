@@ -153,7 +153,6 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
                 {busy === c.key && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
                 {paid && cta.action.kind !== "current" ? "No disponible" : cta.label}
               </button>
-
             </li>
           );
         })}
