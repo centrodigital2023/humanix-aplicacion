@@ -17,15 +17,15 @@ Esta revisión cubrió las 79 pantallas, los 284 componentes y las 40 funciones 
 
 | Pieza | Dónde se ve | Estado |
 | --- | --- | --- |
-| `health_compliance` | Panel del profesional (vacunas, cursos, póliza) | **Corregido:** la tarjeta se oculta en vez de ofrecer guardar fechas que fallaban |
-| `patient_risk_scores`, `vital_signs` | Monitoreo (riesgo del paciente) | **Corregido:** la tarjeta se oculta en vez de ofrecer un cálculo que fallaba |
+| `health_compliance` | Panel del profesional (vacunas, cursos, póliza) | **Corregido:** la tarjeta se oculta en vez de ofrecer guardar fechas que fallaban. Migración lista: `20261020110000` |
+| `patient_risk_scores`, `vital_signs` | Monitoreo (riesgo del paciente) | **Corregido:** la tarjeta se oculta en vez de ofrecer un cálculo que fallaba. Migración lista: `20261020150000` (lee `vital_signs_readings`) |
 | `service_contracts`, depósito `documents` | Página del servicio | Ya se ocultaba solo |
 | `public_stats` | Portal EPS | Ya tenía respaldo |
 | `referrals` y sus 2 funciones | Invitar a un amigo | Ya se ocultaba (15 oct) |
-| `wallet_*`, `payout_requests`, `request_payout`, `get_or_create_wallet` | Billetera | Ya se ocultaba (15 oct) |
-| `institution_branches` | Facturación por sede | Ya se ocultaba (15 oct) |
-| `service_checkins`, depósito `evidence`; `flag_rating`, `respond_to_rating` | `CheckInOut` y `RatingCard` | No se usan en ninguna pantalla |
-| `alert_thresholds`, `rethus_checks` | Funciones de servidor `clinical-alert-notify` y `rethus-weekly-check` | No las llama ningún disparador ni tarea programada |
+| `wallet_*`, `payout_requests`, `request_payout`, `get_or_create_wallet` | Billetera | Ya se ocultaba (15 oct). Migración lista: `20261020130000` |
+| `institution_branches` | Facturación por sede | Ya se ocultaba (15 oct). Migración lista: `20261020120000` |
+| `service_checkins`, depósito `evidence`; `flag_rating`, `respond_to_rating` | `CheckInOut` y `RatingCard` | No se usan en ninguna pantalla. Migraciones listas: `20261020150000` y `20261020160000` |
+| `alert_thresholds`, `rethus_checks` | Funciones de servidor `clinical-alert-notify` y `rethus-weekly-check` | No las llama ningún disparador ni tarea programada. `alert_thresholds` queda en `20261020150000`; `rethus_checks` no se habilita (la regla es una verificación por profesional) |
 
 ## 2. Que sea adorable
 

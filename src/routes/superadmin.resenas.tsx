@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useSuperadmin } from "@/hooks/use-superadmin";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 import { StarDisplay } from "@/components/humanix/RatingCard";
 import { buildSeo } from "@/lib/seo";
 
@@ -110,9 +111,13 @@ function ResenasPage() {
   const moderate = async (ids: string[], keep: boolean) => {
     if (
       !keep &&
-      !window.confirm(
-        `¿Eliminar ${ids.length} reseña${ids.length > 1 ? "s" : ""}? No se puede deshacer.`,
-      )
+      !(await confirmAction({
+        title: ids.length > 1 ? `¿Eliminar ${ids.length} reseñas?` : "¿Eliminar esta reseña?",
+        description:
+          "Sale del perfil y de los promedios. No se puede deshacer; queda en auditoría.",
+        confirmLabel: "Eliminar",
+        destructive: true,
+      }))
     ) {
       return;
     }
