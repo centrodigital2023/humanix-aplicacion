@@ -494,7 +494,8 @@ export function preferenceRequest(input: {
     items: [
       { id: plan, title: PLAN_TITLE_ONCE[plan], quantity: 1, unit_price: amount, currency_id: "COP" },
     ],
-    ...(input.email ? { payer: { email: input.email } } : {}),
+    // Sin `payer`: un correo prellenado que tenga cuenta en Mercado Pago obliga a iniciar sesión y bloquea el botón
+    // de pagar. Sin él, PSE, tarjeta y efectivo se pagan como invitado.
     back_urls: {
       success: `${origin}/pago/exito?tipo=plan&plan=${plan}&from=${from}`,
       failure: `${origin}/pago/fallo?tipo=plan&plan=${plan}&from=${from}`,

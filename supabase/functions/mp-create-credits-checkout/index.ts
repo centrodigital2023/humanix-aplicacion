@@ -25,9 +25,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const emailRaw = typeof body.email === "string" ? body.email.trim().slice(0, 120) : "";
-    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)
-      ? emailRaw : "comprador@humanix.lat";
 
     const rawOrigin = req.headers.get("origin") ?? "";
     const origin = /^https:\/\/([a-z0-9-]+\.)?humanix\.lat$/i.test(rawOrigin)
@@ -62,7 +59,7 @@ Deno.serve(async (req) => {
           currency_id: "COP",
         },
       ],
-      payer: { email },
+      // Sin `payer`: así PSE se paga como invitado, sin iniciar sesión en Mercado Pago.
       back_urls: {
         success: `${origin}/pago/exito?tipo=creditos&pack=${packId}&creditos=${totalCredits}`,
         failure: `${origin}/pago/fallo?tipo=creditos&pack=${packId}`,
