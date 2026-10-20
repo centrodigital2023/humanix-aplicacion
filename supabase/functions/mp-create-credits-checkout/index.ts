@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       },
       auto_return: "approved",
       // Pago como invitado (sin cuenta de Mercado Pago): PSE abierto por defecto, sin excluir medios.
-      payment_methods: { excluded_payment_types: [], installments: 1, default_payment_method_id: "pse" },
+      payment_methods: { excluded_payment_types: [], installments: 1 },
       binary_mode: false,
       external_reference: `credits:${userId}:${packId}`,
       notification_url: `${SUPABASE_URL}/functions/v1/mp-webhook`,
