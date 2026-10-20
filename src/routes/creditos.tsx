@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAppUser } from "@/hooks/use-app-user";
 import { TokenPackages } from "@/components/humanix/TokenPackages";
+import { buildSeo } from "@/lib/seo";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/creditos")({
-  head: () => ({ meta: [{ title: "Créditos IA · Humanix" }] }),
+  head: () => buildSeo({ title: "Créditos IA · Humanix", path: "/creditos", description: "Consulta el saldo y la vigencia de tus créditos de inteligencia artificial en Humanix." }),
   component: CreditosPage,
 });
 
@@ -24,7 +25,7 @@ function CreditosPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Créditos IA</h1>
         <p className="text-muted-foreground mt-1">
-          Gestiona y recarga tus créditos para funciones de inteligencia artificial.
+          Consulta tus créditos para funciones de inteligencia artificial.
         </p>
       </div>
       {user ? (
