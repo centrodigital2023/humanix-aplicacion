@@ -1,4 +1,4 @@
-// Aplica la recompensa al referidor cuando el referido se suscribe.
+// Aplica la recompensa al referidor cuando el referido se suscribe (grant_referral_reward, solo service_role).
 // Llamada desde mp-webhook o manualmente por superadmin.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
@@ -54,57 +54,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Actualizar referido a 'subscribed'
-    const { data: referral, error: refErr } = await supabase
-      .from("referrals")
-      .select("id, referrer_id, status")
-      .eq("referred_id", referred_id)
-      .in("status", ["registered", "pending"])
-      .maybeSingle();
+    // Toda la regla vive en la base (20261020150000_referrals_security.sql): exige plan de pago vigente del referido
+    // en mp_subscriptions, suma el mes a quien refiere, avisa y es idempotente.
+    const { data: result, error } = await supabase.rpc("grant_referral_reward", {
+      p_referred_id: referred_id,
+    });
+    if (error) throw error;
 
-    if (refErr || !referral) {
-      return new Response(JSON.stringify({ error: "no referral found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    await supabase.from("referrals")
-      .update({ status: "subscribed" })
-      .eq("id", referral.id);
-
-    // Extender suscripción del referidor 1 mes
-    const { data: sub } = await supabase
-      .from("subscriptions")
-      .select("id, ends_at")
-      .eq("user_id", referral.referrer_id)
-      .maybeSingle();
-
-    if (sub) {
-      const currentEnd = new Date(sub.ends_at ?? new Date());
-      const newEnd = new Date(currentEnd);
-      newEnd.setMonth(newEnd.getMonth() + 1);
-
-      await supabase.from("subscriptions")
-        .update({ ends_at: newEnd.toISOString() })
-        .eq("id", sub.id);
-    }
-
-    // Marcar como recompensado
-    await supabase.from("referrals")
-      .update({ status: "rewarded", reward_applied_at: new Date().toISOString() })
-      .eq("id", referral.id);
-
-    // Notificación in-app al referidor
-    await supabase.from("notifications").insert({
-      user_id: referral.referrer_id,
-      type: "referral_reward",
-      title: "¡Recompensa de referido!",
-      body: "Tu colega se suscribió a Humanix. Tienes 1 mes del Plan Esencial gratis activado.",
-      is_read: false,
-    }).throwOnError().catch(() => null); // tabla opcional
-
-    return new Response(JSON.stringify({ success: true, referral_id: referral.id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const status = result === "no_referral" ? 404 : result === "not_subscribed" ? 409 : 200;
+    return new Response(JSON.stringify({ success: status === 200, result }), {
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("[apply-referral-reward]", e);

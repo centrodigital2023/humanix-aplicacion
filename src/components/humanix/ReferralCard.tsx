@@ -5,15 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { referralStats, type ReferralStats } from "@/lib/referrals";
 
 const sb = supabase as unknown as SupabaseClient;
-
-type ReferralStats = {
-  pending: number;
-  registered: number;
-  rewarded: number;
-  months_earned: number;
-};
 
 type Props = {
   userId: string;
@@ -21,12 +15,7 @@ type Props = {
 
 export function ReferralCard({ userId }: Props) {
   const [code, setCode] = useState<string | null>(null);
-  const [stats, setStats] = useState<ReferralStats>({
-    pending: 0,
-    registered: 0,
-    rewarded: 0,
-    months_earned: 0,
-  });
+  const [stats, setStats] = useState<ReferralStats>(() => referralStats([]));
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -49,15 +38,7 @@ export function ReferralCard({ userId }: Props) {
       // Estadísticas del referidor
       const { data: rows } = await sb.from("referrals").select("status").eq("referrer_id", userId);
 
-      if (rows) {
-        const rewarded = rows.filter((r: { status: string }) => r.status === "rewarded").length;
-        setStats({
-          pending: rows.filter((r: { status: string }) => r.status === "pending").length,
-          registered: rows.filter((r: { status: string }) => r.status === "registered").length,
-          rewarded,
-          months_earned: rewarded,
-        });
-      }
+      if (rows) setStats(referralStats(rows));
     } catch (err) {
       // Silencio — la tarjeta simplemente no muestra código si falla
     } finally {
@@ -125,17 +106,17 @@ export function ReferralCard({ userId }: Props) {
       <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border/40">
         <div className="text-center">
           <Users className="h-4 w-4 text-muted-foreground mx-auto mb-0.5" />
-          <p className="text-xl font-bold font-display">{stats.pending + stats.registered}</p>
+          <p className="text-xl font-bold font-display">{stats.invited}</p>
           <p className="text-[10px] text-muted-foreground">Invitados</p>
         </div>
         <div className="text-center">
           <Check className="h-4 w-4 text-biosensor mx-auto mb-0.5" />
-          <p className="text-xl font-bold font-display text-biosensor">{stats.rewarded}</p>
+          <p className="text-xl font-bold font-display text-biosensor">{stats.subscribed}</p>
           <p className="text-[10px] text-muted-foreground">Suscritos</p>
         </div>
         <div className="text-center">
           <CalendarDays className="h-4 w-4 text-copper mx-auto mb-0.5" />
-          <p className="text-xl font-bold font-display text-copper">{stats.months_earned}</p>
+          <p className="text-xl font-bold font-display text-copper">{stats.monthsEarned}</p>
           <p className="text-[10px] text-muted-foreground">Meses ganados</p>
         </div>
       </div>

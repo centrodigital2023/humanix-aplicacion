@@ -29,6 +29,7 @@ const {
 
 import appCss from "../styles.css?url";
 import { ConfirmHost } from "@/components/humanix/ConfirmHost";
+import { usePendingReferral } from "@/hooks/use-pending-referral";
 
 const FloatingWAChat = lazy(() =>
   import("@/components/humanix/FloatingWAChat").then((module) => ({
@@ -204,6 +205,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  usePendingReferral();
   // En la home y el registro el WhatsApp ya está en la página; la burbuja
   // flotante taparía el botón principal en el celular.
   const hideBubble = useRouterState({

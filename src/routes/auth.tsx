@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
 import { toast } from "sonner";
 import { friendlyAuthError } from "@/lib/friendlyError";
+import { normalizeReferralCode, PENDING_REFERRAL_KEY } from "@/lib/referrals";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (
@@ -175,18 +176,14 @@ function AuthPage() {
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
 
-  // Referral code: from URL param or localStorage
-  const [refCode, setRefCode] = useState<string | null>(null);
-
-  // Capture referral code on mount
+  // Guarda el código de referido del enlace (?ref=). Se aplica al haber sesión (usePendingReferral en la raíz):
+  // el servidor usa auth.uid(), así que no puede aplicarse antes de confirmar el correo.
   useEffect(() => {
-    const fromUrl = search.ref;
-    if (fromUrl) {
-      localStorage.setItem("humanix_ref_code", fromUrl);
-      setRefCode(fromUrl);
-    } else {
-      const stored = localStorage.getItem("humanix_ref_code");
-      if (stored) setRefCode(stored);
+    try {
+      const fromUrl = normalizeReferralCode(search.ref);
+      if (fromUrl) localStorage.setItem(PENDING_REFERRAL_KEY, fromUrl);
+    } catch {
+      /* sin almacenamiento: el registro sigue sin código */
     }
   }, [search.ref]);
 
@@ -257,24 +254,6 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-
-        // Aplicar código de referido si existe (fire-and-forget, sin bloquear el flujo)
-        if (refCode && data.user?.id) {
-          const _code = refCode;
-          const _uid = data.user.id;
-          void (async () => {
-            try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await (supabase as any).rpc("apply_referral_code", {
-                p_code: _code,
-                p_new_user_id: _uid,
-              });
-              localStorage.removeItem("humanix_ref_code");
-            } catch {
-              /* silencio — no bloquear el registro */
-            }
-          })();
-        }
 
         // If Supabase project has "Confirm email" enabled, session will be
         // null and user must verify via the OTP code we just emailed.
