@@ -1,11 +1,15 @@
-// Crea la suscripción de Mercado Pago (`/preapproval`, cobro mensual en COP) de un plan de Humanix.
-// Devuelve init_point para redirigir al checkout, donde la persona elige el medio de pago y autoriza el cobro.
+// Abre el pago de un plan de Humanix en Mercado Pago, en COP, de una de dos formas (`body.mode`):
+//  - "once" (por defecto): un mes con Checkout Pro; admite PSE, Nequi, tarjeta y efectivo sin cuenta de Mercado Pago.
+//  - "recurring": suscripción (`/preapproval`) con cobro automático mensual con tarjeta.
+// Devuelve init_point para redirigir al checkout.
 // La lógica de qué se puede pagar vive en `_shared/planBilling.ts` (probada con Vitest): abrir un pago nunca le quita
 // a nadie un plan vigente, con un plan vigente no se baja de plan y no se abre una segunda suscripción del mismo plan.
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
 import {
   checkoutDecision,
+  checkoutModeOf,
   preapprovalRequest,
+  preferenceRequest,
   returnPathFor,
   type SubscriptionRow,
 } from "../_shared/planBilling.ts";
@@ -65,12 +69,13 @@ Deno.serve(async (req) => {
       );
     }
     const { plan, amount } = decision;
-    // Mercado Pago exige el correo de quien paga en una suscripción: el de la cuenta (servidor) o el que envió la web.
+    const mode = checkoutModeOf(body.mode);
+    // El correo de la cuenta (servidor) o el que envió la web. La suscripción lo exige; el pago único no.
     const emailRaw = (auth.email ?? (typeof body.email === "string" ? body.email : ""))
       .trim()
       .slice(0, 120);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) return json({ error: "missing_email" }, 400);
-    const email = emailRaw;
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw) ? emailRaw : null;
+    if (mode === "recurring" && !email) return json({ error: "missing_email" }, 400);
 
     // Anti open-redirect: solo se aceptan orígenes de humanix.lat. Si el
     // header Origin viene de otro dominio, forzamos el canónico.
@@ -82,22 +87,38 @@ Deno.serve(async (req) => {
     // Panel al que vuelve cada perfil tras pagar: el de su rol (lista cerrada, sin open-redirect).
     const returnPath = returnPathFor(roles, body.return_to);
 
-    // Suscripción sin plan asociado: Mercado Pago agrega `preapproval_id` a esta URL al volver.
-    const preBody = preapprovalRequest({
-      userId,
-      plan,
-      email,
-      backUrl: `${origin}/pago/exito?tipo=plan&plan=${plan}&from=${encodeURIComponent(returnPath)}`,
-    });
+    // Suscripción: Mercado Pago agrega `preapproval_id` a la URL al volver. Pago único: `payment_id`.
+    const [endpoint, mpBody] =
+      mode === "recurring"
+        ? [
+            "/preapproval",
+            preapprovalRequest({
+              userId,
+              plan,
+              email: email!,
+              backUrl: `${origin}/pago/exito?tipo=plan&plan=${plan}&from=${encodeURIComponent(returnPath)}`,
+            }),
+          ]
+        : [
+            "/checkout/preferences",
+            preferenceRequest({
+              userId,
+              plan,
+              email,
+              origin,
+              returnPath,
+              notificationUrl: `${SUPABASE_URL}/functions/v1/mp-webhook`,
+            }),
+          ];
 
-    const r = await fetch(`${MP_BASE}/preapproval`, {
+    const r = await fetch(`${MP_BASE}${endpoint}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${MP_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify(preBody),
+      body: JSON.stringify(mpBody),
     });
     if (!r.ok) {
       const t = await r.text();
-      console.error("MP preapproval error:", r.status, t);
+      console.error(`MP ${endpoint} error:`, r.status, t);
       return new Response(JSON.stringify({ error: "Error interno. Inténtalo de nuevo." }), {
         status: 500,
         headers: { ...cors, "Content-Type": "application/json" },
@@ -124,9 +145,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         kind: decision.kind,
+        mode,
         init_point: pre.init_point,
         sandbox_init_point: pre.sandbox_init_point,
-        preapproval_id: pre.id,
+        ...(mode === "recurring" ? { preapproval_id: pre.id } : { preference_id: pre.id }),
       }),
       { headers: { ...cors, "Content-Type": "application/json" } },
     );

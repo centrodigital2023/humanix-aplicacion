@@ -1,9 +1,13 @@
 // Lógica de cobro y vigencia de planes — módulo puro (sin APIs de Deno) para que lo usen las Edge Functions
 // `mp-create-subscription` y `mp-webhook`, la interfaz (vía `src/lib/planBilling.ts`) y las pruebas de Vitest.
 //
-// Cómo funciona el cobro hoy: cada plan es una suscripción de Mercado Pago (`/preapproval`) que cobra un mes cada mes,
-// en COP, hasta que la persona la cancela. Cada cobro aprobado suma un mes; el webhook (o la confirmación al volver)
-// es lo único que activa un plan en `mp_subscriptions`. Los pagos únicos antiguos (preferencias) se siguen aplicando.
+// Cómo funciona el cobro hoy, en COP, con dos formas de pagar el mismo plan:
+//  - «once» (por defecto): un mes con Checkout Pro (`/checkout/preferences`). Admite PSE, Nequi, tarjeta y efectivo
+//    sin cuenta de Mercado Pago; no se renueva solo.
+//  - «recurring»: suscripción (`/preapproval`) que cobra un mes cada mes con tarjeta hasta que la persona la cancela.
+//    Mercado Pago no cobra PSE de forma recurrente, por eso no es la opción por defecto.
+// Cada pago aprobado suma un mes; el webhook (o la confirmación al volver) es lo único que activa un plan en
+// `mp_subscriptions`.
 //
 // Reglas que este módulo hace cumplir (todas probadas en `src/lib/planBilling.test.ts`):
 //  1. Se activa el plan que se PAGÓ (lo fija nuestro servidor en la preferencia), nunca el que esté guardado en la
@@ -43,6 +47,20 @@ export const PLAN_TITLE: Record<PaidPlan, string> = {
   pro_monthly: "Humanix Pro · mensual",
   institution_monthly: "Humanix IPS Mejorado · mensual",
 };
+
+/** Título del pago único de un mes (Checkout Pro). */
+export const PLAN_TITLE_ONCE: Record<PaidPlan, string> = {
+  essential_monthly: "Humanix Esencial · 1 mes",
+  pro_monthly: "Humanix Pro · 1 mes",
+  institution_monthly: "Humanix IPS Mejorado · 1 mes",
+};
+
+export type CheckoutMode = "once" | "recurring";
+
+/** Forma de pago pedida por la web; cualquier otra cosa es el pago único (el que admite PSE). */
+export function checkoutModeOf(v: unknown): CheckoutMode {
+  return v === "recurring" ? "recurring" : "once";
+}
 
 const DAY_MS = 86_400_000;
 
@@ -454,6 +472,42 @@ export function preapprovalRequest(input: {
     },
     back_url: input.backUrl,
     status: "pending",
+  };
+}
+
+/**
+ * Cuerpo de `POST /checkout/preferences` para pagar UN mes (Checkout Pro). Sin excluir medios de pago: PSE, Nequi,
+ * tarjeta y efectivo, como invitado. `binary_mode: false` deja PSE «pendiente» mientras el banco confirma.
+ */
+export function preferenceRequest(input: {
+  userId: string;
+  plan: PaidPlan;
+  email: string | null;
+  origin: string;
+  returnPath: string;
+  notificationUrl: string;
+}) {
+  const { plan, origin } = input;
+  const amount = PLAN_PRICE_COP[plan];
+  const from = encodeURIComponent(input.returnPath);
+  return {
+    items: [
+      { id: plan, title: PLAN_TITLE_ONCE[plan], quantity: 1, unit_price: amount, currency_id: "COP" },
+    ],
+    ...(input.email ? { payer: { email: input.email } } : {}),
+    back_urls: {
+      success: `${origin}/pago/exito?tipo=plan&plan=${plan}&from=${from}`,
+      failure: `${origin}/pago/fallo?tipo=plan&plan=${plan}&from=${from}`,
+      pending: `${origin}/pago/exito?tipo=plan&plan=${plan}&estado=pending&from=${from}`,
+    },
+    auto_return: "approved",
+    payment_methods: { excluded_payment_types: [], excluded_payment_methods: [], installments: 1 },
+    binary_mode: false,
+    external_reference: input.userId,
+    notification_url: input.notificationUrl,
+    statement_descriptor: "HUMANIX",
+    // Lo que el webhook usa para activar: el plan y el precio que fijó este servidor.
+    metadata: { user_id: input.userId, plan, price_cop: amount },
   };
 }
 

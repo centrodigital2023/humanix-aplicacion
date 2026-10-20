@@ -1,4 +1,5 @@
-// Abrir la suscripción de un plan (Mercado Pago, cobro mensual, solo en la web) con mensajes claros y amables.
+// Abrir el pago de un plan (Mercado Pago, solo en la web) con mensajes claros y amables. Dos formas: «once», un mes
+// con PSE, Nequi, tarjeta o efectivo (por defecto), y «recurring», suscripción con cobro automático con tarjeta.
 //
 // Un solo camino para /planes, la tarjeta de plan de los paneles y la franja de planes: llama a
 // `mp-create-subscription`, devuelve la URL del pago o un mensaje para la persona. El servidor decide qué se puede
@@ -57,7 +58,12 @@ export async function readErrorPayload(err: unknown): Promise<CheckoutErrorPaylo
 
 export async function startCheckout(
   invoke: Invoke,
-  input: { plan: PlanKey; email?: string | null; returnTo?: string | null },
+  input: {
+    plan: PlanKey;
+    email?: string | null;
+    returnTo?: string | null;
+    mode?: "once" | "recurring";
+  },
 ): Promise<CheckoutResult> {
   try {
     const { data, error } = await invoke("mp-create-subscription", {
@@ -66,6 +72,7 @@ export async function startCheckout(
         amount: PLAN_CATALOG[input.plan].amountCOP,
         email: input.email ?? undefined,
         return_to: input.returnTo ?? undefined,
+        mode: input.mode ?? "once",
       },
     });
     if (error) {

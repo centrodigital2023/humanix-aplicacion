@@ -45,7 +45,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Los pagos son seguros?",
-    a: "Sí. Cada plan es una suscripción de Mercado Pago (estándar PCI DSS nivel 1) que se cobra cada mes en pesos colombianos. No almacenamos datos de tarjetas.",
+    a: "Sí. Pagas en Mercado Pago (estándar PCI DSS nivel 1), en pesos colombianos: un mes con PSE, Nequi, tarjeta o efectivo, o con cobro automático mensual con tarjeta desde tu panel. No almacenamos datos de tarjetas.",
   },
   {
     q: "¿Qué es la verificación RETHUS?",
