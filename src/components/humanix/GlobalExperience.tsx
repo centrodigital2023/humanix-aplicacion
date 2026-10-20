@@ -14,7 +14,6 @@ export function GlobalExperience() {
     } catch {
       /* ignore */
     }
-
   }, []);
   return null;
 }

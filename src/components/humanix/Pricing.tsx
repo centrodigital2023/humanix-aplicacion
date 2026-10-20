@@ -94,7 +94,13 @@ export function Pricing() {
                   disabled={cta.disabled || p.amountCOP > 0}
                   asChild={!cta.disabled && p.amountCOP === 0}
                 >
-                  {p.amountCOP > 0 ? <span>{cta.action.kind === "current" ? cta.label : "No disponible"}</span> : cta.disabled ? <span>{cta.label}</span> : <a href={href}>{cta.label}</a>}
+                  {p.amountCOP > 0 ? (
+                    <span>{cta.action.kind === "current" ? cta.label : "No disponible"}</span>
+                  ) : cta.disabled ? (
+                    <span>{cta.label}</span>
+                  ) : (
+                    <a href={href}>{cta.label}</a>
+                  )}
                 </Button>
               </div>
             );
