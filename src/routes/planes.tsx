@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Check,
   X,
@@ -26,12 +27,12 @@ import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
 import type { Audience } from "@/lib/audience";
 import { computeCta } from "@/lib/planCta";
-import { LATER_MESSAGE } from "@/lib/checkout";
+import { LATER_MESSAGE, payPageHref } from "@/lib/checkout";
 
 const PLAN_FAQS = [
   {
     q: "¿Puedo cancelar en cualquier momento?",
-    a: "Los beneficios adquiridos siguen vigentes hasta el final del periodo registrado. Si tenías una renovación automática, debes gestionarla con el proveedor donde la contrataste.",
+    a: "Sí. No hay permanencia mínima. Cancelas la renovación automática desde tu panel y el plan sigue activo hasta el final del periodo pagado.",
   },
   {
     q: "¿Cuál es la diferencia entre Esencial y Pro?",
@@ -43,7 +44,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Los pagos son seguros?",
-    a: "Los pagos en línea no están disponibles. Los beneficios ya adquiridos se conservan según su vigencia.",
+    a: "Sí. Pagas aquí mismo, en Humanix, con los formularios seguros de Mercado Pago (estándar PCI DSS nivel 1), en pesos colombianos: un mes con tarjeta, PSE (Bancolombia, Nequi y demás bancos) o Efecty, o cobro automático mensual con tarjeta. Los datos de tu tarjeta los guarda Mercado Pago, nunca Humanix.",
   },
   {
     q: "¿Qué es la verificación RETHUS?",
@@ -51,7 +52,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "La compra y el cambio a planes de pago no están disponibles. Puedes consultar los beneficios de tu plan actual.",
+    a: "Puedes subir de plan cuando quieras: los días que te quedaban se convierten al plan nuevo y la suscripción anterior se cancela sola. Para bajar de plan, cancela la renovación automática y elige el nuevo cuando termine tu plan actual.",
   },
 ];
 
@@ -90,7 +91,7 @@ const pricingProductLd = {
           "@type": "Offer",
           price: "9000",
           priceCurrency: "COP",
-          availability: "https://schema.org/OutOfStock",
+          availability: "https://schema.org/InStock",
           priceValidUntil: "2026-12-31",
         },
       },
@@ -107,7 +108,7 @@ const pricingProductLd = {
           "@type": "Offer",
           price: "29000",
           priceCurrency: "COP",
-          availability: "https://schema.org/OutOfStock",
+          availability: "https://schema.org/InStock",
           priceValidUntil: "2026-12-31",
         },
       },
@@ -124,7 +125,7 @@ const pricingProductLd = {
           "@type": "Offer",
           price: "99000",
           priceCurrency: "COP",
-          availability: "https://schema.org/OutOfStock",
+          availability: "https://schema.org/InStock",
           priceValidUntil: "2026-12-31",
         },
       },
@@ -384,13 +385,17 @@ function PlansPage() {
     autoRenew,
     currentPeriodEnd,
     loading: planLoading,
+    error: planError,
     refresh: refreshPlan,
   } = usePlan(user?.id ?? null);
+  const navigate = useNavigate();
   const loading = userLoading || planLoading;
   // Cada perfil ve solo sus planes.
   const { audience } = useAudience();
   const shown = audience ? PLANS_BY_AUDIENCE[audience] : DISPLAY.map((d) => d.key);
   const plans = DISPLAY.filter((d) => shown.includes(d.key));
+  const [acting, setActing] = useState<PlanKey | null>(null);
+  const autoTriggered = useRef(false);
 
   const renewSoon = planValidity(
     { plan: currentPlan, currentPeriodEnd, autoRenew },
@@ -402,11 +407,6 @@ function PlansPage() {
     const cta = computeCta(key, ctx);
     if (cta.action.kind === "free") {
       window.location.href = user ? "/dashboard" : "/auth";
-      return;
-    }
-    if (cta.action.kind === "sales") {
-      // Institución paga en la web igual que los demás planes
-      window.location.href = user ? "/dashboard/institucion" : "/auth?redirect=/planes";
       return;
     }
     if (cta.action.kind === "login") {
@@ -422,8 +422,32 @@ function PlansPage() {
       toast.info(LATER_MESSAGE);
       return;
     }
-    toast.info("Los pagos en línea no están disponibles.");
+    if (planError) {
+      // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
+      toast("No pudimos confirmar tu plan ahora.", {
+        description: "Revisa tu conexión e inténtalo de nuevo.",
+      });
+      void refreshPlan();
+      return;
+    }
+    setActing(key);
+    void navigate({ href: payPageHref(key) });
   };
+
+  useEffect(() => {
+    if (autoTriggered.current || loading || !user) return;
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const requested = url.searchParams.get("plan") as PlanKey | null;
+    if (!requested || !(requested in PLAN_CATALOG)) return;
+    if (requested === "free") return;
+    if (currentPlan === requested && !cancelAtPeriodEnd) return;
+    autoTriggered.current = true;
+    url.searchParams.delete("plan");
+    window.history.replaceState({}, "", url.toString());
+    void choose(requested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user, currentPlan, cancelAtPeriodEnd]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -465,7 +489,9 @@ function PlansPage() {
             Un plan para cada <span className="text-gradient-bio">historia humana</span>.
           </h1>
           <p className="mt-3 text-muted-foreground text-base sm:text-lg">
-            Los pagos en línea no están disponibles. Conservas los beneficios de tu plan vigente.
+            Pagos en pesos colombianos.{" "}
+            <span className="font-semibold text-foreground">Sin permanencia.</span> Cancela cuando
+            quieras.
           </p>
           {/* Trust badges */}
           <div className="mt-5 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
@@ -473,7 +499,7 @@ function PlansPage() {
               <ShieldCheck className="h-3.5 w-3.5 text-biosensor" /> RETHUS verificado
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-copper" /> Plan gratuito disponible
+              <Zap className="h-3.5 w-3.5 text-copper" /> Activación inmediata
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5 text-fuchsia-neural" /> +100 profesionales activos
@@ -551,10 +577,11 @@ function PlansPage() {
                           ? "default"
                           : "outline"
                   }
-                  disabled={loading || cta.disabled || def.amountCOP > 0}
+                  disabled={loading || acting === d.key || cta.disabled}
                   onClick={() => choose(d.key)}
                 >
-                  {def.amountCOP > 0 && cta.action.kind !== "current" ? "No disponible" : cta.label}
+                  {acting === d.key && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {cta.label}
                 </Button>
               </Card>
             );
@@ -677,7 +704,8 @@ function PlansPage() {
             </a>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            El WhatsApp es solo para resolver dudas. No se reciben pagos por este medio.
+            El WhatsApp es solo para resolver dudas. Los pagos se realizan únicamente en esta
+            página.
           </p>
           <Link
             to="/"

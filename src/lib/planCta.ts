@@ -21,10 +21,10 @@ export type CtaAction =
   | { kind: "current" } // Disabled — already on this plan and not cancelling
   | { kind: "reactivate" } // On this paid plan but cancellation pending → re-checkout
   | { kind: "login"; redirectTo: string } // Send to /auth, resume on /planes
-  | { kind: "checkout" } // Trigger MP checkout for this plan
+  | { kind: "checkout" } // Pagar el plan en /pagar
   | { kind: "free" } // Free CTA: dashboard if logged in, /auth otherwise
   | { kind: "later" } // Plan menor con uno vigente: se elige cuando termine (no se pierde lo pagado)
-  | { kind: "sales" }; // Institution → mailto
+  | { kind: "sales" }; // Conversación con ventas (hoy ningún plan la usa)
 
 export type CtaPlan = {
   label: string;
@@ -37,14 +37,6 @@ export function computeCta(target: PlanKey, ctx: CtaContext): CtaPlan {
   const currentTier = tierOf(ctx.currentPlan);
   const isLoggedIn = Boolean(ctx.userId);
   const isCurrent = isLoggedIn && ctx.currentPlan === target;
-
-  // Institution is always a sales conversation, regardless of plan state.
-  if (target === "institution_monthly") {
-    if (isCurrent && !ctx.cancelAtPeriodEnd) {
-      return { label: "Tu plan actual", action: { kind: "current" }, disabled: true };
-    }
-    return { label: "Hablar con ventas", action: { kind: "sales" }, disabled: false };
-  }
 
   // Free card
   if (target === "free") {
@@ -59,7 +51,7 @@ export function computeCta(target: PlanKey, ctx: CtaContext): CtaPlan {
     return { label: "Al terminar tu plan", action: { kind: "later" }, disabled: true };
   }
 
-  // Paid plan cards (essential / pro)
+  // Planes de pago (Esencial, Pro e IPS Mejorado): se pagan en /pagar, dentro de Humanix.
   if (!isLoggedIn) {
     return {
       label: `Empezar con ${def.label}`,
@@ -74,7 +66,7 @@ export function computeCta(target: PlanKey, ctx: CtaContext): CtaPlan {
   if (isCurrent) {
     if (ctx.cancelAtPeriodEnd || ctx.renewSoon) {
       // Suscribirse de nuevo suma un mes desde el vencimiento (no se pierden días). Ver planBilling.subscriptionAfterApproval.
-      return { label: "Renovar cada mes", action: { kind: "reactivate" }, disabled: false };
+      return { label: "Renovar", action: { kind: "reactivate" }, disabled: false };
     }
     return { label: "Tu plan actual", action: { kind: "current" }, disabled: true };
   }

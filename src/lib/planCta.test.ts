@@ -25,10 +25,10 @@ describe("computeCta — logged out", () => {
     expect(r.action).toEqual({ kind: "login", redirectTo: "/planes?plan=essential_monthly" });
   });
 
-  it("Institution → 'Hablar con ventas' even when logged out", () => {
+  it("IPS Mejorado se paga como los demás planes: login y vuelve al plan", () => {
     const r = computeCta("institution_monthly", LOGGED_OUT);
-    expect(r.label).toBe("Hablar con ventas");
-    expect(r.action.kind).toBe("sales");
+    expect(r.label).toBe("Empezar con IPS Mejorado");
+    expect(r.action).toEqual({ kind: "login", redirectTo: "/planes?plan=institution_monthly" });
   });
 });
 
@@ -65,17 +65,17 @@ describe("computeCta — paid plan (downgrade / sidegrade / cancel pending)", ()
     expect(r.action.kind).toBe("current");
   });
 
-  it("Pro user with cancellation pending → Pro card offers 'Renovar cada mes'", () => {
+  it("Pro user with cancellation pending → Pro card offers 'Renovar'", () => {
     const r = computeCta("pro_monthly", ON_PRO_CANCELLING);
-    expect(r.label).toBe("Renovar cada mes");
+    expect(r.label).toBe("Renovar");
     expect(r.action.kind).toBe("reactivate");
     expect(r.disabled).toBe(false);
   });
 
-  it("Pro user close to the end → Pro card offers 'Renovar cada mes' (no automatic charges)", () => {
+  it("Pro user close to the end → Pro card offers 'Renovar' (no automatic charges)", () => {
     const r = computeCta("pro_monthly", { ...ON_PRO, renewSoon: true });
     expect(r).toEqual({
-      label: "Renovar cada mes",
+      label: "Renovar",
       action: { kind: "reactivate" },
       disabled: false,
     });
@@ -91,7 +91,11 @@ describe("computeCta — paid plan (downgrade / sidegrade / cancel pending)", ()
     expect(r).toEqual({ label: "Al terminar tu plan", action: { kind: "later" }, disabled: true });
   });
 
-  it("Paid (non-institution) user → Institution still says 'Hablar con ventas'", () => {
-    expect(computeCta("institution_monthly", ON_PRO).label).toBe("Hablar con ventas");
+  it("Pro user → IPS Mejorado es una mejora que se paga en la web", () => {
+    expect(computeCta("institution_monthly", ON_PRO)).toEqual({
+      label: "Mejorar a IPS Mejorado",
+      action: { kind: "checkout" },
+      disabled: false,
+    });
   });
 });

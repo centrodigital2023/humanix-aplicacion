@@ -44,6 +44,7 @@ import { Route as FisioterapiaDomicilioRouteImport } from './routes/fisioterapia
 import { Route as HabeasDataRouteImport } from './routes/habeas-data'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MensajesRouteImport } from './routes/mensajes'
+import { Route as PagarRouteImport } from './routes/pagar'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PlanesRouteImport } from './routes/planes'
 import { Route as PrensaRouteImport } from './routes/prensa'
@@ -88,6 +89,7 @@ import { Route as SuperadminResenasRouteImport } from './routes/superadmin.resen
 import { Route as SuperadminTestimoniosRouteImport } from './routes/superadmin.testimonios'
 import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -266,6 +268,11 @@ const McpRoute = McpRouteImport.update({
 const MensajesRoute = MensajesRouteImport.update({
   id: '/mensajes',
   path: '/mensajes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagarRoute = PagarRouteImport.update({
+  id: '/pagar',
+  path: '/pagar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PairRoute = PairRouteImport.update({
@@ -489,6 +496,11 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMercadopagoWebhookRoute = ApiMercadopagoWebhookRouteImport.update({
+  id: '/api/mercadopago/webhook',
+  path: '/api/mercadopago/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardFamiliaOnboardingRoute =
   DashboardFamiliaOnboardingRouteImport.update({
     id: '/onboarding',
@@ -548,6 +560,7 @@ export interface FileRoutesByFullPath {
   '/habeas-data': typeof HabeasDataRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
+  '/pagar': typeof PagarRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
   '/prensa': typeof PrensaRoute
@@ -592,6 +605,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -632,6 +646,7 @@ export interface FileRoutesByTo {
   '/habeas-data': typeof HabeasDataRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
+  '/pagar': typeof PagarRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
   '/prensa': typeof PrensaRoute
@@ -675,6 +690,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -717,6 +733,7 @@ export interface FileRoutesById {
   '/habeas-data': typeof HabeasDataRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
+  '/pagar': typeof PagarRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
   '/prensa': typeof PrensaRoute
@@ -761,6 +778,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -804,6 +822,7 @@ export interface FileRouteTypes {
     | '/habeas-data'
     | '/mcp'
     | '/mensajes'
+    | '/pagar'
     | '/pair'
     | '/planes'
     | '/prensa'
@@ -848,6 +867,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/superadmin/'
     | '/.lovable/oauth/consent'
+    | '/api/mercadopago/webhook'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -888,6 +908,7 @@ export interface FileRouteTypes {
     | '/habeas-data'
     | '/mcp'
     | '/mensajes'
+    | '/pagar'
     | '/pair'
     | '/planes'
     | '/prensa'
@@ -931,6 +952,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/superadmin'
     | '/.lovable/oauth/consent'
+    | '/api/mercadopago/webhook'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -972,6 +994,7 @@ export interface FileRouteTypes {
     | '/habeas-data'
     | '/mcp'
     | '/mensajes'
+    | '/pagar'
     | '/pair'
     | '/planes'
     | '/prensa'
@@ -1016,6 +1039,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/superadmin/'
     | '/.lovable/oauth/consent'
+    | '/api/mercadopago/webhook'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/lovable/email/auth/preview'
@@ -1058,6 +1082,7 @@ export interface RootRouteChildren {
   HabeasDataRoute: typeof HabeasDataRoute
   McpRoute: typeof McpRoute
   MensajesRoute: typeof MensajesRoute
+  PagarRoute: typeof PagarRoute
   PairRoute: typeof PairRoute
   PlanesRoute: typeof PlanesRoute
   PrensaRoute: typeof PrensaRoute
@@ -1083,6 +1108,7 @@ export interface RootRouteChildren {
   ProfesionalProIdRoute: typeof ProfesionalProIdRoute
   ServicioBookingIdRoute: typeof ServicioBookingIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiMercadopagoWebhookRoute: typeof ApiMercadopagoWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
 }
@@ -1332,6 +1358,13 @@ declare module '@tanstack/react-router' {
       path: '/mensajes'
       fullPath: '/mensajes'
       preLoaderRoute: typeof MensajesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagar': {
+      id: '/pagar'
+      path: '/pagar'
+      fullPath: '/pagar'
+      preLoaderRoute: typeof PagarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pair': {
@@ -1642,6 +1675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/mercadopago/webhook': {
+      id: '/api/mercadopago/webhook'
+      path: '/api/mercadopago/webhook'
+      fullPath: '/api/mercadopago/webhook'
+      preLoaderRoute: typeof ApiMercadopagoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/familia/onboarding': {
       id: '/dashboard/familia/onboarding'
       path: '/onboarding'
@@ -1799,6 +1839,7 @@ const rootRouteChildren: RootRouteChildren = {
   HabeasDataRoute: HabeasDataRoute,
   McpRoute: McpRoute,
   MensajesRoute: MensajesRoute,
+  PagarRoute: PagarRoute,
   PairRoute: PairRoute,
   PlanesRoute: PlanesRoute,
   PrensaRoute: PrensaRoute,
@@ -1825,6 +1866,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfesionalProIdRoute: ProfesionalProIdRoute,
   ServicioBookingIdRoute: ServicioBookingIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiMercadopagoWebhookRoute: ApiMercadopagoWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
 }

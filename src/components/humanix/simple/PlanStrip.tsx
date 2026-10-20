@@ -1,13 +1,13 @@
-// Planes por perfil con la pasarela real (Mercado Pago, edge function
-// mp-create-subscription). Reutiliza computeCta (lógica probada de /planes).
+// Planes por perfil: pagar lleva a /pagar (Mercado Pago dentro de Humanix). Reutiliza computeCta (lógica probada de
+// /planes).
 // Precio visible antes de pagar, sin casillas preseleccionadas.
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
-import { type AppUser } from "@/hooks/use-app-user";
+import { pathForRole, type AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
 import { computeCta } from "@/lib/planCta";
-import { LATER_MESSAGE } from "@/lib/checkout";
+import { LATER_MESSAGE, payPageHref } from "@/lib/checkout";
 import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
 import { AUDIENCE_COPY, type Audience } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
@@ -100,7 +100,18 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
       });
       return;
     }
-    setError("Los pagos en línea no están disponibles.");
+    // checkout / reactivate → /pagar (Mercado Pago dentro de Humanix, solo en la web)
+    if (plan.error) {
+      // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
+      setError("No pudimos confirmar tu plan ahora. Revisa tu conexión e inténtalo de nuevo.");
+      void plan.refresh();
+      return;
+    }
+    setBusy(key);
+    say("Te llevamos a pagar de forma segura.");
+    void navigate({
+      href: payPageHref(key, { returnTo: user ? pathForRole(user.primaryRole) : null }),
+    });
   };
 
   return (
@@ -145,14 +156,19 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
               <button
                 type="button"
                 onClick={() => act(c.key)}
-                disabled={paid || cta.disabled || busy !== null}
+                disabled={cta.disabled || busy !== null}
                 className={`mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl px-4 text-lg font-bold transition active:scale-[0.98] disabled:opacity-60 ${
                   paid ? "bg-white text-trust-deep" : "bg-trust text-trust-foreground"
                 }`}
               >
                 {busy === c.key && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
-                {paid && cta.action.kind !== "current" ? "No disponible" : cta.label}
+                {cta.label}
               </button>
+              {paid && c.key !== "institution_monthly" && (
+                <p className="mt-2 text-center text-sm opacity-85">
+                  🔒 Mercado Pago · PSE, Nequi o tarjeta
+                </p>
+              )}
             </li>
           );
         })}
