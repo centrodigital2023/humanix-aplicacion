@@ -8,7 +8,9 @@ import {
   parsePreapprovalReference,
   preapprovalIdOfPayment,
   preapprovalReference,
+  checkoutModeOf,
   preapprovalRequest,
+  preferenceRequest,
   subscriptionAfterPreapprovalStatus,
   withSubscriptionMetadata,
   type MpPreapproval,
@@ -98,6 +100,42 @@ describe("referencia y cuerpo de la suscripción", () => {
     });
     expect(checkoutErrorMessage({ error: "already_subscribed" }, "pro_monthly")).toMatch(
       /se renueva solo/,
+    );
+  });
+});
+
+describe("pago único de un mes (Checkout Pro, con PSE)", () => {
+  it("es la forma por defecto; la suscripción solo si se pide", () => {
+    expect(checkoutModeOf(undefined)).toBe("once");
+    expect(checkoutModeOf("algo")).toBe("once");
+    expect(checkoutModeOf("recurring")).toBe("recurring");
+  });
+
+  it("no excluye medios de pago (PSE incluido), deja PSE pendiente y fija plan y precio en la metadata", () => {
+    const body = preferenceRequest({
+      userId: USER,
+      plan: "essential_monthly",
+      email: null,
+      origin: "https://humanix.lat",
+      returnPath: "/dashboard/familia",
+      notificationUrl: "https://x.supabase.co/functions/v1/mp-webhook",
+    });
+    expect(body.payment_methods).toEqual({
+      excluded_payment_types: [],
+      excluded_payment_methods: [],
+      installments: 1,
+    });
+    expect(body.binary_mode).toBe(false);
+    expect(body.items[0]).toMatchObject({
+      id: "essential_monthly",
+      title: "Humanix Esencial · 1 mes",
+      unit_price: 9000,
+      currency_id: "COP",
+    });
+    expect(body.metadata).toEqual({ user_id: USER, plan: "essential_monthly", price_cop: 9000 });
+    expect(body).not.toHaveProperty("payer");
+    expect(body.back_urls.success).toBe(
+      "https://humanix.lat/pago/exito?tipo=plan&plan=essential_monthly&from=%2Fdashboard%2Ffamilia",
     );
   });
 });

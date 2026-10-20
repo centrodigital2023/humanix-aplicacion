@@ -23,8 +23,17 @@ describe("abrir el pago", () => {
         amount: 9000,
         email: "a@b.co",
         return_to: "/dashboard/familia",
+        mode: "once",
       },
     });
+  });
+
+  it("pide la suscripción con cobro automático solo si se elige", async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValue({ data: { init_point: "https://mp/sub" }, error: null });
+    await startCheckout(invoke, { plan: "pro_monthly", mode: "recurring" });
+    expect(invoke.mock.calls[0][1].body.mode).toBe("recurring");
   });
 
   it("usa la URL de pruebas si no hay otra", async () => {
