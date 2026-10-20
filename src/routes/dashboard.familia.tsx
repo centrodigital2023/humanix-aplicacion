@@ -24,7 +24,7 @@ import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
 import { OffersMap, type MapPoint } from "@/components/humanix/OffersMap";
 import { LiveMapSection } from "@/components/humanix/LiveMapSection";
-import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
+import { PlanStatus } from "@/components/humanix/PlanStatus";
 import { SmartFamilyProfileForm } from "@/components/humanix/SmartFamilyProfileForm";
 
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
@@ -453,10 +453,8 @@ function FamilyDashboard() {
             </Link>
           </div>
           {user?.id && (
-            <MercadoPagoSubscription
+            <PlanStatus
               userId={user.id}
-              defaultPlan="essential_monthly"
-              plans={["essential_monthly"]}
             />
           )}
         </section>

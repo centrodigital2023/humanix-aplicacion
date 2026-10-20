@@ -4,11 +4,10 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { pathForRole, type AppUser } from "@/hooks/use-app-user";
+import { type AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
 import { computeCta } from "@/lib/planCta";
-import { LATER_MESSAGE, startCheckout } from "@/lib/checkout";
+import { LATER_MESSAGE } from "@/lib/checkout";
 import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
 import { AUDIENCE_COPY, type Audience } from "@/lib/audience";
 import { CONTACT } from "@/lib/social";
@@ -101,26 +100,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
       });
       return;
     }
-    // checkout / reactivate → Mercado Pago (solo en la web)
-    if (plan.error) {
-      // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
-      setError("No pudimos confirmar tu plan ahora. Revisa tu conexión e inténtalo de nuevo.");
-      void plan.refresh();
-      return;
-    }
-    setBusy(key);
-    say("Te llevamos a pagar de forma segura.");
-    const r = await startCheckout(supabase.functions.invoke.bind(supabase.functions), {
-      plan: key,
-      email: user?.email,
-      returnTo: user ? pathForRole(user.primaryRole) : null,
-    });
-    if (r.ok) {
-      window.location.href = r.url;
-      return;
-    }
-    setError(r.message);
-    setBusy(null);
+    setError("Los pagos en línea no están disponibles.");
   };
 
   return (
