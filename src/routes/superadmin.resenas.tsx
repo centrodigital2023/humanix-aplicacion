@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useSuperadmin } from "@/hooks/use-superadmin";
-import { StarDisplay } from "@/components/humanix/RatingCard";
+import { StarDisplay } from "@/components/humanix/StarDisplay";
 import { buildSeo } from "@/lib/seo";
 
 const sb = supabase as unknown as SupabaseClient;

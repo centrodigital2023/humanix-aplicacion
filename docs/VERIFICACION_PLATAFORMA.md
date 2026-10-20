@@ -24,7 +24,7 @@ Esta revisión cubrió las 79 pantallas, los 284 componentes y las 40 funciones 
 | `referrals` y sus 2 funciones | Invitar a un amigo | Ya se ocultaba (15 oct) |
 | `wallet_*`, `payout_requests`, `request_payout`, `get_or_create_wallet` | Billetera | Ya se ocultaba (15 oct) |
 | `institution_branches` | Facturación por sede | Ya se ocultaba (15 oct) |
-| `service_checkins`, depósito `evidence`; `flag_rating`, `respond_to_rating` | `CheckInOut` y `RatingCard` | No se usan en ninguna pantalla |
+| `service_checkins`, depósito `evidence`; `flag_rating`, `respond_to_rating` | `CheckInOut` y `RatingCard` | **Retirados (20 oct):** no se usaban en ninguna pantalla |
 | `alert_thresholds`, `rethus_checks` | Funciones de servidor `clinical-alert-notify` y `rethus-weekly-check` | No las llama ningún disparador ni tarea programada |
 
 ## 2. Que sea adorable
