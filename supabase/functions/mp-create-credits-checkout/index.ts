@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
           currency_id: "COP",
         },
       ],
-      payer: { email },
+      // Sin `payer`: así PSE se paga como invitado, sin iniciar sesión en Mercado Pago.
       back_urls: {
         success: `${origin}/pago/exito?tipo=creditos&pack=${packId}&creditos=${totalCredits}`,
         failure: `${origin}/pago/fallo?tipo=creditos&pack=${packId}`,
