@@ -38,6 +38,7 @@ import { AlertCenter } from "./AlertCenter";
 import { DevicesList, PairDeviceDialog } from "./DeviceDialog";
 import { VitalsDialog } from "./VitalsDialog";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 function VitalTile({
   label,
@@ -122,7 +123,7 @@ export function PatientMonitorPanel({
       await actions.setMonitoring.mutateAsync({ patientId: patient.id, on: false });
       toast.success("Salió de monitoreo");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     }
   };
 
@@ -147,7 +148,7 @@ export function PatientMonitorPanel({
               void actions.setMonitoring
                 .mutateAsync({ patientId: patient.id, on: true })
                 .then(() => toast.success("Entró a monitoreo"))
-                .catch((e: Error) => toast.error(e.message))
+                .catch((e: Error) => toast.error(friendlyError(e)))
             }
           >
             <Power aria-hidden /> Poner en monitoreo

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAiCredits, type AiCreditPack } from "@/hooks/use-ai-credits";
 import { COP } from "@/lib/plans";
+import { friendlyError } from "@/lib/friendlyError";
 
 const PACK_ICONS: Record<string, string> = {
   pack_100: "⚡",
@@ -116,7 +117,7 @@ export function TokenPackages({ userId, userEmail }: { userId: string; userEmail
         "Abriendo Mercado Pago… completa el pago y los créditos se acreditarán automáticamente.",
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al iniciar el pago");
+      toast.error(friendlyError(e, "Error al iniciar el pago"));
     } finally {
       setBuying(null);
       setTimeout(refresh, 3000);

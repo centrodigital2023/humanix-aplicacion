@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PriceBreakdownCard } from "@/components/humanix/PriceBreakdownCard";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 const COP = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -101,7 +102,7 @@ export function BookNowButton({
       setOpen(false);
       navigate({ to: "/servicio/$bookingId", params: { bookingId: data.id } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo crear la reserva");
+      toast.error(friendlyError(e, "No se pudo crear la reserva"));
     } finally {
       setBusy(false);
     }

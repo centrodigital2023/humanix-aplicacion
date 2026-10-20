@@ -73,6 +73,7 @@ import { CaseDialog, CasesPanel, CloseCaseDialog, RateCaseDialog } from "./Patie
 import { PatientFormDialog } from "./PatientFormDialog";
 import { NotesPanel } from "./PatientNotes";
 import { TasksPanel } from "./PatientTasks";
+import { friendlyError } from "@/lib/friendlyError";
 
 export type DrawerTab = "resumen" | "casos" | "notas" | "tareas" | "monitoreo" | "actividad";
 
@@ -151,7 +152,7 @@ export function PatientDrawer({
       await actions.setPatientStatus.mutateAsync({ id: patient.id, status });
       toast.success(status === "paused" ? "En pausa" : "Paciente activo");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     }
   };
 
@@ -458,7 +459,7 @@ export function PatientDrawer({
                                   modality: v,
                                 })
                                 .then(() => toast.success("Modalidad actualizada"))
-                                .catch((err: Error) => toast.error(err.message))
+                                .catch((err: Error) => toast.error(friendlyError(err)))
                             }
                           >
                             <SelectTrigger id="drawer-modality" className="h-8 w-44 text-xs">

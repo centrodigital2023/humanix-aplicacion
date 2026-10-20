@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -291,7 +292,7 @@ export function WalletPanel({ userId }: { userId: string }) {
       setDestination("");
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo solicitar el retiro");
+      toast.error(friendlyError(err, "No se pudo solicitar el retiro"));
     } finally {
       setSubmitting(false);
     }

@@ -3,6 +3,7 @@ import { Sparkles, Loader2, Brain, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Status = "missing" | "ready" | "outdated";
 
@@ -50,7 +51,7 @@ export function AiFingerprintCard({ userId }: { userId: string }) {
       toast.success("✨ Tu huella IA está activa. Ahora apareces en matches semánticos.");
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo generar la huella IA");
+      toast.error(friendlyError(e, "No se pudo generar la huella IA"));
     } finally {
       setBusy(false);
     }

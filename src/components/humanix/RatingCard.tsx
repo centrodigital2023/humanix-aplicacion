@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -396,7 +397,7 @@ export function RatingComposer({
       });
       onSuccess?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo enviar la calificación");
+      toast.error(friendlyError(err, "No se pudo enviar la calificación"));
     } finally {
       setSubmitting(false);
       setConfirming(false);
@@ -545,7 +546,7 @@ export function RatingList({
       toast.success("Respuesta publicada.");
       onRespond?.(id, text);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al publicar respuesta");
+      toast.error(friendlyError(err, "Error al publicar respuesta"));
     }
   };
 
@@ -559,7 +560,7 @@ export function RatingList({
       toast.success("Reseña reportada para revisión.");
       onFlag?.(id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al reportar");
+      toast.error(friendlyError(err, "Error al reportar"));
     }
   };
 

@@ -36,6 +36,7 @@ import {
   type StepUp,
 } from "@/lib/contractIdentity";
 import { signSmartContract } from "@/lib/contracts.functions";
+import { friendlyError } from "@/lib/friendlyError";
 
 interface Props {
   detail: ContractDetail;
@@ -126,7 +127,7 @@ export function ContractSignFlow({ detail, party, userId, onSigned, onReadFullTe
     });
     setSending(false);
     if (err) {
-      setError(`No pudimos enviar el código: ${err.message}`);
+      setError(friendlyError(err, "No pudimos enviar el código. Inténtalo de nuevo en un momento."));
       return;
     }
     setCodeSentAt(Date.now());
@@ -179,7 +180,7 @@ export function ContractSignFlow({ detail, party, userId, onSigned, onReadFullTe
       onSigned();
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "No se pudo registrar la firma. Inténtalo de nuevo.",
+        friendlyError(e, "No se pudo registrar la firma. Inténtalo de nuevo."),
       );
     } finally {
       setSigning(false);

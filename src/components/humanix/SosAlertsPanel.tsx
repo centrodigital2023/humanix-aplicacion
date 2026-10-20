@@ -21,6 +21,7 @@ import {
   type SosAction,
   type SosAlertRow,
 } from "@/lib/sos";
+import { friendlyError } from "@/lib/friendlyError";
 
 function AlertRow({
   row,
@@ -136,7 +137,7 @@ export function SosAlertsPanel({
             action === "acknowledge" ? "Marcaste que vas en camino" : "Alerta actualizada",
           ),
         onError: (e) =>
-          toast.error(e instanceof Error ? e.message : "No se pudo actualizar la alerta"),
+          toast.error(friendlyError(e, "No se pudo actualizar la alerta")),
       },
     );
   };

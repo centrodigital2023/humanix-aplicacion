@@ -65,6 +65,7 @@ import { useAppUser } from "@/hooks/use-app-user";
 import { HScrollCarousel } from "@/components/humanix/HScrollCarousel";
 import { InterviewActions } from "@/components/humanix/InterviewActions";
 import { VitalSignsMonitor } from "@/components/humanix/VitalSignsMonitor";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/evaluador")({
   head: () => ({
@@ -531,7 +532,7 @@ function WebPresencePanel({
       });
       toast.success(`Escaneo IA completo · Social Trust ${parsed.score}/100`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo escanear");
+      toast.error(friendlyError(e, "No se pudo escanear"));
     } finally {
       setScanBusy(false);
     }
@@ -1125,7 +1126,7 @@ function ProfessionalDetailDialog({
       })
       .eq("user_id", pro.user_id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Profesional aprobado y publicado");
     onChanged();
     onClose();
@@ -1148,7 +1149,7 @@ function ProfessionalDetailDialog({
       })
       .eq("user_id", pro.user_id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Profesional bloqueado");
     onChanged();
     onClose();
@@ -1161,7 +1162,7 @@ function ProfessionalDetailDialog({
       .update({ blocked: false, blocked_reason: null, blocked_at: null, blocked_by: null })
       .eq("user_id", pro.user_id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Bloqueo retirado");
     onChanged();
     onClose();
@@ -1188,7 +1189,7 @@ function ProfessionalDetailDialog({
       onChanged();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo eliminar");
+      toast.error(friendlyError(e, "No se pudo eliminar"));
     } finally {
       setBusy(false);
     }
@@ -1196,7 +1197,7 @@ function ProfessionalDetailDialog({
 
   const deleteDoc = async (d: Doc) => {
     const { error } = await supabase.from("professional_documents").delete().eq("id", d.id);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     // Best-effort: remove file from storage if path matches bucket
     try {
       const marker = "/professional-docs/";
@@ -1263,7 +1264,7 @@ function ProfessionalDetailDialog({
       }
       setPreviewDoc({ doc: d, url, kind: detectKind(d.file_name) });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo abrir el documento");
+      toast.error(friendlyError(e, "No se pudo abrir el documento"));
     } finally {
       setPreviewLoading(false);
     }
@@ -1325,7 +1326,7 @@ function ProfessionalDetailDialog({
       setExpandedDoc(d.id);
       await loadAll();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error analizando documento");
+      toast.error(friendlyError(e, "Error analizando documento"));
     } finally {
       setAnalyzingDoc(null);
     }
@@ -1377,7 +1378,7 @@ function ProfessionalDetailDialog({
       setHolistic(v);
       toast.success(`Análisis completo · score ${v.score}/100`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error en análisis");
+      toast.error(friendlyError(e, "Error en análisis"));
     } finally {
       setHolisticBusy(false);
     }
@@ -2575,7 +2576,7 @@ function OfferDetailDialog({
       })
       .eq("id", offer.id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Oferta aprobada");
     onChanged();
     onClose();
@@ -2598,7 +2599,7 @@ function OfferDetailDialog({
       })
       .eq("id", offer.id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Oferta bloqueada");
     onChanged();
     onClose();
@@ -2617,7 +2618,7 @@ function OfferDetailDialog({
       })
       .eq("id", offer.id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Bloqueo retirado");
     onChanged();
     onClose();
@@ -2628,7 +2629,7 @@ function OfferDetailDialog({
     const { error } = await supabase.from("job_offers").delete().eq("id", offer.id);
     setBusy(false);
     setConfirmDelete(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Oferta eliminada");
     onChanged();
     onClose();
@@ -2821,7 +2822,7 @@ function DocsTab({ reviewerId }: { reviewerId: string }) {
         reviewed_at: new Date().toISOString(),
       })
       .eq("id", doc.id);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     if (status === "approved" && doc.doc_type === "rethus") {
       await supabase
         .from("professional_profiles")
@@ -2838,7 +2839,7 @@ function DocsTab({ reviewerId }: { reviewerId: string }) {
       body: { document_id: doc.id },
     });
     toast.dismiss(`ai-${doc.id}`);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success(`IA: ${data?.score ?? "?"}/100 — ${data?.recommendation ?? "validado"}`);
     load();
   };

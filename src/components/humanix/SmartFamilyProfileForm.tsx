@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type FormState = {
   full_name: string;
@@ -93,7 +94,7 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
       setForm((p) => ({ ...p, id_doc_url: path }));
       toast.success("Cédula adjuntada");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
+      toast.error(friendlyError(e, "Error al subir"));
     } finally {
       setUploading(false);
     }
@@ -114,7 +115,7 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
     else toast.success(`Enviamos un enlace a ${email}. Revisa tu correo.`);
   };
 
@@ -142,7 +143,7 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
       if (e2) throw e2;
       toast.success("✅ Perfil guardado");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al guardar");
+      toast.error(friendlyError(e, "Error al guardar"));
     } finally {
       setSaving(false);
     }

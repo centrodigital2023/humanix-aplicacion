@@ -35,6 +35,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendlyError";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 type DocType =
   | "cv"
@@ -332,7 +334,7 @@ export function DocumentsManager({
             toast.success("✨ Datos extraídos del CV. Revísalos antes de guardar.");
           }
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "No se pudo analizar el CV");
+          toast.error(friendlyError(e, "No se pudo analizar el CV"));
         } finally {
           setExtractingCv(false);
         }
@@ -378,7 +380,7 @@ export function DocumentsManager({
         setVerifyingId(null);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
+      toast.error(friendlyError(e, "Error al subir"));
     } finally {
       setBusyType(null);
     }
@@ -394,12 +396,20 @@ export function DocumentsManager({
       if (error || !data?.signedUrl) throw error ?? new Error("No se pudo abrir");
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo abrir el documento");
+      toast.error(friendlyError(e, "No se pudo abrir el documento"));
     }
   };
 
   const remove = async (doc: Doc) => {
-    if (!confirm("¿Eliminar este documento?")) return;
+    if (
+      !(await confirmAction({
+        title: "¿Eliminar este documento?",
+        description: "Si lo necesitas para tu verificación, tendrás que subirlo de nuevo.",
+        confirmLabel: "Eliminar",
+        destructive: true,
+      }))
+    )
+      return;
     try {
       const path = extractPath(doc.file_url);
       if (path) await supabase.storage.from("professional-docs").remove([path]);
@@ -407,7 +417,7 @@ export function DocumentsManager({
       setDocs((prev) => prev.filter((d) => d.id !== doc.id));
       toast.success("Eliminado");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al eliminar");
+      toast.error(friendlyError(e, "Error al eliminar"));
     }
   };
 

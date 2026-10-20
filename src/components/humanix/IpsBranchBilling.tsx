@@ -41,6 +41,8 @@ import { cn } from "@/lib/utils";
 import { useInstitutionBilling } from "@/hooks/use-institution-billing";
 import { COP } from "@/lib/plans";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { friendlyError } from "@/lib/friendlyError";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -128,7 +130,7 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
       setAddress("");
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo agregar la sede");
+      toast.error(friendlyError(err, "No se pudo agregar la sede"));
     } finally {
       setSaving(false);
     }
@@ -139,14 +141,22 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
       toast.error("La sede principal no se puede eliminar");
       return;
     }
-    if (!confirm(`¿Eliminar la sede "${branch.name}"? Tu plan se recalculará.`)) return;
+    if (
+      !(await confirmAction({
+        title: `¿Eliminar la sede «${branch.name}»?`,
+        description: "Tu plan se recalculará con las sedes que queden.",
+        confirmLabel: "Eliminar sede",
+        destructive: true,
+      }))
+    )
+      return;
     try {
       const { error } = await sb.from("institution_branches").delete().eq("id", branch.id);
       if (error) throw error;
       toast.success("Sede eliminada");
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo eliminar");
+      toast.error(friendlyError(err, "No se pudo eliminar"));
     }
   };
 

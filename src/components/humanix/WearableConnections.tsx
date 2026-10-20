@@ -578,7 +578,7 @@ export function WearableConnections({ patientId }: { patientId: string }) {
       toast.success("Dispositivo desvinculado");
     } catch (err) {
       console.error("[WearableConnections] disconnect:", err);
-      toast.error("Error al desvincular. Intenta de nuevo.");
+      toast.error("No pudimos desvincular el dispositivo. Inténtalo de nuevo.");
     }
   };
 

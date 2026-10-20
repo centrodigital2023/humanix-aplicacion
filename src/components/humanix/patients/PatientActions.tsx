@@ -49,6 +49,7 @@ import type { InstLive, InstPatient } from "@/lib/instCareTypes";
 import { OUTCOME_OPTIONS, dischargeSchema, type DischargeValues } from "@/lib/instForms";
 import { FHIR_MIME, buildFhirBundle, bundleSummary, fhirFileName, fhirJson } from "@/lib/instFhir";
 import { SelectField, TextAreaField } from "@/components/humanix/instcare/fields";
+import { friendlyError } from "@/lib/friendlyError";
 
 // ── Alta ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -449,7 +450,7 @@ export function ExportMenu({
         toast.success("Notas exportadas en CSV");
       }
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     } finally {
       setBusy(false);
     }

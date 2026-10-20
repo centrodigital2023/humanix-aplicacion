@@ -48,6 +48,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { humanixAi } from "@/lib/humanixAi";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendlyError";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -308,7 +309,7 @@ export function ProAgendaModule({ userId }: { userId: string }) {
       });
       setNotes((prev) => ({ ...notesInit, ...prev }));
     } catch (err: any) {
-      toast.error("Error cargando agenda: " + err.message);
+      toast.error(friendlyError(err, "No pudimos cargar tu agenda. Inténtalo de nuevo."));
     } finally {
       setLoading(false);
     }
@@ -361,7 +362,7 @@ export function ProAgendaModule({ userId }: { userId: string }) {
       );
       toast.success("Nota guardada");
     } catch (err: any) {
-      toast.error("Error guardando nota: " + err.message);
+      toast.error(friendlyError(err, "No se pudo guardar la nota. Inténtalo de nuevo."));
     } finally {
       setSavingNote(null);
     }
@@ -392,7 +393,7 @@ export function ProAgendaModule({ userId }: { userId: string }) {
         toast.success("✨ Nota estructurada en formato SOAP");
       }
     } catch (err: any) {
-      toast.error("Error con IA: " + err.message);
+      toast.error(friendlyError(err, "El asistente no respondió. Inténtalo de nuevo en un momento."));
     } finally {
       setAiLoadingId(null);
     }
@@ -498,7 +499,7 @@ export function ProAgendaModule({ userId }: { userId: string }) {
         toast.success("Signos vitales registrados");
       }
     } catch (err: any) {
-      toast.error("Error guardando signos vitales: " + err.message);
+      toast.error(friendlyError(err, "No se pudieron guardar los signos vitales. Inténtalo de nuevo."));
     } finally {
       setSavingVitals(null);
     }
@@ -530,7 +531,7 @@ export function ProAgendaModule({ userId }: { userId: string }) {
       };
       toast.success(labels[newStatus] ?? "Estado actualizado");
     } catch (err: any) {
-      toast.error("Error actualizando estado: " + err.message);
+      toast.error(friendlyError(err, "No se pudo actualizar el estado. Inténtalo de nuevo."));
     } finally {
       setStatusLoading(null);
     }

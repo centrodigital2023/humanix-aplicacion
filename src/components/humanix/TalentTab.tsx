@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LiveMarketplaceMap } from "@/components/humanix/LiveMarketplaceMap";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendlyError";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -397,7 +398,7 @@ export function TalentTab({
       setPoolTab("market");
       toast.success(`${merged.length} profesionales del marketplace encontrados.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error en búsqueda");
+      toast.error(friendlyError(e, "Error en búsqueda"));
     } finally {
       setSearching(false);
     }
@@ -463,7 +464,7 @@ export function TalentTab({
       setAiResults(mapped);
       toast.success(`✨ IA encontró ${mapped.length} candidatos.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error en búsqueda IA");
+      toast.error(friendlyError(e, "Error en búsqueda IA"));
       setAiMode(false);
     } finally {
       setAiSearching(false);

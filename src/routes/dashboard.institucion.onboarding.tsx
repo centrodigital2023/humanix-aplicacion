@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAppUser } from "@/hooks/use-app-user";
 import { Logo } from "@/components/humanix/Logo";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/dashboard/institucion/onboarding")({
   head: () => ({ meta: [{ title: "Configura tu institución · Humanix" }] }),
@@ -131,7 +132,7 @@ function InstitutionOnboarding() {
       setDocUrl(path);
       toast.success("Documento adjuntado ✓");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
+      toast.error(friendlyError(e, "Error al subir"));
     } finally {
       setUploading(false);
     }
@@ -187,7 +188,7 @@ function InstitutionOnboarding() {
       if (error) throw error;
       setStep(TOTAL_STEPS + 1); // pantalla de éxito
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo guardar");
+      toast.error(friendlyError(e, "No se pudo guardar"));
     } finally {
       setSaving(false);
     }
@@ -485,7 +486,7 @@ function InstitutionOnboarding() {
                 <span className="text-sm text-muted-foreground leading-relaxed">
                   Autorizo el tratamiento de datos personales e institucionales conforme a la{" "}
                   <a
-                    href="/politica-privacidad"
+                    href="/privacidad"
                     target="_blank"
                     className="underline text-foreground"
                   >

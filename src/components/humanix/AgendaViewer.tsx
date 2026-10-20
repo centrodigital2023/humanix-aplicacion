@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { TrustProfileCard } from "./TrustProfileCard";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -272,7 +273,7 @@ export function AgendaViewer({
       setPendingCell(null);
       onProposalSent?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error enviando propuesta");
+      toast.error(friendlyError(e, "Error enviando propuesta"));
     } finally {
       setSending(null);
     }

@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PromoCarousel, type PromoContext } from "@/components/humanix/PromoCarousel";
+import { friendlyError } from "@/lib/friendlyError";
 
 const COP = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -323,7 +324,7 @@ export function EnhancedBulkOffersModule({
       toast.success(`${valid.length} oferta(s) publicada(s) con requisitos.`);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "No pudimos publicar las ofertas.");
+      toast.error(friendlyError(e, "No pudimos publicar las ofertas."));
     } finally {
       setBusy(false);
     }
@@ -369,7 +370,7 @@ export function EnhancedBulkOffersModule({
       toast.success(`${docs.length} documentos encontrados. Cumplimiento FUID verificado.`);
     } catch (e: any) {
       console.error(e);
-      toast.error("Error descargando documentos.");
+      toast.error("No pudimos descargar los documentos. Inténtalo de nuevo.");
     } finally {
       setFolderLoading(false);
     }
@@ -415,7 +416,7 @@ export function EnhancedBulkOffersModule({
       toast.success("Carpeta descargada. Verifica normativa FUID aplicable.");
     } catch (e: any) {
       console.error(e);
-      toast.error("Error en la descarga.");
+      toast.error("La descarga no terminó. Inténtalo de nuevo.");
     }
   };
 
@@ -508,7 +509,7 @@ export function EnhancedBulkOffersModule({
                     {r.matches} match
                   </Badge>
                 )}
-                <Button size="icon" variant="ghost" onClick={() => removeRow(r.id)}>
+                <Button size="icon" variant="ghost" onClick={() => removeRow(r.id)} aria-label="Quitar esta fila">
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </div>

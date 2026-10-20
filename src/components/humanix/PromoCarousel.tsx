@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { ShareButtons } from "@/components/humanix/ShareButtons";
 import { supabase as _sb } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 const supabase: any = _sb;
 
@@ -97,7 +98,7 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
       setSlides((s) => [...s, { id: crypto.randomUUID(), url, caption: briefing, source: "ai" }]);
       toast.success("Imagen generada");
     } catch (e: any) {
-      toast.error(e?.message || "No se pudo generar la imagen");
+      toast.error(friendlyError(e, "No se pudo generar la imagen"));
     } finally {
       setBusy(false);
     }
@@ -131,7 +132,7 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
       setSlides((s) => [...s, { id: crypto.randomUUID(), url, caption, source: "ai", copy }]);
       toast.success("Pieza publicitaria lista (copy + imagen)");
     } catch (e: any) {
-      toast.error(e?.message || "No se pudo generar la pieza");
+      toast.error(friendlyError(e, "No se pudo generar la pieza"));
     } finally {
       setBusyCopy(false);
     }
@@ -348,6 +349,7 @@ export function PromoCarousel({ shareTitle = "Conoce Humanix", shareUrl, context
                   className="absolute top-1 right-1 h-7 w-7 bg-background/80 hover:bg-background"
                   onClick={() => remove(s.id)}
                   title="Eliminar"
+                  aria-label="Eliminar"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>

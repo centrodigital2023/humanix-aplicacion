@@ -92,7 +92,7 @@ function ResenasPage() {
       if (error) throw error;
       setRows((data as Row[]) ?? []);
     } catch (err) {
-      toast.error("Error al cargar reseñas");
+      toast.error("No pudimos cargar las reseñas. Inténtalo de nuevo.");
     } finally {
       setFetching(false);
     }
@@ -113,7 +113,7 @@ function ResenasPage() {
       setSelected(new Set());
       load();
     } catch (err) {
-      toast.error("Error al actualizar");
+      toast.error("No pudimos guardar el cambio. Inténtalo de nuevo.");
     }
   };
 

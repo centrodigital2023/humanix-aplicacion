@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { OfferRow } from "@/lib/marketplaceInsights";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -51,7 +52,7 @@ export function ModerateDialog({ offer, onOpenChange, onDone }: Props) {
     });
     setBusy(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Oferta bloqueada. Se avisó al autor y quedó registrada en auditoría.");

@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useAppUser } from "@/hooks/use-app-user";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/talento-humano")({
   head: () => ({
@@ -87,7 +88,7 @@ function HRPage() {
       .from("professional_profiles")
       .update({ verified: !current })
       .eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success(!current ? "Profesional verificado" : "Verificación retirada");
     await load();
   };
@@ -98,7 +99,7 @@ function HRPage() {
       body: { user_id: userId },
     });
     toast.dismiss(`trust-${userId}`);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success(`Trust Score: ${data?.score ?? "?"}/100`);
     await load();
   };

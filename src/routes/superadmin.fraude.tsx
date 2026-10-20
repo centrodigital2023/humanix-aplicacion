@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useSuperadmin } from "@/hooks/use-superadmin";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/superadmin/fraude")({
   head: () => ({ meta: [{ title: "Anti-fraude · Superadmin · Humanix" }] }),
@@ -109,7 +110,7 @@ function FraudePage() {
     const { error } = await supabase.from("fraud_flags").update({ resolved: true }).eq("id", id);
     setResolvingId(null);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Marcado como resuelto");

@@ -28,6 +28,7 @@ const {
 } = seo;
 
 import appCss from "../styles.css?url";
+import { ConfirmHost } from "@/components/humanix/ConfirmHost";
 
 const FloatingWAChat = lazy(() =>
   import("@/components/humanix/FloatingWAChat").then((module) => ({
@@ -39,16 +40,29 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Página no encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          La página que buscas no existe o fue movida. Vuelve al inicio para seguir explorando
-          Humanix.
+        <p className="text-6xl font-bold text-primary/80" aria-hidden>
+          404
         </p>
-        <div className="mt-6">
+        <h1 className="mt-4 text-xl font-semibold text-foreground">Esta página no existe</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Puede que el enlace haya cambiado. Te llevamos a donde ibas:
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Ir a mi panel
+          </Link>
+          <Link
+            to="/buscar"
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Buscar cuidado
+          </Link>
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
             Volver al inicio
           </Link>
@@ -208,6 +222,7 @@ function RootComponent() {
         </Suspense>
       )}
       <Toaster richColors position="top-right" />
+      <ConfirmHost />
       <GlobalExperience />
     </AppQueryProvider>
   );

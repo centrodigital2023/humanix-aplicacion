@@ -34,6 +34,7 @@ import { DEVICE_RULES, deviceHealth, deviceSnippets } from "@/lib/instMonitoring
 import { cn } from "@/lib/utils";
 import { SelectField, TextField } from "@/components/humanix/instcare/fields";
 import { TONE } from "@/components/humanix/instcare/tones";
+import { friendlyError } from "@/lib/friendlyError";
 
 const apiUrl = (): string => String(import.meta.env.VITE_SUPABASE_URL ?? "");
 
@@ -264,7 +265,7 @@ export function DevicesList({
       await actions.revokeDevice.mutateAsync({ id: revoking.id });
       toast.success("Dispositivo revocado");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     } finally {
       setRevoking(null);
     }

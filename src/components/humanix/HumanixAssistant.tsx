@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, X, Send, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -105,7 +106,7 @@ export function HumanixAssistant({
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
-        upsert("❌ Error: " + (e instanceof Error ? e.message : "desconocido"));
+        upsert(friendlyError(e, "No pude responder esta vez. ¿Lo intentamos de nuevo?"));
       }
     } finally {
       setLoading(false);

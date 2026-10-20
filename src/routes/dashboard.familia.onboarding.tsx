@@ -37,6 +37,7 @@ import { LocationPicker } from "@/components/humanix/LocationPicker";
 import { FamilyDocumentsManager } from "@/components/humanix/FamilyDocumentsManager";
 import { toast } from "sonner";
 import { z } from "zod";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/dashboard/familia/onboarding")({
   head: () => ({
@@ -298,7 +299,7 @@ function FamilyOnboarding() {
       // Avanza automáticamente al paso de identidad
       setStep(1);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "La IA no pudo procesar tu solicitud");
+      toast.error(friendlyError(e, "La IA no pudo procesar tu solicitud"));
     } finally {
       setAiLoading(false);
     }
@@ -323,7 +324,7 @@ function FamilyOnboarding() {
         toast.error("La IA no pudo generar un resumen con la info actual.");
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error generando resumen");
+      toast.error(friendlyError(e, "Error generando resumen"));
     } finally {
       setSummaryLoading(false);
     }
@@ -347,7 +348,7 @@ function FamilyOnboarding() {
       await supabase.from("profiles").update({ avatar_url: pub.publicUrl }).eq("user_id", user.id);
       toast.success("Foto actualizada");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo subir la foto");
+      toast.error(friendlyError(e, "No se pudo subir la foto"));
     } finally {
       setAvatarUploading(false);
     }
@@ -373,7 +374,7 @@ function FamilyOnboarding() {
   const next = () => {
     const err = validateStep(step);
     if (err) {
-      toast.error(err);
+      toast.error(`Nos falta un dato para seguir: ${err}`);
       return;
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -434,7 +435,7 @@ function FamilyOnboarding() {
         } as never,
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo guardar");
+      toast.error(friendlyError(e, "No se pudo guardar"));
     } finally {
       setSaving(false);
     }

@@ -65,6 +65,7 @@ import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { AnimatedCounter } from "@/components/humanix/AnimatedCounter";
 import { useSuperadmin } from "@/hooks/use-superadmin";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/superadmin/")({
   head: () => ({ meta: [{ title: "Control Center · Humanix" }] }),
@@ -376,7 +377,7 @@ function SuperadminPage() {
       .insert({ email, role, created_by: user?.id });
     setCreating(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success(`Invitación creada para ${email}`);
@@ -397,7 +398,7 @@ function SuperadminPage() {
       setRegisteredUsers((prev) => prev.filter((u) => u.user_id !== uid));
       setStats((s) => ({ ...s, users: Math.max(0, s.users - 1) }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al eliminar");
+      toast.error(friendlyError(err, "Error al eliminar"));
     } finally {
       setDeleting(null);
     }
@@ -417,7 +418,7 @@ function SuperadminPage() {
     const { error } = await supabase.auth.updateUser({ password: newPw });
     setSavingPw(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     setNewPw("");
@@ -438,7 +439,7 @@ function SuperadminPage() {
     });
     setSendingNote(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Notificación enviada");

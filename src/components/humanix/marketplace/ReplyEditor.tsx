@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { draftPqrsReply } from "@/lib/pqrs.functions";
 import type { TicketRow } from "./types";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -75,7 +76,7 @@ export function ReplyEditor({ ticket, onChanged }: { ticket: TicketRow; onChange
       .eq("id", ticket.id);
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Respuesta guardada. El solicitante la verá al consultar su radicado.");

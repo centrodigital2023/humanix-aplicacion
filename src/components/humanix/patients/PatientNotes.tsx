@@ -22,6 +22,7 @@ import { NOTE_KIND_OPTIONS, NOTE_MAX, noteFormSchema, type NoteFormValues } from
 import { cn } from "@/lib/utils";
 import { SelectField, TextAreaField } from "@/components/humanix/instcare/fields";
 import { TONE } from "@/components/humanix/instcare/tones";
+import { friendlyError } from "@/lib/friendlyError";
 
 const VITAL_LABEL: Record<string, string> = {
   hr: "Pulso",
@@ -70,7 +71,7 @@ export function NotesPanel({
       const r = await verifyNotes(patient.id);
       setVerdict({ ok: r.ok, checked: r.checked, bad: r.first_bad_seq });
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     } finally {
       setVerifying(false);
     }

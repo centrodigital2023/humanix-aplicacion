@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Doc = {
   id: string;
@@ -113,7 +114,7 @@ export function InterviewActions({
       URL.revokeObjectURL(url);
       toast.success(`Carpeta descargada (${ok} documentos)`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al empaquetar");
+      toast.error(friendlyError(e, "Error al empaquetar"));
     } finally {
       setZipBusy(false);
     }

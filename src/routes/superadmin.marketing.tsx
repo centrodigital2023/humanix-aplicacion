@@ -40,6 +40,7 @@ import { useSuperadmin } from "@/hooks/use-superadmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SITE_URL } from "@/lib/seo";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/superadmin/marketing")({
   head: () => ({
@@ -381,7 +382,7 @@ function MarketingPage() {
           })),
         );
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Error cargando datos");
+        toast.error(friendlyError(e, "Error cargando datos"));
       } finally {
         setDataLoading(false);
       }

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { explainMatch, type OfferRow, type SuggestedPro } from "@/lib/marketplaceInsights";
 import { initials } from "./format";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -25,7 +26,7 @@ export function MatchPanel({ offer }: { offer: OfferRow }) {
       ({ data, error: rpcError }) => {
         if (!active) return;
         if (rpcError) {
-          setError(rpcError.message);
+          setError(friendlyError(rpcError, "No pudimos buscar coincidencias. Inténtalo de nuevo."));
           setPros([]);
           return;
         }
@@ -60,7 +61,7 @@ export function MatchPanel({ offer }: { offer: OfferRow }) {
     });
     setInviting(false);
     if (rpcError) {
-      toast.error(rpcError.message);
+      toast.error(friendlyError(rpcError));
       return;
     }
     const sent = Number(data ?? 0);

@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { useAppUser, type AppRole } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -90,7 +91,7 @@ export function TestimonialComposer() {
       setContent("");
       setOpen(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al enviar");
+      toast.error(friendlyError(e, "Error al enviar"));
     } finally {
       setSubmitting(false);
     }

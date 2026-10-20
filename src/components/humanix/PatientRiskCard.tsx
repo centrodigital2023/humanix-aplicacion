@@ -30,6 +30,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isMissingTable } from "@/lib/epsMetrics";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -191,6 +192,8 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
   const [generating, setGenerating] = useState(false);
   const [showFactors, setShowFactors] = useState(!compact);
   const [showRecommendations, setShowRecommendations] = useState(!compact);
+  // `patient_risk_scores` / `vital_signs` aún no existen en producción: la tarjeta no se muestra en vez de ofrecer un cálculo que falla.
+  const [unavailable, setUnavailable] = useState(false);
 
   const loadLatestScore = useCallback(async () => {
     if (!patientId) return;
@@ -206,6 +209,7 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
       if (error) throw error;
       if (data) setRiskData(data as RiskScore);
     } catch (err) {
+      if (isMissingTable(err)) setUnavailable(true);
       console.warn("[PatientRiskCard] loadLatestScore:", err);
     } finally {
       setLoading(false);
@@ -262,6 +266,7 @@ export function PatientRiskCard({ patientId, patientName, compact = false }: Pro
     }
   };
 
+  if (unavailable) return null;
   if (loading) {
     return (
       <Card className="p-6 flex items-center justify-center">

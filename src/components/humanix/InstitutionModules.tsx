@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 const COP = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -126,7 +127,7 @@ export function BulkOffersModule({
       toast.success(`${valid.length} oferta(s) publicada(s) gratis`);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "No pudimos publicar las ofertas.");
+      toast.error(friendlyError(e, "No pudimos publicar las ofertas."));
     } finally {
       setBusy(false);
     }
@@ -207,7 +208,7 @@ export function BulkOffersModule({
                   {r.matches} match
                 </Badge>
               )}
-              <Button size="icon" variant="ghost" onClick={() => removeRow(r.id)}>
+              <Button size="icon" variant="ghost" onClick={() => removeRow(r.id)} aria-label="Quitar esta fila">
                 <Trash2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             </div>

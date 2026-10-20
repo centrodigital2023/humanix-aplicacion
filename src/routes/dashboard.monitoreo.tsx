@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -135,7 +136,7 @@ function MonitoreoPage() {
       toast.success("Medición registrada");
       setManualVital((prev) => ({ ...prev, value: "" }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al guardar");
+      toast.error(friendlyError(err, "Error al guardar"));
     } finally {
       setSavingManual(false);
     }

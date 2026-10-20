@@ -13,6 +13,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { friendlyError } from "@/lib/friendlyError";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 type DocType =
   | "id_document"
@@ -168,7 +170,7 @@ export function FamilyDocumentsManager({ userId }: { userId: string }) {
         setVerifyingId(null);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
+      toast.error(friendlyError(e, "Error al subir"));
     } finally {
       setBusyType(null);
     }
@@ -182,12 +184,20 @@ export function FamilyDocumentsManager({ userId }: { userId: string }) {
       if (error || !data?.signedUrl) throw error ?? new Error("No se pudo abrir");
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo abrir el documento");
+      toast.error(friendlyError(e, "No se pudo abrir el documento"));
     }
   };
 
   const remove = async (doc: Doc) => {
-    if (!confirm("¿Eliminar este documento?")) return;
+    if (
+      !(await confirmAction({
+        title: "¿Eliminar este documento?",
+        description: "Ya no estará disponible para los profesionales que cuidan a tu familiar.",
+        confirmLabel: "Eliminar",
+        destructive: true,
+      }))
+    )
+      return;
     try {
       const path = extractPath(doc.file_url);
       if (path) await supabase.storage.from("family-docs").remove([path]);
@@ -197,7 +207,7 @@ export function FamilyDocumentsManager({ userId }: { userId: string }) {
         .eq("id", doc.id);
       toast.success("Eliminado");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al eliminar");
+      toast.error(friendlyError(e, "Error al eliminar"));
     }
   };
 

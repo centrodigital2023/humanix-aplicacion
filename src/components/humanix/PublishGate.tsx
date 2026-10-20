@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Validation = {
   is_publishable: boolean;
@@ -125,7 +126,7 @@ export function PublishGate({
         );
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error en validación");
+      toast.error(friendlyError(e, "Error en validación"));
     } finally {
       setValidating(false);
       setPublishing(false);

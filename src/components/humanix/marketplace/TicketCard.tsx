@@ -41,6 +41,8 @@ import type { TicketInsight } from "./insights";
 import { ReplyEditor } from "./ReplyEditor";
 import { TicketTimeline } from "./TicketTimeline";
 import type { TicketRow } from "./types";
+import { friendlyError } from "@/lib/friendlyError";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -106,7 +108,7 @@ export function TicketCard({
   const patch = async (fields: Record<string, unknown>, okMessage?: string) => {
     const { error } = await sb.from("pqrs_tickets").update(fields).eq("id", ticket.id);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return false;
     }
     if (okMessage) toast.success(okMessage);
@@ -131,9 +133,11 @@ export function TicketCard({
 
   const markDuplicate = async (primary: TicketRow) => {
     if (
-      !window.confirm(
-        `¿Marcar ${ticket.radicado} como duplicado de ${primary.radicado} y cerrarlo?`,
-      )
+      !(await confirmAction({
+        title: `¿Marcar ${ticket.radicado} como duplicado?`,
+        description: `Se cerrará y quedará unido a ${primary.radicado}.`,
+        confirmLabel: "Marcar y cerrar",
+      }))
     )
       return;
     await patch(

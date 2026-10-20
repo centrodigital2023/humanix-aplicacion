@@ -3,6 +3,7 @@ import { Send, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Msg = {
   id: string;
@@ -72,7 +73,7 @@ export function ChatRoom({
       setText("");
       setSuggestions([]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo enviar");
+      toast.error(friendlyError(e, "No se pudo enviar"));
     } finally {
       setSending(false);
     }
@@ -87,7 +88,7 @@ export function ChatRoom({
       if (error) throw error;
       setSuggestions((data?.suggestions ?? []) as string[]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error copiloto");
+      toast.error(friendlyError(e, "Error copiloto"));
     } finally {
       setLoadingSug(false);
     }

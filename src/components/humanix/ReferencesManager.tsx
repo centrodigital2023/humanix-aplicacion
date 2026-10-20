@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 type RefType = "work" | "family";
 type Reference = {
@@ -101,7 +103,7 @@ export function ReferencesManager({ userId }: { userId: string }) {
       .single();
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     setRefs((prev) => [...prev, data as Reference]);
@@ -110,7 +112,15 @@ export function ReferencesManager({ userId }: { userId: string }) {
   }
 
   async function removeRef(id: string) {
-    if (!confirm("¿Eliminar esta referencia?")) return;
+    if (
+      !(await confirmAction({
+        title: "¿Eliminar esta referencia?",
+        description: "Dejará de aparecer en tu perfil.",
+        confirmLabel: "Eliminar",
+        destructive: true,
+      }))
+    )
+      return;
     const client = supabase as unknown as {
       from: (t: string) => {
         delete: () => {
@@ -120,7 +130,7 @@ export function ReferencesManager({ userId }: { userId: string }) {
     };
     const { error } = await client.from("professional_references").delete().eq("id", id);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     setRefs((prev) => prev.filter((r) => r.id !== id));

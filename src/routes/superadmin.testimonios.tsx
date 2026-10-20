@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useSuperadmin } from "@/hooks/use-superadmin";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -103,7 +104,7 @@ function ModeracionPage() {
       .update({ status, moderated_at: new Date().toISOString() })
       .eq("id", id);
     setBusy(null);
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
     else toast.success(status === "published" ? "Publicado" : "Rechazado");
   };
 
@@ -112,7 +113,7 @@ function ModeracionPage() {
     setBusy(id);
     const { error } = await sb.from("community_testimonials").delete().eq("id", id);
     setBusy(null);
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
     else toast.success("Eliminado");
   };
 

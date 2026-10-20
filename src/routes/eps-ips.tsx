@@ -231,7 +231,7 @@ function EpsIpsLanding() {
       {/* ── Footer mínimo ── */}
       <footer className="px-5 py-6 border-t border-border/60 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} Humanix · Colombia ·{" "}
-        <a href="/politica-privacidad" className="underline hover:text-foreground">
+        <a href="/privacidad" className="underline hover:text-foreground">
           Privacidad
         </a>
       </footer>

@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SelectField, TextField } from "@/components/humanix/instcare/fields";
 import { TONE } from "@/components/humanix/instcare/tones";
+import { friendlyError } from "@/lib/friendlyError";
 
 function TaskRow({
   task,
@@ -44,7 +45,7 @@ function TaskRow({
       await actions.finishTask.mutateAsync({ id: task.id, status });
       toast.success(status === "done" ? "Tarea hecha" : "Tarea omitida");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     }
   };
   return (

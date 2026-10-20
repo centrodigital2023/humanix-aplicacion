@@ -25,6 +25,7 @@ import { SocialIcons } from "@/components/humanix/SocialIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
 import { toast } from "sonner";
+import { friendlyAuthError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (
@@ -300,7 +301,7 @@ function AuthPage() {
         toast.success("¡Hola de nuevo!");
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Algo salió mal";
+      const msg = friendlyAuthError(err, "No pudimos continuar. Inténtalo de nuevo.");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -324,7 +325,7 @@ function AuthPage() {
       toast.success("¡Email verificado! Bienvenido a Humanix.");
       // onAuthStateChange will redirect.
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Código inválido o expirado";
+      const msg = friendlyAuthError(err, "Código inválido o expirado");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -342,7 +343,7 @@ function AuthPage() {
       if (error) throw error;
       toast.success("Código reenviado. Revisa tu bandeja y la carpeta de spam.");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "No se pudo reenviar";
+      const msg = friendlyAuthError(err, "No se pudo reenviar");
       toast.error(msg);
     } finally {
       setResending(false);
@@ -364,7 +365,7 @@ function AuthPage() {
       setForgotSent(true);
       toast.success("Te enviamos un enlace para restablecer tu contraseña.");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "No se pudo enviar el enlace";
+      const msg = friendlyAuthError(err, "No se pudo enviar el enlace");
       toast.error(msg);
     } finally {
       setLoading(false);

@@ -26,6 +26,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isMissingTable } from "@/lib/epsMetrics";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -117,15 +119,18 @@ export function HealthComplianceCard({ professionalId }: { professionalId: strin
   const [row, setRow] = useState<ComplianceRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  // La tabla aún no existe en producción (ver docs/VERIFICACION_PAGOS.md §3): la tarjeta no se muestra en vez de fallar al guardar.
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = async () => {
-    const { data } = await sb
+    const { data, error } = await sb
       .from("health_compliance")
       .select(
         "id, vacuna_hepatitis_b_expires, vacuna_tetano_expires, examen_ocupacional_expires, curso_bioseguridad_expires, poliza_rc_expires, primeros_auxilios_expires, status",
       )
       .eq("professional_id", professionalId)
       .maybeSingle();
+    if (error && isMissingTable(error)) setUnavailable(true);
     setRow((data as ComplianceRow | null) ?? null);
     setLoading(false);
   };
@@ -164,12 +169,13 @@ export function HealthComplianceCard({ professionalId }: { professionalId: strin
       if (error) throw error;
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo guardar la fecha");
+      toast.error(friendlyError(err, "No se pudo guardar la fecha"));
     } finally {
       setSavingKey(null);
     }
   };
 
+  if (unavailable) return null;
   if (loading) {
     return (
       <Card className="p-6 flex items-center justify-center">

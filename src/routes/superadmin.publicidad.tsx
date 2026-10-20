@@ -63,6 +63,7 @@ import { PromoCards } from "@/components/humanix/PromoCards";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchNasaImageWithFallback } from "@/lib/nasa";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/superadmin/publicidad")({
   head: () => ({ meta: [{ title: "Publicidad · Superadmin" }] }),
@@ -278,7 +279,7 @@ function PublicidadPage() {
       ? await supabase.from("ad_banners").update(payload).eq("id", editing.id)
       : await supabase.from("ad_banners").insert({ ...payload, created_by: user?.id });
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success(editing.id ? "Banner actualizado" : "Banner creado");
@@ -339,7 +340,7 @@ function PublicidadPage() {
       });
       toast.success("IA aplicada al banner");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error IA");
+      toast.error(friendlyError(e, "Error IA"));
     } finally {
       setAiLoading(false);
     }
@@ -363,7 +364,7 @@ function PublicidadPage() {
       setEditing({ ...editing, image_url: pub.publicUrl });
       toast.success("Imagen subida");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo subir la imagen");
+      toast.error(friendlyError(e, "No se pudo subir la imagen"));
     } finally {
       setUploadingImg(false);
     }
@@ -393,7 +394,7 @@ function PublicidadPage() {
       setEditing({ ...editing, image_url: pub.publicUrl });
       toast.success("Imagen generada con IA");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo generar la imagen");
+      toast.error(friendlyError(e, "No se pudo generar la imagen"));
     } finally {
       setGenImgLoading(false);
     }
@@ -423,7 +424,7 @@ function PublicidadPage() {
           : `NASA no disponible · usando imagen IA cósmica`,
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo cargar NASA");
+      toast.error(friendlyError(e, "No se pudo cargar NASA"));
     } finally {
       setGenImgLoading(false);
     }
@@ -444,7 +445,7 @@ function PublicidadPage() {
       .update({ active: !b.active })
       .eq("id", b.id);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success(!b.active ? "Banner activado" : "Banner pausado");
@@ -467,7 +468,7 @@ function PublicidadPage() {
       created_by: user.id,
     });
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Banner duplicado como borrador");
@@ -503,7 +504,7 @@ function PublicidadPage() {
       toast.success(`${payload.length} banners creados como borradores`);
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo crear los banners");
+      toast.error(friendlyError(e, "No se pudo crear los banners"));
     } finally {
       setSeeding(false);
     }

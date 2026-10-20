@@ -79,6 +79,7 @@ import type { InstBriefTarget } from "@/lib/instBrief";
 import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/dashboard/institucion")({
   // `?tab=pacientes` (o monitoreo, ofertas…): los avisos al equipo y los enlaces de otras pantallas abren la pestaña indicada.
@@ -375,7 +376,7 @@ function InstitutionDashboard() {
         await loadTalent(proIds);
       } catch (err) {
         console.error("[inst] loadAll failed:", err);
-        toast.error("Error cargando datos. Intenta refrescar.");
+        toast.error("No pudimos cargar tus datos. Recarga la página en un momento.");
       } finally {
         if (!signal.current.cancelled) setDataLoading(false);
       }
@@ -499,7 +500,7 @@ function InstitutionDashboard() {
             : "Oferta cerrada",
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error actualizando oferta");
+      toast.error(friendlyError(e, "Error actualizando oferta"));
     }
   };
 

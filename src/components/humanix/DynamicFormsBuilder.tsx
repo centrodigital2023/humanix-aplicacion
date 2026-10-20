@@ -200,7 +200,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
       }
     } catch (e: any) {
       console.error(e);
-      toast.error("Error creando formulario");
+      toast.error("No pudimos crear el formulario. Inténtalo de nuevo.");
     }
   };
 
@@ -236,7 +236,7 @@ export function DynamicFormsBuilder({ offerId, userId }: { offerId: string; user
       toast.success("Formulario eliminado");
     } catch (e: any) {
       console.error(e);
-      toast.error("Error eliminando formulario");
+      toast.error("No pudimos eliminar el formulario. Inténtalo de nuevo.");
     }
   };
 

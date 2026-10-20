@@ -40,6 +40,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { friendlyError } from "@/lib/friendlyError";
 
 type InstitutionProfile = {
   user_id: string;
@@ -195,7 +196,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
       toast.success("Perfil guardado exitosamente");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "Error guardando perfil");
+      toast.error(friendlyError(e, "Error guardando perfil"));
     } finally {
       setSaving(false);
     }
@@ -229,7 +230,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
       setShowDocDialog(false);
     } catch (e: any) {
       console.error(e);
-      toast.error("Error cargando documento");
+      toast.error("No pudimos subir el documento. Inténtalo de nuevo.");
     } finally {
       setUploadingDoc(false);
     }

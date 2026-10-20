@@ -31,6 +31,7 @@ import { formatDistanceToNow, format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -281,7 +282,7 @@ export function CheckInOut({
         description: `Ubicación: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`,
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al registrar check-in");
+      toast.error(friendlyError(err, "Error al registrar check-in"));
     } finally {
       setBusy(false);
     }
@@ -343,7 +344,7 @@ export function CheckInOut({
         description: `Duración: ${Math.floor(durationMins / 60)}h ${durationMins % 60}m`,
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al registrar check-out");
+      toast.error(friendlyError(err, "Error al registrar check-out"));
     } finally {
       setBusy(false);
     }

@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchNasaImageWithFallback } from "@/lib/nasa";
+import { friendlyError } from "@/lib/friendlyError";
 
 export type PromoTemplate = {
   id: string;
@@ -376,7 +377,7 @@ export function PromoCards({ origin }: { origin: string }) {
         }
         setShareCounts((p) => ({ ...p, [tpl.id]: (p[tpl.id] ?? 0) + 1 }));
       } catch (e) {
-        toast.error("No se pudo compartir: " + (e as Error).message);
+        toast.error(friendlyError(e, "No se pudo compartir. Inténtalo de nuevo."));
       }
     },
     [shareUrlFor],
@@ -454,7 +455,7 @@ export function PromoCards({ origin }: { origin: string }) {
         }
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
-          toast.error("No se pudo compartir: " + (e as Error).message);
+          toast.error(friendlyError(e, "No se pudo compartir. Inténtalo de nuevo."));
         }
       } finally {
         setSharingNative(false);
@@ -524,7 +525,7 @@ export function PromoCards({ origin }: { origin: string }) {
       URL.revokeObjectURL(url);
       toast.success(`Carrusel descargado (${blobs.length} imágenes)`);
     } catch (e) {
-      toast.error("No se pudo crear el carrusel: " + (e as Error).message);
+      toast.error(friendlyError(e, "No se pudo crear el carrusel. Inténtalo de nuevo."));
     } finally {
       setCarouselBusy(false);
     }
@@ -555,7 +556,7 @@ export function PromoCards({ origin }: { origin: string }) {
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
-        toast.error("No se pudo compartir: " + (e as Error).message);
+        toast.error(friendlyError(e, "No se pudo compartir. Inténtalo de nuevo."));
       }
     } finally {
       setCarouselBusy(false);
@@ -607,7 +608,7 @@ export function PromoCards({ origin }: { origin: string }) {
           toast.success(`NASA no disponible · usando imagen IA cósmica`);
         }
       } catch (e) {
-        toast.error((e as Error).message || "No se pudo cargar NASA");
+        toast.error(friendlyError(e, "No se pudo cargar NASA"));
       } finally {
         setGenerating(false);
       }

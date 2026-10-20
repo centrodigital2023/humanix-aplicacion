@@ -67,6 +67,7 @@ import {
   type ServiceOfferFormValues,
 } from "@/lib/serviceOffers";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendlyError";
 
 export interface MyServiceOffersProfile {
   specialty: string | null;
@@ -415,7 +416,7 @@ function ServiceOfferDialog({
       onClose();
     } catch (e) {
       const kind = e instanceof ServiceOfferError ? e.kind : "other";
-      const message = e instanceof Error ? e.message : "No pudimos guardar tu oferta.";
+      const message = friendlyError(e, "No pudimos guardar tu oferta.");
       if (kind === "rude" || kind === "sale") setError("title", { message });
       else if (kind === "offtopic" || kind === "contact") setError("description", { message });
       else setFormError(message);

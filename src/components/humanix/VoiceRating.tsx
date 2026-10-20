@@ -4,6 +4,7 @@ import { Mic, Square, Star, Loader2, Send, ShieldAlert, CheckCircle2 } from "luc
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Analysis = {
   transcript: string;
@@ -87,7 +88,7 @@ export function VoiceRating({
         toast.success("Análisis listo");
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo analizar el audio");
+      toast.error(friendlyError(e, "No se pudo analizar el audio"));
     } finally {
       setAnalyzing(false);
     }
@@ -140,7 +141,7 @@ export function VoiceRating({
       toast.success("¡Gracias por tu valoración!");
       onSubmitted?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo enviar la valoración");
+      toast.error(friendlyError(e, "No se pudo enviar la valoración"));
     } finally {
       setSubmitting(false);
     }

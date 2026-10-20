@@ -112,7 +112,7 @@ export function EnhancedInstitutionOperations({ userId }: { userId: string }) {
         }
       } catch (e) {
         console.error("[operations dashboard] load failed", e);
-        if (active) toast.error("Error cargando métricas operativas");
+        if (active) toast.error("No pudimos cargar las métricas. Inténtalo de nuevo en un momento.");
       } finally {
         if (active) setLoading(false);
       }

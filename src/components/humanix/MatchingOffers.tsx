@@ -3,6 +3,7 @@ import { Sparkles, Loader2, MapPin, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Offer = {
   id: string;
@@ -57,7 +58,7 @@ export function MatchingOffers({
         if (error) throw error;
         setMatches((data?.matches ?? []) as Match[]);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Error matching IA");
+        toast.error(friendlyError(e, "Error matching IA"));
       } finally {
         setLoading(false);
       }

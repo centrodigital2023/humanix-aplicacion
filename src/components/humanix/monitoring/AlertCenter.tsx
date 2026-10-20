@@ -43,6 +43,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PersonAvatar } from "@/components/humanix/instcare/PersonAvatar";
 import { TONE } from "@/components/humanix/instcare/tones";
+import { friendlyError } from "@/lib/friendlyError";
 
 const RESOLUTIONS = [
   { value: "treated", label: "Se atendió y se resolvió" },
@@ -171,7 +172,7 @@ export function AlertCard({
       await actions.ackAlert.mutateAsync({ id: alert.id });
       toast.success("Quedó registrado que la viste");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     }
   };
 

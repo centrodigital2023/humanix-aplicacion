@@ -89,6 +89,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/dashboard/profesional")({
   head: () => ({
@@ -553,7 +554,7 @@ function ProDashboard() {
       applyExtraction(data?.profile ?? {});
       toast.success("✨ Listo. Revisa los campos antes de guardar.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error procesando con IA");
+      toast.error(friendlyError(e, "Error procesando con IA"));
     } finally {
       setAiBusy(false);
     }
@@ -591,7 +592,7 @@ function ProDashboard() {
       .select()
       .maybeSingle();
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     if (data) setProfile(data as unknown as ProProfile);
@@ -628,7 +629,7 @@ function ProDashboard() {
           : "Trust Score actualizado",
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error en validación IA");
+      toast.error(friendlyError(e, "Error en validación IA"));
     } finally {
       setValidating(false);
     }
@@ -649,7 +650,7 @@ function ProDashboard() {
       if (typeof s.bio === "string") setBio(s.bio);
       toast.success("✨ Sugerencias aplicadas. Revisa antes de guardar.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error sugiriendo tarifas");
+      toast.error(friendlyError(e, "Error sugiriendo tarifas"));
     } finally {
       setSuggesting(false);
     }

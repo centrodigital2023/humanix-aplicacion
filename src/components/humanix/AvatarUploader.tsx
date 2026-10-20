@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 export function AvatarUploader({
   userId,
@@ -45,7 +46,7 @@ export function AvatarUploader({
       onChange?.(publicUrl);
       toast.success("Foto actualizada");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al subir");
+      toast.error(friendlyError(e, "Error al subir"));
     } finally {
       setBusy(false);
     }

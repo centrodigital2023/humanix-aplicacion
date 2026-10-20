@@ -9,6 +9,8 @@ import { normalizeText } from "@/lib/pqrsRules";
 import { ModerateDialog } from "./ModerateDialog";
 import { OfferCard } from "./OfferCard";
 import type { OfferInsight } from "./insights";
+import { friendlyError } from "@/lib/friendlyError";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 const sb = supabase as unknown as SupabaseClient;
 const PAGE = 25;
@@ -99,12 +101,17 @@ export function OffersPanel({ offers, insights, search, now, onChanged }: Props)
   const run = async (action: "unblock" | "close", offer: OfferRow) => {
     if (
       action === "close" &&
-      !window.confirm(`¿Cerrar la oferta «${offer.title}»? Dejará de recibir postulaciones.`)
+      !(await confirmAction({
+        title: `¿Cerrar la oferta «${offer.title}»?`,
+        description: "Dejará de recibir postulaciones.",
+        confirmLabel: "Cerrar oferta",
+        destructive: true,
+      }))
     )
       return;
     const { error } = await sb.rpc("moderate_offer", { p_offer_id: offer.id, p_action: action });
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success(action === "unblock" ? "Oferta desbloqueada" : "Oferta cerrada");

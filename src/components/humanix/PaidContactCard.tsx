@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { classifyHubError, type ServerError } from "@/lib/opportunities";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Props = {
   bookingId: string;
@@ -64,7 +65,7 @@ export function PaidContactCard({ bookingId, peerName, isPaid, amountCOP }: Prop
       if (!convId) throw new Error("No se pudo abrir la conversación");
       navigate({ to: "/mensajes", search: { c: convId } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo abrir la bandeja");
+      toast.error(friendlyError(e, "No se pudo abrir la bandeja"));
     } finally {
       setOpeningInbox(false);
     }

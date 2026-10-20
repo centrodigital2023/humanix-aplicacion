@@ -38,6 +38,7 @@ import {
 import { KudosCard } from "@/components/humanix/care/KudosCard";
 import { useCareReport } from "@/hooks/use-care-loop";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 const PAID_STATUSES = new Set(["confirmed", "in_route", "in_progress", "completed"]);
 
@@ -225,7 +226,7 @@ function ServicePage() {
   const updateStatus = async (patch: StatusPatch): Promise<boolean> => {
     const { error } = await supabase.from("service_bookings").update(patch).eq("id", bookingId);
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return false;
     }
     // Si el canal en vivo no está disponible, la pantalla igual refleja el cambio.

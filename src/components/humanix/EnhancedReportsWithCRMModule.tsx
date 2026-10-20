@@ -265,7 +265,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
       setContacts((data ?? []) as Contact[]);
     } catch (e: any) {
       console.error(e);
-      toast.error("Error agregando contacto");
+      toast.error("No pudimos agregar el contacto. Inténtalo de nuevo.");
     }
   };
 
@@ -279,7 +279,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
       toast.success("Contacto eliminado");
     } catch (e: any) {
       console.error(e);
-      toast.error("Error eliminando contacto");
+      toast.error("No pudimos eliminar el contacto. Inténtalo de nuevo.");
     }
   };
 
@@ -334,7 +334,7 @@ export function EnhancedReportsWithCRMModule({ userId }: { userId: string }) {
       setCampaigns((data ?? []) as Campaign[]);
     } catch (e: any) {
       console.error(e);
-      toast.error("Error enviando campaña");
+      toast.error("No pudimos enviar la campaña. Inténtalo de nuevo.");
     }
   };
 

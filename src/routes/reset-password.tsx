@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/humanix/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { friendlyAuthError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -89,7 +90,7 @@ function ResetPasswordPage() {
           .finally(() => navigate({ to: "/auth", search: { mode: "signin" } }));
       }, 1500);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo actualizar");
+      toast.error(friendlyAuthError(err, "No se pudo actualizar"));
     } finally {
       setLoading(false);
     }

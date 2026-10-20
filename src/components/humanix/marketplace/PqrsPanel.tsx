@@ -21,6 +21,7 @@ import {
 import type { TicketInsight } from "./insights";
 import { TicketCard } from "./TicketCard";
 import type { TicketRow } from "./types";
+import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 const sb = supabase as unknown as SupabaseClient;
 const PAGE = 20;
@@ -185,9 +186,11 @@ export function PqrsPanel({ tickets, insights, userId, search, now, onChanged }:
     const queue = unclassified.slice(0, BATCH_LIMIT);
     if (!queue.length) return;
     if (
-      !window.confirm(
-        `Se clasificarán ${queue.length} ticket(s) con IA (1 crédito IA cada uno). ¿Continuar?`,
-      )
+      !(await confirmAction({
+        title: `¿Clasificar ${queue.length} ${queue.length === 1 ? "solicitud" : "solicitudes"} con IA?`,
+        description: `Usará ${queue.length} ${queue.length === 1 ? "crédito IA" : "créditos IA"} (uno por solicitud).`,
+        confirmLabel: "Clasificar",
+      }))
     )
       return;
     setBatch({ done: 0, total: queue.length });

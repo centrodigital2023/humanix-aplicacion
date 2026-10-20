@@ -54,6 +54,7 @@ import { FamilySmartCenter } from "@/components/humanix/family/FamilySmartCenter
 import { CareRoutineCard } from "@/components/humanix/family/CareRoutineCard";
 import { SosFamiliarButton } from "@/components/humanix/SosFamiliarButton";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/dashboard/familia")({
   head: () => ({ meta: [{ title: "Familia · Humanix" }] }),
@@ -302,7 +303,7 @@ function FamilyDashboard() {
       setFamilyCoords({ lat, lng });
       toast.success("📍 Ubicación guardada — distancias actualizadas");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo guardar la ubicación");
+      toast.error(friendlyError(e, "No se pudo guardar la ubicación"));
     } finally {
       setSavingLoc(false);
     }

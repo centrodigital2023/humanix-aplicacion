@@ -36,6 +36,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -307,7 +308,7 @@ export function AlertSystem({ patientId }: Props) {
       localStorage.setItem(THRESH_KEY, JSON.stringify(saved));
       toast.success("Umbral guardado");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al guardar");
+      toast.error(friendlyError(err, "Error al guardar"));
     } finally {
       setSaving(null);
     }

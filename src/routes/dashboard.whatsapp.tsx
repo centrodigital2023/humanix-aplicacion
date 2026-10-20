@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useAppUser } from "@/hooks/use-app-user";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/dashboard/whatsapp")({
   head: () => ({ meta: [{ title: "WhatsApp CRM · Humanix" }] }),
@@ -165,7 +166,7 @@ function WhatsAppCRM() {
       });
       if (error) throw error;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo enviar");
+      toast.error(friendlyError(e, "No se pudo enviar"));
       setDraft(body);
     } finally {
       setSending(false);

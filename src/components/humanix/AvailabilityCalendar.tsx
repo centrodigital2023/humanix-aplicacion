@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Slot = {
   id: string;
@@ -223,11 +224,11 @@ export function AvailabilityCalendar({
           .from("availability_slots")
           .update({ status: "busy" })
           .eq("id", existing.id);
-        if (error) toast.error(error.message);
+        if (error) toast.error(friendlyError(error));
         else setSlots((s) => s.map((x) => (x.id === existing.id ? { ...x, status: "busy" } : x)));
       } else {
         const { error } = await supabase.from("availability_slots").delete().eq("id", existing.id);
-        if (error) toast.error(error.message);
+        if (error) toast.error(friendlyError(error));
         else setSlots((s) => s.filter((x) => x.id !== existing.id));
       }
     } else {
@@ -241,7 +242,7 @@ export function AvailabilityCalendar({
         })
         .select()
         .single();
-      if (error) toast.error(error.message);
+      if (error) toast.error(friendlyError(error));
       else if (data) setSlots((s) => [...s, data as Slot]);
     }
   }
@@ -291,7 +292,7 @@ export function AvailabilityCalendar({
       }
       toast.success(`${toInsert.length} horas marcadas como disponibles`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error aplicando preset");
+      toast.error(friendlyError(e, "Error aplicando preset"));
     } finally {
       setBulkBusy(false);
     }

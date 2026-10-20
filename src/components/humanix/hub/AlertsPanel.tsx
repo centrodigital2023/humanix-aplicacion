@@ -20,6 +20,7 @@ import {
   type Shift,
 } from "@/lib/opportunities";
 import { formatCOP } from "@/lib/pricing";
+import { friendlyError } from "@/lib/friendlyError";
 
 const sb = supabase as unknown as SupabaseClient;
 
@@ -101,7 +102,7 @@ export function AlertsPanel({ userId, shifts, defaultCity }: Props) {
       void qc.invalidateQueries({ queryKey: key });
     },
     onError: (e) =>
-      toast.error((e as { message?: string }).message ?? "No se pudo crear la alerta"),
+      toast.error(friendlyError(e, "No se pudo crear la alerta")),
   });
 
   const toggle = useMutation({

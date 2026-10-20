@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { checkOutgoingMessage } from "@/lib/opportunities";
 import { checkOfferText, offerIssueFromError, OFFER_ISSUE_MESSAGE } from "@/lib/contentModeration";
+import { friendlyError } from "@/lib/friendlyError";
 
 // Untyped client for tables not in generated types (migration pendiente de regenerar)
 const sb = supabase as unknown as SupabaseClient;
@@ -130,7 +131,7 @@ export function FamilyNeedsCalendar({
         return;
       }
       const { error } = await sb.from("family_needs").delete().eq("id", existing.id);
-      if (error) toast.error(error.message);
+      if (error) toast.error(friendlyError(error));
       else setNeeds((n) => n.filter((x) => x.id !== existing.id));
       return;
     }
@@ -169,7 +170,7 @@ export function FamilyNeedsCalendar({
     const { data, error } = await sb.from("family_needs").insert(payload).select().single();
     if (error) {
       const issue = offerIssueFromError(error);
-      toast.error(issue ? OFFER_ISSUE_MESSAGE[issue] : error.message);
+      toast.error(issue ? OFFER_ISSUE_MESSAGE[issue] : friendlyError(error, "No se pudo guardar. Inténtalo de nuevo."));
     } else if (data) setNeeds((n) => [...n, data as Need]);
   }
 

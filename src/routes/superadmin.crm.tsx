@@ -46,6 +46,7 @@ import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { useSuperadmin } from "@/hooks/use-superadmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 export const Route = createFileRoute("/superadmin/crm")({
   head: () => ({ meta: [{ title: "CRM · Superadmin" }] }),
@@ -183,7 +184,7 @@ function CRMPage() {
       ? await supabase.from("crm_contacts").update(payload).eq("id", editingContact.id)
       : await supabase.from("crm_contacts").insert({ ...payload, created_by: user?.id });
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Contacto guardado");
@@ -202,7 +203,7 @@ function CRMPage() {
       toast.success("Contacto segmentado por IA");
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error IA");
+      toast.error(friendlyError(e, "Error IA"));
     } finally {
       setAiBusy(null);
     }
@@ -224,7 +225,7 @@ function CRMPage() {
       ? await supabase.from("crm_campaigns").update(payload).eq("id", editingCampaign.id)
       : await supabase.from("crm_campaigns").insert({ ...payload, created_by: user?.id });
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Campaña guardada");
@@ -254,7 +255,7 @@ function CRMPage() {
       toast.success(`Enviada a ${result.delivered}/${result.total} contactos`);
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al enviar");
+      toast.error(friendlyError(e, "Error al enviar"));
     } finally {
       setSendingId(null);
     }
@@ -274,7 +275,7 @@ function CRMPage() {
       created_by: user?.id,
     });
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyError(error));
       return;
     }
     toast.success("Tarea creada");
