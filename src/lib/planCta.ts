@@ -11,8 +11,8 @@ export type CtaContext = {
   /** Whether the active subscription has been scheduled to cancel. */
   cancelAtPeriodEnd: boolean;
   /**
-   * Quedan pocos días del plan vigente (`planValidity().renewSoon`). No hay cobro automático: cada pago es un mes,
-   * así que la tarjeta del plan actual invita a renovar cuando se acerca el vencimiento.
+   * Quedan pocos días de un plan SIN renovación automática (`planValidity().renewSoon`): la tarjeta del plan actual
+   * invita a suscribirse de nuevo. Con renovación automática nunca es `true`.
    */
   renewSoon?: boolean;
 };
@@ -73,8 +73,8 @@ export function computeCta(target: PlanKey, ctx: CtaContext): CtaPlan {
 
   if (isCurrent) {
     if (ctx.cancelAtPeriodEnd || ctx.renewSoon) {
-      // Renovar suma un mes desde el vencimiento (no se pierden días). Ver planBilling.subscriptionAfterApproval.
-      return { label: "Renovar 1 mes", action: { kind: "reactivate" }, disabled: false };
+      // Suscribirse de nuevo suma un mes desde el vencimiento (no se pierden días). Ver planBilling.subscriptionAfterApproval.
+      return { label: "Renovar cada mes", action: { kind: "reactivate" }, disabled: false };
     }
     return { label: "Tu plan actual", action: { kind: "current" }, disabled: true };
   }

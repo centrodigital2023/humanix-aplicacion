@@ -29,7 +29,7 @@ export const corsHeaders: Record<string, string> = {
 };
 
 export type AuthResult =
-  | { ok: true; userId: string; token: string }
+  | { ok: true; userId: string; token: string; email: string | null }
   | { ok: false; response: Response };
 
 export async function requireUser(req: Request): Promise<AuthResult> {
@@ -68,5 +68,5 @@ export async function requireUser(req: Request): Promise<AuthResult> {
       }),
     };
   }
-  return { ok: true, userId: data.user.id, token };
+  return { ok: true, userId: data.user.id, token, email: data.user.email ?? null };
 }

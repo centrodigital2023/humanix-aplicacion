@@ -404,6 +404,8 @@ export type SubscriptionSnapshot = {
   currency: string | null;
   current_period_end: string | null;
   cancel_at_period_end?: boolean | null;
+  /** Suscripción de Mercado Pago que renueva el plan cada mes. */
+  mp_preapproval_id?: string | null;
 };
 
 export type NormalizedPlan = {
@@ -413,6 +415,8 @@ export type NormalizedPlan = {
   currency: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  /** El plan se cobra solo cada mes (suscripción de Mercado Pago activa). */
+  autoRenew: boolean;
 };
 
 export function normalizeSubscription(
@@ -426,6 +430,7 @@ export function normalizeSubscription(
     currency: null,
     currentPeriodEnd: row?.current_period_end ?? null,
     cancelAtPeriodEnd: false,
+    autoRenew: false,
   };
   if (!row) return { ...free, status: null, currentPeriodEnd: null };
   const active = row.status === "active" || row.status === "approved";
@@ -440,10 +445,11 @@ export function normalizeSubscription(
     currency: row.currency ?? null,
     currentPeriodEnd: row.current_period_end ?? null,
     cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+    autoRenew: Boolean(row.mp_preapproval_id),
   };
 }
 
-/** Días desde los que se recuerda renovar (no hay cobro automático: si nadie renueva, el plan pasa a Free). */
+/** Días desde los que se recuerda renovar un plan sin renovación automática (si nadie renueva, pasa a Free). */
 export const RENEW_REMINDER_DAYS = 5;
 
 export type PlanValidity = {
@@ -451,7 +457,7 @@ export type PlanValidity = {
   daysLeft: number | null;
   /** Quedan `RENEW_REMINDER_DAYS` días o menos: momento de recordar con calma. */
   renewSoon: boolean;
-  /** «Vigente hasta el 15 de noviembre» o `null`. */
+  /** «Vigente hasta el 15 de noviembre», «Se renueva el 15 de noviembre» o `null`. */
   line: string | null;
 };
 
@@ -477,7 +483,7 @@ export function longDateEs(t: number): string {
 }
 
 export function planValidity(
-  p: Pick<NormalizedPlan, "plan" | "currentPeriodEnd">,
+  p: Pick<NormalizedPlan, "plan" | "currentPeriodEnd"> & { autoRenew?: boolean },
   now: number,
 ): PlanValidity {
   const end = p.currentPeriodEnd ? Date.parse(p.currentPeriodEnd) : NaN;
@@ -485,6 +491,10 @@ export function planValidity(
     return { daysLeft: null, renewSoon: false, line: null };
   }
   const daysLeft = Math.ceil((end - now) / 86_400_000);
+  // Con renovación automática no hay nada que recordar: Mercado Pago cobra el mes siguiente.
+  if (p.autoRenew) {
+    return { daysLeft, renewSoon: false, line: `Se renueva el ${longDateEs(end)}` };
+  }
   return {
     daysLeft,
     renewSoon: daysLeft <= RENEW_REMINDER_DAYS,

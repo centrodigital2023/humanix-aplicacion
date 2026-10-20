@@ -1,4 +1,4 @@
-// Abrir el pago de un plan (Mercado Pago, solo en la web) con mensajes claros y amables.
+// Abrir la suscripción de un plan (Mercado Pago, cobro mensual, solo en la web) con mensajes claros y amables.
 //
 // Un solo camino para /planes, la tarjeta de plan de los paneles y la franja de planes: llama a
 // `mp-create-subscription`, devuelve la URL del pago o un mensaje para la persona. El servidor decide qué se puede
@@ -31,6 +31,12 @@ export function checkoutErrorMessage(
     const end = payload.ends_at ? Date.parse(payload.ends_at) : NaN;
     const when = Number.isFinite(end) ? ` hasta el ${longDateEs(end)}` : "";
     return `Tu plan ${current} sigue vigente${when}. Podrás pasar a ${PLAN_CATALOG[requested].label} cuando termine: así no pierdes lo que ya pagaste.`;
+  }
+  if (payload?.error === "already_subscribed") {
+    return "Tu plan ya se renueva solo cada mes: no hace falta pagarlo de nuevo.";
+  }
+  if (payload?.error === "missing_email") {
+    return "Mercado Pago necesita el correo de tu cuenta para la suscripción. Revisa tu perfil e inténtalo de nuevo.";
   }
   if (payload?.error === "unknown_plan")
     return "Ese plan no está disponible. Elige uno de la lista.";

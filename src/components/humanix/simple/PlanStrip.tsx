@@ -175,7 +175,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
               </button>
               {paid && c.key !== "institution_monthly" && (
                 <p className="mt-2 text-center text-sm opacity-85">
-                  🔒 Pago seguro con Mercado Pago
+                  🔒 Mercado Pago · cobro mensual, cancela cuando quieras
                 </p>
               )}
             </li>

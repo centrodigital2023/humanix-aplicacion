@@ -65,16 +65,20 @@ describe("computeCta — paid plan (downgrade / sidegrade / cancel pending)", ()
     expect(r.action.kind).toBe("current");
   });
 
-  it("Pro user with cancellation pending → Pro card offers 'Renovar 1 mes'", () => {
+  it("Pro user with cancellation pending → Pro card offers 'Renovar cada mes'", () => {
     const r = computeCta("pro_monthly", ON_PRO_CANCELLING);
-    expect(r.label).toBe("Renovar 1 mes");
+    expect(r.label).toBe("Renovar cada mes");
     expect(r.action.kind).toBe("reactivate");
     expect(r.disabled).toBe(false);
   });
 
-  it("Pro user close to the end → Pro card offers 'Renovar 1 mes' (no automatic charges)", () => {
+  it("Pro user close to the end → Pro card offers 'Renovar cada mes' (no automatic charges)", () => {
     const r = computeCta("pro_monthly", { ...ON_PRO, renewSoon: true });
-    expect(r).toEqual({ label: "Renovar 1 mes", action: { kind: "reactivate" }, disabled: false });
+    expect(r).toEqual({
+      label: "Renovar cada mes",
+      action: { kind: "reactivate" },
+      disabled: false,
+    });
     expect(computeCta("pro_monthly", { ...ON_PRO, renewSoon: false }).action.kind).toBe("current");
   });
 

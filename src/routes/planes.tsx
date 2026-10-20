@@ -33,7 +33,7 @@ import { LATER_MESSAGE, startCheckout } from "@/lib/checkout";
 const PLAN_FAQS = [
   {
     q: "¿Puedo cancelar en cualquier momento?",
-    a: "Sí. No hay permanencia mínima. Cancelas desde tu perfil o escribiéndonos, y el plan sigue activo hasta el final del periodo pagado.",
+    a: "Sí. No hay permanencia mínima. Cancelas la renovación automática desde tu panel y el plan sigue activo hasta el final del periodo pagado.",
   },
   {
     q: "¿Cuál es la diferencia entre Esencial y Pro?",
@@ -45,7 +45,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Los pagos son seguros?",
-    a: "Sí. Procesamos pagos con MercadoPago (estándar PCI DSS nivel 1). No almacenamos datos de tarjetas. También aceptamos Nequi y PSE.",
+    a: "Sí. Cada plan es una suscripción de Mercado Pago (estándar PCI DSS nivel 1) que se cobra cada mes en pesos colombianos. No almacenamos datos de tarjetas.",
   },
   {
     q: "¿Qué es la verificación RETHUS?",
@@ -53,7 +53,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Sí. Puedes subir o bajar de plan en cualquier momento. El cambio aplica de inmediato y se prorratea en tu siguiente ciclo de facturación.",
+    a: "Puedes subir de plan cuando quieras: los días que te quedaban se convierten al plan nuevo y la suscripción anterior se cancela sola. Para bajar de plan, cancela la renovación automática y elige el nuevo cuando termine tu plan actual.",
   },
 ];
 
@@ -383,6 +383,7 @@ function PlansPage() {
   const {
     plan: currentPlan,
     cancelAtPeriodEnd,
+    autoRenew,
     currentPeriodEnd,
     loading: planLoading,
     error: planError,
@@ -396,7 +397,10 @@ function PlansPage() {
   const [acting, setActing] = useState<PlanKey | null>(null);
   const autoTriggered = useRef(false);
 
-  const renewSoon = planValidity({ plan: currentPlan, currentPeriodEnd }, Date.now()).renewSoon;
+  const renewSoon = planValidity(
+    { plan: currentPlan, currentPeriodEnd, autoRenew },
+    Date.now(),
+  ).renewSoon;
   const ctx = { userId: user?.id ?? null, currentPlan, cancelAtPeriodEnd, renewSoon };
 
   const choose = async (key: PlanKey) => {
