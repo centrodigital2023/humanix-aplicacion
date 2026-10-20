@@ -93,7 +93,13 @@ import { friendlyError } from "@/lib/friendlyError";
 import { buildSeo } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/profesional")({
-  head: () => buildSeo({ title: "Mi panel profesional · Humanix", path: "/dashboard/profesional", description: "Gestiona tu perfil profesional, agenda, oportunidades y beneficios vigentes en Humanix." }),
+  head: () =>
+    buildSeo({
+      title: "Mi panel profesional · Humanix",
+      path: "/dashboard/profesional",
+      description:
+        "Gestiona tu perfil profesional, agenda, oportunidades y beneficios vigentes en Humanix.",
+    }),
   component: ProDashboard,
 });
 
@@ -1869,32 +1875,32 @@ function ProDashboard() {
             {/* Map: familias e instituciones; las solicitudes sin ubicación, en la lista de abajo */}
             {userId && (
               <>
-              <LiveMapSection
-                role="professional"
-                userId={userId}
-                height={440}
-                pickLocation={{
-                  lat: profile?.lat ?? null,
-                  lng: profile?.lng ?? null,
-                  defaultCity: profile?.home_city ?? undefined,
-                  onChange: async (pickedLat, pickedLng, address) => {
-                    const lat = toCell(pickedLat);
-                    const lng = toCell(pickedLng);
-                    await supabase
-                      .from("professional_profiles")
-                      .update({
-                        lat,
-                        lng,
-                        home_city: address ?? profile?.home_city ?? null,
-                      } as never)
-                      .eq("user_id", userId);
-                    setProfile((prev) =>
-                      prev ? { ...prev, lat, lng, home_city: address ?? prev.home_city } : prev,
-                    );
-                  },
-                }}
-              />
-              <UnplacedDemandList />
+                <LiveMapSection
+                  role="professional"
+                  userId={userId}
+                  height={440}
+                  pickLocation={{
+                    lat: profile?.lat ?? null,
+                    lng: profile?.lng ?? null,
+                    defaultCity: profile?.home_city ?? undefined,
+                    onChange: async (pickedLat, pickedLng, address) => {
+                      const lat = toCell(pickedLat);
+                      const lng = toCell(pickedLng);
+                      await supabase
+                        .from("professional_profiles")
+                        .update({
+                          lat,
+                          lng,
+                          home_city: address ?? profile?.home_city ?? null,
+                        } as never)
+                        .eq("user_id", userId);
+                      setProfile((prev) =>
+                        prev ? { ...prev, lat, lng, home_city: address ?? prev.home_city } : prev,
+                      );
+                    },
+                  }}
+                />
+                <UnplacedDemandList />
               </>
             )}
           </div>
