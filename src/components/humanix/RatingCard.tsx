@@ -1,17 +1,7 @@
-// Calificación bidireccional: familia/institución ↔ profesional.
-// Estrellas interactivas, subcategorías, distribución tipo Amazon,
-// respuesta del calificado y opción anónima.
+// Reseñas de `service_ratings`: resumen tipo Amazon, lista con la respuesta del calificado
+// (`respond_to_rating`) y el reporte para moderación (`flag_rating`). La calificación se crea en `VoiceRating`.
 import { useState } from "react";
-import {
-  Star,
-  MessageSquare,
-  Send,
-  Loader2,
-  ShieldCheck,
-  ChevronDown,
-  ThumbsUp,
-  Flag,
-} from "lucide-react";
+import { Star, MessageSquare, Loader2, ShieldCheck, ThumbsUp, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -31,13 +21,15 @@ export type RatingRow = {
   booking_id: string | null;
   stars: number;
   comment: string | null;
-  is_anonymous: boolean;
-  punctuality_stars: number | null;
-  communication_stars: number | null;
-  professionalism_stars: number | null;
+  // Columnas de `service_ratings` (rater_id/rated_id se leen con alias). Las demás son opcionales: las dimensiones viven
+  // en `service_rating_dimensions` y no hay reseñas anónimas.
+  is_anonymous?: boolean;
+  punctuality_stars?: number | null;
+  communication_stars?: number | null;
+  professionalism_stars?: number | null;
   response_text: string | null;
   response_at: string | null;
-  status: "published" | "flagged" | "removed";
+  status: "published" | "flagged";
   created_at: string;
   // joins opcionales
   reviewer_name?: string;
@@ -57,49 +49,6 @@ export type RatingSummary = {
   two_star_count: number;
   one_star_count: number;
 };
-
-// ── StarPicker ────────────────────────────────────────────────────────────────
-
-function StarPicker({
-  value,
-  onChange,
-  size = "md",
-  label,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  size?: "sm" | "md" | "lg";
-  label?: string;
-}) {
-  const [hover, setHover] = useState(0);
-  const sz = size === "lg" ? "h-8 w-8" : size === "sm" ? "h-4 w-4" : "h-6 w-6";
-  return (
-    <div className="flex flex-col gap-1">
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      <div className="flex gap-0.5" role="group" aria-label={label ?? "Calificación"}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            aria-label={`${n} estrella${n !== 1 ? "s" : ""}`}
-            onClick={() => onChange(n)}
-            onMouseEnter={() => setHover(n)}
-            onMouseLeave={() => setHover(0)}
-            className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper transition-transform active:scale-90"
-          >
-            <Star
-              className={`${sz} transition-colors ${
-                n <= (hover || value)
-                  ? "fill-copper text-copper"
-                  : "fill-transparent text-muted-foreground/40"
-              }`}
-            />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── StarDisplay ───────────────────────────────────────────────────────────────
 
@@ -342,174 +291,6 @@ function RatingItem({
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── RatingComposer ────────────────────────────────────────────────────────────
-
-type ComposerProps = {
-  reviewerId: string;
-  reviewedId: string;
-  bookingId?: string;
-  reviewedName: string;
-  onSuccess?: () => void;
-};
-
-export function RatingComposer({
-  reviewerId,
-  reviewedId,
-  bookingId,
-  reviewedName,
-  onSuccess,
-}: ComposerProps) {
-  const [stars, setStars] = useState(0);
-  const [punctuality, setPunctuality] = useState(0);
-  const [communication, setCommunication] = useState(0);
-  const [professionalism, setProfessionalism] = useState(0);
-  const [comment, setComment] = useState("");
-  const [anonymous, setAnonymous] = useState(false);
-  const [showCategories, setShowCategories] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const canSubmit = stars > 0;
-
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    try {
-      const { error } = await (sb as SupabaseClient).from("ratings").insert({
-        reviewer_id: reviewerId,
-        reviewed_id: reviewedId,
-        booking_id: bookingId ?? null,
-        stars,
-        comment: comment.trim() || null,
-        is_anonymous: anonymous,
-        punctuality_stars: punctuality || null,
-        communication_stars: communication || null,
-        professionalism_stars: professionalism || null,
-      });
-
-      if (error) throw error;
-      toast.success("¡Gracias por tu calificación!", {
-        description: "Tu reseña ya es visible en el perfil.",
-      });
-      onSuccess?.();
-    } catch (err) {
-      toast.error(friendlyError(err, "No se pudo enviar la calificación"));
-    } finally {
-      setSubmitting(false);
-      setConfirming(false);
-    }
-  };
-
-  if (confirming) {
-    return (
-      <div className="rounded-2xl border border-copper/30 bg-copper/5 p-5 space-y-3">
-        <p className="font-semibold text-sm">
-          ¿Confirmas tu calificación de <span className="text-copper">{stars} ★</span> para{" "}
-          <span className="font-bold">{reviewedName}</span>?
-        </p>
-        <p className="text-xs text-muted-foreground">
-          No podrás editar tu reseña después de publicarla.
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setConfirming(false)}
-            disabled={submitting}
-          >
-            Revisar
-          </Button>
-          <Button size="sm" onClick={handleSubmit} disabled={submitting}>
-            {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-            Publicar reseña
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-      <h3 className="font-display text-base font-semibold">
-        Califica a <span className="text-biosensor">{reviewedName}</span>
-      </h3>
-
-      {/* Estrellas principales */}
-      <StarPicker value={stars} onChange={setStars} size="lg" label="Calificación general *" />
-
-      {/* Categorías opcionales */}
-      <button
-        type="button"
-        onClick={() => setShowCategories((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-biosensor hover:underline"
-      >
-        <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform ${showCategories ? "rotate-180" : ""}`}
-        />
-        {showCategories ? "Ocultar" : "Agregar"} categorías específicas (opcional)
-      </button>
-
-      {showCategories && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
-          <StarPicker value={punctuality} onChange={setPunctuality} size="sm" label="Puntualidad" />
-          <StarPicker
-            value={communication}
-            onChange={setCommunication}
-            size="sm"
-            label="Comunicación"
-          />
-          <StarPicker
-            value={professionalism}
-            onChange={setProfessionalism}
-            size="sm"
-            label="Profesionalismo"
-          />
-        </div>
-      )}
-
-      {/* Comentario */}
-      <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">
-          Comentario (opcional · máx. 300 caracteres)
-        </label>
-        <Textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value.slice(0, 300))}
-          placeholder="Cuéntanos tu experiencia..."
-          rows={3}
-          className="text-sm resize-none"
-        />
-        <p className="text-xs text-muted-foreground text-right">{comment.length}/300</p>
-      </div>
-
-      {/* Opciones */}
-      <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={anonymous}
-          onChange={(e) => setAnonymous(e.target.checked)}
-          className="rounded border-border accent-biosensor"
-        />
-        <span>
-          Publicar de forma anónima{" "}
-          <span className="text-muted-foreground text-xs">
-            (apareces como "Usuario verificado")
-          </span>
-        </span>
-      </label>
-
-      <Button
-        className="w-full"
-        disabled={!canSubmit || submitting}
-        onClick={() => setConfirming(true)}
-      >
-        <Send className="h-4 w-4 mr-2" />
-        Enviar calificación
-      </Button>
     </div>
   );
 }

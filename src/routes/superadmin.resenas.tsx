@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Star,
-  Flag,
   Trash2,
   ShieldCheck,
   LayoutDashboard,
@@ -53,15 +52,14 @@ type Row = {
   reviewed_id: string;
   stars: number;
   comment: string | null;
-  is_anonymous: boolean;
-  status: "published" | "flagged" | "removed";
+  status: "published" | "flagged";
   flagged_reason: string | null;
   created_at: string;
   reviewer_name?: string;
   reviewed_name?: string;
 };
 
-type StatusFilter = "all" | "published" | "flagged" | "removed";
+type StatusFilter = "all" | "published" | "flagged";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const Route = (createFileRoute as any)("/superadmin/resenas")({
@@ -86,7 +84,13 @@ function ResenasPage() {
     if (!user) return;
     setFetching(true);
     try {
-      const q = sb.from("ratings").select("*").order("created_at", { ascending: false }).limit(200);
+      const q = sb
+        .from("service_ratings")
+        .select(
+          "id, reviewer_id:rater_id, reviewed_id:rated_id, stars, comment, status, flagged_reason, created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (filter !== "all") q.eq("status", filter);
       const { data, error } = await q;
       if (error) throw error;
@@ -102,12 +106,21 @@ function ResenasPage() {
     load();
   }, [load]);
 
-  const updateStatus = async (ids: string[], status: "published" | "removed") => {
+  // Mantener la deja publicada (ya no se puede volver a reportar); eliminar la borra y sale de los promedios. Queda en auditoría.
+  const moderate = async (ids: string[], keep: boolean) => {
+    if (
+      !keep &&
+      !window.confirm(
+        `¿Eliminar ${ids.length} reseña${ids.length > 1 ? "s" : ""}? No se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
     try {
-      const { error } = await sb
-        .from("ratings")
-        .update({ status, moderated_by: user?.id, moderated_at: new Date().toISOString() })
-        .in("id", ids);
+      const results = await Promise.all(
+        ids.map((id) => sb.rpc("moderate_rating", { p_rating_id: id, p_keep: keep })),
+      );
+      const error = results.find((r) => r.error)?.error;
       if (error) throw error;
       toast.success(`${ids.length} reseña${ids.length > 1 ? "s" : ""} actualizadas.`);
       setSelected(new Set());
@@ -131,7 +144,6 @@ function ResenasPage() {
     all: rows.length,
     published: rows.filter((r) => r.status === "published").length,
     flagged: rows.filter((r) => r.status === "flagged").length,
-    removed: rows.filter((r) => r.status === "removed").length,
   };
 
   const toggleSelect = (id: string) =>
@@ -148,8 +160,8 @@ function ResenasPage() {
     <AppShell nav={NAV} title="Moderación de Reseñas" user={user} onLogout={logout}>
       <div className="space-y-6">
         {/* KPI cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {(["all", "published", "flagged", "removed"] as StatusFilter[]).map((s) => (
+        <div className="grid grid-cols-3 gap-3">
+          {(["all", "published", "flagged"] as StatusFilter[]).map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
@@ -161,13 +173,7 @@ function ResenasPage() {
             >
               <p className="text-2xl font-bold font-display">{counts[s]}</p>
               <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                {s === "all"
-                  ? "Total"
-                  : s === "published"
-                    ? "Publicadas"
-                    : s === "flagged"
-                      ? "Reportadas"
-                      : "Eliminadas"}
+                {s === "all" ? "Total" : s === "published" ? "Publicadas" : "Reportadas"}
               </p>
             </button>
           ))}
@@ -187,19 +193,15 @@ function ResenasPage() {
           </Button>
           {selected.size > 0 && (
             <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => updateStatus([...selected], "published")}
-              >
+              <Button size="sm" variant="outline" onClick={() => moderate([...selected], true)}>
                 <CheckSquare className="h-4 w-4 mr-1.5 text-biosensor" />
-                Restaurar {selected.size}
+                Mantener {selected.size}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 className="text-destructive border-destructive/40 hover:bg-destructive/5"
-                onClick={() => updateStatus([...selected], "removed")}
+                onClick={() => moderate([...selected], false)}
               >
                 <Trash2 className="h-4 w-4 mr-1.5" />
                 Eliminar {selected.size}
@@ -278,9 +280,7 @@ function ResenasPage() {
                       </td>
                       <td className="py-3 px-3">
                         <span className="text-xs font-mono text-muted-foreground">
-                          {r.is_anonymous
-                            ? "Anónimo"
-                            : (r.reviewer_name ?? r.reviewer_id.slice(0, 8))}
+                          {r.reviewer_name ?? r.reviewer_id.slice(0, 8)}
                         </span>
                       </td>
                       <td className="py-3 px-3">
@@ -303,20 +303,10 @@ function ResenasPage() {
                       </td>
                       <td className="py-3 px-3">
                         <Badge
-                          variant={
-                            r.status === "published"
-                              ? "default"
-                              : r.status === "flagged"
-                                ? "destructive"
-                                : "secondary"
-                          }
+                          variant={r.status === "published" ? "default" : "destructive"}
                           className="text-[10px]"
                         >
-                          {r.status === "published"
-                            ? "Publicada"
-                            : r.status === "flagged"
-                              ? "Reportada"
-                              : "Eliminada"}
+                          {r.status === "published" ? "Publicada" : "Reportada"}
                         </Badge>
                       </td>
                       <td className="py-3 px-3 text-xs text-muted-foreground whitespace-nowrap">
@@ -324,39 +314,26 @@ function ResenasPage() {
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {r.status !== "published" && (
+                          {r.status === "flagged" && (
                             <Button
                               size="sm"
                               variant="ghost"
                               className="h-7 text-biosensor hover:bg-biosensor/10"
-                              onClick={() => updateStatus([r.id], "published")}
-                              title="Restaurar"
+                              onClick={() => moderate([r.id], true)}
+                              title="Mantener"
                             >
                               <ShieldCheck className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          {r.status !== "flagged" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-amber-500 hover:bg-amber-500/10"
-                              onClick={() => updateStatus([r.id], "removed")}
-                              title="Reportar"
-                            >
-                              <Flag className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          {r.status !== "removed" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-destructive hover:bg-destructive/10"
-                              onClick={() => updateStatus([r.id], "removed")}
-                              title="Eliminar"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-destructive hover:bg-destructive/10"
+                            onClick={() => moderate([r.id], false)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
