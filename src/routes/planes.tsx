@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Check,
   X,
@@ -28,6 +29,7 @@ import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
 import type { Audience } from "@/lib/audience";
 import { computeCta } from "@/lib/planCta";
+import { startPlanPayment } from "@/lib/payments.functions";
 import { LATER_MESSAGE, startCheckout } from "@/lib/checkout";
 
 const PLAN_FAQS = [
@@ -389,6 +391,7 @@ function PlansPage() {
     error: planError,
     refresh: refreshPlan,
   } = usePlan(user?.id ?? null);
+  const startPayment = useServerFn(startPlanPayment);
   const loading = userLoading || planLoading;
   // Cada perfil ve solo sus planes.
   const { audience } = useAudience();
@@ -437,6 +440,7 @@ function PlansPage() {
     }
     setActing(key);
     const r = await startCheckout(supabase.functions.invoke.bind(supabase.functions), {
+      startOnce: (i) => startPayment({ data: i }),
       plan: key,
       email: user?.email,
     });

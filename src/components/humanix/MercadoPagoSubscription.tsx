@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { PlanBadge } from "@/components/humanix/PlanGate";
 import { usePlan } from "@/hooks/use-plan";
 import { startCheckout } from "@/lib/checkout";
-import { cancelMercadoPagoRenewal } from "@/lib/payments.functions";
+import { cancelMercadoPagoRenewal, startPlanPayment } from "@/lib/payments.functions";
 import { PLAN_CATALOG, COP, planValidity, tierOf, type PlanKey } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +52,7 @@ export function MercadoPagoSubscription({
 }) {
   const plan = usePlan(userId);
   const cancelRenewal = useServerFn(cancelMercadoPagoRenewal);
+  const startPayment = useServerFn(startPlanPayment);
   const [busy, setBusy] = useState<"once" | "recurring" | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [selected, setSelected] = useState<PlanKey>(defaultPlan);
@@ -105,6 +106,7 @@ export function MercadoPagoSubscription({
     setBusy(mode);
     const { data: sess } = await supabase.auth.getSession();
     const r = await startCheckout(supabase.functions.invoke.bind(supabase.functions), {
+      startOnce: (i) => startPayment({ data: i }),
       plan: selected,
       email: sess.session?.user.email,
       returnTo: currentPanel(),

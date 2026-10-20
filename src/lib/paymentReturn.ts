@@ -46,6 +46,18 @@ export function paymentIdFromSearch(search: URLSearchParams): string | null {
   return null;
 }
 
+/**
+ * La búsqueda que ya interpretó el router (igual en el servidor y en el navegador) como `URLSearchParams`. Leer
+ * `window.location` al pintar daba un HTML distinto en el servidor y en el navegador (error de hidratación).
+ */
+export function searchParamsOf(search: Record<string, unknown>): URLSearchParams {
+  const out = new URLSearchParams();
+  for (const [k, v] of Object.entries(search)) {
+    if (v !== undefined && v !== null) out.set(k, String(v));
+  }
+  return out;
+}
+
 const PREAPPROVAL_ID_RE = /^[0-9a-z]{8,64}$/i;
 
 export function preapprovalIdFromSearch(search: URLSearchParams): string | null {
