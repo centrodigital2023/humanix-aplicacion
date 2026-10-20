@@ -138,7 +138,11 @@ function AuditoriaPage() {
         r.resource_id ?? "",
         r.severity,
       ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .map((v) => {
+          let s = String(v);
+          if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+          return `"${s.replace(/"/g, '""')}"`;
+        })
         .join(","),
     );
     const csv = [header.join(","), ...lines].join("\n");

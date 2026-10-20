@@ -614,7 +614,7 @@ Deno.serve(async (req) => {
 
             // Skip AI if disabled for this contact (human agent handles)
             if (!aiEnabled) {
-              console.log(`[wa] ai_enabled=false para ${from}, dejado para agente humano`);
+              console.log("[wa] ai_enabled=false, dejado para agente humano");
               continue;
             }
 

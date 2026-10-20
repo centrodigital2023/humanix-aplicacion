@@ -60,7 +60,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, persona } = await req.json();
+    const body = await req.json();
+    const persona = body?.persona;
+    // Solo roles user/assistant con texto: el cliente no puede inyectar mensajes de sistema.
+    const messages = (Array.isArray(body?.messages) ? body.messages : [])
+      .filter(
+        (m: unknown): m is { role: string; content: string } =>
+          !!m &&
+          typeof m === "object" &&
+          ((m as { role?: unknown }).role === "user" ||
+            (m as { role?: unknown }).role === "assistant") &&
+          typeof (m as { content?: unknown }).content === "string",
+      )
+      .map((m: { role: string; content: string }) => ({ role: m.role, content: m.content }));
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "messages requerido" }), {
         status: 400,
