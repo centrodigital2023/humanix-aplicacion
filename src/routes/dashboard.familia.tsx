@@ -55,9 +55,10 @@ import { CareRoutineCard } from "@/components/humanix/family/CareRoutineCard";
 import { SosFamiliarButton } from "@/components/humanix/SosFamiliarButton";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 import { friendlyError } from "@/lib/friendlyError";
+import { buildSeo } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/familia")({
-  head: () => ({ meta: [{ title: "Familia · Humanix" }] }),
+  head: () => buildSeo({ title: "Familia · Humanix", path: "/dashboard/familia", description: "Consulta tus servicios de cuidado, profesionales cercanos y beneficios vigentes en tu panel familiar Humanix." }),
   component: FamilyDashboard,
 });
 

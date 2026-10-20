@@ -90,11 +90,10 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendlyError";
+import { buildSeo } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/profesional")({
-  head: () => ({
-    meta: [{ title: "Mi panel profesional · Humanix" }],
-  }),
+  head: () => buildSeo({ title: "Mi panel profesional · Humanix", path: "/dashboard/profesional", description: "Gestiona tu perfil profesional, agenda, oportunidades y beneficios vigentes en Humanix." }),
   component: ProDashboard,
 });
 
