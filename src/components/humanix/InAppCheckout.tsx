@@ -47,7 +47,10 @@ export default function InAppCheckout(props: {
   const initialization = useMemo(
     () => ({
       amount: props.amount,
-      ...(props.email ? { payer: { email: props.email } } : {}),
+      payer: {
+        ...(props.email ? { email: props.email } : {}),
+        entityType: "individual" as const,
+      },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [props.amount],

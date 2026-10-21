@@ -1,4 +1,5 @@
 # Mercado Pago dentro de Humanix
+- [ ] Corregir los datos faltantes al enviar PSE y verificar los importes de los planes sin realizar cobros.
 - [x] Pago de 1 mes en /pagar (Payment Brick): tarjeta, PSE (Bancolombia, Nequi y demás bancos) y Efecty.
 - [x] Cobro automático mensual con plan asociado (preapproval_plan + preapproval con card_token_id).
 - [x] Webhook público en la app: /api/public/mercadopago/webhook, con verificación de firma (sin nuevas Edge Functions).
