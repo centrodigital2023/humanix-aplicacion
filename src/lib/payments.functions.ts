@@ -426,11 +426,15 @@ export const payPlanInApp = createServerFn({ method: "POST" })
       ),
     );
     const email = accountEmail(context.claims);
+    const profile = await rest(`profiles?id=eq.${userId}&select=full_name`)
+      .then((r) => r.json() as Promise<Array<{ full_name: string | null }>>)
+      .catch(() => [] as Array<{ full_name: string | null }>);
     const built = brickPaymentRequest({
       form: data.form,
       userId,
       plan: check.plan,
       accountEmail: email,
+      accountName: Array.isArray(profile) ? (profile[0]?.full_name ?? null) : null,
       ip: clientIp((name) => getRequestHeader(name)),
       callbackUrl: `${siteOrigin()}/pago/exito?tipo=plan&plan=${check.plan}&from=${from}`,
       notificationUrl: MP_WEBHOOK_URL,

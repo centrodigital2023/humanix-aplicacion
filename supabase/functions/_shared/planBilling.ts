@@ -703,6 +703,7 @@ export function brickPaymentRequest(input: {
   userId: string;
   plan: PaidPlan;
   accountEmail: string | null;
+  accountName?: string | null;
   ip: string;
   callbackUrl: string;
   notificationUrl: string;
@@ -719,8 +720,17 @@ export function brickPaymentRequest(input: {
   const idType = str(idIn.type, 20);
   const idNumber = str(idIn.number, 30);
   if (idType && idNumber) payer.identification = { type: idType, number: idNumber };
-  const firstName = str(payerIn.first_name, 60);
-  const lastName = str(payerIn.last_name, 60);
+  // PSE exige nombre y apellido, pero el formulario de Mercado Pago no los pide: se toman de la cuenta.
+  const nameParts = (
+    str(input.accountName, 120) ?? email.split("@")[0].replace(/[^\p{L} ]+/gu, " ")
+  )
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const firstName = str(payerIn.first_name, 60) ?? (nameParts[0] || "Cliente");
+  const lastName =
+    str(payerIn.last_name, 60) ??
+    (nameParts.length > 1 ? nameParts.slice(1).join(" ").slice(0, 60) : "Humanix");
   if (firstName) payer.first_name = firstName;
   if (lastName) payer.last_name = lastName;
 
