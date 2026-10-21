@@ -7,6 +7,8 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   CalendarClock,
+  Check,
+  CreditCard,
   ExternalLink,
   Loader2,
   Lock,
@@ -266,25 +268,27 @@ function PagarPage() {
           <ModeOption
             active={mode === "once"}
             onClick={() => setMode("once")}
-            title={s.renew ? "Sumar 1 mes" : "Pagar 1 mes"}
-            note="Tarjeta, PSE o Efecty"
+             title={s.renew ? "Sumar 1 mes" : "Pagar una vez"}
+             note="PSE, tarjeta o Efecty"
+             icon={<ReceiptText className="h-5 w-5" aria-hidden="true" />}
           />
           <ModeOption
             active={mode === "recurring"}
             onClick={() => setMode("recurring")}
             title="Cobro automático"
-            note="Cada mes, con tarjeta de crédito"
+             note="Mensual · tarjeta de crédito"
+             icon={<CreditCard className="h-5 w-5" aria-hidden="true" />}
           />
         </div>
-        <p className="text-xs text-muted-foreground">
+         <p className="text-sm text-muted-foreground">
           {mode === "once"
-            ? "Con PSE eliges tu banco (Bancolombia, Nequi, Davivienda y los demás) y el banco te pide autorizar el pago en su página. Luego vuelves aquí."
-            : "Se cobra cada mes a tu tarjeta. Puedes cancelar la renovación desde tu panel cuando quieras y conservas el plan hasta el vencimiento."}
+             ? "Sin renovación automática. Con PSE pagas desde tu banco, sin cuenta de Mercado Pago."
+             : "Renovación mensual. Puedes cancelarla desde tu panel y conservar el mes pagado."}
         </p>
 
-        <div className="relative min-h-[320px] rounded-2xl border border-border bg-card p-2 sm:p-4">
+         <div className="relative min-h-[320px] rounded-lg border border-border bg-card p-2 sm:p-4">
           {(!formReady || redirecting) && !formError && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-card/90 text-sm text-muted-foreground">
+             <div role="status" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-card/90 text-sm text-muted-foreground">
               <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
               {redirecting
                 ? "Te llevamos a tu banco…"
@@ -319,14 +323,15 @@ function PagarPage() {
         {mode === "once" && (
           <p className="text-center text-xs text-muted-foreground">
             ¿No carga el formulario?{" "}
-            <button
+             <Button
+               variant="link"
               type="button"
-              className="underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+               className="h-auto whitespace-normal p-0 text-xs"
               onClick={() => void openFallback()}
               disabled={redirecting}
             >
               Pagar en la página de Mercado Pago
-            </button>
+             </Button>
           </p>
         )}
       </div>
@@ -337,19 +342,25 @@ function PagarPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <PseDetailsDialog open={!!pseForm} onCancel={cancelPse} onConfirm={confirmPse} />
-      <main className="mx-auto max-w-xl px-4 pb-16 pt-24 sm:pt-28">
+       <main className="mx-auto max-w-xl px-4 pb-16 pt-24 sm:pt-28">
         <Link
           to={back as "/"}
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver
         </Link>
-        <h1 className="text-2xl font-bold">{def ? `Plan ${def.label}` : "Pagar tu plan"}</h1>
+         <h1 className="text-2xl font-bold">{def ? `Pagar plan ${def.label}` : "Pagar tu plan"}</h1>
         {def && def.amountCOP > 0 && (
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <CalendarClock className="h-4 w-4" aria-hidden="true" />
-            {COP(s?.ok ? s.amount : def.amountCOP)} al mes, en pesos colombianos
-          </p>
+           <div className="mt-5 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
+             <p className="flex items-center gap-2 text-sm text-muted-foreground">
+               <CalendarClock className="h-4 w-4" aria-hidden="true" />
+               {mode === "once" ? "1 mes de tu plan" : "Renovación mensual"}
+             </p>
+             <div className="text-right">
+               <p className="text-xs text-muted-foreground">{mode === "once" ? "Total a pagar" : "Total cada mes"} · COP</p>
+               <p className="text-3xl font-bold tabular-nums">{COP(s?.ok ? s.amount : def.amountCOP)}</p>
+             </div>
+           </div>
         )}
         <div className="mt-6">{body}</div>
         <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
@@ -361,23 +372,28 @@ function PagarPage() {
   );
 }
 
-function ModeOption(props: { active: boolean; onClick: () => void; title: string; note: string }) {
+function ModeOption(props: { active: boolean; onClick: () => void; title: string; note: string; icon: React.ReactNode }) {
   return (
-    <button
+     <Button
+       variant="outline"
       type="button"
       role="radio"
       aria-checked={props.active}
       onClick={props.onClick}
       className={cn(
-        "rounded-xl border p-3 text-left transition motion-safe:active:scale-[0.98]",
+         "h-auto min-h-24 min-w-0 flex-col items-start whitespace-normal rounded-lg border p-3 text-left transition",
         props.active
-          ? "border-foreground bg-foreground/5"
+           ? "border-primary bg-primary/5 hover:bg-primary/5"
           : "border-border hover:border-foreground/30",
       )}
     >
-      <p className="text-sm font-semibold">{props.title}</p>
-      <p className="text-xs text-muted-foreground">{props.note}</p>
-    </button>
+       <span className="flex w-full items-center justify-between text-primary">
+         {props.icon}
+         {props.active && <Check className="h-4 w-4" aria-hidden="true" />}
+       </span>
+       <span className="text-sm font-semibold">{props.title}</span>
+       <span className="text-xs font-normal text-muted-foreground">{props.note}</span>
+     </Button>
   );
 }
 
