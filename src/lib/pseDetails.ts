@@ -23,7 +23,7 @@ export const pseDetailsSchema = z.object({
 export type PseDetails = z.infer<typeof pseDetailsSchema>;
 
 /** Complementa los datos que el Brick de PSE no recoge; no modifica banco, documento ni precio. */
-export function withPseDetails(form: Record<string, unknown>, details: PseDetails) {
+export function withPseDetails<T extends Record<string, unknown>>(form: T, details: PseDetails) {
   const data = pseDetailsSchema.parse(details);
   const payer = form.payer && typeof form.payer === "object" ? form.payer : {};
   return {
