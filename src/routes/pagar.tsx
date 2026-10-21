@@ -1,14 +1,12 @@
 // Pagar un plan dentro de Humanix, con los formularios de Mercado Pago (ver `InAppCheckout`). El servidor fija el
 // precio y decide si el plan se puede pagar (`getPlanPaymentSetup`); la página solo muestra el resultado.
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   CalendarClock,
-  Check,
-  CreditCard,
   ExternalLink,
   Loader2,
   Lock,
@@ -18,13 +16,10 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/humanix/Navbar";
-import { PseDetailsDialog } from "@/components/humanix/PseDetailsDialog";
-import { withPseDetails, type PseDetails } from "@/lib/pseDetails";
 import { useAppUser } from "@/hooks/use-app-user";
 import { checkoutErrorMessage, payModeOf, type PayMode } from "@/lib/checkout";
 import { safeReturnPath, searchParamsOf } from "@/lib/paymentReturn";
 import { savePendingPayment } from "@/lib/pendingPayment";
-import { goToBank } from "@/lib/bankRedirect";
 import {
   getPlanPaymentSetup,
   payPlanInApp,
@@ -74,11 +69,6 @@ function PagarPage() {
   const [voucher, setVoucher] = useState<string | null>(null);
   const [attemptId, setAttemptId] = useState(newAttempt);
   const [redirecting, setRedirecting] = useState(false);
-  const [bankUrl, setBankUrl] = useState<string | null>(null);
-  const [pseForm, setPseForm] = useState<Record<string, unknown> | null>(null);
-  const pseCompletion = useRef<{ resolve: () => void; reject: (error: Error) => void } | null>(
-    null,
-  );
   useEffect(() => setMounted(true), []);
 
   const setup = useQuery({
@@ -101,7 +91,7 @@ function PagarPage() {
   useEffect(() => {
     setFormReady(false);
     setFormError(null);
-  }, [mode, plan]);
+  }, [mode]);
 
   const payOnce = async (form: Record<string, unknown>) => {
     const r = await payFn({ data: { plan, returnTo: from, attemptId, form } });
@@ -111,10 +101,10 @@ function PagarPage() {
       throw new Error(r.error);
     }
     if (r.redirectUrl) {
-      // PSE: el banco abre su página y vuelve a /pago/exito. Nunca dentro de un marco (PSE lo rechaza).
+      // PSE: el banco abre su página y vuelve a /pago/exito.
       savePendingPayment(r.paymentId);
-      setBankUrl(r.redirectUrl);
-      if (goToBank(r.redirectUrl, window)) setRedirecting(true);
+      setRedirecting(true);
+      window.location.assign(r.redirectUrl);
       return;
     }
     if (r.voucherUrl) {
@@ -152,42 +142,11 @@ function PagarPage() {
     void navigate({ href: `/pago/exito?preapproval_id=${r.preapprovalId}&${exitoQuery}` });
   };
 
-  const submitOnce = (form: Record<string, unknown>): Promise<void> => {
-    if (form.payment_method_id !== "pse") return payOnce(form);
-    return new Promise((resolve, reject) => {
-      pseCompletion.current = { resolve, reject };
-      setPseForm(form);
-    });
-  };
-
-  const cancelPse = () => {
-    pseCompletion.current?.reject(new Error("payment_cancelled"));
-    pseCompletion.current = null;
-    setPseForm(null);
-  };
-
-  const confirmPse = async (details: PseDetails) => {
-    if (!pseForm) return;
-    try {
-      await payOnce(withPseDetails(pseForm, details));
-      pseCompletion.current?.resolve();
-    } catch (error) {
-      pseCompletion.current?.reject(error instanceof Error ? error : new Error("payment_failed"));
-    } finally {
-      pseCompletion.current = null;
-      setPseForm(null);
-    }
-  };
-
   const openFallback = async () => {
     setRedirecting(true);
     const r = await fallbackFn({ data: { plan, returnTo: from } }).catch(() => null);
     if (r?.ok) {
-      // La página de Mercado Pago tampoco se deja abrir dentro de un marco.
-      if (!goToBank(r.url, window)) {
-        setRedirecting(false);
-        setBankUrl(r.url);
-      }
+      window.location.assign(r.url);
       return;
     }
     setRedirecting(false);
@@ -246,27 +205,6 @@ function PagarPage() {
         action={<Link to={back as "/"}>Volver</Link>}
       />
     );
-  } else if (bankUrl && !redirecting) {
-    body = (
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-6 text-center">
-        <Lock className="mx-auto h-10 w-10 text-primary" aria-hidden="true" />
-        <h2 className="text-lg font-semibold">Continúa el pago en una pestaña nueva</h2>
-        <p className="text-sm text-muted-foreground">
-          Tu banco (PSE) no se puede abrir dentro de esta ventana. Ábrelo en una pestaña nueva,
-          autoriza el pago y vuelve aquí: tu plan se activa apenas el banco lo apruebe.
-        </p>
-        <div className="flex flex-wrap justify-center gap-2">
-          <Button asChild variant="hero">
-            <a href={bankUrl} target="_blank" rel="noopener noreferrer">
-              Continuar el pago <ExternalLink className="ml-1.5 h-3.5 w-3.5" aria-hidden="true" />
-            </a>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to={`/pago/exito?${exitoQuery}` as "/"}>Ya pagué</Link>
-          </Button>
-        </div>
-      </div>
-    );
   } else if (voucher) {
     body = (
       <div className="space-y-4 rounded-2xl border border-border bg-card p-6 text-center">
@@ -295,42 +233,25 @@ function PagarPage() {
           <ModeOption
             active={mode === "once"}
             onClick={() => setMode("once")}
-            title={s.renew ? "Sumar 1 mes" : "Pagar una vez"}
-            note="PSE, tarjeta o Efecty"
-            icon={<ReceiptText className="h-5 w-5" aria-hidden="true" />}
+            title={s.renew ? "Sumar 1 mes" : "Pagar 1 mes"}
+            note="Tarjeta, PSE o Efecty"
           />
           <ModeOption
             active={mode === "recurring"}
             onClick={() => setMode("recurring")}
             title="Cobro automático"
-            note="Mensual · tarjeta de crédito"
-            icon={<CreditCard className="h-5 w-5" aria-hidden="true" />}
+            note="Cada mes, con tarjeta de crédito"
           />
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {mode === "once"
-            ? "Sin renovación automática. Con PSE pagas desde tu banco, sin cuenta de Mercado Pago."
-            : "Renovación mensual. Puedes cancelarla desde tu panel y conservar el mes pagado."}
+            ? "Con PSE eliges tu banco (Bancolombia, Nequi, Davivienda y los demás) y el banco te pide autorizar el pago en su página. Luego vuelves aquí."
+            : "Se cobra cada mes a tu tarjeta. Puedes cancelar la renovación desde tu panel cuando quieras y conservas el plan hasta el vencimiento."}
         </p>
-        {mode === "once" && (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Medios de pago disponibles">
-            {["Tarjeta", "PSE", "Bancolombia", "Nequi", "Efecty"].map((m) => (
-              <li
-                key={m}
-                className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
-              >
-                {m}
-              </li>
-            ))}
-          </ul>
-        )}
 
-        <div className="relative min-h-[320px] rounded-lg border border-border bg-card p-2 sm:p-4">
+        <div className="relative min-h-[320px] rounded-2xl border border-border bg-card p-2 sm:p-4">
           {(!formReady || redirecting) && !formError && (
-            <div
-              role="status"
-              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-card/90 text-sm text-muted-foreground"
-            >
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-card/90 text-sm text-muted-foreground">
               <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
               {redirecting
                 ? "Te llevamos a tu banco…"
@@ -348,12 +269,12 @@ function PagarPage() {
             mounted && (
               <Suspense fallback={null}>
                 <InAppCheckout
-                  key={`${plan}:${mode}`}
+                  key={mode}
                   publicKey={s.publicKey}
                   mode={mode}
                   amount={s.amount}
                   email={s.email}
-                  onSubmit={mode === "once" ? submitOnce : subscribe}
+                  onSubmit={mode === "once" ? payOnce : subscribe}
                   onReady={() => setFormReady(true)}
                   onError={(m) => setFormError(m)}
                 />
@@ -365,15 +286,14 @@ function PagarPage() {
         {mode === "once" && (
           <p className="text-center text-xs text-muted-foreground">
             ¿No carga el formulario?{" "}
-            <Button
-              variant="link"
+            <button
               type="button"
-              className="h-auto whitespace-normal p-0 text-xs"
+              className="underline underline-offset-2 hover:text-foreground disabled:opacity-50"
               onClick={() => void openFallback()}
               disabled={redirecting}
             >
               Pagar en la página de Mercado Pago
-            </Button>
+            </button>
           </p>
         )}
       </div>
@@ -383,7 +303,6 @@ function PagarPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <PseDetailsDialog open={!!pseForm} onCancel={cancelPse} onConfirm={confirmPse} />
       <main className="mx-auto max-w-xl px-4 pb-16 pt-24 sm:pt-28">
         <Link
           to={back as "/"}
@@ -391,22 +310,12 @@ function PagarPage() {
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver
         </Link>
-        <h1 className="text-2xl font-bold">{def ? `Pagar plan ${def.label}` : "Pagar tu plan"}</h1>
+        <h1 className="text-2xl font-bold">{def ? `Plan ${def.label}` : "Pagar tu plan"}</h1>
         {def && def.amountCOP > 0 && (
-          <div className="mt-5 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CalendarClock className="h-4 w-4" aria-hidden="true" />
-              {mode === "once" ? "1 mes de tu plan" : "Renovación mensual"}
-            </p>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">
-                {mode === "once" ? "Total a pagar" : "Total cada mes"} · COP
-              </p>
-              <p className="text-3xl font-bold tabular-nums">
-                {COP(s?.ok ? s.amount : def.amountCOP)}
-              </p>
-            </div>
-          </div>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <CalendarClock className="h-4 w-4" aria-hidden="true" />
+            {COP(s?.ok ? s.amount : def.amountCOP)} al mes, en pesos colombianos
+          </p>
         )}
         <div className="mt-6">{body}</div>
         <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
@@ -418,34 +327,23 @@ function PagarPage() {
   );
 }
 
-function ModeOption(props: {
-  active: boolean;
-  onClick: () => void;
-  title: string;
-  note: string;
-  icon: React.ReactNode;
-}) {
+function ModeOption(props: { active: boolean; onClick: () => void; title: string; note: string }) {
   return (
-    <Button
-      variant="outline"
+    <button
       type="button"
       role="radio"
       aria-checked={props.active}
       onClick={props.onClick}
       className={cn(
-        "h-auto min-h-24 min-w-0 flex-col items-start whitespace-normal rounded-lg border p-3 text-left transition",
+        "rounded-xl border p-3 text-left transition motion-safe:active:scale-[0.98]",
         props.active
-          ? "border-primary bg-primary/5 hover:bg-primary/5"
+          ? "border-foreground bg-foreground/5"
           : "border-border hover:border-foreground/30",
       )}
     >
-      <span className="flex w-full items-center justify-between text-primary">
-        {props.icon}
-        {props.active && <Check className="h-4 w-4" aria-hidden="true" />}
-      </span>
-      <span className="text-sm font-semibold">{props.title}</span>
-      <span className="text-xs font-normal text-muted-foreground">{props.note}</span>
-    </Button>
+      <p className="text-sm font-semibold">{props.title}</p>
+      <p className="text-xs text-muted-foreground">{props.note}</p>
+    </button>
   );
 }
 

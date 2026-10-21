@@ -1,7 +1,4 @@
 # Mercado Pago dentro de Humanix
-- [x] Verificar la pasarela de principio a fin con sesión real: el formulario carga con la clave de producción, PSE lista 48 bancos (Bancolombia y Nequi incluidos), el pago llega hasta el diálogo de datos y llama al servidor; envío interceptado, sin cobros.
-- [x] Simplificar la pantalla y los datos de PSE; selección de pago y campos bancarios comprobados con sesión real, escritorio y móvil; 28 pruebas aprobadas, sin realizar cobros.
-- [x] Corregir los datos faltantes al enviar PSE; formulario comprobado con sesión y envío interceptado sin cobro; precios de los tres planes cubiertos por pruebas.
 - [x] Pago de 1 mes en /pagar (Payment Brick): tarjeta, PSE (Bancolombia, Nequi y demás bancos) y Efecty.
 - [x] Cobro automático mensual con plan asociado (preapproval_plan + preapproval con card_token_id).
 - [x] Webhook público en la app: /api/public/mercadopago/webhook, con verificación de firma (sin nuevas Edge Functions).

@@ -22,7 +22,6 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - Sensitive profile fields (verification, trust, ratings) are written only by service-role code; a BEFORE UPDATE trigger preserves them for clients — users must not self-verify.
 - Plan/payment state is read from `mp_subscriptions`, which only server code writes (`processMercadoPagoPayment`, from the signature-verified webhook `/api/public/mercadopago/webhook` or the in-app checkout `/pagar`) — client rows are untrusted. Mercado Pago Bricks require the configured public key, access token and webhook secret; never fall back to a previous account's key.
 - Payments happen only on the web checkout, never via WhatsApp — business/compliance rule.
-- PSE checkout collects missing payer details in a validated dialog and merges them with the Brick payload through `pseDetails`; the Brick does not emit the payer names and address required by the payment API.
 - `/superadmin/*` uses only `useSuperadmin`, redirecting to `/admin` — keeps admin flow isolated.
 - Admin access code is validated server-side only (`verify-admin-access`) — never in frontend.
 - New server logic uses `createServerFn` in `src/lib/*.functions.ts` with `requireSupabaseAuth`; `src/start.ts` attaches the bearer token — project template forbids new Edge Functions.
