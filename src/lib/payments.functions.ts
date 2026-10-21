@@ -68,14 +68,8 @@ export const confirmMercadoPagoPayment = createServerFn({ method: "POST" })
 
 const MP_BASE = "https://api.mercadopago.com";
 
-/** Avisos de Mercado Pago: ruta de servidor de la propia app (`src/routes/api/mercadopago/webhook.ts`). */
-export const MP_WEBHOOK_URL = "https://humanix.lat/api/mercadopago/webhook";
-
-/**
- * Public Key de producción de Mercado Pago. Es pública por diseño (solo dibuja los formularios y convierte la tarjeta
- * en un token); si se configura `MERCADOPAGO_PUBLIC_KEY`, manda esa.
- */
-const MP_PUBLIC_KEY_DEFAULT = "APP_USR-cab576f2-9677-4e92-aaf0-01aeb8b017b6";
+/** Ruta pública con verificación de firma para los avisos externos de Mercado Pago. */
+export const MP_WEBHOOK_URL = "https://humanix.lat/api/public/mercadopago/webhook";
 
 function serverConfig() {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -363,7 +357,10 @@ export const getPlanPaymentSetup = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => setupInput.parse(data ?? {}))
   .handler(async ({ data, context }): Promise<PaySetupResult> => {
     const cfg = serverConfig();
-    if (!cfg) return { ok: false, error: "not_configured" };
+    const publicKey = process.env.MERCADOPAGO_PUBLIC_KEY?.trim();
+    if (!cfg || !publicKey || !process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+      return { ok: false, error: "not_configured" };
+    }
     const check = await checkPlan(
       makeRest(cfg.supabaseUrl, cfg.serviceKey),
       context.userId,
@@ -372,7 +369,7 @@ export const getPlanPaymentSetup = createServerFn({ method: "POST" })
     if (!check.ok) return check;
     return {
       ok: true,
-      publicKey: process.env.MERCADOPAGO_PUBLIC_KEY || MP_PUBLIC_KEY_DEFAULT,
+      publicKey,
       plan: check.plan,
       amount: check.amount,
       title: PLAN_TITLE_ONCE[check.plan],
