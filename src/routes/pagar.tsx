@@ -72,7 +72,9 @@ function PagarPage() {
   const [attemptId, setAttemptId] = useState(newAttempt);
   const [redirecting, setRedirecting] = useState(false);
   const [pseForm, setPseForm] = useState<Record<string, unknown> | null>(null);
-  const pseCompletion = useRef<{ resolve: () => void; reject: (error: Error) => void } | null>(null);
+  const pseCompletion = useRef<{ resolve: () => void; reject: (error: Error) => void } | null>(
+    null,
+  );
   useEffect(() => setMounted(true), []);
 
   const setup = useQuery({

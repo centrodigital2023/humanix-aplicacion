@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-const required = (max: number) => z.string().trim().min(1, "Completa este dato").max(max, `Máximo ${max} caracteres`);
+const required = (max: number) =>
+  z.string().trim().min(1, "Completa este dato").max(max, `Máximo ${max} caracteres`);
 
 export const pseDetailsSchema = z.object({
   firstName: required(32),
@@ -9,8 +10,14 @@ export const pseDetailsSchema = z.object({
   streetNumber: required(5),
   neighborhood: required(18),
   city: required(18),
-  zipCode: z.string().trim().regex(/^\d{5,6}$/, "Ingresa un código postal válido"),
-  phone: z.string().trim().regex(/^\d{10}$/, "Ingresa los 10 dígitos de tu celular"),
+  zipCode: z
+    .string()
+    .trim()
+    .regex(/^\d{5,6}$/, "Ingresa un código postal válido"),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\d{10}$/, "Ingresa los 10 dígitos de tu celular"),
 });
 
 export type PseDetails = z.infer<typeof pseDetailsSchema>;
