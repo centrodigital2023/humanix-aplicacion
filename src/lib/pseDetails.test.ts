@@ -16,7 +16,7 @@ describe("datos adicionales de PSE", () => {
   it.each(["firstName", "lastName", "streetName", "streetNumber", "neighborhood", "city", "zipCode", "phone"])("no omite %s", (field) => {
     expect(pseDetailsSchema.safeParse({ ...details, [field]: "" }).success).toBe(false);
   });
-  it.each([ ["essential_monthly", 9000], ["pro_monthly", 29000], ["enterprise_monthly", 299000] ] as const)("PSE conserva el importe autorizado para %s", (plan, amount) => {
+  it.each([ ["essential_monthly", 9000], ["pro_monthly", 29000], ["institution_monthly", 299000] ] as const)("PSE conserva el importe autorizado para %s", (plan, amount) => {
     const result = brickPaymentRequest({ form: withPseDetails(form, details), plan, userId: "11111111-2222-4333-8444-555555555555", accountEmail: null, ip: "190.0.0.1", callbackUrl: "https://humanix.lat/pago/exito", notificationUrl: "https://humanix.lat/api/public/mercadopago/webhook" });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.body.transaction_amount).toBe(amount);

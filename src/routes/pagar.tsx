@@ -1,6 +1,6 @@
 // Pagar un plan dentro de Humanix, con los formularios de Mercado Pago (ver `InAppCheckout`). El servidor fija el
 // precio y decide si el plan se puede pagar (`getPlanPaymentSetup`); la página solo muestra el resultado.
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -16,6 +16,8 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/humanix/Navbar";
+import { PseDetailsDialog } from "@/components/humanix/PseDetailsDialog";
+import { withPseDetails, type PseDetails } from "@/lib/pseDetails";
 import { useAppUser } from "@/hooks/use-app-user";
 import { checkoutErrorMessage, payModeOf, type PayMode } from "@/lib/checkout";
 import { safeReturnPath, searchParamsOf } from "@/lib/paymentReturn";
@@ -69,6 +71,8 @@ function PagarPage() {
   const [voucher, setVoucher] = useState<string | null>(null);
   const [attemptId, setAttemptId] = useState(newAttempt);
   const [redirecting, setRedirecting] = useState(false);
+  const [pseForm, setPseForm] = useState<Record<string, unknown> | null>(null);
+  const pseCompletion = useRef<{ resolve: () => void; reject: (error: Error) => void } | null>(null);
   useEffect(() => setMounted(true), []);
 
   const setup = useQuery({
@@ -91,7 +95,7 @@ function PagarPage() {
   useEffect(() => {
     setFormReady(false);
     setFormError(null);
-  }, [mode]);
+  }, [mode, plan]);
 
   const payOnce = async (form: Record<string, unknown>) => {
     const r = await payFn({ data: { plan, returnTo: from, attemptId, form } });
@@ -140,6 +144,33 @@ function PagarPage() {
       throw new Error(r.error);
     }
     void navigate({ href: `/pago/exito?preapproval_id=${r.preapprovalId}&${exitoQuery}` });
+  };
+
+  const submitOnce = (form: Record<string, unknown>): Promise<void> => {
+    if (form.payment_method_id !== "pse") return payOnce(form);
+    return new Promise((resolve, reject) => {
+      pseCompletion.current = { resolve, reject };
+      setPseForm(form);
+    });
+  };
+
+  const cancelPse = () => {
+    pseCompletion.current?.reject(new Error("payment_cancelled"));
+    pseCompletion.current = null;
+    setPseForm(null);
+  };
+
+  const confirmPse = async (details: PseDetails) => {
+    if (!pseForm) return;
+    try {
+      await payOnce(withPseDetails(pseForm, details));
+      pseCompletion.current?.resolve();
+    } catch (error) {
+      pseCompletion.current?.reject(error instanceof Error ? error : new Error("payment_failed"));
+    } finally {
+      pseCompletion.current = null;
+      setPseForm(null);
+    }
   };
 
   const openFallback = async () => {
@@ -269,12 +300,12 @@ function PagarPage() {
             mounted && (
               <Suspense fallback={null}>
                 <InAppCheckout
-                  key={mode}
+                  key={`${plan}:${mode}`}
                   publicKey={s.publicKey}
                   mode={mode}
                   amount={s.amount}
                   email={s.email}
-                  onSubmit={mode === "once" ? payOnce : subscribe}
+                  onSubmit={mode === "once" ? submitOnce : subscribe}
                   onReady={() => setFormReady(true)}
                   onError={(m) => setFormError(m)}
                 />
@@ -303,6 +334,7 @@ function PagarPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <PseDetailsDialog open={!!pseForm} onCancel={cancelPse} onConfirm={confirmPse} />
       <main className="mx-auto max-w-xl px-4 pb-16 pt-24 sm:pt-28">
         <Link
           to={back as "/"}
