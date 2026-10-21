@@ -17,7 +17,7 @@ const base = {
   accountEmail: "cuenta@humanix.lat",
   ip: "190.0.0.1",
   callbackUrl: "https://humanix.lat/pago/exito?tipo=plan&plan=pro_monthly&from=%2Fdashboard",
-  notificationUrl: "https://humanix.lat/api/mercadopago/webhook",
+  notificationUrl: "https://humanix.lat/api/public/mercadopago/webhook",
 };
 
 const pseForm = {
