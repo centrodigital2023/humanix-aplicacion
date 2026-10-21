@@ -122,9 +122,17 @@ function PagarPage() {
     }
     if (r.state === "failed") {
       setAttemptId(newAttempt());
-      toast("Mercado Pago no aprobó el pago.", {
-        description: "No se te cobró nada. Revisa los datos o prueba con otro medio de pago.",
-      });
+      if (r.statusDetail === "bank_error") {
+        // El banco o la red PSE rechazaron la transacción (p. ej. registro.pse.com.co no responde).
+        toast("Tu banco no pudo completar el pago.", {
+          description:
+            "No se te cobró nada. La red PSE puede estar en mantenimiento: inténtalo de nuevo en unos minutos o paga con Nequi, tarjeta o Efecty.",
+        });
+      } else {
+        toast("Mercado Pago no aprobó el pago.", {
+          description: "No se te cobró nada. Revisa los datos o prueba con otro medio de pago.",
+        });
+      }
       throw new Error("rejected");
     }
     void navigate({ href: `/pago/exito?payment_id=${r.paymentId}&${exitoQuery}` });
