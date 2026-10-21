@@ -285,6 +285,18 @@ function PagarPage() {
              ? "Sin renovación automática. Con PSE pagas desde tu banco, sin cuenta de Mercado Pago."
              : "Renovación mensual. Puedes cancelarla desde tu panel y conservar el mes pagado."}
         </p>
+        {mode === "once" && (
+          <ul className="flex flex-wrap gap-1.5" aria-label="Medios de pago disponibles">
+            {["Tarjeta", "PSE", "Bancolombia", "Nequi", "Efecty"].map((m) => (
+              <li
+                key={m}
+                className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
+              >
+                {m}
+              </li>
+            ))}
+          </ul>
+        )}
 
          <div className="relative min-h-[320px] rounded-lg border border-border bg-card p-2 sm:p-4">
           {(!formReady || redirecting) && !formError && (
