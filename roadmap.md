@@ -6,3 +6,8 @@
 - [x] Checkout abierto con sesión real; muestra tarjeta, PSE y Efecty sin errores; webhook sin firma rechazado (401); 31 pruebas aprobadas.
 - [ ] Publicar la app y configurar https://humanix.lat/api/public/mercadopago/webhook en Mercado Pago con eventos Pagos y Planes y suscripciones (requiere acción del usuario).
 - [ ] Primer pago real con PSE y con tarjeta (requiere autorización y datos de pago del usuario; no se realizaron cobros).
+
+# Mapa de profesionales en vivo
+- [ ] Actualizar ubicación y estado también para visitantes, sin exponer datos privados.
+- [ ] Mostrar todos los profesionales visibles con ubicación y mantener actualizado el profesional seleccionado.
+- [ ] Verificar el mapa y las pruebas; conservar privados los perfiles sin publicar.
