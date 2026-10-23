@@ -134,6 +134,13 @@
       "when": 1792718650415,
       "tag": "0018_storage_update_policies_with_check",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792718686458,
+      "tag": "0019_avatars_select_own_for_upsert",
+      "breakpoints": true
     }
   ]
 }
