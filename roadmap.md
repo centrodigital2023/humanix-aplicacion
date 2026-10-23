@@ -8,6 +8,7 @@
 - [ ] Primer pago real con PSE y con tarjeta (requiere autorización y datos de pago del usuario; no se realizaron cobros).
 
 # Mapa de profesionales en vivo
-- [ ] Actualizar ubicación y estado también para visitantes, sin exponer datos privados.
-- [ ] Mostrar todos los profesionales visibles con ubicación y mantener actualizado el profesional seleccionado.
-- [ ] Verificar el mapa y las pruebas; conservar privados los perfiles sin publicar.
+- [x] Actualizar ubicación y estado también para visitantes, con avisos sin datos privados y recarga al reconectar.
+- [x] Consultar hasta 500 profesionales visibles con ubicación y mantener actualizado el profesional seleccionado.
+- [x] Verificar el mapa público y 111 pruebas; conservar privados los perfiles sin publicar.
+- [ ] Verificar movimiento real con un profesional publicado que comparta ubicación (actualmente hay un perfil registrado, ninguno publicado; requiere publicación voluntaria).
