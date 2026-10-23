@@ -4,7 +4,7 @@
 //
 // En vivo: la base emite un aviso sin datos («algo que ve el mapa cambió») por un canal privado de difusión; aquí se escucha y se
 // vuelven a pedir los datos por las funciones seguras. Una sola suscripción compartida por todos los componentes. Los visitantes sin
-// sesión no pueden escuchar canales privados: para ellos se escuchan los cambios de profesionales publicados (son públicos).
+// sesión escuchan un canal público separado que solo emite avisos vacíos, nunca filas ni ubicaciones.
 // Además se programa UNA recarga justo cuando vence el «en vivo» más próximo (una presencia que se apaga sin avisar no genera evento).
 
 import { useEffect, useMemo } from "react";
