@@ -116,10 +116,17 @@ export function SimpleLiveMap({
 
   // Profesionales (familias e instituciones) u oferta abierta (profesionales). Solo se pide lo que ese mapa necesita.
   // Los profesionales llegan con los datos validados del buscador: sin nombre, ciudad o turnos no hay pin.
-  const prosQ = useValidatedMapProfessionals({ authed: session.has, enabled: mode === "pros", limit: 500 });
+  const prosQ = useValidatedMapProfessionals({
+    authed: session.has,
+    enabled: mode === "pros",
+    limit: 500,
+  });
   const demandQ = useMapDemand({ authed: session.has, enabled: mode === "offers" && session.has });
   // Instituciones visibles sin turnos abiertos: también salen en el mapa del profesional (atenuadas). Las familias, solo con solicitud.
-  const instQ = useMapInstitutions({ authed: session.has, enabled: mode === "offers" && session.has });
+  const instQ = useMapInstitutions({
+    authed: session.has,
+    enabled: mode === "offers" && session.has,
+  });
 
   const pins = useMemo<MapPin[] | null>(() => {
     if (mode === "pros") {
@@ -237,7 +244,10 @@ export function SimpleLiveMap({
       </MapContainer>
 
       {/* Contador en vivo (dato real) */}
-      <div className="pointer-events-none absolute left-3 right-20 top-3 z-[500] flex flex-wrap gap-2" aria-live="polite">
+      <div
+        className="pointer-events-none absolute left-3 right-20 top-3 z-[500] flex flex-wrap gap-2"
+        aria-live="polite"
+      >
         {mode === "pros" && pins !== null && (
           <span className="rounded-full bg-card px-3.5 py-2 text-sm font-bold text-card-foreground shadow-md">
             {merged.length} en el mapa
@@ -310,12 +320,13 @@ export function SimpleLiveMap({
 
       {(failed || (pins !== null && pins.length === 0)) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-16 z-[500] mx-auto w-fit max-w-[90%] rounded-full bg-white/95 px-4 py-2 text-center text-base font-bold text-trust-deep shadow-md">
-          {failed ? "No pudimos cargar el mapa. Intenta de nuevo."
+          {failed
+            ? "No pudimos cargar el mapa. Intenta de nuevo."
             : mode === "pros"
-            ? "Aún no hay perfiles publicados con ubicación"
-            : session.has
-              ? "Pronto habrá solicitudes aquí"
-              : "Entra como profesional para ver solicitudes cerca de ti"}
+              ? "Aún no hay perfiles publicados con ubicación"
+              : session.has
+                ? "Pronto habrá solicitudes aquí"
+                : "Entra como profesional para ver solicitudes cerca de ti"}
         </div>
       )}
 

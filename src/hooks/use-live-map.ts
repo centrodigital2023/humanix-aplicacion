@@ -90,7 +90,9 @@ function subscribeMapPing(qc: QueryClient, publicMode = false): () => void {
   clients.set(qc, (clients.get(qc) ?? 0) + 1);
   if (!state.channel) {
     state.channel = sb
-      .channel(publicMode ? "live_map_public_ping" : "live_map_ping", { config: { private: !publicMode } })
+      .channel(publicMode ? "live_map_public_ping" : "live_map_ping", {
+        config: { private: !publicMode },
+      })
       .on("broadcast", { event: "map_changed" }, refresh)
       .on("broadcast", { event: "service_offers_changed" }, () => {
         // Un profesional publica, pausa o cierra una oferta de servicio: las familias e instituciones recargan su lista segura.

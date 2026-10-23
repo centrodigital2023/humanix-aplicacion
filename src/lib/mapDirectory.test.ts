@@ -62,7 +62,13 @@ describe("validatedMapProfessionals — el mapa usa los datos validados del busc
   });
 
   it("oculta a quien no tiene fila en el directorio o la tiene incompleta", () => {
-    const map = [pin({ id: "a" }), pin({ id: "b" }), pin({ id: "c" }), pin({ id: "d" }), pin({ id: "e" })];
+    const map = [
+      pin({ id: "a" }),
+      pin({ id: "b" }),
+      pin({ id: "c" }),
+      pin({ id: "d" }),
+      pin({ id: "e" }),
+    ];
     const out = validatedMapProfessionals(map, [
       dir({ user_id: "b", full_name: "Profesional Humanix" }),
       dir({ user_id: "c", home_city: null, service_cities: [] }),
