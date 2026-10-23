@@ -11,7 +11,6 @@ import {
   Clock,
   XCircle,
   Sparkles,
-  Receipt,
   Briefcase,
   ShieldAlert,
   Stethoscope,
@@ -37,13 +36,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendlyError";
 import { confirmAction } from "@/components/humanix/ConfirmHost";
+import { missingProfessionalDocuments } from "../../../supabase/functions/_shared/professionalDocumentRequirements";
 
 type DocType =
   | "cv"
   | "rethus"
   | "diploma"
   | "id_document"
-  | "utility_bill"
   | "work_experience"
   | "public_function_cv"
   | "medical_exam"
@@ -115,13 +114,6 @@ const REGULAR_TYPES: DocDef[] = [
     label: "Cédula",
     icon: <IdCard className="h-4 w-4" />,
     hint: "Frente y reverso.",
-    required: true,
-  },
-  {
-    value: "utility_bill",
-    label: "Recibo de servicios públicos",
-    icon: <Receipt className="h-4 w-4" />,
-    hint: "Reciente (últimos 60 días). Verifica tu dirección.",
     required: true,
   },
   {
@@ -254,7 +246,6 @@ export function DocumentsManager({
     rethus: null,
     diploma: null,
     id_document: null,
-    utility_bill: null,
     work_experience: null,
     public_function_cv: null,
     medical_exam: null,
@@ -424,9 +415,9 @@ export function DocumentsManager({
   const docsByType = (t: DocType) => docs.filter((d) => d.doc_type === t);
   const hasDoc = (t: DocType) => docs.some((d) => d.doc_type === t && d.status !== "rejected");
 
-  const requiredMissing = REGULAR_TYPES.filter((t) => t.required && !hasDoc(t.value)).length;
-  const credencialMissing = !hasDoc("rethus") && !hasDoc("diploma");
-  const totalMissing = requiredMissing + (credencialMissing ? 1 : 0);
+  const missingDocuments = missingProfessionalDocuments(docs);
+  const credencialMissing = missingDocuments.includes("rethus_o_diploma");
+  const totalMissing = missingDocuments.length;
 
   const publicUploaded = PUBLIC_TYPES.filter((t) => hasDoc(t.value)).length;
 

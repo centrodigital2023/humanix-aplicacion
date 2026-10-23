@@ -18,7 +18,6 @@ import { confirmAction } from "@/components/humanix/ConfirmHost";
 
 type DocType =
   | "id_document"
-  | "utility_bill"
   | "patient_id"
   | "medical_history"
   | "authorization"
@@ -61,7 +60,6 @@ export function FamilyDocumentsManager({ userId }: { userId: string }) {
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const inputRefs = useRef<Record<DocType, HTMLInputElement | null>>({
     id_document: null,
-    utility_bill: null,
     patient_id: null,
     medical_history: null,
     authorization: null,

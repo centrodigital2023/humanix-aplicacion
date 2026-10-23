@@ -12,6 +12,7 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - `supabase/functions/` existing Edge Functions (maintain only, never add new ones).
 
 ## Rules
+- Professional document requirements are shared in the browser-safe `supabase/functions/_shared/professionalDocumentRequirements.ts` module by the panel and existing validator, so completion and publication checks remain consistent.
 - UI only with shadcn/Radix/Tailwind; icons from lucide-react; semantic color tokens, no arbitrary hex in new code — keeps theming consistent.
 - Business logic as pure functions in `src/lib/` with Vitest tests — testable without the DB.
 - Search cards, map and agent results share validated directory rows from `searchProfessionalDetails`; display only server-authorized names so incomplete data and privacy rules stay consistent.
