@@ -21,11 +21,11 @@ export function AvatarUploader({
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast.error("Sube una imagen (JPG/PNG).");
+      toast.error("Sube una imagen o foto.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Máximo 5MB.");
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Máximo 8MB.");
       return;
     }
     setBusy(true);
@@ -75,7 +75,7 @@ export function AvatarUploader({
       </button>
       <div>
         <p className="text-sm font-semibold">Foto de perfil</p>
-        <p className="text-xs text-muted-foreground">JPG o PNG, hasta 5MB.</p>
+        <p className="text-xs text-muted-foreground">Cualquier imagen o foto, hasta 8MB.</p>
       </div>
       <input
         ref={inputRef}
