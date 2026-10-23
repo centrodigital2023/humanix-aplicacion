@@ -4,7 +4,7 @@ import { FileUp, Loader2, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { extractProfessionalProfile } from "@/lib/profileExtract.functions";
-import { prepareProfileImport, PROFILE_FILE_ACCEPT } from "@/lib/profileImport.client";
+import { prepareProfileImport, PROFILE_FILE_ACCEPT } from "@/lib/profileImport";
 import type { ExtractedProfile } from "@/lib/profileExtraction";
 import { toast } from "sonner";
 

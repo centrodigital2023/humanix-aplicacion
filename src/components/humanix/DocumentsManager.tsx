@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { extractProfessionalProfile } from "@/lib/profileExtract.functions";
-import { prepareProfileImport, PROFILE_FILE_ACCEPT } from "@/lib/profileImport.client";
+import { prepareProfileImport, PROFILE_FILE_ACCEPT } from "@/lib/profileImport";
 import {
   FileText,
   IdCard,
