@@ -1,5 +1,6 @@
 // Perfil público de profesional: experiencia, documentación verificada,
 // rating, ubicación y CTA contratar (con auth-gate vía BookNowButton).
+import { FREE_COMMISSION_PCT } from "@/lib/plans";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
@@ -522,10 +523,11 @@ function ProfessionalPublicPage() {
                   <ShieldCheck className="h-4 w-4 text-copper" /> Comisión transparente
                 </h2>
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                  Pagas el valor acordado directamente al profesional. Si el profesional está en el
-                  plan Free, Humanix le descuenta el <strong className="text-copper">12%</strong>;
-                  con un plan de pago recibe el <strong>100%</strong>. Sin tarifas ocultas ni
-                  permanencia.
+                  Pagas el valor acordado directamente al profesional. Si nadie tiene plan de pago,
+                  Humanix le descuenta el{" "}
+                  <strong className="text-copper">{FREE_COMMISSION_PCT}%</strong> al profesional; si
+                  él tiene Pro o Premium, o tú tienes el plan Familiar o Premium Familiar, recibe el{" "}
+                  <strong>100%</strong>. Sin tarifas ocultas ni permanencia.
                 </p>
               </Card>
             </aside>

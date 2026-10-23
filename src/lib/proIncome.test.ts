@@ -152,18 +152,19 @@ describe("requiredHourlyRate", () => {
 
 describe("comparePaidPlan", () => {
   it("calcula el ahorro y el punto de equilibrio frente a la comisión", () => {
-    const c = comparePaidPlan({ grossMonthly: 500_000, planPrice: 9000 });
+    // comisión del 10 % frente al plan Pro de 19.900
+    const c = comparePaidPlan({ grossMonthly: 500_000, planPrice: 19_900 });
     expect(c).toEqual({
-      commissionAvoided: 60_000,
-      planPrice: 9000,
-      monthlySavings: 51_000,
-      breakEvenMonthly: 75_000,
+      commissionAvoided: 50_000,
+      planPrice: 19_900,
+      monthlySavings: 30_100,
+      breakEvenMonthly: 199_000,
       worthIt: true,
     });
   });
   it("con poca facturación el plan no compensa", () => {
-    const c = comparePaidPlan({ grossMonthly: 50_000, planPrice: 9000 });
-    expect(c.monthlySavings).toBe(-3000);
+    const c = comparePaidPlan({ grossMonthly: 50_000, planPrice: 19_900 });
+    expect(c.monthlySavings).toBe(-14_900);
     expect(c.worthIt).toBe(false);
   });
 });

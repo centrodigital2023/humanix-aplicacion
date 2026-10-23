@@ -9,8 +9,8 @@ import { DAY, NOW, USER, deps, fakeDb, planPayment } from "./mpPayment.testkit";
 const REFERRER = "99999999-8888-4777-8666-555555555555";
 const iso = (t: number) => new Date(t).toISOString();
 
-describe("subscriptionAfterReferralReward — un mes de Esencial para quien refiere", () => {
-  it("sin plan vigente: Esencial por un mes desde hoy, sin cobro", () => {
+describe("subscriptionAfterReferralReward — un mes de Familiar para quien refiere", () => {
+  it("sin plan vigente: Familiar por un mes desde hoy, sin cobro", () => {
     const out = subscriptionAfterReferralReward(null, NOW);
     expect(out.kind).toBe("new");
     expect(out.patch).toMatchObject({ plan: "essential_monthly", status: "active", amount: 0 });
@@ -22,7 +22,7 @@ describe("subscriptionAfterReferralReward — un mes de Esencial para quien refi
     expect(subscriptionAfterReferralReward(row, NOW).patch.plan).toBe("essential_monthly");
   });
 
-  it("con Esencial vigente: un mes más desde el vencimiento, sin tocar el monto pagado", () => {
+  it("con Familiar vigente: un mes más desde el vencimiento, sin tocar el monto pagado", () => {
     const end = NOW + 10 * DAY;
     const out = subscriptionAfterReferralReward(
       { plan: "essential_monthly", status: "active", current_period_end: iso(end) },
@@ -33,15 +33,15 @@ describe("subscriptionAfterReferralReward — un mes de Esencial para quien refi
     expect(out.patch).not.toHaveProperty("amount");
   });
 
-  it("con un plan mayor vigente: conserva el plan y suma lo que vale un mes de Esencial (9 días de Pro)", () => {
+  it("con un plan mayor vigente: conserva el plan y suma lo que vale un mes de Familiar (14 días de Pro)", () => {
     const end = NOW + 10 * DAY;
     const out = subscriptionAfterReferralReward(
       { plan: "pro_monthly", status: "active", current_period_end: iso(end) },
       NOW,
     );
-    expect(out).toMatchObject({ kind: "convert", days: 9 });
+    expect(out).toMatchObject({ kind: "convert", days: 14 });
     expect(out.patch.plan).toBe("pro_monthly");
-    expect(Date.parse(out.patch.current_period_end)).toBe(end + 9 * DAY);
+    expect(Date.parse(out.patch.current_period_end)).toBe(end + 14 * DAY);
     expect(out.patch).not.toHaveProperty("amount");
   });
 

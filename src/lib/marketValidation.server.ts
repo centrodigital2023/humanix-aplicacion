@@ -193,8 +193,7 @@ export type RedeemError =
   | "server";
 
 export type RedeemResult =
-  | { ok: true; plan: string; endsAt: string }
-  | { ok: false; error: RedeemError };
+  { ok: true; plan: string; endsAt: string } | { ok: false; error: RedeemError };
 
 async function redeem(admin: Db, userId: string, code: string): Promise<RedeemResult> {
   const { data, error } = await admin.rpc("redeem_validation_benefit", {
@@ -508,7 +507,7 @@ async function sendEmail(
   const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
 <h2>Tu código de verificación Humanix</h2>
 <p style="font-size:44px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</p>
-<p>Este código es válido por <strong>15 minutos</strong>. Con él confirmas tu contacto para recibir tu mes del plan Esencial.</p>
+<p>Este código es válido por <strong>15 minutos</strong>. Con él confirmas tu contacto para recibir tu mes del plan Familiar.</p>
 <p style="color:#6b7280;font-size:12px">Si no lo solicitaste, ignora este mensaje. · humanix.lat</p>
 </body></html>`;
   const res = await postJson(

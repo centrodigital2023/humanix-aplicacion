@@ -48,7 +48,19 @@ const charge = (id = 5001, over: Record<string, unknown> = {}) => ({
 describe("referencia y cuerpo de la suscripción", () => {
   it("la referencia dice de quién y de qué plan, y solo se acepta la nuestra", () => {
     const ref = preapprovalReference(USER, "essential_monthly");
-    expect(parsePreapprovalReference(ref)).toEqual({ userId: USER, plan: "essential_monthly" });
+    expect(parsePreapprovalReference(ref)).toEqual({
+      userId: USER,
+      plan: "essential_monthly",
+      cycle: "monthly",
+    });
+    const annual = preapprovalReference(USER, "institution_monthly", "annual");
+    expect(annual).toBe(`sub:${USER}:institution_monthly:annual`);
+    expect(parsePreapprovalReference(annual)).toEqual({
+      userId: USER,
+      plan: "institution_monthly",
+      cycle: "annual",
+    });
+    expect(parsePreapprovalReference(`sub:${USER}:pro_monthly:otro`)).toBeNull();
     expect(parsePreapprovalReference(`sub:${USER}:gold`)).toBeNull();
     expect(parsePreapprovalReference("sub:no-uuid:pro_monthly")).toBeNull();
     expect(parsePreapprovalReference(USER)).toBeNull();
@@ -128,11 +140,18 @@ describe("pago único de un mes (Checkout Pro, con PSE)", () => {
     expect(body.binary_mode).toBe(false);
     expect(body.items[0]).toMatchObject({
       id: "essential_monthly",
-      title: "Humanix Esencial · 1 mes",
-      unit_price: 9000,
+      title: "Humanix Familiar · 1 mes",
+      unit_price: 9900,
       currency_id: "COP",
     });
-    expect(body.metadata).toEqual({ user_id: USER, plan: "essential_monthly", price_cop: 9000 });
+    expect(body.metadata).toEqual({
+      user_id: USER,
+      plan: "essential_monthly",
+      price_cop: 9900,
+      months: 1,
+      cycle: "monthly",
+      branches: 1,
+    });
     expect(body).not.toHaveProperty("payer");
     expect(body.back_urls.success).toBe(
       "https://humanix.lat/pago/exito?tipo=plan&plan=essential_monthly&from=%2Fdashboard%2Ffamilia",
@@ -143,10 +162,13 @@ describe("pago único de un mes (Checkout Pro, con PSE)", () => {
 describe("withSubscriptionMetadata / preapprovalIdOfPayment", () => {
   it("pone usuario, plan y precio desde la suscripción consultada", () => {
     const out = withSubscriptionMetadata(charge(), preapproval());
+    // Suscripción de antes del cambio de precios: sigue pagando 29.000 y se respeta.
     expect(out?.metadata).toEqual({
       user_id: USER,
       plan: "pro_monthly",
       price_cop: 29000,
+      months: 1,
+      cycle: "monthly",
       preapproval_id: PRE_ID,
     });
   });

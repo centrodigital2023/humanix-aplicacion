@@ -1,4 +1,4 @@
-// Primeros pasos: la lista que convierte un tablero vacío en el hábito de usarlo. Cada paso tiene su botón; los que pide el plan IPS Mejorado
+// Primeros pasos: la lista que convierte un tablero vacío en el hábito de usarlo. Cada paso tiene su botón; los que pide el plan Institucional
 // se ven con candado y no cuentan para el avance (nunca se castiga a quien tiene Free).
 import { Check, ChevronRight, Lock, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,7 @@ export function OnboardingCard({
                   {s.label}
                   {s.locked && (
                     <span className="ml-1.5 text-[10px] font-semibold text-copper">
-                      IPS Mejorado
+                      Institucional
                     </span>
                   )}
                 </p>

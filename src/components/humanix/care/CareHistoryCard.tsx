@@ -72,7 +72,7 @@ export function CareHistoryCard({
         <UpgradeCta
           min="essential_monthly"
           title="Exporta tu historia de cuidado"
-          description="Disponible desde el plan Esencial (COP 9.000/mes), sin permanencia."
+          description="Disponible desde el plan Familiar (COP 9.900/mes), sin permanencia."
         />
       </Card>
     );

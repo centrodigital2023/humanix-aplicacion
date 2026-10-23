@@ -266,13 +266,10 @@ function ContactStep({
           </p>
           <p className="text-center text-[0.72rem] text-muted-foreground">
             ¿Quieres el beneficio completo?{" "}
-            <a
-              href="/validacion"
-              className="font-semibold text-trust underline underline-offset-2"
-            >
+            <a href="/validacion" className="font-semibold text-trust underline underline-offset-2">
               Diligencia la encuesta de validación
             </a>{" "}
-            (4 min) y gana 1 mes del plan Esencial.
+            (4 min) y gana 1 mes del plan Familiar.
           </p>
         </div>
       )}
@@ -306,7 +303,7 @@ function SuccessView() {
         href="/validacion"
         className="text-sm font-semibold text-trust underline underline-offset-2"
       >
-        O completa la encuesta de validación y gana 1 mes del plan Esencial →
+        O completa la encuesta de validación y gana 1 mes del plan Familiar →
       </a>
     </div>
   );

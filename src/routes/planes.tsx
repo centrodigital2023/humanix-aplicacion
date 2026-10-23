@@ -20,7 +20,20 @@ import { Footer } from "@/components/humanix/Footer";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
 import { buildSeo, jsonLdString, faqLd, breadcrumbLd, SITE_URL } from "@/lib/seo";
 import { toast } from "sonner";
-import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
+import {
+  COP,
+  FREE_COMMISSION_PCT,
+  INSTITUTION_BILLING,
+  PLAN_CATALOG,
+  PLANS_FOR_SEGMENT,
+  calculateInstitutionBilling,
+  canUseFeature,
+  planValidity,
+  type BillingCycle,
+  type PlanFeature,
+  type PlanKey,
+  type PlanSegment,
+} from "@/lib/plans";
 import { usePlan } from "@/hooks/use-plan";
 import { PromoCodeRedeemCard } from "@/components/humanix/PromoCodeRedeemCard";
 import { useAppUser } from "@/hooks/use-app-user";
@@ -35,16 +48,24 @@ const PLAN_FAQS = [
     a: "Sí. No hay permanencia mínima. Cancelas la renovación automática desde tu panel y el plan sigue activo hasta el final del periodo pagado.",
   },
   {
-    q: "¿Cuál es la diferencia entre Esencial y Pro?",
-    a: "Esencial deja todo activo. Pro agrega boost de visibilidad en búsquedas, coach de carrera IA y sugerencias de mensajes — pensado para profesionales que quieren más servicios.",
+    q: "¿Cómo funciona la comisión del plan Free?",
+    a: `Con el plan Free buscas, solicitas y contratas sin pagar nada. Humanix cobra una comisión del ${FREE_COMMISSION_PCT} % al profesional por cada servicio. Si la familia tiene el plan Familiar o Premium Familiar, o el profesional tiene Pro o Premium, ese servicio no paga comisión.`,
   },
   {
-    q: "¿Cómo funciona el plan Institución?",
-    a: "El plan Institución está diseñado para IPS, clínicas y agencias. Incluye multi-usuario con roles (HR, evaluador, admin), pipeline con scoring IA, detección de inconsistencias en CVs y soporte prioritario con onboarding asistido. Contáctanos para adaptar el plan a tus necesidades.",
+    q: "¿Cuál es la diferencia entre Familiar y Premium Familiar?",
+    a: "Familiar quita la comisión e incluye acuerdos digitales, bitácora, alertas y soporte prioritario. Premium Familiar suma seguimiento avanzado, círculo familiar de hasta 10 personas, reportes para el médico, alertas prioritarias, botón SOS con aviso a tu círculo y soporte dedicado.",
+  },
+  {
+    q: "¿Cuál es la diferencia entre Pro y Premium?",
+    a: "Pro te deja cobrar el 100 % de cada servicio (0 % de comisión), con mejor visibilidad y acceso a ofertas. Premium suma prioridad alta en las búsquedas, badge verificado destacado, más créditos de IA y herramientas de reputación.",
+  },
+  {
+    q: "¿Cómo funciona el plan Institucional?",
+    a: `Desde ${COP(INSTITUTION_BILLING.basePriceCOP)} al mes con la sede principal incluida, y ${COP(INSTITUTION_BILLING.extraBranchCOP)} al mes por cada sede adicional. Incluye multiusuario con roles, vacantes, agenda, seguimiento y soporte. Con el contrato anual pagas ${INSTITUTION_BILLING.annualPaidMonths} meses y recibes ${INSTITUTION_BILLING.annualMonths}.`,
   },
   {
     q: "¿Los pagos son seguros?",
-    a: "Sí. Pagas aquí mismo, en Humanix, con los formularios seguros de Mercado Pago (estándar PCI DSS nivel 1), en pesos colombianos: un mes con tarjeta, PSE (Bancolombia, Nequi y demás bancos) o Efecty, o cobro automático mensual con tarjeta. Los datos de tu tarjeta los guarda Mercado Pago, nunca Humanix.",
+    a: "Sí. Pagas aquí mismo, en Humanix, con los formularios seguros de Mercado Pago (estándar PCI DSS nivel 1), en pesos colombianos: un mes con tarjeta, PSE (Bancolombia, Nequi y demás bancos) o Efecty, o cobro automático con tarjeta. Los datos de tu tarjeta los guarda Mercado Pago, nunca Humanix.",
   },
   {
     q: "¿Qué es la verificación RETHUS?",
@@ -56,80 +77,60 @@ const PLAN_FAQS = [
   },
 ];
 
+const productLd = (position: number, key: PlanKey, description: string) => ({
+  "@type": "ListItem",
+  position,
+  item: {
+    "@type": "Product",
+    name: `Humanix ${PLAN_CATALOG[key].label}`,
+    description,
+    url: `${SITE_URL}/planes`,
+    offers: {
+      "@type": "Offer",
+      price: String(PLAN_CATALOG[key].amountCOP),
+      priceCurrency: "COP",
+      availability: "https://schema.org/InStock",
+      priceValidUntil: "2026-12-31",
+    },
+  },
+});
+
 const pricingProductLd = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   name: "Planes Humanix",
   url: `${SITE_URL}/planes`,
   itemListElement: [
-    {
-      "@type": "ListItem",
-      position: 1,
-      item: {
-        "@type": "Product",
-        name: "Humanix Free",
-        description: "Plan gratuito para conocer Humanix sin compromiso.",
-        url: `${SITE_URL}/planes`,
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "COP",
-          availability: "https://schema.org/InStock",
-          priceValidUntil: "2026-12-31",
-        },
-      },
-    },
-    {
-      "@type": "ListItem",
-      position: 2,
-      item: {
-        "@type": "Product",
-        name: "Humanix Esencial",
-        description: "Para familias y profesionales que quieren todo activo.",
-        url: `${SITE_URL}/planes`,
-        offers: {
-          "@type": "Offer",
-          price: "9000",
-          priceCurrency: "COP",
-          availability: "https://schema.org/InStock",
-          priceValidUntil: "2026-12-31",
-        },
-      },
-    },
-    {
-      "@type": "ListItem",
-      position: 3,
-      item: {
-        "@type": "Product",
-        name: "Humanix Pro Profesional",
-        description: "Para profesionales que quieren visibilidad máxima y coach IA.",
-        url: `${SITE_URL}/planes`,
-        offers: {
-          "@type": "Offer",
-          price: "29000",
-          priceCurrency: "COP",
-          availability: "https://schema.org/InStock",
-          priceValidUntil: "2026-12-31",
-        },
-      },
-    },
-    {
-      "@type": "ListItem",
-      position: 4,
-      item: {
-        "@type": "Product",
-        name: "Humanix Institución (IPS)",
-        description: "Para clínicas, hospitales y agencias de cuidado.",
-        url: `${SITE_URL}/planes`,
-        offers: {
-          "@type": "Offer",
-          price: "99000",
-          priceCurrency: "COP",
-          availability: "https://schema.org/InStock",
-          priceValidUntil: "2026-12-31",
-        },
-      },
-    },
+    productLd(
+      1,
+      "free",
+      "Plan gratuito: busca, solicita y contrata. Comisión del 10 % al profesional.",
+    ),
+    productLd(
+      2,
+      "essential_monthly",
+      "Para familias: sin comisión, acuerdos digitales, bitácora y alertas.",
+    ),
+    productLd(
+      3,
+      "family_premium_monthly",
+      "Para familias: seguimiento avanzado, círculo familiar y SOS.",
+    ),
+    productLd(
+      4,
+      "pro_monthly",
+      "Para profesionales: 0 % de comisión, mejor visibilidad y ofertas.",
+    ),
+    productLd(
+      5,
+      "pro_premium_monthly",
+      "Para profesionales: prioridad alta, badge destacado y más IA.",
+    ),
+    productLd(
+      6,
+      "institution_monthly",
+      "Para IPS y clínicas: multiusuario, vacantes, agenda y sedes.",
+    ),
   ],
 };
 
@@ -139,7 +140,7 @@ export const Route = createFileRoute("/planes")({
       title: "Planes y precios · Humanix",
       path: "/planes",
       description:
-        "Planes Humanix desde COP 0. Free, Esencial $9.000, Pro $29.000 e Institución $99.000 COP/mes. Sin permanencia, cancela cuando quieras. Verificación RETHUS incluida.",
+        "Planes Humanix desde COP 0. Familias: Familiar $9.900 y Premium $24.900. Profesionales: Pro $19.900 y Premium $39.900. Instituciones desde $299.000/mes. Sin permanencia.",
     }),
   component: PlansPage,
 });
@@ -152,8 +153,10 @@ type DisplayPlan = {
 
 const DISPLAY: DisplayPlan[] = [
   { key: "free", icon: Heart, tone: "muted" },
-  { key: "essential_monthly", icon: Sparkles, tone: "copper" },
+  { key: "essential_monthly", icon: Heart, tone: "copper" },
+  { key: "family_premium_monthly", icon: Sparkles, tone: "copper" },
   { key: "pro_monthly", icon: Stethoscope, tone: "bio" },
+  { key: "pro_premium_monthly", icon: Crown, tone: "bio" },
   { key: "institution_monthly", icon: Building2, tone: "fuchsia" },
 ];
 
@@ -164,184 +167,78 @@ const TONE: Record<string, string> = {
   muted: "border-border bg-muted/40 text-muted-foreground",
 };
 
+/** Una fila por función: cada columna se marca según `canUseFeature` (la misma regla que abre la función en la app). */
 type CompareRow = {
   label: string;
-  free: boolean | string;
-  essential: boolean | string;
-  pro: boolean | string;
-  institution: boolean | string;
+  feature: PlanFeature;
+  /** Perfiles para los que la fila tiene sentido (sin valor: todos). */
+  only?: PlanSegment[];
 };
 
 const COMPARE_ROWS: CompareRow[] = [
+  { label: "Perfil, búsqueda y solicitudes", feature: "apply_offers" },
+  { label: "Asistente IA básico", feature: "ai_basic" },
+  { label: "Mensajería 1:1 (aplicaciones aceptadas)", feature: "inbox_accepted" },
+  { label: "Sin comisión en los servicios", feature: "no_commission" },
+  { label: "Contacto directo por WhatsApp y dirección", feature: "whatsapp_contact" },
+  { label: "Geolocalización en vivo + ETA", feature: "live_geo_eta" },
+  { label: "Verificación RETHUS + anti-fraude IA", feature: "rethus_antifraud" },
+  { label: "Acuerdos digitales", feature: "digital_agreements", only: ["family", "institution"] },
   {
-    label: "Perfil profesional o familiar",
-    free: true,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Bitácora del cuidado e historia exportable",
+    feature: "care_log",
+    only: ["family", "institution"],
   },
+  { label: "Alertas del cuidado", feature: "care_alerts", only: ["family", "institution"] },
   {
-    label: "Buscar y aplicar a ofertas",
-    free: true,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Panel de familia inteligente (comparador, presupuesto, cobertura)",
+    feature: "smart_applicant_ranking",
+    only: ["family"],
   },
+  { label: "Soporte prioritario", feature: "priority_support" },
+  { label: "Seguimiento avanzado", feature: "advanced_tracking", only: ["family"] },
+  { label: "Círculo familiar (hasta 10 personas)", feature: "family_circle", only: ["family"] },
+  { label: "Reportes para el médico", feature: "doctor_reports", only: ["family"] },
   {
-    label: "Asistente IA básico",
-    free: true,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Alertas prioritarias y botón SOS al círculo",
+    feature: "priority_alerts",
+    only: ["family"],
   },
+  { label: "Soporte dedicado", feature: "dedicated_support", only: ["family"] },
+  { label: "Mejor visibilidad en búsquedas", feature: "visibility_boost", only: ["professional"] },
+  { label: "Acceso a ofertas y «Mi semana»", feature: "offers_access", only: ["professional"] },
+  { label: "Negociar el valor", feature: "negotiate_rate", only: ["professional"] },
   {
-    label: "Mensajería 1:1 (aplicaciones aceptadas)",
-    free: true,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Panel inteligente (ingresos reales, tarifa y descanso)",
+    feature: "pro_income_pulse",
+    only: ["professional"],
   },
+  { label: "Prioridad alta en búsquedas", feature: "priority_listing", only: ["professional"] },
   {
-    label: "Match IA en < 150 ms",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Badge verificado destacado",
+    feature: "verified_badge_featured",
+    only: ["professional"],
   },
+  { label: "Más créditos de IA", feature: "ai_credits_plus", only: ["professional"] },
   {
-    label: "Postulaciones ilimitadas",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Herramientas de reputación y pasaporte con QR",
+    feature: "pro_reputation_lab",
+    only: ["professional"],
   },
+  { label: "Coach de carrera y sugerencias IA", feature: "career_coach", only: ["professional"] },
+  { label: "Multiusuario con roles", feature: "multi_user_roles", only: ["institution"] },
   {
-    label: "Contacto directo WhatsApp",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Vacantes y pipeline con scoring IA",
+    feature: "pipeline_scoring",
+    only: ["institution"],
   },
+  { label: "Agenda inteligente", feature: "inst_agenda_insights", only: ["institution"] },
   {
-    label: "Geolocalización en vivo + ETA",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
+    label: "Seguimiento de pacientes y monitoreo clínico",
+    feature: "inst_care_scale",
+    only: ["institution"],
   },
-  {
-    label: "Verificación RETHUS + anti-fraude IA",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Sin comisión (cobro directo)",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Historia de cuidado exportable (Excel/CSV)",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Panel de familia inteligente (bienestar, comparador, presupuesto, cobertura)",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Panel del profesional inteligente (ingresos reales, tarifa y descanso)",
-    free: false,
-    essential: true,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "«Mi semana» y reputación en detalle",
-    free: false,
-    essential: false,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Boost de visibilidad en búsquedas",
-    free: false,
-    essential: false,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Coach de carrera IA 24/7",
-    free: false,
-    essential: false,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Sugerencias IA en mensajes",
-    free: false,
-    essential: false,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Anti-fraude IA prioritario",
-    free: false,
-    essential: false,
-    pro: true,
-    institution: true,
-  },
-  {
-    label: "Multi-usuario con roles (HR, admin)",
-    free: false,
-    essential: false,
-    pro: false,
-    institution: true,
-  },
-  {
-    label: "Pipeline de candidatos + scoring IA",
-    free: false,
-    essential: false,
-    pro: false,
-    institution: true,
-  },
-  {
-    label: "Detección inconsistencias CV + RETHUS",
-    free: false,
-    essential: false,
-    pro: false,
-    institution: true,
-  },
-  {
-    label: "Créditos IA mensuales",
-    free: false,
-    essential: false,
-    pro: false,
-    institution: true,
-  },
-  {
-    label: "Soporte prioritario + onboarding",
-    free: false,
-    essential: false,
-    pro: false,
-    institution: true,
-  },
-  {
-    label:
-      "Centro de gestión para instituciones (costos, calidad y cumplimiento, equipo, pronóstico e informe)",
-    free: false,
-    essential: false,
-    pro: false,
-    institution: true,
-  },
+  { label: "Cobro por sedes y contrato anual", feature: "branch_billing", only: ["institution"] },
 ];
 
 function CellIcon({ value }: { value: boolean | string }) {
@@ -352,30 +249,54 @@ function CellIcon({ value }: { value: boolean | string }) {
   return <span className="text-xs text-muted-foreground">{value}</span>;
 }
 
-const PLANS_BY_AUDIENCE: Record<Audience, PlanKey[]> = {
-  familias: ["free", "essential_monthly"],
-  instituciones: ["free", "institution_monthly"],
-  profesionales: ["free", "essential_monthly", "pro_monthly"],
+const SEGMENT_OF: Record<Audience, PlanSegment> = {
+  familias: "family",
+  profesionales: "professional",
+  instituciones: "institution",
 };
 
-// Textos de cada plan dirigidos solo al perfil activo (sin nombrar a los demás).
-const PLAN_LINE: Partial<Record<Audience, Partial<Record<PlanKey, string>>>> = {
-  familias: { essential_monthly: "Para tener todo activo con tu familia." },
-  profesionales: { essential_monthly: "Para profesionales que quieren todo activo." },
+const SEGMENT_TITLE: Record<PlanSegment, string> = {
+  family: "Para familias",
+  professional: "Para profesionales",
+  institution: "Para instituciones",
+};
+
+// Cómo se ve el plan Free para cada perfil (la columna «cómo genera ingreso» de la tabla de precios).
+const FREE_LINE: Record<PlanSegment, { audience: string; features: string[] }> = {
+  family: {
+    audience: "Busca, solicita y contrata sin pagar nada.",
+    features: [
+      "Buscar profesionales verificados",
+      "Solicitar y contratar servicios",
+      "Asistente IA básico",
+      `Humanix cobra ${FREE_COMMISSION_PCT} % al profesional por cada servicio`,
+    ],
+  },
+  professional: {
+    audience: "Recibe servicios sin pagar mensualidad.",
+    features: [
+      "Perfil profesional verificado",
+      "Postularte a solicitudes y ofertas abiertas",
+      "Asistente IA básico",
+      `Humanix cobra ${FREE_COMMISSION_PCT} % por cada servicio`,
+    ],
+  },
+  institution: {
+    audience: "Para conocer Humanix antes de contratar.",
+    features: [
+      "Perfil de la institución",
+      "Publicar ofertas y recibir postulaciones",
+      "Asistente IA básico",
+    ],
+  },
 };
 
 // Preguntas que solo tienen sentido para ciertos perfiles.
 const FAQ_ONLY: Record<string, Audience[]> = {
-  "¿Cuál es la diferencia entre Esencial y Pro?": ["profesionales"],
-  "¿Cómo funciona el plan Institución?": ["instituciones"],
+  "¿Cuál es la diferencia entre Familiar y Premium Familiar?": ["familias"],
+  "¿Cuál es la diferencia entre Pro y Premium?": ["profesionales"],
+  "¿Cómo funciona el plan Institucional?": ["instituciones"],
 };
-
-const COMPARE_KEY = {
-  free: "free",
-  essential_monthly: "essential",
-  pro_monthly: "pro",
-  institution_monthly: "institution",
-} as const;
 
 function PlansPage() {
   const { user, loading: userLoading } = useAppUser({ requireAuth: false });
@@ -392,8 +313,10 @@ function PlansPage() {
   const loading = userLoading || planLoading;
   // Cada perfil ve solo sus planes.
   const { audience } = useAudience();
-  const shown = audience ? PLANS_BY_AUDIENCE[audience] : DISPLAY.map((d) => d.key);
-  const plans = DISPLAY.filter((d) => shown.includes(d.key));
+  const segments: PlanSegment[] = audience
+    ? [SEGMENT_OF[audience]]
+    : ["family", "professional", "institution"];
+  const [instCycle, setInstCycle] = useState<BillingCycle>("monthly");
   const [acting, setActing] = useState<PlanKey | null>(null);
   const autoTriggered = useRef(false);
 
@@ -431,7 +354,9 @@ function PlansPage() {
       return;
     }
     setActing(key);
-    void navigate({ href: payPageHref(key) });
+    void navigate({
+      href: payPageHref(key, key === "institution_monthly" ? { cycle: instCycle } : {}),
+    });
   };
 
   useEffect(() => {
@@ -512,146 +437,169 @@ function PlansPage() {
           <PromoCodeRedeemCard signedIn={Boolean(user)} onRedeemed={() => void refreshPlan()} />
         </div>
 
-        {/* PRICING CARDS ----------------------------------------------- */}
-        <section
-          aria-label="Planes de suscripción"
-          className={`mt-12 grid gap-6 md:grid-cols-2 ${
-            plans.length >= 4
-              ? "lg:grid-cols-4"
-              : plans.length === 3
-                ? "lg:grid-cols-3"
-                : "lg:mx-auto lg:max-w-4xl"
-          }`}
-        >
-          {plans.map((d) => {
-            const def = PLAN_CATALOG[d.key];
-            const Icon = d.icon;
-            const cta = computeCta(d.key, ctx);
-            return (
-              <Card
-                key={d.key}
-                className={`p-6 flex flex-col relative transition-shadow hover:shadow-lg ${
-                  def.highlight
-                    ? "border-copper/50 shadow-[var(--shadow-elegant)] ring-1 ring-copper/20"
-                    : ""
+        {segments.map((segment) => {
+          const plans = DISPLAY.filter((d) => PLANS_FOR_SEGMENT[segment].includes(d.key));
+          const rows = COMPARE_ROWS.filter((r) => !r.only || r.only.includes(segment));
+          return (
+            <div key={segment}>
+              {segments.length > 1 && (
+                <h2 className="mt-16 text-center font-display text-2xl font-bold">
+                  {SEGMENT_TITLE[segment]}
+                </h2>
+              )}
+              {/* PRICING CARDS ------------------------------------------- */}
+              <section
+                aria-label={`Planes de suscripción · ${SEGMENT_TITLE[segment]}`}
+                className={`mt-8 grid gap-6 md:grid-cols-2 ${
+                  plans.length === 3 ? "lg:grid-cols-3" : "lg:mx-auto lg:max-w-4xl"
                 }`}
               >
-                {def.highlight && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-copper text-white border border-copper/30 font-bold whitespace-nowrap shadow-sm">
-                    ✦ Más elegido
-                  </span>
-                )}
-                <div
-                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${TONE[d.tone]}`}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h2 className="mt-3 font-display text-xl font-semibold">{def.label}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                  {(audience && PLAN_LINE[audience]?.[d.key]) ?? def.audience}
-                </p>
-                <div className="mt-4 pb-4 border-b border-border">
-                  <span className="text-3xl sm:text-4xl font-bold font-display">
-                    {def.priceLabel}
-                  </span>
-                  {def.priceNote && (
-                    <span className="text-sm text-muted-foreground ml-1">{def.priceNote}</span>
-                  )}
-                </div>
-                <ul className="mt-5 space-y-2.5 text-sm flex-1">
-                  {def.featuresLabel.map((f) => (
-                    <li key={f} className="flex gap-2.5">
-                      <Check className="h-4 w-4 text-biosensor mt-0.5 shrink-0" />
-                      <span className="leading-snug">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="mt-6 w-full"
-                  variant={
-                    def.highlight
-                      ? "copper"
-                      : d.tone === "fuchsia"
-                        ? "hero"
-                        : d.tone === "bio"
-                          ? "default"
-                          : "outline"
-                  }
-                  disabled={loading || acting === d.key || cta.disabled}
-                  onClick={() => choose(d.key)}
-                >
-                  {acting === d.key && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  {cta.label}
-                </Button>
-              </Card>
-            );
-          })}
-        </section>
-
-        {/* FEATURE COMPARISON TABLE ------------------------------------ */}
-        <section aria-label="Tabla de comparación de planes" className="mt-20">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-center mb-2">
-            ¿Qué incluye cada plan?
-          </h2>
-          <p className="text-center text-muted-foreground text-sm mb-8">
-            Compara todas las funciones y elige el plan que se adapta a ti.
-          </p>
-
-          <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-4 pl-6 pr-4 text-left font-semibold text-foreground w-2/5">
-                    Funcionalidad
-                  </th>
-                  {plans.map((d) => {
-                    const def = PLAN_CATALOG[d.key];
-                    return (
-                      <th
-                        key={d.key}
-                        className={`py-4 px-3 text-center font-semibold w-[15%] ${
-                          def.highlight ? "text-copper" : "text-foreground"
-                        }`}
+                {plans.map((d) => {
+                  const def = PLAN_CATALOG[d.key];
+                  const Icon = d.icon;
+                  const cta = computeCta(d.key, ctx);
+                  const free = d.key === "free" ? FREE_LINE[segment] : null;
+                  return (
+                    <Card
+                      key={d.key}
+                      className={`p-6 flex flex-col relative transition-shadow hover:shadow-lg ${
+                        def.highlight
+                          ? "border-copper/50 shadow-[var(--shadow-elegant)] ring-1 ring-copper/20"
+                          : ""
+                      }`}
+                    >
+                      {def.highlight && (
+                        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-copper text-white border border-copper/30 font-bold whitespace-nowrap shadow-sm">
+                          ✦ Más elegido
+                        </span>
+                      )}
+                      <div
+                        className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${TONE[d.tone]}`}
                       >
-                        <div className="flex flex-col items-center gap-1">
-                          <span>{def.label}</span>
-                          <span
-                            className={`text-xs font-normal ${
-                              def.highlight ? "text-copper" : "text-muted-foreground"
-                            }`}
-                          >
-                            {def.priceLabel}
-                            {def.priceNote ? def.priceNote : ""}
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <h3 className="mt-3 font-display text-xl font-semibold">{def.label}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                        {free?.audience ?? def.audience}
+                      </p>
+                      <div className="mt-4 pb-4 border-b border-border">
+                        <span className="text-3xl sm:text-4xl font-bold font-display">
+                          {def.priceLabel}
+                        </span>
+                        {def.priceNote && (
+                          <span className="text-sm text-muted-foreground ml-1">
+                            {def.priceNote}
                           </span>
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE_ROWS.map((row, i) => (
-                  <tr
-                    key={row.label}
-                    className={`border-b border-border/50 transition-colors hover:bg-muted/30 ${
-                      i % 2 === 0 ? "" : "bg-muted/10"
-                    }`}
-                  >
-                    <td className="py-3 pl-6 pr-4 text-foreground/90 leading-snug">{row.label}</td>
-                    {plans.map((d) => (
-                      <td
-                        key={d.key}
-                        className={`py-3 px-3 text-center ${d.key === "essential_monthly" ? "bg-copper/5" : ""}`}
+                        )}
+                      </div>
+                      <ul className="mt-5 space-y-2.5 text-sm flex-1">
+                        {(free?.features ?? def.featuresLabel).map((f) => (
+                          <li key={f} className="flex gap-2.5">
+                            <Check className="h-4 w-4 text-biosensor mt-0.5 shrink-0" />
+                            <span className="leading-snug">{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {d.key === "institution_monthly" && (
+                        <InstitutionCalculator cycle={instCycle} onCycle={setInstCycle} />
+                      )}
+                      <Button
+                        className="mt-6 w-full"
+                        variant={
+                          def.highlight
+                            ? "copper"
+                            : d.tone === "fuchsia"
+                              ? "hero"
+                              : d.tone === "bio"
+                                ? "default"
+                                : "outline"
+                        }
+                        disabled={loading || acting === d.key || cta.disabled}
+                        onClick={() => choose(d.key)}
                       >
-                        <CellIcon value={row[COMPARE_KEY[d.key]]} />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                        {acting === d.key && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        {cta.label}
+                      </Button>
+                    </Card>
+                  );
+                })}
+              </section>
+
+              {/* FEATURE COMPARISON TABLE -------------------------------- */}
+              <section
+                aria-label={`Tabla de comparación · ${SEGMENT_TITLE[segment]}`}
+                className="mt-12"
+              >
+                {segments.length === 1 && (
+                  <>
+                    <h2 className="font-display text-2xl sm:text-3xl font-bold text-center mb-2">
+                      ¿Qué incluye cada plan?
+                    </h2>
+                    <p className="text-center text-muted-foreground text-sm mb-8">
+                      Compara todas las funciones y elige el plan que se adapta a ti.
+                    </p>
+                  </>
+                )}
+                <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
+                  <table className="w-full min-w-[560px] text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="py-4 pl-6 pr-4 text-left font-semibold text-foreground w-2/5">
+                          Funcionalidad
+                        </th>
+                        {plans.map((d) => {
+                          const def = PLAN_CATALOG[d.key];
+                          return (
+                            <th
+                              key={d.key}
+                              className={`py-4 px-3 text-center font-semibold ${
+                                def.highlight ? "text-copper" : "text-foreground"
+                              }`}
+                            >
+                              <div className="flex flex-col items-center gap-1">
+                                <span>{def.label}</span>
+                                <span
+                                  className={`text-xs font-normal ${
+                                    def.highlight ? "text-copper" : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {def.priceLabel}
+                                  {def.priceNote ? def.priceNote : ""}
+                                </span>
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, i) => (
+                        <tr
+                          key={row.label}
+                          className={`border-b border-border/50 transition-colors hover:bg-muted/30 ${
+                            i % 2 === 0 ? "" : "bg-muted/10"
+                          }`}
+                        >
+                          <td className="py-3 pl-6 pr-4 text-foreground/90 leading-snug">
+                            {row.label}
+                          </td>
+                          {plans.map((d) => (
+                            <td
+                              key={d.key}
+                              className={`py-3 px-3 text-center ${PLAN_CATALOG[d.key].highlight ? "bg-copper/5" : ""}`}
+                            >
+                              <CellIcon value={canUseFeature(d.key, row.feature)} />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          );
+        })}
 
         {/* FAQ --------------------------------------------------------- */}
         <section aria-label="Preguntas frecuentes sobre planes" className="mt-20 max-w-3xl mx-auto">
@@ -716,6 +664,80 @@ function PlansPage() {
         </section>
       </main>
       <Footer />
+    </div>
+  );
+}
+
+/** Calculadora del plan Institucional: sedes activas y ciclo (mensual o anual, 12 meses por 10). */
+function InstitutionCalculator({
+  cycle,
+  onCycle,
+}: {
+  cycle: BillingCycle;
+  onCycle: (c: BillingCycle) => void;
+}) {
+  const [branches, setBranches] = useState(1);
+  const b = calculateInstitutionBilling({ branches, cycle });
+  const max = 50;
+  return (
+    <div className="mt-5 space-y-3 rounded-xl border border-fuchsia-neural/30 bg-fuchsia-neural/5 p-3 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold">Sedes</span>
+        <div className="inline-flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Quitar una sede"
+            className="h-7 w-7 rounded-full border border-border bg-card disabled:opacity-40"
+            disabled={branches <= 1}
+            onClick={() => setBranches((n) => Math.max(1, n - 1))}
+          >
+            −
+          </button>
+          <span className="w-6 text-center font-semibold tabular-nums" aria-live="polite">
+            {branches}
+          </span>
+          <button
+            type="button"
+            aria-label="Agregar una sede"
+            className="h-7 w-7 rounded-full border border-border bg-card disabled:opacity-40"
+            disabled={branches >= max}
+            onClick={() => setBranches((n) => Math.min(max, n + 1))}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-1 rounded-full border border-border bg-card p-0.5">
+        {(["monthly", "annual"] as const).map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-pressed={cycle === c}
+            onClick={() => onCycle(c)}
+            className={`rounded-full px-2 py-1 transition ${
+              cycle === c ? "bg-fuchsia-neural text-white" : "text-muted-foreground"
+            }`}
+          >
+            {c === "monthly"
+              ? "Mensual"
+              : `Anual (${INSTITUTION_BILLING.annualMonths} por ${INSTITUTION_BILLING.annualPaidMonths})`}
+          </button>
+        ))}
+      </div>
+      <p className="flex items-baseline justify-between gap-2">
+        <span className="text-muted-foreground">
+          {cycle === "annual" ? `Total ${b.months} meses` : "Total al mes"}
+        </span>
+        <span className="text-base font-bold tabular-nums text-fuchsia-neural">
+          {COP(b.totalCOP)}
+        </span>
+      </p>
+      {cycle === "annual" && (
+        <p className="text-emerald-700 dark:text-emerald-400">
+          Ahorras {COP(b.annualDiscountCOP)}: {COP(Math.round(b.totalCOP / b.months))} al mes.
+        </p>
+      )}
+      <p className="text-muted-foreground">Al pagar se cobran las sedes activas de tu cuenta.</p>
     </div>
   );
 }

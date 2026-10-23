@@ -290,14 +290,14 @@ describe("turno y negociación según el plan", () => {
     );
   });
 
-  it("con plan Esencial y su turno, negocia", () => {
+  it("con plan Familiar y su turno, negocia", () => {
     expect(negotiationState(fromSlotRow(slotRow())).state).toBe("available");
   });
 
   it("en el plan gratuito, el botón se bloquea con el motivo del plan", () => {
     const n = negotiationState(fromSlotRow(slotRow({ can_negotiate: false, plan_key: "free" })));
     expect(n.state).toBe("locked_plan");
-    expect(n.reason).toMatch(/plan Esencial/);
+    expect(n.reason).toMatch(/plan Familiar/);
   });
 
   it("la última ronda solo se acepta o se rechaza, aun con plan", () => {

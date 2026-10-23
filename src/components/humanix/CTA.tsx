@@ -18,7 +18,7 @@ export function CTA() {
               El cuidado humano, <span className="text-gradient-bio">amplificado por IA</span>.
             </h2>
             <p className="mt-5 text-lg text-cyber-foreground/70">
-              Únete a Humanix y sé parte de la red de salud más conectada de Colombia. Plan Esencial
+              Únete a Humanix y sé parte de la red de salud más conectada de Colombia. Plan Familiar
               desde $9.000 COP/mes.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">

@@ -419,9 +419,11 @@ export function parseOverview(raw: unknown): CareOverview | null {
 
 export const PLAN_NAME: Record<string, string> = {
   free: "Free",
-  essential_monthly: "Esencial",
+  essential_monthly: "Familiar",
   pro_monthly: "Pro",
-  institution_monthly: "IPS Mejorado",
+  family_premium_monthly: "Premium Familiar",
+  pro_premium_monthly: "Premium Profesional",
+  institution_monthly: "Institucional",
 };
 export const planName = (plan: string): string => PLAN_NAME[plan] ?? "Free";
 export const isPremiumPlan = (o: CareOverview): boolean => o.plan === "institution_monthly";
@@ -518,7 +520,7 @@ export function usageMeters(o: CareOverview): UsageMeter[] {
         limit,
         ratio: 0,
         state: "locked",
-        message: "Disponible con IPS Mejorado",
+        message: "Disponible con Institucional",
       };
     }
     const ratio = Math.min(1, used / limit);
@@ -585,7 +587,7 @@ export function upsellFor(o: CareOverview): Upsell {
   return {
     show: true,
     urgency: "info",
-    headline: "Con IPS Mejorado tu equipo cuida a más personas con menos esfuerzo",
+    headline: "Con Institucional tu equipo cuida a más personas con menos esfuerzo",
     perks: PREMIUM_PERKS,
   };
 }
@@ -597,7 +599,7 @@ export interface OnboardingStep {
   label: string;
   hint: string;
   done: boolean;
-  /** Pide el plan IPS Mejorado y la institución no lo tiene: no cuenta para el avance. */
+  /** Pide el plan Institucional y la institución no lo tiene: no cuenta para el avance. */
   locked: boolean;
 }
 
@@ -1152,12 +1154,12 @@ const ERROR_TEXT: Record<string, { text: string; kind: CareErrorKind }> = {
   patient_limit: { text: "Llegaste al máximo de pacientes de tu plan.", kind: "plan" },
   monitor_limit: { text: "Llegaste al máximo de pacientes en monitoreo de tu plan.", kind: "plan" },
   device_limit: { text: "Llegaste al máximo de dispositivos de tu plan.", kind: "plan" },
-  devices_plan: { text: "Conectar dispositivos es parte del plan IPS Mejorado.", kind: "plan" },
+  devices_plan: { text: "Conectar dispositivos es parte del plan Institucional.", kind: "plan" },
   handoff_plan: {
-    text: "Guardar el relevo de turno es parte del plan IPS Mejorado.",
+    text: "Guardar el relevo de turno es parte del plan Institucional.",
     kind: "plan",
   },
-  export_plan: { text: "Exportar la historia es parte del plan IPS Mejorado.", kind: "plan" },
+  export_plan: { text: "Exportar la historia es parte del plan Institucional.", kind: "plan" },
   patient_discharged: {
     text: "El paciente ya tiene el alta. Reactívalo para seguir.",
     kind: "conflict",

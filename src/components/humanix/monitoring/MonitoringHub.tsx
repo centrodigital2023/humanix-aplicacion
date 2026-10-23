@@ -2,7 +2,7 @@
 // mayores): quién está bien y quién necesita ojos, de un vistazo.
 //
 // «Triage NEWS2» es el semáforo del puntaje de alerta temprana (Royal College of Physicians), calculado por el servidor con cada control
-// (a mano o de un dispositivo): apoya la decisión clínica, no la reemplaza. Las alertas tienen plazo y, con el plan IPS Mejorado, se escalan
+// (a mano o de un dispositivo): apoya la decisión clínica, no la reemplaza. Las alertas tienen plazo y, con el plan Institucional, se escalan
 // solas. Todo se actualiza en vivo (Realtime), sin recargar.
 import { useMemo, useState } from "react";
 import {

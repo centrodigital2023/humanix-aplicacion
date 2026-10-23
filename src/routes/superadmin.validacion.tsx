@@ -208,7 +208,7 @@ function ValidationDashboard() {
       sub: `${t.pays.yes} sí · ${t.pays.no} no · ${t.pays.not_researched} sin investigar`,
     },
     {
-      label: "Beneficios del plan Esencial",
+      label: "Beneficios del plan Familiar",
       value: `${nf.format(t.withBenefit)} emitidos`,
       sub: `${nf.format(t.redeemed)} canjeados`,
     },

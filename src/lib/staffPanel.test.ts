@@ -103,7 +103,7 @@ describe("staffGate", () => {
   it("plan en pausa: explica que es de la institución", () => {
     const g = staffGate(ctx({ planActive: false }));
     expect(g.state).toBe("paused");
-    if (g.state !== "ready") expect(g.message).toMatch(/IPS Mejorado/);
+    if (g.state !== "ready") expect(g.message).toMatch(/Institucional/);
   });
 
   it("sin módulos: pide acceso a quien administra", () => {

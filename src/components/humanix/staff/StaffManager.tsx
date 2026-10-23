@@ -235,10 +235,10 @@ export function StaffManager({ institutionId }: { institutionId: string }) {
       {!entitled && (
         <Alert data-testid="staff-plan-required">
           <Sparkles className="h-4 w-4" aria-hidden />
-          <AlertTitle>Esto es parte del plan IPS Mejorado</AlertTitle>
+          <AlertTitle>Esto es parte del plan Institucional</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>
-              Con IPS Mejorado tu equipo entra con su propio usuario y contraseña. Mientras tanto
+              Con Institucional tu equipo entra con su propio usuario y contraseña. Mientras tanto
               puedes suspender o quitar a quien ya tengas agregado, y su acceso a los datos de la
               institución se pausa si el plan no está vigente.
             </p>

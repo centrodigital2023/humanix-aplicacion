@@ -28,10 +28,10 @@ import { PlanBadge } from "@/components/humanix/PlanGate";
 import { usePlan } from "@/hooks/use-plan";
 import { payPageHref } from "@/lib/checkout";
 import { cancelMercadoPagoRenewal } from "@/lib/payments.functions";
-import { PLAN_CATALOG, COP, planValidity, tierOf, type PlanKey } from "@/lib/plans";
+import { PLAN_CATALOG, PLAN_ORDER, COP, planValidity, tierOf, type PlanKey } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
-const PAID_PLANS: PlanKey[] = ["essential_monthly", "pro_monthly", "institution_monthly"];
+const PAID_PLANS: PlanKey[] = PLAN_ORDER.filter((k) => k !== "free");
 
 /** Panel al que vuelve quien paga: el que tiene abierto (el servidor lo confirma contra su rol). */
 function currentPanel(): string | null {

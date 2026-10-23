@@ -299,7 +299,7 @@ export function contractTotal(
   return shifts.reduce((sum, s) => sum + perShiftTotal(modality, amount, s.hours, n), 0);
 }
 
-/** Lo que queda para el profesional después de la comisión de Humanix (12 % Free, 0 % de pago). */
+/** Lo que queda para el profesional después de la comisión de Humanix (10 % en Free, 0 % con plan de pago). */
 export function professionalNet(total: number, commissionPct: number) {
   const b = buildPriceBreakdown(total, 1, commissionPct);
   return { total: b.total, commission: b.commission, net: b.professionalNet };

@@ -50,7 +50,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   userId: string;
   intro: ProIntro;
-  /** Plan con la función «negociar el valor» (Esencial o superior). */
+  /** Plan con la función «negociar el valor» (Pro o superior). */
   canNegotiate: boolean;
   /** 12 en plan Free, 0 en planes de pago. */
   commissionPct: number;
@@ -207,8 +207,8 @@ export function ApplyDialog({
 
             {!canNegotiate ? (
               <p className="text-xs text-muted-foreground">
-                Negociar el valor está disponible desde el plan Esencial (COP 9.000/mes), que además
-                no cobra comisión.{" "}
+                Negociar el valor está disponible desde el plan Pro (COP 19.900/mes), que además no
+                cobra comisión.{" "}
                 <button
                   type="button"
                   className="font-medium text-biosensor underline-offset-2 hover:underline"

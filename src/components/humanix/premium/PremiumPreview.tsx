@@ -1,4 +1,4 @@
-// Lo que ve quien aún no tiene el plan de una herramienta premium (Esencial, Pro o IPS Mejorado): qué es, qué recibiría y
+// Lo que ve quien aún no tiene el plan de una herramienta premium (Esencial, Pro o Institucional): qué es, qué recibiría y
 // un dato real de su propia cuenta (sin revelar el análisis). El botón lleva a /planes: el pago se hace solo en la web.
 import type { ReactNode } from "react";
 import { Lock } from "lucide-react";

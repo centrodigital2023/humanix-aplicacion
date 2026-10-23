@@ -3,7 +3,7 @@
 // Junta lo que ya pasa en su panel (turnos en curso con alertas, profesionales que no llegan, turnos que van a quedar sin
 // cubrir, postulaciones sin responder, contratos sin firma, servicios por calificar, perfil) en una lista corta y
 // priorizada. Es para TODAS las instituciones: lo que protege al paciente y mueve la cobertura nunca se esconde tras un
-// plan. Con el plan IPS Mejorado se añade el aviso de calidad; sin él, una sola invitación honesta a conocer los números.
+// plan. Con el plan Institucional se añade el aviso de calidad; sin él, una sola invitación honesta a conocer los números.
 // No contacta a nadie, no acepta nada por la institución y nunca habla de pagos fuera de la página web.
 
 import { orderBrief, type HeroPriority, type HeroStat } from "./dayHero";
@@ -30,7 +30,7 @@ export interface InstBriefItem {
   priority: InstBriefPriority;
   title: string;
   detail: string;
-  /** Etiqueta pequeña junto al título (por ejemplo «Plan IPS Mejorado»). */
+  /** Etiqueta pequeña junto al título (por ejemplo «Plan Institucional»). */
   badge?: string;
   cta: { label: string; target: InstBriefTarget };
 }
@@ -68,7 +68,7 @@ export interface InstUnrated {
   completedAt: string | null;
 }
 
-/** Resumen de calidad para el aviso del día (solo con el plan IPS Mejorado). */
+/** Resumen de calidad para el aviso del día (solo con el plan Institucional). */
 export interface InstQualityHint {
   alerts: number;
   /** El indicador más bajo en rojo. */
@@ -88,7 +88,7 @@ export interface InstSnapshot {
   /** La institución ya publicó al menos un turno. */
   hasShifts: boolean;
   completedServices: number;
-  /** Plan IPS Mejorado (el de las instituciones). */
+  /** Plan Institucional (el de las instituciones). */
   premium: boolean;
   quality: InstQualityHint | null;
 }
@@ -269,12 +269,12 @@ export function buildInstBrief(s: InstSnapshot): InstBriefItem[] {
     });
   }
 
-  // ── Calidad (plan IPS Mejorado) ─────────────────────────────────────────────
+  // ── Calidad (plan Institucional) ─────────────────────────────────────────────
   if (s.premium && s.quality && s.quality.alerts > 0) {
     add({
       id: "quality_attention",
       priority: "medium",
-      badge: "Plan IPS Mejorado",
+      badge: "Plan Institucional",
       title: plural(
         s.quality.alerts,
         "indicador de calidad pide atención",
@@ -341,8 +341,8 @@ export function buildInstBrief(s: InstSnapshot): InstBriefItem[] {
       priority: "low",
       title: "Conoce tus números",
       detail:
-        "Con el plan IPS Mejorado ves tus costos por mes y por hora, la puntualidad y el cumplimiento de tus profesionales, el pronóstico de cobertura y un informe listo para tu gerencia.",
-      cta: { label: "Ver el plan IPS Mejorado", target: { kind: "plans" } },
+        "Con el plan Institucional ves tus costos por mes y por hora, la puntualidad y el cumplimiento de tus profesionales, el pronóstico de cobertura y un informe listo para tu gerencia.",
+      cta: { label: "Ver el plan Institucional", target: { kind: "plans" } },
     });
   }
 

@@ -4,7 +4,7 @@
 //
 // Un solo camino para /planes, la tarjeta de plan de los paneles y la franja de planes: llevan a `payPageHref`. El
 // servidor decide qué se puede pagar (ver `planBilling.checkoutDecision`); aquí solo se traduce su respuesta.
-import { PLAN_CATALOG, longDateEs, type PlanKey } from "./plans";
+import { PLAN_CATALOG, longDateEs, type BillingCycle, type PlanKey } from "./plans";
 
 export interface CheckoutErrorPayload {
   error?: string;
@@ -66,10 +66,12 @@ export function payModeOf(v: unknown): PayMode {
  */
 export function payPageHref(
   plan: PlanKey,
-  opts: { mode?: PayMode; returnTo?: string | null } = {},
+  opts: { mode?: PayMode; returnTo?: string | null; cycle?: BillingCycle } = {},
 ): string {
   const q = new URLSearchParams({ plan });
   if (opts.mode === "recurring") q.set("modo", "recurrente");
+  // Solo el plan Institucional tiene contrato anual (12 meses por el precio de 10).
+  if (opts.cycle === "annual" && plan === "institution_monthly") q.set("ciclo", "anual");
   if (opts.returnTo) q.set("from", opts.returnTo);
   return `/pagar?${q.toString()}`;
 }

@@ -183,7 +183,7 @@ export function CareerCard({
                 <p className="text-xs text-muted-foreground">
                   El pasaporte imprimible con código QR es del plan Pro.
                 </p>
-                <UpgradeCta min="pro_monthly" compact />
+                <UpgradeCta min="pro_premium_monthly" compact />
               </div>
             )
           )}

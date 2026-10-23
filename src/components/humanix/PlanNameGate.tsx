@@ -54,7 +54,7 @@ export function PlanNameGate({
         <span>
           Nombre visible con{" "}
           <Link to="/planes" className="font-semibold text-biosensor underline pointer-events-auto">
-            Plan Esencial
+            Plan Familiar
           </Link>
         </span>
       </span>

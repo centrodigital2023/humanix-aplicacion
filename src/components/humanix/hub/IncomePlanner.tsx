@@ -141,7 +141,7 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
     const free = projectIncome({ ...base, commissionPct: FREE_COMMISSION_PCT });
     const comparison = comparePaidPlan({
       grossMonthly: free.grossMonthly,
-      planPrice: PLAN_CATALOG.essential_monthly.amountCOP,
+      planPrice: PLAN_CATALOG.pro_monthly.amountCOP,
     });
     const needed =
       v.targetNet && v.targetNet > 0
@@ -331,14 +331,14 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
                   <p className="text-xs">
                     {calc.comparison.worthIt ? (
                       <>
-                        Con este ritmo, el plan <strong>Esencial</strong> te ahorra{" "}
+                        Con este ritmo, el plan <strong>Pro</strong> te ahorra{" "}
                         <strong>{formatCOP(calc.comparison.monthlySavings)}</strong> al mes: dejas
                         de pagar {formatCOP(calc.comparison.commissionAvoided)} de comisión y el
                         plan cuesta {formatCOP(calc.comparison.planPrice)}.
                       </>
                     ) : (
                       <>
-                        Con este ritmo el plan Esencial aún no compensa. Empieza a ahorrar desde{" "}
+                        Con este ritmo el plan Pro aún no compensa. Empieza a ahorrar desde{" "}
                         <strong>{formatCOP(calc.comparison.breakEvenMonthly ?? 0)}</strong>{" "}
                         facturados al mes.
                       </>

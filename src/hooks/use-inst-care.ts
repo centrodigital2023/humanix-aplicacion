@@ -6,7 +6,7 @@
 //     traducidos al español (`CareError`).
 //   · Tiempo real: una sola suscripción por pantalla; cada tabla invalida solo lo que le toca. Las lecturas de dispositivos llegan muchas:
 //     se agrupan en una sola actualización cada 400 ms.
-//   · Escalamiento: una alerta urgente o crítica que nadie ve en su plazo se escala (plan IPS Mejorado). La base lo revisa cada minuto; la
+//   · Escalamiento: una alerta urgente o crítica que nadie ve en su plazo se escala (plan Institucional). La base lo revisa cada minuto; la
 //     pantalla además lo pide a la hora exacta del vencimiento.
 import { useEffect, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
@@ -417,14 +417,7 @@ export function useRecentObs(
 const suffix = () => Math.random().toString(36).slice(2, 8);
 
 type ListKey =
-  | "overview"
-  | "patients"
-  | "cases"
-  | "tasks"
-  | "live"
-  | "alerts"
-  | "devices"
-  | "applications";
+  "overview" | "patients" | "cases" | "tasks" | "live" | "alerts" | "devices" | "applications";
 
 /** Qué consultas se vuelven a pedir cuando cambia cada tabla. */
 const TABLE_KEYS: Record<string, ListKey[]> = {

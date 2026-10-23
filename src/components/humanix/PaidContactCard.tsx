@@ -99,7 +99,7 @@ export function PaidContactCard({ bookingId, peerName, isPaid, amountCOP }: Prop
       );
       window.open(`https://wa.me/${wa}?text=${greeting}`, "_blank", "noopener,noreferrer");
     } catch (e) {
-      // Ver el WhatsApp de la contraparte es una función del plan Esencial o superior para el profesional.
+      // Ver el WhatsApp de la contraparte es una función del plan Pro o superior para el profesional.
       const failure = classifyHubError(e as ServerError);
       if (failure.kind === "plan_required") {
         toast.error(failure.message, {

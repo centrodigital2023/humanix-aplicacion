@@ -3,7 +3,7 @@
 // I-PASS (Starmer et al., NEJM 2014) ordena lo que se cuenta al relevar a alguien: Illness severity (gravedad) · Patient summary (resumen)
 // · Action list (qué falta hacer) · Situation awareness & contingency (qué vigilar y qué hacer si cambia) · Synthesis by receiver (quien
 // recibe repite lo que entendió). La pantalla propone un borrador por paciente con los datos reales (NEWS2, alertas, tareas); la persona
-// lo corrige y se guarda en la historia de cada paciente (plan IPS Mejorado). La «síntesis» queda en la hoja impresa, para firmar.
+// lo corrige y se guarda en la historia de cada paciente (plan Institucional). La «síntesis» queda en la hoja impresa, para firmar.
 //
 // Nada de esto reemplaza el criterio clínico: es un borrador.
 

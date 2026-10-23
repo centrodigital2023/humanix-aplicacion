@@ -1,10 +1,37 @@
-// Plan catalog — canonical source of truth for plan keys, tiers, prices and
-// features. Keep this file in sync with:
+// Plan catalog — canonical source of truth for plan keys, prices, features and
+// permissions. Keep this file in sync with:
+//   - supabase/functions/_shared/planBilling.ts (precios que cobra el servidor; hay una prueba que lo exige)
 //   - src/routes/planes.tsx (UI)
-//   - supabase/functions/mp-create-subscription/index.ts (pricing server-side)
-//   - supabase/migrations/.../plans_logic.sql (plan_tier_rank)
+//   - supabase/migrations/20261023100000_plans_v2_pricing.sql (plan_key_for, comisión, cupos y créditos en SQL)
+//
+// Tabla de precios (oct 2026):
+//   Familia      Free COP 0 · Familiar COP 9.900/mes · Premium Familiar COP 24.900/mes
+//   Profesional  Free COP 0 · Pro COP 19.900/mes · Premium COP 39.900/mes
+//   Institución  Institucional desde COP 299.000/mes (1 sede) · sede adicional COP 50.000/mes · anual: 12 meses por 10
+// Comisión: en Free, Humanix cobra 10 % al profesional por cada servicio. No hay comisión si el profesional o quien
+// contrata (familia o institución) tiene un plan de pago.
+//
+// La clave `essential_monthly` es el plan Familiar: se conserva para no tocar las filas de `mp_subscriptions` ni las
+// funciones SQL que ya la usan.
 
-export type PlanKey = "free" | "essential_monthly" | "pro_monthly" | "institution_monthly";
+import {
+  INSTITUTION_PRICING,
+  PLAN_PRICE_COP,
+  PLAN_TIER,
+  planQuote,
+  type BillingCycle,
+} from "./planBilling";
+
+export type PlanKey =
+  | "free"
+  | "essential_monthly"
+  | "pro_monthly"
+  | "family_premium_monthly"
+  | "pro_premium_monthly"
+  | "institution_monthly";
+
+/** A quién se le vende cada plan. `all` = Free, que existe para los tres perfiles. */
+export type PlanSegment = "family" | "professional" | "institution";
 
 export type PlanFeature =
   | "profile"
@@ -39,6 +66,23 @@ export type PlanFeature =
   | "pro_rest_guard"
   | "pro_week_planner"
   | "pro_reputation_lab"
+  // Plan Familiar
+  | "digital_agreements"
+  | "care_log"
+  | "care_alerts"
+  // Plan Premium Familiar
+  | "advanced_tracking"
+  | "family_circle"
+  | "doctor_reports"
+  | "priority_alerts"
+  | "sos_priority"
+  | "dedicated_support"
+  // Planes profesionales
+  | "offers_access"
+  | "priority_listing"
+  | "verified_badge_featured"
+  | "ai_credits_plus"
+  // Institución
   | "inst_cost_intel"
   | "inst_quality_compliance"
   | "inst_team_reliability"
@@ -55,133 +99,238 @@ export type PlanFeature =
 export type PlanDef = {
   key: PlanKey;
   label: string;
-  tier: 0 | 1 | 2 | 3;
+  /** Orden por precio: decide qué es subir y qué es bajar de plan. */
+  tier: number;
+  /** Perfil al que se vende (`null` = Free, para todos). */
+  segment: PlanSegment | null;
   amountCOP: number;
   priceLabel: string;
   priceNote: string;
   audience: string;
+  /** Cómo genera ingreso Humanix con este plan (la columna de la tabla de precios). */
+  revenue: string;
   highlight?: boolean;
+  /** TODAS las funciones que abre el plan (no solo las que agrega). */
   features: PlanFeature[];
-  featuresLabel: string[]; // user-facing copy, order-matched to `features`
+  featuresLabel: string[]; // user-facing copy for the pricing card
 };
+
+// ── Funciones por plan ────────────────────────────────────────────────────────
+
+const FREE_FEATURES: PlanFeature[] = ["profile", "apply_offers", "ai_basic", "inbox_accepted"];
+
+/** Lo que tiene cualquier plan de pago: contacto directo, verificación y sin comisión. */
+const PAID_BASE: PlanFeature[] = [
+  ...FREE_FEATURES,
+  "view_full_names",
+  "unlimited_applications",
+  "whatsapp_contact",
+  "view_address",
+  "live_geo_eta",
+  "rethus_antifraud",
+  "no_commission",
+];
+
+const FAMILIAR_FEATURES: PlanFeature[] = [
+  ...PAID_BASE,
+  // La familia también negocia el valor de lo que publica (la base lo exige con cualquier plan de pago).
+  "negotiate_rate",
+  "digital_agreements",
+  "care_log",
+  "care_alerts",
+  "priority_support",
+  "care_history_export",
+  "family_wellbeing_report",
+  "smart_applicant_ranking",
+  "care_budget_forecast",
+  "coverage_radar",
+];
+
+const FAMILY_PREMIUM_FEATURES: PlanFeature[] = [
+  ...FAMILIAR_FEATURES,
+  "advanced_tracking",
+  "family_circle",
+  "doctor_reports",
+  "priority_alerts",
+  "sos_priority",
+  "dedicated_support",
+];
+
+const PRO_FEATURES: PlanFeature[] = [
+  ...PAID_BASE,
+  "negotiate_rate",
+  "pro_income_pulse",
+  "pro_rest_guard",
+  "visibility_boost",
+  "offers_access",
+  "pro_week_planner",
+];
+
+const PRO_PREMIUM_FEATURES: PlanFeature[] = [
+  ...PRO_FEATURES,
+  "priority_listing",
+  "verified_badge_featured",
+  "ai_credits_plus",
+  "pro_reputation_lab",
+  "career_coach",
+  "career_passport",
+  "ai_message_suggestions",
+  "priority_antifraud",
+];
+
+const INSTITUTION_OWN: PlanFeature[] = [
+  "ai_credits",
+  "multi_user_roles",
+  "pipeline_scoring",
+  "cv_rethus_consistency",
+  "priority_support",
+  "branch_billing",
+  "inst_cost_intel",
+  "inst_quality_compliance",
+  "inst_team_reliability",
+  "inst_coverage_forecast",
+  "inst_executive_report",
+  "inst_care_scale",
+  "inst_devices",
+  "inst_alert_escalation",
+  "inst_care_followups",
+  "inst_shift_handoff",
+  "inst_care_export",
+  "inst_agenda_insights",
+];
+
+const uniq = (xs: PlanFeature[]) => [...new Set(xs)];
+
+/**
+ * Quien pagó el plan Esencial (9.000, misma clave que hoy es Familiar) cuando era para familias y profesionales conserva
+ * lo del profesional mientras su plan siga vigente: ingresos reales y descanso. Una familia no ve esas pantallas, así
+ * que no cambia nada para ella.
+ */
+export const LEGACY_ESSENTIAL_FEATURES: PlanFeature[] = ["pro_income_pulse", "pro_rest_guard"];
+
+const COPf = (n: number) => `COP ${n.toLocaleString("es-CO")}`;
 
 export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
   free: {
     key: "free",
     label: "Free",
     tier: 0,
+    segment: null,
     amountCOP: 0,
     priceLabel: "COP 0",
     priceNote: "siempre",
     audience: "Para conocer Humanix sin compromiso.",
-    features: ["profile", "apply_offers", "ai_basic", "inbox_accepted"],
+    revenue: "Humanix cobra una comisión del 10 % al profesional por cada servicio.",
+    features: FREE_FEATURES,
     featuresLabel: [
       "Crear perfil profesional o familiar",
-      "Buscar y aplicar a ofertas abiertas",
+      "Buscar, solicitar y contratar; recibir servicios",
       "Asistente IA básico (preguntas generales)",
       "Mensajería 1:1 cuando se acepta una aplicación",
+      "Comisión del 10 % al profesional por cada servicio",
     ],
   },
   essential_monthly: {
     key: "essential_monthly",
-    label: "Esencial",
-    tier: 1,
-    amountCOP: 9000,
-    priceLabel: "COP 9.000",
+    label: "Familiar",
+    tier: PLAN_TIER.essential_monthly,
+    segment: "family",
+    amountCOP: PLAN_PRICE_COP.essential_monthly,
+    priceLabel: COPf(PLAN_PRICE_COP.essential_monthly),
     priceNote: "/mes",
-    audience: "Familias y profesionales que quieren todo activo.",
+    audience: "Para familias que quieren cuidar sin comisiones.",
+    revenue: "Suscripción mensual: los servicios que contratas no pagan comisión.",
     highlight: true,
-    features: [
-      "unlimited_applications",
-      "whatsapp_contact",
-      "view_address",
-      "negotiate_rate",
-      "live_geo_eta",
-      "rethus_antifraud",
-      "no_commission",
-      "care_history_export",
-      "family_wellbeing_report",
-      "smart_applicant_ranking",
-      "care_budget_forecast",
-      "coverage_radar",
-      "pro_income_pulse",
-      "pro_rest_guard",
-    ],
+    features: FAMILIAR_FEATURES,
     featuresLabel: [
-      "Match IA en menos de 150 ms",
-      "Buzón de postulaciones ilimitado",
-      "Contacto directo por WhatsApp con la otra parte",
-      "Ver la dirección del servicio y negociar el valor con la familia",
-      "Geolocalización en vivo y ETA",
-      "Verificación RETHUS y anti-fraude IA incluida",
-      "Sin comisión: el profesional cobra directo al cliente",
-      "Historia de cuidado exportable (Excel/CSV) con el parte de cada servicio",
-      "Panel de familia inteligente: informe de bienestar para el médico, comparador de postulaciones con tarifa justa, presupuesto de cuidado y radar de cobertura",
-      "Panel del profesional inteligente: tus ingresos reales (neto, comisión y mejor día), tu tarifa frente al mercado y tu carga de trabajo con descanso sugerido",
+      "Sin comisión en los servicios que contratas",
+      "Acuerdos digitales con cada profesional",
+      "Bitácora del cuidado y historia exportable (Excel/CSV)",
+      "Alertas del cuidado en tu celular",
+      "Contacto directo por WhatsApp, dirección y ubicación en vivo",
+      "Panel de familia inteligente: informe de bienestar, comparador de postulaciones, presupuesto y radar de cobertura",
+      "Soporte prioritario",
     ],
   },
   pro_monthly: {
     key: "pro_monthly",
-    label: "Pro Profesional",
-    tier: 2,
-    amountCOP: 29000,
-    priceLabel: "COP 29.000",
+    label: "Pro",
+    tier: PLAN_TIER.pro_monthly,
+    segment: "professional",
+    amountCOP: PLAN_PRICE_COP.pro_monthly,
+    priceLabel: COPf(PLAN_PRICE_COP.pro_monthly),
     priceNote: "/mes",
-    audience: "Profesionales que quieren visibilidad máxima.",
-    features: [
-      "visibility_boost",
-      "career_coach",
-      "ai_message_suggestions",
-      "priority_antifraud",
-      "career_passport",
-      "pro_week_planner",
-      "pro_reputation_lab",
-    ],
+    audience: "Profesionales que quieren cobrar todo lo que trabajan.",
+    revenue: "Suscripción mensual: 0 % de comisión en tus servicios.",
+    highlight: true,
+    features: PRO_FEATURES,
     featuresLabel: [
-      "Todo lo del Esencial",
-      "Boost de visibilidad en búsquedas",
-      "Coach de carrera 24/7 (mejorar perfil y Trust Score)",
-      "Sugerencias IA en cada mensaje",
-      "Validación anti-fraude IA prioritaria",
-      "Pasaporte profesional verificable con código QR (imprimible)",
-      "«Mi semana»: turnos compatibles que encajan en tu agenda sin cruces, y reputación en detalle con consejos para crecer",
+      "0 % de comisión: cobras el 100 % de cada servicio",
+      "Mejor visibilidad en las búsquedas de familias e instituciones",
+      "Acceso a ofertas: «Mi semana» con turnos compatibles, contacto directo y negociar el valor",
+      "Postulaciones ilimitadas",
+      "Panel inteligente: tus ingresos reales, tu tarifa frente al mercado y descanso sugerido",
+    ],
+  },
+  family_premium_monthly: {
+    key: "family_premium_monthly",
+    label: "Premium Familiar",
+    tier: PLAN_TIER.family_premium_monthly,
+    segment: "family",
+    amountCOP: PLAN_PRICE_COP.family_premium_monthly,
+    priceLabel: COPf(PLAN_PRICE_COP.family_premium_monthly),
+    priceNote: "/mes",
+    audience: "Para familias que acompañan un cuidado exigente.",
+    revenue: "Suscripción mensual con seguimiento avanzado y soporte dedicado.",
+    features: FAMILY_PREMIUM_FEATURES,
+    featuresLabel: [
+      "Todo lo del plan Familiar",
+      "Seguimiento avanzado del cuidado",
+      "Círculo familiar: hasta 10 personas siguen los servicios",
+      "Reportes para el médico (informe de bienestar)",
+      "Alertas prioritarias y botón SOS con aviso a tu círculo",
+      "Soporte dedicado",
+    ],
+  },
+  pro_premium_monthly: {
+    key: "pro_premium_monthly",
+    label: "Premium Profesional",
+    tier: PLAN_TIER.pro_premium_monthly,
+    segment: "professional",
+    amountCOP: PLAN_PRICE_COP.pro_premium_monthly,
+    priceLabel: COPf(PLAN_PRICE_COP.pro_premium_monthly),
+    priceNote: "/mes",
+    audience: "Profesionales que quieren ser los primeros en aparecer.",
+    revenue: "Suscripción mensual con prioridad alta y herramientas de reputación.",
+    features: PRO_PREMIUM_FEATURES,
+    featuresLabel: [
+      "Todo lo del plan Pro",
+      "Prioridad alta: apareces antes en las búsquedas",
+      "Badge verificado destacado en tu perfil",
+      "Más créditos de IA cada mes (1.000)",
+      "Herramientas de reputación: tu reputación en detalle y pasaporte profesional con QR",
+      "Coach de carrera y sugerencias IA en cada mensaje",
     ],
   },
   institution_monthly: {
     key: "institution_monthly",
-    label: "IPS Mejorado",
-    tier: 3,
-    amountCOP: 299_000,
-    priceLabel: "Desde COP 299.000",
+    label: "Institucional",
+    tier: PLAN_TIER.institution_monthly,
+    segment: "institution",
+    amountCOP: PLAN_PRICE_COP.institution_monthly,
+    priceLabel: `Desde ${COPf(PLAN_PRICE_COP.institution_monthly)}`,
     priceNote: "/mes · 1 sede incluida",
-    audience: "Redes de IPS, clínicas y hospitales con varias sedes.",
-    features: [
-      "ai_credits",
-      "multi_user_roles",
-      "pipeline_scoring",
-      "cv_rethus_consistency",
-      "priority_support",
-      "branch_billing",
-      "inst_cost_intel",
-      "inst_quality_compliance",
-      "inst_team_reliability",
-      "inst_coverage_forecast",
-      "inst_executive_report",
-      "inst_care_scale",
-      "inst_devices",
-      "inst_alert_escalation",
-      "inst_care_followups",
-      "inst_shift_handoff",
-      "inst_care_export",
-      "inst_agenda_insights",
-    ],
+    audience: "IPS, clínicas, hospitales y agencias de cuidado.",
+    revenue: `Suscripción por sedes: ${COPf(INSTITUTION_PRICING.extraBranchCOP)}/mes por sede adicional; anual, 12 meses por el precio de 10.`,
+    // La institución tiene todo lo de los demás planes, más lo suyo.
+    features: uniq([...FAMILY_PREMIUM_FEATURES, ...PRO_PREMIUM_FEATURES, ...INSTITUTION_OWN]),
     featuresLabel: [
+      "Multiusuario con roles (HR, evaluador, admin)",
+      "Vacantes y pipeline de candidatos con scoring IA; detección de inconsistencias en CVs y RETHUS",
       "Bolsa de créditos IA mensual",
-      "Multi-usuario con roles (HR, evaluador, admin)",
-      "Pipeline de candidatos con scoring IA",
-      "Detección de inconsistencias en CVs y RETHUS",
       "Soporte prioritario y onboarding asistido",
-      "Cobro por sucursales: COP 299.000 base + COP 50.000 por sede adicional",
+      `Cobro por sedes: ${COPf(INSTITUTION_PRICING.baseCOP)} con la sede principal + ${COPf(INSTITUTION_PRICING.extraBranchCOP)} por sede adicional`,
+      `Contrato anual: ${INSTITUTION_PRICING.annualMonths} meses por el precio de ${INSTITUTION_PRICING.annualPaidMonths}`,
       "Centro de gestión inteligente: costos y proyección, calidad y cumplimiento (puntualidad, parte del turno, contratos y RETHUS), equipo confiable, pronóstico de cobertura a 14 días e informe para la gerencia",
       "Agenda inteligente de 7 días: riesgo de inasistencia por profesional, reporte de utilización de 30 días y exportación a CSV e iCal",
       "Pacientes y monitoreo clínico a escala: hasta 1.000 pacientes y 300 en monitoreo con NEWS2 (Free: 5 y 3), relojes y sensores conectados, escalamiento automático de alertas sin atender, seguimientos automáticos de cada caso, relevo de turno I-PASS guardado en la historia y exportación de la historia en FHIR y CSV",
@@ -189,65 +338,58 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
   },
 };
 
+/** Todos los planes, del más barato al más caro. */
 export const PLAN_ORDER: PlanKey[] = [
   "free",
   "essential_monthly",
   "pro_monthly",
+  "family_premium_monthly",
+  "pro_premium_monthly",
   "institution_monthly",
 ];
 
-// Which minimum plan unlocks each feature. Used by the `usePlan` hook to
-// answer `can(feature)` without spreading feature checks around the codebase.
-export const FEATURE_MIN_PLAN: Record<PlanFeature, PlanKey> = {
-  // Free-tier
-  profile: "free",
-  apply_offers: "free",
-  ai_basic: "free",
-  inbox_accepted: "free",
-  // Essential+ (ver nombres completos de otros usuarios)
-  view_full_names: "essential_monthly",
-  unlimited_applications: "essential_monthly",
-  whatsapp_contact: "essential_monthly",
-  view_address: "essential_monthly",
-  negotiate_rate: "essential_monthly",
-  live_geo_eta: "essential_monthly",
-  rethus_antifraud: "essential_monthly",
-  no_commission: "essential_monthly",
-  care_history_export: "essential_monthly",
-  family_wellbeing_report: "essential_monthly",
-  smart_applicant_ranking: "essential_monthly",
-  care_budget_forecast: "essential_monthly",
-  coverage_radar: "essential_monthly",
-  pro_income_pulse: "essential_monthly",
-  pro_rest_guard: "essential_monthly",
-  // Pro+
-  visibility_boost: "pro_monthly",
-  career_coach: "pro_monthly",
-  ai_message_suggestions: "pro_monthly",
-  priority_antifraud: "pro_monthly",
-  career_passport: "pro_monthly",
-  pro_week_planner: "pro_monthly",
-  pro_reputation_lab: "pro_monthly",
-  // Institution
-  ai_credits: "institution_monthly",
-  multi_user_roles: "institution_monthly",
-  pipeline_scoring: "institution_monthly",
-  cv_rethus_consistency: "institution_monthly",
-  priority_support: "institution_monthly",
-  branch_billing: "institution_monthly",
-  inst_cost_intel: "institution_monthly",
-  inst_quality_compliance: "institution_monthly",
-  inst_team_reliability: "institution_monthly",
-  inst_coverage_forecast: "institution_monthly",
-  inst_executive_report: "institution_monthly",
-  inst_care_scale: "institution_monthly",
-  inst_devices: "institution_monthly",
-  inst_alert_escalation: "institution_monthly",
-  inst_care_followups: "institution_monthly",
-  inst_shift_handoff: "institution_monthly",
-  inst_care_export: "institution_monthly",
-  inst_agenda_insights: "institution_monthly",
+/** Los planes que ve cada perfil en /planes, en orden. */
+export const PLANS_FOR_SEGMENT: Record<PlanSegment, PlanKey[]> = {
+  family: ["free", "essential_monthly", "family_premium_monthly"],
+  professional: ["free", "pro_monthly", "pro_premium_monthly"],
+  institution: ["free", "institution_monthly"],
 };
+
+function planFeatures(plan: PlanKey): PlanFeature[] {
+  const own = PLAN_CATALOG[plan].features;
+  return plan === "essential_monthly" ? [...own, ...LEGACY_ESSENTIAL_FEATURES] : own;
+}
+
+/**
+ * El plan más barato que abre cada función: es el que se ofrece en un candado cuando no se sabe el perfil de quien
+ * mira. Con perfil, usar `upgradePlanFor`.
+ */
+export const FEATURE_MIN_PLAN = Object.fromEntries(
+  ([...new Set(PLAN_ORDER.flatMap((k) => PLAN_CATALOG[k].features))] as PlanFeature[]).map((f) => [
+    f,
+    PLAN_ORDER.find((k) => PLAN_CATALOG[k].features.includes(f)) as PlanKey,
+  ]),
+) as Record<PlanFeature, PlanKey>;
+
+/** Plan que se le ofrece a un perfil para abrir `feature`: el más barato de SUS planes que la incluye. */
+export function upgradePlanFor(feature: PlanFeature, segment?: PlanSegment | null): PlanKey {
+  if (segment) {
+    const own = PLANS_FOR_SEGMENT[segment].find(
+      (k) => k !== "free" && PLAN_CATALOG[k].features.includes(feature),
+    );
+    if (own) return own;
+  }
+  return FEATURE_MIN_PLAN[feature];
+}
+
+/** Perfil para ofrecer planes a partir de los roles de la cuenta (institución > profesional > familia). */
+export function segmentOfRoles(roles: readonly string[] | null | undefined): PlanSegment | null {
+  const r = roles ?? [];
+  if (r.includes("institution")) return "institution";
+  if (r.includes("professional")) return "professional";
+  if (r.includes("family")) return "family";
+  return null;
+}
 
 export function tierOf(plan: PlanKey | string | null | undefined): number {
   if (!plan) return 0;
@@ -255,6 +397,7 @@ export function tierOf(plan: PlanKey | string | null | undefined): number {
   return def ? def.tier : 0;
 }
 
+/** ¿El plan actual cuesta al menos lo que `minPlan`? Para permisos, usar `canUseFeature`. */
 export function hasAtLeast(
   currentPlan: PlanKey | string | null | undefined,
   minPlan: PlanKey,
@@ -262,12 +405,55 @@ export function hasAtLeast(
   return tierOf(currentPlan) >= tierOf(minPlan);
 }
 
+const FREE_SET = Object.fromEntries(FREE_FEATURES.map((f) => [f, true]));
+
 export function canUseFeature(
   currentPlan: PlanKey | string | null | undefined,
   feature: PlanFeature,
 ): boolean {
-  return hasAtLeast(currentPlan, FEATURE_MIN_PLAN[feature]);
+  if (!currentPlan || !(currentPlan in PLAN_CATALOG)) return feature in FREE_SET;
+  return planFeatures(currentPlan as PlanKey).includes(feature);
 }
+
+export function isPaidPlanKey(plan: PlanKey | string | null | undefined): boolean {
+  return Boolean(plan) && plan !== "free" && (plan as string) in PLAN_CATALOG;
+}
+
+// ── Comisión, créditos IA y círculo familiar (espejo de las funciones SQL) ────
+
+/** Comisión de Humanix al profesional por servicio cuando nadie tiene plan de pago (`platform_commission_pct`). */
+export const FREE_COMMISSION_PCT = 10;
+
+/**
+ * Comisión de un servicio (`booking_commission_pct` en SQL): 0 % si el profesional o quien contrata tiene un plan de
+ * pago; si no, 10 %.
+ */
+export function bookingCommissionPct(
+  professionalPlan: PlanKey | string | null | undefined,
+  clientPlan: PlanKey | string | null | undefined,
+): number {
+  return isPaidPlanKey(professionalPlan) || isPaidPlanKey(clientPlan) ? 0 : FREE_COMMISSION_PCT;
+}
+
+/** Créditos IA del mes por plan (`ai_credits_monthly_allowance`). */
+export const AI_MONTHLY_CREDITS: Record<PlanKey, number> = {
+  free: 30,
+  essential_monthly: 150,
+  pro_monthly: 400,
+  family_premium_monthly: 300,
+  pro_premium_monthly: 1000,
+  institution_monthly: 2000,
+};
+
+/** Personas que se pueden invitar al círculo de cuidado (`hx_circle_limit`). */
+export const CIRCLE_LIMIT: Record<PlanKey, number> = {
+  free: 1,
+  essential_monthly: 3,
+  pro_monthly: 3,
+  family_premium_monthly: 10,
+  pro_premium_monthly: 3,
+  institution_monthly: 10,
+};
 
 export const COP = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -277,21 +463,22 @@ export const COP = (n: number) =>
   }).format(n);
 
 // ── Lógica de cobro institucional ─────────────────────────────────────────────
+// Un solo cálculo para la interfaz y el servidor: `planQuote` (planBilling).
 
-export type BillingCycle = "monthly" | "annual";
+export type { BillingCycle };
 
 export type InstitutionBillingConfig = {
-  /** Precio base mensual del plan institución (COP) */
+  /** Precio base mensual del plan institución (COP), con la sede principal */
   basePriceCOP: number;
-  /** Precio por cada sucursal adicional más allá de la primera (COP/mes) */
+  /** Precio por cada sede adicional más allá de la primera (COP/mes) */
   extraBranchCOP: number;
-  /** Precio por cada profesional asociado más allá del límite incluido (COP/mes) */
-  extraProfessionalCOP: number;
-  /** Número de profesionales incluidos en el plan base */
-  includedProfessionals: number;
-  /** Número de sucursales incluidas en el plan base */
+  /** Número de sedes incluidas en el plan base */
   includedBranches: number;
-  /** Descuento en fracción por ciclo anual (ej: 0.20 = 20%) */
+  /** Meses de servicio del contrato anual */
+  annualMonths: number;
+  /** Meses que se pagan en el contrato anual (12 por 10) */
+  annualPaidMonths: number;
+  /** Descuento equivalente del contrato anual, en fracción (2/12 ≈ 0,167) */
   annualDiscount: number;
   /** Días de período de prueba gratuito */
   trialDays: number;
@@ -299,20 +486,16 @@ export type InstitutionBillingConfig = {
   graceDays: number;
 };
 
-/**
- * Plan IPS Mejorado — cobro por sucursales.
- * Pensado para redes de IPS/clínicas con varias sedes: precio base cubre la
- * sede principal + el cupo de profesionales, y cada sede adicional se cobra
- * aparte (más caro que un profesional extra porque implica un nuevo "tenant"
- * operativo: agenda, cumplimiento y KPIs propios en el dashboard EPS).
- */
+/** Plan Institucional — cobro por sedes y contrato anual (12 meses por el precio de 10). */
 export const INSTITUTION_BILLING: InstitutionBillingConfig = {
-  basePriceCOP: 299_000,
-  extraBranchCOP: 50_000,
-  extraProfessionalCOP: 5_000,
-  includedProfessionals: 10,
-  includedBranches: 1,
-  annualDiscount: 0.2,
+  basePriceCOP: INSTITUTION_PRICING.baseCOP,
+  extraBranchCOP: INSTITUTION_PRICING.extraBranchCOP,
+  includedBranches: INSTITUTION_PRICING.includedBranches,
+  annualMonths: INSTITUTION_PRICING.annualMonths,
+  annualPaidMonths: INSTITUTION_PRICING.annualPaidMonths,
+  annualDiscount:
+    (INSTITUTION_PRICING.annualMonths - INSTITUTION_PRICING.annualPaidMonths) /
+    INSTITUTION_PRICING.annualMonths,
   trialDays: 14,
   graceDays: 7,
 };
@@ -320,42 +503,32 @@ export const INSTITUTION_BILLING: InstitutionBillingConfig = {
 export type InstitutionBillingBreakdown = {
   baseCOP: number;
   extraBranchesCOP: number;
-  extraProfessionalsCOP: number;
   subtotalMonthlyCOP: number;
   annualDiscountCOP: number;
   totalCOP: number;
+  /** Meses de servicio que cubre `totalCOP`. */
+  months: number;
   cycle: BillingCycle;
   /** Resumen legible para mostrar al usuario */
   lines: Array<{ label: string; amountCOP: number }>;
 };
 
-/** Calcula el total a cobrar a una institución según su configuración. */
+/** Calcula el total a cobrar a una institución según sus sedes activas y el ciclo. */
 export function calculateInstitutionBilling(opts: {
   branches: number;
-  professionals: number;
   cycle: BillingCycle;
 }): InstitutionBillingBreakdown {
   const cfg = INSTITUTION_BILLING;
-  const { branches, professionals, cycle } = opts;
-
-  const extraBranches = Math.max(0, branches - cfg.includedBranches);
-  const extraPros = Math.max(0, professionals - cfg.includedProfessionals);
-
+  const q = planQuote("institution_monthly", { branches: opts.branches, cycle: opts.cycle });
+  const extraBranches = Math.max(0, q.branches - cfg.includedBranches);
   const baseCOP = cfg.basePriceCOP;
   const extraBranchesCOP = extraBranches * cfg.extraBranchCOP;
-  const extraProfessionalsCOP = extraPros * cfg.extraProfessionalCOP;
-  const subtotalMonthlyCOP = baseCOP + extraBranchesCOP + extraProfessionalsCOP;
-
-  const months = cycle === "annual" ? 12 : 1;
-  const rawTotal = subtotalMonthlyCOP * months;
-  const annualDiscountCOP = cycle === "annual" ? Math.round(rawTotal * cfg.annualDiscount) : 0;
-  const totalCOP = rawTotal - annualDiscountCOP;
+  const subtotalMonthlyCOP = q.monthlyCOP;
+  const annual = q.cycle === "annual";
+  const annualDiscountCOP = annual ? subtotalMonthlyCOP * q.months - q.amount : 0;
 
   const lines: InstitutionBillingBreakdown["lines"] = [
-    {
-      label: `Plan Institución base (${cfg.includedBranches} sede, ${cfg.includedProfessionals} profesionales)`,
-      amountCOP: baseCOP,
-    },
+    { label: `Plan Institucional (${cfg.includedBranches} sede incluida)`, amountCOP: baseCOP },
   ];
   if (extraBranches > 0) {
     lines.push({
@@ -363,24 +536,25 @@ export function calculateInstitutionBilling(opts: {
       amountCOP: extraBranchesCOP,
     });
   }
-  if (extraPros > 0) {
+  if (annual) {
     lines.push({
-      label: `${extraPros} profesional${extraPros > 1 ? "es" : ""} adicional${extraPros > 1 ? "es" : ""}`,
-      amountCOP: extraProfessionalsCOP,
+      label: `× ${cfg.annualMonths} meses`,
+      amountCOP: subtotalMonthlyCOP * (cfg.annualMonths - 1),
     });
-  }
-  if (cycle === "annual") {
-    lines.push({ label: "Descuento anual (−20%)", amountCOP: -annualDiscountCOP });
+    lines.push({
+      label: `Contrato anual: ${cfg.annualMonths - cfg.annualPaidMonths} meses gratis`,
+      amountCOP: -annualDiscountCOP,
+    });
   }
 
   return {
     baseCOP,
     extraBranchesCOP,
-    extraProfessionalsCOP,
     subtotalMonthlyCOP,
     annualDiscountCOP,
-    totalCOP,
-    cycle,
+    totalCOP: q.amount,
+    months: q.months,
+    cycle: q.cycle,
     lines,
   };
 }

@@ -4,6 +4,7 @@
 // la interfaz muestra siempre los supuestos y un descargo.
 
 import { MAX_HOURLY_RATE, MIN_HOURLY_RATE, SMMLV_2026 } from "./negotiation";
+import { FREE_COMMISSION_PCT } from "./plans";
 
 export const CO_RULES = {
   year: 2026,
@@ -166,7 +167,8 @@ export function requiredHourlyRate(args: {
 
 // ─── ¿Me conviene un plan de pago? (comisión vs. mensualidad) ────────────────
 
-export const FREE_COMMISSION_PCT = 12;
+// Una sola fuente: la comisión del plan Free vive en `plans.ts` (espejo de `platform_commission_pct` en SQL).
+export { FREE_COMMISSION_PCT };
 
 export interface PlanComparison {
   commissionAvoided: number;

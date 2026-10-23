@@ -34,7 +34,9 @@ async function verifyMetaSignature(req: Request, rawBody: string): Promise<boole
     ["sign"],
   );
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
-  const got = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const got = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   if (got.length !== expected.length) return false;
   let diff = 0;
   for (let i = 0; i < got.length; i++) diff |= got.charCodeAt(i) ^ expected.charCodeAt(i);
@@ -49,22 +51,60 @@ const supabase = createClient(
 // ─── INTENT DETECTION ────────────────────────────────────────────────────────
 
 type Intent =
-  | "pago" | "mis_citas" | "vitales" | "notas" | "buscar_pro"
-  | "mi_plan" | "agendar" | "profesional" | "paciente"
-  | "soporte" | "cancelar" | "confirmar" | "general";
+  | "pago"
+  | "mis_citas"
+  | "vitales"
+  | "notas"
+  | "buscar_pro"
+  | "mi_plan"
+  | "agendar"
+  | "profesional"
+  | "paciente"
+  | "soporte"
+  | "cancelar"
+  | "confirmar"
+  | "general";
 
 function detectIntent(text: string): Intent {
   const t = text.toLowerCase().trim();
-  if (/^(si|sí|confirmo|confirmar|ok|dale|listo|claro|exacto|correcto)$/i.test(t)) return "confirmar";
+  if (/^(si|sí|confirmo|confirmar|ok|dale|listo|claro|exacto|correcto)$/i.test(t))
+    return "confirmar";
   if (/^(no|cancelar|cancela|anular|salir|volver|atrás|atras)$/i.test(t)) return "cancelar";
-  if (/pago|cobro|mercado\s?pago|factur|tarjet|precio.*plan|suscripci|cuanto\s+cuesta|valor.*mes/i.test(t)) return "pago";
-  if (/mis\s+citas|mis\s+turnos|mis\s+visitas|tengo\s+cita|próxima\s+cita|ver\s+citas/i.test(t)) return "mis_citas";
-  if (/signos?\s+vitales?|presión\s+arterial|temperatura\s+corporal|saturaci|glucosa|pulso|oximetría/i.test(t)) return "vitales";
-  if (/notas?\s+de?\s+enferme|informe\s+de\s+visita|reporte\s+(médico|enfermería)|evolución\s+clínica/i.test(t)) return "notas";
-  if (/busca[r]?\s+(una?|enferme|cuidad|fisio|médic)|necesito\s+(una?|enferme|cuidad)|quiero\s+contra/i.test(t)) return "buscar_pro";
-  if (/mi\s+plan|mi\s+suscripci|créditos?\s+ia|saldo\s+ia|cuántos\s+crédito/i.test(t)) return "mi_plan";
+  if (
+    /pago|cobro|mercado\s?pago|factur|tarjet|precio.*plan|suscripci|cuanto\s+cuesta|valor.*mes/i.test(
+      t,
+    )
+  )
+    return "pago";
+  if (/mis\s+citas|mis\s+turnos|mis\s+visitas|tengo\s+cita|próxima\s+cita|ver\s+citas/i.test(t))
+    return "mis_citas";
+  if (
+    /signos?\s+vitales?|presión\s+arterial|temperatura\s+corporal|saturaci|glucosa|pulso|oximetría/i.test(
+      t,
+    )
+  )
+    return "vitales";
+  if (
+    /notas?\s+de?\s+enferme|informe\s+de\s+visita|reporte\s+(médico|enfermería)|evolución\s+clínica/i.test(
+      t,
+    )
+  )
+    return "notas";
+  if (
+    /busca[r]?\s+(una?|enferme|cuidad|fisio|médic)|necesito\s+(una?|enferme|cuidad)|quiero\s+contra/i.test(
+      t,
+    )
+  )
+    return "buscar_pro";
+  if (/mi\s+plan|mi\s+suscripci|créditos?\s+ia|saldo\s+ia|cuántos\s+crédito/i.test(t))
+    return "mi_plan";
   if (/agendar|cita|turno|visita|cuando|horario|disponibil|reservar/i.test(t)) return "agendar";
-  if (/soy\s+enfermer|soy\s+médic|soy\s+profesional|trabajo\s+como\s+(enfermer|cuidad|fisio)|mi\s+perfil/i.test(t)) return "profesional";
+  if (
+    /soy\s+enfermer|soy\s+médic|soy\s+profesional|trabajo\s+como\s+(enfermer|cuidad|fisio)|mi\s+perfil/i.test(
+      t,
+    )
+  )
+    return "profesional";
   if (/mi\s+paciente|mi\s+familiar|necesito\s+cuidado/i.test(t)) return "paciente";
   if (/problem|error|no\s+funciona|ayuda|soporte|bug|fallo|no\s+puedo/i.test(t)) return "soporte";
   return "general";
@@ -142,7 +182,9 @@ async function getRecentVitals(userId: string): Promise<string> {
       if (sections.length >= 2) break;
       const lines = readings.slice(0, 3).map((r) => {
         const dt = r.recorded_at
-          ? new Date(r.recorded_at as string).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })
+          ? new Date(r.recorded_at as string).toLocaleDateString("es-CO", {
+              timeZone: "America/Bogota",
+            })
           : "";
         const sev = r.severity === "critical" ? "🔴" : r.severity === "warning" ? "🟡" : "🟢";
         return `  ${r.reading_type}: ${r.value} ${(r.unit as string) ?? ""} ${sev} (${dt})`;
@@ -175,7 +217,9 @@ async function getRecentNotes(userId: string, role: string): Promise<string> {
 
     const lines = data.map((b) => {
       const dt = b.scheduled_at
-        ? new Date(b.scheduled_at as string).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })
+        ? new Date(b.scheduled_at as string).toLocaleDateString("es-CO", {
+            timeZone: "America/Bogota",
+          })
         : "";
       const note = String(b.notes).slice(0, 120);
       return `📋 *${(b.service_type as string) ?? "Servicio"} (${dt}):*\n${note}${String(b.notes).length > 120 ? "…" : ""}`;
@@ -207,9 +251,10 @@ async function searchProfessionals(specialty?: string, city?: string): Promise<s
     }
 
     const lines = data.map((p: Record<string, unknown>) => {
-      const rate = Number(p.hourly_rate) > 0
-        ? ` · desde $${Number(p.hourly_rate).toLocaleString("es-CO")}/hr`
-        : "";
+      const rate =
+        Number(p.hourly_rate) > 0
+          ? ` · desde $${Number(p.hourly_rate).toLocaleString("es-CO")}/hr`
+          : "";
       return `👩‍⚕️ *${p.full_name}* — ${(p.specialty as string) ?? "Salud"}${rate}\n   ${SITE_URL}/profesional/${p.user_id}`;
     });
 
@@ -229,17 +274,17 @@ async function getMyPlan(userId: string): Promise<string> {
         .eq("user_id", userId)
         .maybeSingle(),
       // deno-lint-ignore no-explicit-any
-      (supabase as any)
-        .rpc("get_total_ai_credits_balance", { p_user_id: userId })
-        .single(),
+      (supabase as any).rpc("get_total_ai_credits_balance", { p_user_id: userId }).single(),
     ]);
 
     const plan = planRow?.status === "active" ? (planRow.plan as string) : "free";
     const planLabel: Record<string, string> = {
       free: "Free",
-      essential_monthly: "Essential",
+      essential_monthly: "Familiar",
+      family_premium_monthly: "Premium Familiar",
       pro_monthly: "Pro",
-      institution_monthly: "Institución",
+      pro_premium_monthly: "Premium Profesional",
+      institution_monthly: "Institucional",
     };
     const credits = (credRow as Record<string, number> | null)?.balance ?? 0;
     let msg = `📋 *Tu plan Humanix:* ${planLabel[plan] ?? plan}`;
@@ -316,7 +361,10 @@ async function processMessage(
   if (waState.flow === "booking") {
     // Cancel at any step
     if (intent === "cancelar" || /cancelar|salir|no\s+quiero|olvida/i.test(text.toLowerCase())) {
-      return { reply: "De acuerdo, cancelé la solicitud. ¿En qué más te puedo ayudar?", newState: {} };
+      return {
+        reply: "De acuerdo, cancelé la solicitud. ¿En qué más te puedo ayudar?",
+        newState: {},
+      };
     }
 
     if (waState.step === "type") {
@@ -370,7 +418,10 @@ async function processMessage(
           newState: {},
         };
       }
-      return { reply: "De acuerdo, cancelé la solicitud. ¿En qué más te puedo ayudar?", newState: {} };
+      return {
+        reply: "De acuerdo, cancelé la solicitud. ¿En qué más te puedo ayudar?",
+        newState: {},
+      };
     }
   }
 
@@ -378,8 +429,7 @@ async function processMessage(
 
   if (intent === "pago") {
     return {
-      reply:
-        `Para ver planes y realizar tu pago:\n${SITE_URL}/planes\n\nTodos los pagos se hacen en la página: tarjeta, PSE, Nequi, Daviplata. ¿En qué más te ayudo?`,
+      reply: `Para ver planes y realizar tu pago:\n${SITE_URL}/planes\n\nTodos los pagos se hacen en la página: tarjeta, PSE, Nequi, Daviplata. ¿En qué más te ayudo?`,
       newState: {},
     };
   }
@@ -411,7 +461,10 @@ async function processMessage(
     if (ctx.linkedUserId && ctx.role) {
       return { reply: await getRecentNotes(ctx.linkedUserId, ctx.role), newState: {} };
     }
-    return { reply: `Las notas de enfermería están en tu panel: ${SITE_URL}/dashboard`, newState: {} };
+    return {
+      reply: `Las notas de enfermería están en tu panel: ${SITE_URL}/dashboard`,
+      newState: {},
+    };
   }
 
   if (intent === "buscar_pro") {
@@ -455,8 +508,7 @@ async function processMessage(
 
 // ─── SEND WHATSAPP ────────────────────────────────────────────────────────────
 
-const SAFE_PAYMENT_REPLY =
-  `Los pagos se realizan únicamente en la página: ${SITE_URL}/planes. Esta conversación es informativa y no genera ningún cobro.`;
+const SAFE_PAYMENT_REPLY = `Los pagos se realizan únicamente en la página: ${SITE_URL}/planes. Esta conversación es informativa y no genera ningún cobro.`;
 const ALLOWED_HOSTS = ["humanix.lat", "wa.me"];
 
 async function sendWhatsApp(to: string, rawText: string): Promise<string | null> {
@@ -467,8 +519,11 @@ async function sendWhatsApp(to: string, rawText: string): Promise<string | null>
   if (guard.blocked) {
     console.warn("[wa send] mensaje bloqueado:", guard.reason);
     await logExecution({
-      functionName: "whatsapp-webhook", triggerType: "webhook", status: "blocked",
-      startedAt: Date.now(), errorCode: guard.reason,
+      functionName: "whatsapp-webhook",
+      triggerType: "webhook",
+      status: "blocked",
+      startedAt: Date.now(),
+      errorCode: guard.reason,
     });
   }
   try {
@@ -490,7 +545,7 @@ async function sendWhatsApp(to: string, rawText: string): Promise<string | null>
       return null;
     }
     const json = await res.json();
-    return (json as Record<string, unknown[]>)?.messages?.[0] as string | null ?? null;
+    return ((json as Record<string, unknown[]>)?.messages?.[0] as string | null) ?? null;
   } catch (e) {
     console.error("[wa send] failed:", e);
     return null;
@@ -530,7 +585,8 @@ Deno.serve(async (req) => {
           for (const msg of value.messages ?? []) {
             const from = String(msg.from ?? "");
             const text = (msg.text?.body as string) ?? "[mensaje no textual]";
-            const contactName = (waContacts[0] as Record<string, Record<string, string>>)?.profile?.name ?? null;
+            const contactName =
+              (waContacts[0] as Record<string, Record<string, string>>)?.profile?.name ?? null;
             if (!from) continue;
 
             // Owner CRM staff
@@ -562,16 +618,24 @@ Deno.serve(async (req) => {
                 const stateAge = prev.wa_state_updated_at
                   ? Date.now() - new Date(prev.wa_state_updated_at as string).getTime()
                   : Infinity;
-                existingState =
-                  stateAge < 30 * 60 * 1000 ? ((prev.wa_state as WaState) ?? {}) : {};
+                existingState = stateAge < 30 * 60 * 1000 ? ((prev.wa_state as WaState) ?? {}) : {};
 
                 aiEnabled = (prev.ai_enabled as boolean) !== false;
 
                 const linkedId = prev.linked_user_id as string | null;
                 if (linkedId) {
                   const [{ data: r2 }, { data: planRow }] = await Promise.all([
-                    supabase.from("user_roles").select("role").eq("user_id", linkedId).limit(1).maybeSingle(),
-                    supabase.from("mp_subscriptions").select("plan, status").eq("user_id", linkedId).maybeSingle(),
+                    supabase
+                      .from("user_roles")
+                      .select("role")
+                      .eq("user_id", linkedId)
+                      .limit(1)
+                      .maybeSingle(),
+                    supabase
+                      .from("mp_subscriptions")
+                      .select("plan, status")
+                      .eq("user_id", linkedId)
+                      .maybeSingle(),
                   ]);
                   userCtx = {
                     role: r2?.role as string | undefined,
@@ -580,7 +644,9 @@ Deno.serve(async (req) => {
                   };
                 }
               }
-            } catch { /* context optional */ }
+            } catch {
+              /* context optional */
+            }
 
             // Upsert contact (wa_state not overwritten — not in upsert payload)
             const { data: contact } = await supabase
@@ -626,7 +692,9 @@ Deno.serve(async (req) => {
                 .from("whatsapp_contacts")
                 .update({ wa_state: newState, wa_state_updated_at: new Date().toISOString() })
                 .eq("id", contact.id);
-            } catch { /* non-fatal */ }
+            } catch {
+              /* non-fatal */
+            }
 
             const waId = await sendWhatsApp(from, reply);
 

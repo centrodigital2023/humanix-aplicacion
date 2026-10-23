@@ -227,8 +227,7 @@ export function ShiftCard({
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11px] text-muted-foreground">
-            La dirección exacta y el WhatsApp se ven después de postularte, con plan Esencial o
-            superior.
+            La dirección exacta y el WhatsApp se ven después de postularte, con plan Pro o superior.
           </p>
           <Button size="sm" variant="hero" onClick={onApply} disabled={match.conflict}>
             <Send className="mr-1.5 h-4 w-4" aria-hidden />

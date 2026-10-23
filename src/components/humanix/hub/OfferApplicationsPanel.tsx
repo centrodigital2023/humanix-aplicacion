@@ -231,7 +231,7 @@ function ApplicationCard({
           {actions.needsPlanToNegotiate && (
             <Button asChild size="sm" variant="outline">
               <Link to="/planes">
-                <Lock className="mr-1.5 h-3.5 w-3.5" aria-hidden /> Negociar el valor: plan Esencial
+                <Lock className="mr-1.5 h-3.5 w-3.5" aria-hidden /> Negociar el valor: plan de pago
               </Link>
             </Button>
           )}
