@@ -32,6 +32,33 @@ export interface ExtractedProfile {
   monthly_rate?: number;
   work_experience: ExtractedWorkExp[];
   references: ExtractedReference[];
+  document_evidence: DocumentEvidence[];
+}
+
+export interface DocumentEvidence {
+  doc_type: "cv" | "id_document" | "rethus" | "diploma" | "work_experience";
+  page_start: number;
+  page_end: number;
+  evidence: string;
+}
+
+/** Only visible original PDF pages count as supporting documents, never CV mentions. */
+export function normalizeDocumentEvidence(input: unknown, pageCount: number): DocumentEvidence[] {
+  if (!Array.isArray(input) || !Number.isInteger(pageCount) || pageCount < 1) return [];
+  const allowed = new Set(["cv", "id_document", "rethus", "diploma", "work_experience"]);
+  const seen = new Set<string>();
+  return input.flatMap((value) => {
+    if (!value || typeof value !== "object") return [];
+    const d = value as Record<string, unknown>;
+    if (typeof d.doc_type !== "string" || !allowed.has(d.doc_type) || seen.has(d.doc_type)) return [];
+    const start = d.page_start;
+    const end = d.page_end;
+    const evidence = typeof d.evidence === "string" ? d.evidence.trim() : "";
+    if (typeof start !== "number" || typeof end !== "number" || !Number.isInteger(start) ||
+      !Number.isInteger(end) || start < 1 || end < start || end > pageCount || !evidence) return [];
+    seen.add(d.doc_type);
+    return [{ doc_type: d.doc_type as DocumentEvidence["doc_type"], page_start: start, page_end: end, evidence: evidence.slice(0, 500) }];
+  });
 }
 
 const s = (v: unknown, max: number): string | undefined => {
@@ -108,7 +135,7 @@ export function normalizeExtraction(input: unknown): ExtractedProfile {
     .filter((x): x is ExtractedReference => !!x)
     .slice(0, 10);
 
-  const out: ExtractedProfile = { work_experience: work, references: refs };
+  const out: ExtractedProfile = { work_experience: work, references: refs, document_evidence: [] };
   const set = <K extends keyof ExtractedProfile>(k: K, v: ExtractedProfile[K] | undefined) => {
     if (v !== undefined) out[k] = v;
   };
