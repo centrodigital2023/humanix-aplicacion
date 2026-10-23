@@ -12,6 +12,8 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - `supabase/functions/` existing Edge Functions (maintain only, never add new ones).
 
 ## Rules
+- Profile uploads share `ProfileImporter`; extracted PDF support pages are bounded and saved as independent pending files through authenticated server code, never as approved/verified documents.
+- Installability uses a web manifest and existing-brand icons only, with no offline worker or clinical-data caching; native store packages remain a separate Capacitor release process.
 - Professional document requirements are shared in the browser-safe `supabase/functions/_shared/professionalDocumentRequirements.ts` module by the panel and existing validator, so completion and publication checks remain consistent.
 - UI only with shadcn/Radix/Tailwind; icons from lucide-react; semantic color tokens, no arbitrary hex in new code — keeps theming consistent.
 - Business logic as pure functions in `src/lib/` with Vitest tests — testable without the DB.

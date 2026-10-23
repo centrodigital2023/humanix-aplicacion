@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Humanix · Cuidado en casa",
+  "short_name": "Humanix",
+  "lang": "es-CO",
+  "description": "Coordina cuidado en casa, profesionales, servicios y agenda en Humanix.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#0f4c81",
+  "icons": [
+    { "src": "/icons/humanix-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/humanix-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/humanix-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

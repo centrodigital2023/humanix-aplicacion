@@ -1,3 +1,8 @@
+# Importación completa y aplicación instalable
+- [x] Unificar PDF, Word, imágenes y texto pegado para rellenar perfil, experiencia y referencias editables; 14 pruebas aprobadas.
+- [x] Guardar el archivo de origen y registrar soportes realmente presentes como pendientes de revisión, sin inventar ni aprobar documentos.
+- [x] Añadir instalación desde el navegador con icono Humanix; PDF real importado, perfil guardado y leído tras recargar sin errores; diálogo de instalación verificado. Instalación física y publicación no realizadas.
+
 # Retirar requisito de recibo de servicios públicos
 - [x] Eliminada la solicitud en formularios familiares/profesionales y la exigencia en evaluación IA y publicación; documentos históricos conservados; 47 pruebas aprobadas y Docs verificado con sesión real mostrando 2/2 sin recibo.
 

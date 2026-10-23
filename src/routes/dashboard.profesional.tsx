@@ -1,4 +1,3 @@
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -12,8 +11,6 @@ import {
   Briefcase,
   MapPin,
   Wand2,
-  Upload,
-  Send,
   LogOut,
   CheckCircle2,
   TrendingUp,
@@ -54,8 +51,9 @@ import { UnplacedDemandList } from "@/components/humanix/UnplacedDemandList";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
 import { toCell } from "@/lib/presence";
 import { ReferencesManager } from "@/components/humanix/ReferencesManager";
-import { extractProfessionalProfile } from "@/lib/profileExtract.functions";
-import { fileKind, newReferences } from "@/lib/profileExtraction";
+import { ProfileImporter } from "@/components/humanix/ProfileImporter";
+import { InstallAppButton } from "@/components/humanix/InstallAppButton";
+import { newReferences, normalizeExtraction, type ExtractedProfile } from "@/lib/profileExtraction";
 import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
@@ -231,11 +229,9 @@ function ProDashboard() {
   const [docSummary, setDocSummary] = useState<Record<string, boolean>>({});
 
   // IA onboarding
-  const [aiText, setAiText] = useState("");
-  const [aiBusy, setAiBusy] = useState(false);
-  const [aiFile, setAiFile] = useState<File | null>(null);
+  const [languages, setLanguages] = useState("");
+  const [docsKey, setDocsKey] = useState(0);
   const [refsKey, setRefsKey] = useState(0);
-  const extractProfileFn = useServerFn(extractProfessionalProfile);
   const [validating, setValidating] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
 
@@ -398,6 +394,7 @@ function ProDashboard() {
           Array.isArray(pp.certifications) ? (pp.certifications as string[]).join(", ") : "",
         );
         setBio(pp.bio ?? "");
+        setLanguages((pp.languages ?? []).join(", "));
         setWorkExp(Array.isArray(pp.work_experience) ? pp.work_experience : []);
       } else {
         const ins = await supabase.from("professional_profiles").insert({ user_id: uid });
@@ -546,88 +543,29 @@ function ProDashboard() {
     if (Array.isArray(p.service_cities)) setCities((p.service_cities as string[]).join(", "));
     if (Array.isArray(p.sub_specialties)) setSubs((p.sub_specialties as string[]).join(", "));
     if (Array.isArray(p.certifications)) setCerts((p.certifications as string[]).join(", "));
-    if (typeof p.bio === "string" && !bio) setBio(p.bio);
-    if (Array.isArray(p.work_experience)) setWorkExp(p.work_experience as WorkExp[]);
-    if (typeof p.full_name === "string" && !fullName) setFullName(p.full_name);
+    if (Array.isArray(p.languages)) setLanguages((p.languages as string[]).join(", "));
+    if (typeof p.bio === "string") setBio(p.bio);
+    if (Array.isArray(p.work_experience) && p.work_experience.length) setWorkExp(p.work_experience as WorkExp[]);
+    if (typeof p.full_name === "string") setFullName(p.full_name);
   };
 
-  const extractFromText = async () => {
-    const text = aiText.trim();
-    if (!text && !aiFile) {
-      toast.error("Sube tu hoja de vida o pega la información primero");
-      return;
+  const acceptImportedProfile = async (extracted: ExtractedProfile) => {
+    applyExtraction(extracted as unknown as Record<string, unknown>);
+    if (userId && extracted.references.length) {
+      const { data: existing, error } = await supabase.from("professional_references").select("phone").eq("user_id", userId);
+      if (error) throw error;
+      const fresh = newReferences(extracted.references, existing ?? []);
+      if (fresh.length) {
+        const inserted = await supabase.from("professional_references").insert(fresh.map((r) => ({ ...r, user_id: userId })));
+        if (inserted.error) throw inserted.error;
+      }
+      setRefsKey((key) => key + 1);
     }
-    setAiBusy(true);
-    try {
-      let extraText = text;
-      let file: { name: string; kind: "pdf" | "image"; mime: string; base64: string } | undefined;
-      if (aiFile) {
-        const kind = fileKind(aiFile.name, aiFile.type);
-        if (!kind) {
-          toast.error("Formato no soportado. Usa PDF, Word (.docx), foto o texto.");
-          return;
-        }
-        if (aiFile.size > 10 * 1024 * 1024) {
-          toast.error("El archivo pesa más de 10 MB");
-          return;
-        }
-        if (kind === "docx") {
-          const mammoth = await import("mammoth");
-          const { value } = await mammoth.extractRawText({
-            arrayBuffer: await aiFile.arrayBuffer(),
-          });
-          extraText = `${extraText}\n${value}`.trim();
-        } else if (kind === "text") {
-          extraText = `${extraText}\n${await aiFile.text()}`.trim();
-        } else {
-          const buf = new Uint8Array(await aiFile.arrayBuffer());
-          let bin = "";
-          for (let i = 0; i < buf.length; i += 0x8000)
-            bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-          file = { name: aiFile.name, kind, mime: aiFile.type, base64: btoa(bin) };
-        }
-      }
-      const r = await extractProfileFn({
-        data: { text: extraText ? extraText.slice(0, 60_000) : undefined, file },
-      });
-      if (!r.ok) {
-        toast.error(
-          r.error === "ai_busy"
-            ? "La IA está ocupada, intenta en un minuto."
-            : r.error === "no_credits"
-              ? "No hay créditos de IA disponibles."
-              : "No pude leer la información. Prueba con otro archivo o pega el texto.",
-        );
-        return;
-      }
-      applyExtraction(r.profile as unknown as Record<string, unknown>);
-      if (r.profile.full_name && userId && !fullName) {
-        await supabase.from("profiles").update({ full_name: r.profile.full_name }).eq("id", userId);
-      }
-      let added = 0;
-      if (userId && r.profile.references.length) {
-        const { data: existing } = await supabase
-          .from("professional_references")
-          .select("phone")
-          .eq("user_id", userId);
-        const fresh = newReferences(r.profile.references, existing ?? []);
-        if (fresh.length) {
-          const { error } = await supabase
-            .from("professional_references")
-            .insert(fresh.map((x) => ({ ...x, user_id: userId })));
-          if (!error) added = fresh.length;
-        }
-        setRefsKey((k) => k + 1);
-      }
-      setAiFile(null);
-      toast.success(
-        `Listo: llené tu perfil${r.profile.work_experience.length ? `, ${r.profile.work_experience.length} experiencias` : ""}${added ? ` y ${added} referencias` : ""}. Revisa, edita y guarda.`,
-      );
-    } catch (e) {
-      toast.error(friendlyError(e, "Error procesando con IA"));
-    } finally {
-      setAiBusy(false);
+    if (userId) {
+      const { data } = await supabase.from("professional_documents").select("doc_type").eq("user_id", userId).neq("status", "rejected");
+      if (data) setDocSummary(Object.fromEntries(data.map((d) => [d.doc_type, true])));
     }
+    setDocsKey((key) => key + 1);
   };
 
   const buildPayload = () => ({
@@ -650,11 +588,14 @@ function ProDashboard() {
       .map((s) => s.trim())
       .filter(Boolean),
     bio: bio || null,
+    languages: languages.split(",").map((value) => value.trim()).filter(Boolean),
     work_experience: workExp,
   });
 
   const saveProfile = async () => {
     if (!userId) return;
+    const nameUpdate = await supabase.from("profiles").update({ full_name: fullName }).eq("user_id", userId);
+    if (nameUpdate.error) { toast.error(friendlyError(nameUpdate.error)); return; }
     const { data, error } = await supabase
       .from("professional_profiles")
       .update(buildPayload())
@@ -853,6 +794,7 @@ function ProDashboard() {
           </div>
 
           <div className="flex items-center gap-1">
+            <InstallAppButton />
             {userId && <NotificationsBell userId={userId} />}
             <Button variant="ghost" size="icon" onClick={logout} title="Salir">
               <LogOut className="h-4 w-4" />
@@ -1332,52 +1274,7 @@ function ProDashboard() {
               </div>
             )}
 
-            {/* IA onboarding */}
-            <div className="rounded-2xl border border-fuchsia-neural/20 bg-fuchsia-neural/5 p-5">
-              <div className="flex items-center gap-2 mb-1">
-                <Wand2 className="h-4 w-4 text-fuchsia-neural" />
-                <p className="text-sm font-semibold">Llena tu perfil con IA</p>
-              </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Sube tu hoja de vida (PDF, Word, foto o texto) o pega la información. Completo tus
-                datos profesionales, experiencia laboral y referencias laborales y familiares. Luego
-                puedes editar todo.
-              </p>
-              <Textarea
-                value={aiText}
-                onChange={(e) => setAiText(e.target.value)}
-                rows={3}
-                placeholder='Pega aquí tu hoja de vida o escribe: "Soy enfermera, 7 años en cuidado adulto mayor, RETHUS 12345, atiendo Bogotá. Referencia laboral: Carlos Ruiz 300 123 4567…"'
-                className="text-sm mb-2"
-              />
-              <div className="flex flex-col sm:flex-row gap-2">
-                <label className="flex-1 cursor-pointer rounded-xl border border-dashed border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground hover:bg-muted/40 flex items-center gap-2">
-                  <Upload className="h-4 w-4 shrink-0" />
-                  <span className="truncate">
-                    {aiFile ? aiFile.name : "Subir archivo (PDF, Word .docx, foto o .txt)"}
-                  </span>
-                  <input
-                    type="file"
-                    className="sr-only"
-                    accept=".pdf,.docx,.txt,.md,.rtf,.csv,image/png,image/jpeg,image/webp"
-                    onChange={(e) => setAiFile(e.target.files?.[0] ?? null)}
-                  />
-                </label>
-                <Button
-                  onClick={extractFromText}
-                  disabled={aiBusy}
-                  variant="hero"
-                  className="shrink-0"
-                >
-                  {aiBusy ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-1.5" />
-                  )}
-                  {aiBusy ? "Leyendo…" : "Extraer y llenar"}
-                </Button>
-              </div>
-            </div>
+            <ProfileImporter onExtracted={acceptImportedProfile} />
 
             {/* Public profile preview link */}
             {userId && (
@@ -1521,6 +1418,11 @@ function ProDashboard() {
                   )}
                 </FormSection>
 
+                <FormSection label="Nombre e idiomas">
+                  <Field label="Nombre completo"><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
+                  <Field label="Idiomas"><Input value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="Español, inglés" /></Field>
+                </FormSection>
+
                 {/* Bio */}
                 <FormSection label="Bio profesional">
                   <Field label="Lo que ven familias e IPS">
@@ -1615,6 +1517,7 @@ function ProDashboard() {
               {/* Save + publish */}
               {userId && (
                 <div className="mt-5 pt-5 border-t border-border">
+                  <Button variant="hero" onClick={() => void saveProfile()} className="mb-4">Guardar perfil</Button>
                   <PublishGate
                     userId={userId}
                     profilePayload={{
@@ -1707,6 +1610,7 @@ function ProDashboard() {
         {/* ══ TAB: DOCUMENTOS ══ */}
         {tab === "documentos" && (
           <div className="space-y-4">
+            <ProfileImporter onExtracted={acceptImportedProfile} />
             {/* Progreso docs */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
               <div className="flex items-center justify-between mb-2">
@@ -1754,11 +1658,9 @@ function ProDashboard() {
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <DocumentsManager
+                  key={docsKey}
                   userId={userId}
-                  onCvExtracted={(p) => {
-                    applyExtraction(p);
-                    setTab("perfil");
-                  }}
+                  onCvExtracted={(p) => void acceptImportedProfile(normalizeExtraction(p))}
                 />
               </div>
             )}

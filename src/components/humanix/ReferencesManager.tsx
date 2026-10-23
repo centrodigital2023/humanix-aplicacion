@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Phone, User, Briefcase, Heart, Loader2 } from "lucide-react";
+import { Plus, Trash2, Phone, User, Briefcase, Heart, Loader2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,11 @@ export function ReferencesManager({ userId }: { userId: string }) {
   const [refs, setRefs] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Reference | null>(null);
+  const editRef = (reference: Reference) => {
+    setEditing(reference);
+    setDraft((prev) => ({ ...prev, [reference.ref_type]: { full_name: reference.full_name, phone: reference.phone, relation: reference.relation ?? "" } }));
+  };
   const [draft, setDraft] = useState<
     Record<RefType, { full_name: string; phone: string; relation: string }>
   >({
@@ -81,6 +86,18 @@ export function ReferencesManager({ userId }: { userId: string }) {
       return;
     }
     setSaving(true);
+    if (editing?.ref_type === t) {
+      const result = await supabase.from("professional_references").update({
+        full_name: d.full_name.trim().slice(0, 120), phone: d.phone.trim().slice(0, 30), relation: d.relation.trim().slice(0, 60) || null,
+      }).eq("id", editing.id).eq("user_id", userId).select().single();
+      setSaving(false);
+      if (result.error) { toast.error(friendlyError(result.error)); return; }
+      setRefs((prev) => prev.map((ref) => ref.id === editing.id ? result.data as Reference : ref));
+      setEditing(null);
+      setDraft((prev) => ({ ...prev, [t]: { full_name: "", phone: "", relation: "" } }));
+      toast.success("Referencia actualizada");
+      return;
+    }
     const client = supabase as unknown as {
       from: (t: string) => {
         insert: (row: Record<string, unknown>) => {
@@ -156,6 +173,8 @@ export function ReferencesManager({ userId }: { userId: string }) {
         onDraftChange={(d) => setDraft((p) => ({ ...p, work: d }))}
         onAdd={() => addRef("work")}
         onRemove={removeRef}
+        onEdit={editRef}
+        editing={editing?.ref_type === "work"}
         saving={saving}
         relationPlaceholder="Cargo / Empresa"
       />
@@ -169,6 +188,8 @@ export function ReferencesManager({ userId }: { userId: string }) {
         onDraftChange={(d) => setDraft((p) => ({ ...p, family: d }))}
         onAdd={() => addRef("family")}
         onRemove={removeRef}
+        onEdit={editRef}
+        editing={editing?.ref_type === "family"}
         saving={saving}
         relationPlaceholder="Parentesco (mamá, hermano…)"
       />
@@ -186,6 +207,8 @@ function RefSection({
   onDraftChange,
   onAdd,
   onRemove,
+  onEdit,
+  editing,
   saving,
   relationPlaceholder,
 }: {
@@ -198,6 +221,8 @@ function RefSection({
   onDraftChange: (d: { full_name: string; phone: string; relation: string }) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
+  onEdit: (reference: Reference) => void;
+  editing: boolean;
   saving: boolean;
   relationPlaceholder: string;
 }) {
@@ -236,6 +261,7 @@ function RefSection({
                   {r.relation && ` · ${r.relation}`}
                 </p>
               </div>
+              <Button variant="ghost" size="icon" onClick={() => onEdit(r)} aria-label="Editar referencia" title="Editar referencia"><Pencil className="h-3.5 w-3.5" /></Button>
               <button
                 onClick={() => onRemove(r.id)}
                 className="text-muted-foreground hover:text-destructive shrink-0"
@@ -286,7 +312,7 @@ function RefSection({
           ) : (
             <Plus className="h-3.5 w-3.5" />
           )}
-          <span className="ml-1.5">Agregar referencia</span>
+          <span className="ml-1.5">{editing ? "Guardar referencia" : "Agregar referencia"}</span>
         </Button>
       </div>
     </div>

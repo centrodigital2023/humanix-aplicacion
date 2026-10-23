@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fileKind, newReferences, normalizeExtraction, normalizePhone } from "./profileExtraction";
+import { fileKind, newReferences, normalizeDocumentEvidence, normalizeExtraction, normalizePhone } from "./profileExtraction";
 
 describe("normalizeExtraction", () => {
   it("separa referencias laborales y familiares con celular válido", () => {
@@ -29,6 +29,18 @@ describe("normalizeExtraction", () => {
 });
 
 describe("utilidades", () => {
+  it("solo registra páginas PDF reales dentro de límites y nunca recibos", () => {
+    expect(normalizeDocumentEvidence([
+      { doc_type: "diploma", page_start: 2, page_end: 2, evidence: "Título original visible" },
+      { doc_type: "id_document", page_start: 0, page_end: 3, evidence: "Cédula" },
+      { doc_type: "rethus", page_start: 1, page_end: 7, evidence: "Registro" },
+      { doc_type: "utility_bill", page_start: 1, page_end: 1, evidence: "Recibo" },
+    ], 3)).toEqual([{ doc_type: "diploma", page_start: 2, page_end: 2, evidence: "Título original visible" }]);
+  });
+  it("texto y simples menciones no cumplen soportes", () => {
+    expect(normalizeExtraction({ specialty: "Enfermería", rethus_number: "123", certifications: ["Diploma"] }).document_evidence).toEqual([]);
+    expect(normalizeDocumentEvidence([{ doc_type: "diploma", evidence: "Mencionado en CV" }], 3)).toEqual([]);
+  });
   it("normalizePhone", () => {
     expect(normalizePhone("573001234567")).toBe("+57 3001234567");
     expect(normalizePhone("abc")).toBeNull();

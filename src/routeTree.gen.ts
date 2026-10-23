@@ -42,6 +42,7 @@ import { Route as EvaluadorRouteImport } from './routes/evaluador'
 import { Route as FamiliasRouteImport } from './routes/familias'
 import { Route as FisioterapiaDomicilioRouteImport } from './routes/fisioterapia-domicilio'
 import { Route as HabeasDataRouteImport } from './routes/habeas-data'
+import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MensajesRouteImport } from './routes/mensajes'
 import { Route as PagarRouteImport } from './routes/pagar'
@@ -259,6 +260,11 @@ const FisioterapiaDomicilioRoute = FisioterapiaDomicilioRouteImport.update({
 const HabeasDataRoute = HabeasDataRouteImport.update({
   id: '/habeas-data',
   path: '/habeas-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstalarRoute = InstalarRouteImport.update({
+  id: '/instalar',
+  path: '/instalar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -565,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/familias': typeof FamiliasRoute
   '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
+  '/instalar': typeof InstalarRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
   '/pagar': typeof PagarRoute
@@ -652,6 +659,7 @@ export interface FileRoutesByTo {
   '/familias': typeof FamiliasRoute
   '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
+  '/instalar': typeof InstalarRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
   '/pagar': typeof PagarRoute
@@ -740,6 +748,7 @@ export interface FileRoutesById {
   '/familias': typeof FamiliasRoute
   '/fisioterapia-domicilio': typeof FisioterapiaDomicilioRoute
   '/habeas-data': typeof HabeasDataRoute
+  '/instalar': typeof InstalarRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
   '/pagar': typeof PagarRoute
@@ -830,6 +839,7 @@ export interface FileRouteTypes {
     | '/familias'
     | '/fisioterapia-domicilio'
     | '/habeas-data'
+    | '/instalar'
     | '/mcp'
     | '/mensajes'
     | '/pagar'
@@ -917,6 +927,7 @@ export interface FileRouteTypes {
     | '/familias'
     | '/fisioterapia-domicilio'
     | '/habeas-data'
+    | '/instalar'
     | '/mcp'
     | '/mensajes'
     | '/pagar'
@@ -1004,6 +1015,7 @@ export interface FileRouteTypes {
     | '/familias'
     | '/fisioterapia-domicilio'
     | '/habeas-data'
+    | '/instalar'
     | '/mcp'
     | '/mensajes'
     | '/pagar'
@@ -1093,6 +1105,7 @@ export interface RootRouteChildren {
   FamiliasRoute: typeof FamiliasRoute
   FisioterapiaDomicilioRoute: typeof FisioterapiaDomicilioRoute
   HabeasDataRoute: typeof HabeasDataRoute
+  InstalarRoute: typeof InstalarRoute
   McpRoute: typeof McpRoute
   MensajesRoute: typeof MensajesRoute
   PagarRoute: typeof PagarRoute
@@ -1358,6 +1371,13 @@ declare module '@tanstack/react-router' {
       path: '/habeas-data'
       fullPath: '/habeas-data'
       preLoaderRoute: typeof HabeasDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instalar': {
+      id: '/instalar'
+      path: '/instalar'
+      fullPath: '/instalar'
+      preLoaderRoute: typeof InstalarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -1858,6 +1878,7 @@ const rootRouteChildren: RootRouteChildren = {
   FamiliasRoute: FamiliasRoute,
   FisioterapiaDomicilioRoute: FisioterapiaDomicilioRoute,
   HabeasDataRoute: HabeasDataRoute,
+  InstalarRoute: InstalarRoute,
   McpRoute: McpRoute,
   MensajesRoute: MensajesRoute,
   PagarRoute: PagarRoute,
