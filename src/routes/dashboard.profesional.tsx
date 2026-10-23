@@ -53,6 +53,7 @@ import { toCell } from "@/lib/presence";
 import { ReferencesManager } from "@/components/humanix/ReferencesManager";
 import { ProfileImporter } from "@/components/humanix/ProfileImporter";
 import { InstallAppButton } from "@/components/humanix/InstallAppButton";
+import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { newReferences, normalizeExtraction, type ExtractedProfile } from "@/lib/profileExtraction";
 import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
@@ -795,6 +796,7 @@ function ProDashboard() {
 
           <div className="flex items-center gap-1">
             <InstallAppButton />
+            <ShareAppButton />
             {userId && <NotificationsBell userId={userId} />}
             <Button variant="ghost" size="icon" onClick={logout} title="Salir">
               <LogOut className="h-4 w-4" />

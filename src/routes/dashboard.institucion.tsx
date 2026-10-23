@@ -35,6 +35,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/humanix/Logo";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
+import { InstallAppButton } from "@/components/humanix/InstallAppButton";
+import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { EnhancedBulkOffersModule } from "@/components/humanix/EnhancedBulkOffersModule";
 import { CoverageSemaphore } from "@/components/humanix/CoverageSemaphore";
 import { EnhancedAgendaModule } from "@/components/humanix/EnhancedAgendaModule";
@@ -654,6 +656,8 @@ function InstitutionDashboard() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            <InstallAppButton />
+            <ShareAppButton />
             {user.id && <NotificationsBell userId={user.id} />}
             <div className="hidden sm:block">
               <HiringCopilot />
