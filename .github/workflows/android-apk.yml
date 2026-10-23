@@ -1,0 +1,105 @@
+# Compila la APK de Android de Humanix y la publica como release de GitHub.
+# El enlace estable para descargar siempre la última versión es:
+#   https://github.com/centrodigital2023/humanix-aplicacion/releases/latest/download/humanix.apk
+# (lo usa la página /descargar).
+#
+# Firma: si existen los secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS y ANDROID_KEY_PASSWORD se publica una APK release firmada con tu llave.
+# Sin ellos se publica una APK debug (instalable, pero cada compilación usa otra firma y
+# para actualizar hay que desinstalar la anterior).
+name: APK Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - capacitor.config.ts
+      - resources/**
+      - scripts/prepare-android-apk.sh
+      - .github/workflows/android-apk.yml
+  # En PR solo se compila (sin publicar) para comprobar que la APK sale bien.
+  pull_request:
+    paths:
+      - capacitor.config.ts
+      - resources/**
+      - scripts/prepare-android-apk.sh
+      - .github/workflows/android-apk.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Preparar proyecto Android
+        env:
+          CAP_SERVER_URL: https://humanix.lat
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: bash scripts/prepare-android-apk.sh
+
+      - name: Compilar APK firmada (release)
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: apk-build/android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/humanix.keystore"
+          ./gradlew --no-daemon assembleRelease \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/humanix.keystore" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/humanix.apk"
+
+      - name: Compilar APK debug (sin llave de firma)
+        if: env.HAS_KEYSTORE != 'true'
+        working-directory: apk-build/android
+        run: |
+          echo "::warning::Sin secretos de firma: se publica APK debug. Agrega ANDROID_KEYSTORE_BASE64 para actualizaciones sin desinstalar."
+          ./gradlew --no-daemon assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/humanix.apk"
+
+      - name: Guardar APK de prueba
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: humanix-apk
+          path: humanix.apk
+
+      - name: Publicar release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-v1.0.${{ github.run_number }}
+          name: Humanix Android 1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: "true"
+          files: humanix.apk
+          body: |
+            APK de Android de Humanix (carga https://humanix.lat).
+            Descarga directa: https://github.com/${{ github.repository }}/releases/latest/download/humanix.apk
+            Página de descarga: https://humanix.lat/descargar
