@@ -394,6 +394,7 @@ function ProDashboard() {
           Array.isArray(pp.certifications) ? (pp.certifications as string[]).join(", ") : "",
         );
         setBio(pp.bio ?? "");
+        setLanguages((pp.languages ?? []).join(", "));
         setWorkExp(Array.isArray(pp.work_experience) ? pp.work_experience : []);
       } else {
         const ins = await supabase.from("professional_profiles").insert({ user_id: uid });
@@ -543,9 +544,9 @@ function ProDashboard() {
     if (Array.isArray(p.sub_specialties)) setSubs((p.sub_specialties as string[]).join(", "));
     if (Array.isArray(p.certifications)) setCerts((p.certifications as string[]).join(", "));
     if (Array.isArray(p.languages)) setLanguages((p.languages as string[]).join(", "));
-    if (typeof p.bio === "string" && !bio) setBio(p.bio);
-    if (Array.isArray(p.work_experience)) setWorkExp(p.work_experience as WorkExp[]);
-    if (typeof p.full_name === "string" && !fullName) setFullName(p.full_name);
+    if (typeof p.bio === "string") setBio(p.bio);
+    if (Array.isArray(p.work_experience) && p.work_experience.length) setWorkExp(p.work_experience as WorkExp[]);
+    if (typeof p.full_name === "string") setFullName(p.full_name);
   };
 
   const acceptImportedProfile = async (extracted: ExtractedProfile) => {
