@@ -1691,7 +1691,7 @@ function ProDashboard() {
                 <p className="text-xs text-muted-foreground mb-4">
                   Mínimo 2 laborales y 2 familiares (nombre y celular).
                 </p>
-                <ReferencesManager userId={userId} />
+                <ReferencesManager key={refsKey} userId={userId} />
               </div>
             )}
 
