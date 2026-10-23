@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
+import { InstallAppButton } from "@/components/humanix/InstallAppButton";
+import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { OffersMap, type MapPoint } from "@/components/humanix/OffersMap";
 import { LiveMapSection } from "@/components/humanix/LiveMapSection";
 import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
@@ -329,7 +331,13 @@ function FamilyDashboard() {
       subtitle="¿Qué necesitas hoy?"
       crumbs={[{ label: "🏠 Inicio", to: "/" }, { label: "Familia" }]}
       badge={{ label: "Familia", tone: "copper" }}
-      actions={<HiringCopilot />}
+      actions={
+        <div className="flex items-center gap-1">
+          <InstallAppButton />
+          <ShareAppButton />
+          <HiringCopilot />
+        </div>
+      }
     >
       <div className="space-y-6">
         {/* Acciones rápidas */}

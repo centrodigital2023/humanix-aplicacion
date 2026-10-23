@@ -59,18 +59,28 @@ export function InstallAppButton() {
           <DialogHeader>
             <DialogTitle>Instalar Humanix</DialogTitle>
             <DialogDescription>
-              Abre humanix.lat directamente en tu navegador, fuera de esta vista previa.
+              Abre humanix.lat en tu navegador y sigue estos pasos. Gratis, sin tienda de
+              aplicaciones.
             </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {ios
-              ? "En Safari, toca Compartir y luego Añadir a pantalla de inicio."
-              : "En Chrome o Edge, abre el menú y elige Instalar aplicación o Añadir a pantalla de inicio."}
-          </p>
-          {ios && <Share className="h-5 w-5 text-primary" />}
+          {ios ? (
+            <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>Abre humanix.lat en Safari.</li>
+              <li className="flex items-center gap-1.5">
+                Toca el botón Compartir <Share className="h-4 w-4 text-primary" />.
+              </li>
+              <li>Elige «Añadir a pantalla de inicio» y confirma.</li>
+            </ol>
+          ) : (
+            <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>Abre humanix.lat en Chrome o Edge.</li>
+              <li>Toca el menú ⋮ (o el ícono de instalar en la barra de direcciones).</li>
+              <li>Elige «Instalar aplicación» o «Añadir a pantalla de inicio».</li>
+            </ol>
+          )}
           <Button asChild>
             <a href="https://humanix.lat/instalar" target="_blank" rel="noopener noreferrer">
-              Abrir Humanix
+              Abrir humanix.lat
             </a>
           </Button>
         </DialogContent>
