@@ -95,6 +95,7 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendlyError";
 import { buildSeo } from "@/lib/seo";
+import { REQUIRED_PROFESSIONAL_DOCUMENTS } from "../../supabase/functions/_shared/professionalDocumentRequirements";
 
 export const Route = createFileRoute("/dashboard/profesional")({
   head: () =>
@@ -264,7 +265,6 @@ function ProDashboard() {
       { label: "Ciudades de servicio", done: cities.trim().length > 0 },
       { label: "Hoja de vida", done: !!docSummary["cv"] },
       { label: "Cédula", done: !!docSummary["id_document"] },
-      { label: "Recibo servicios", done: !!docSummary["utility_bill"] },
       { label: "RETHUS o Diploma", done: !!(docSummary["rethus"] || docSummary["diploma"]) },
     ],
     [profile?.avatar_url, specialty, bio, years, cities, docSummary],
@@ -1713,30 +1713,23 @@ function ProDashboard() {
                 <p className="text-sm font-semibold">Documentos requeridos</p>
                 <span className="text-sm font-bold text-biosensor">
                   {
-                    [
-                      docSummary["cv"],
-                      docSummary["id_document"],
-                      docSummary["utility_bill"],
-                    ].filter(Boolean).length
+                    REQUIRED_PROFESSIONAL_DOCUMENTS.filter((type) => docSummary[type]).length
                   }
-                  /3
+                  /{REQUIRED_PROFESSIONAL_DOCUMENTS.length}
                 </span>
               </div>
               <Progress
                 value={
-                  ([docSummary["cv"], docSummary["id_document"], docSummary["utility_bill"]].filter(
-                    Boolean,
-                  ).length /
-                    3) *
+                  (REQUIRED_PROFESSIONAL_DOCUMENTS.filter((type) => docSummary[type]).length /
+                    REQUIRED_PROFESSIONAL_DOCUMENTS.length) *
                   100
                 }
                 className="h-2"
               />
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {[
                   { key: "cv", label: "CV" },
                   { key: "id_document", label: "Cédula" },
-                  { key: "utility_bill", label: "Recibo" },
                 ].map((d) => (
                   <div
                     key={d.key}

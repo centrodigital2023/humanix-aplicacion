@@ -770,7 +770,7 @@ function FamilyOnboarding() {
                       familia
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Sube tu cédula, recibo de servicios y documentos del paciente. La IA verifica
+                      Sube tu cédula y documentos del paciente. La IA verifica
                       al instante.
                     </p>
                   </div>

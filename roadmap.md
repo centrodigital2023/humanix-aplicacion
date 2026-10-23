@@ -1,4 +1,3 @@
-# Mercado Pago dentro de Humanix
 # Retirar requisito de recibo de servicios públicos
 - [ ] Eliminar la solicitud y exigencia en formularios y verificaciones, conservar documentos históricos y comprobar las reglas.
 
