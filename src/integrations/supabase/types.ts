@@ -5134,6 +5134,10 @@ export type Database = {
         }
         Returns: string
       }
+      booking_commission_pct: {
+        Args: { p_client: string; p_professional: string }
+        Returns: number
+      }
       care_can_view: {
         Args: { p_booking_id: string; p_user: string }
         Returns: boolean
@@ -5335,6 +5339,12 @@ export type Database = {
           dimensions: Json
           ratings_count: number
           stars_avg: number
+        }[]
+      }
+      featured_professionals: {
+        Args: { p_ids: string[] }
+        Returns: {
+          user_id: string
         }[]
       }
       find_replacement_candidates: {
@@ -5656,6 +5666,7 @@ export type Database = {
       }
       hx_care_plan: { Args: { p_inst: string }; Returns: Json }
       hx_cell: { Args: { p: number; p_size?: number }; Returns: number }
+      hx_circle_limit: { Args: { p_plan: string }; Returns: number }
       hx_cop: { Args: { p_amount: number }; Returns: string }
       hx_dashboard_link: { Args: { p_user: string }; Returns: string }
       hx_distance_band: { Args: { p_km: number }; Returns: number }
@@ -5664,6 +5675,7 @@ export type Database = {
         Returns: number
       }
       hx_duration_label: { Args: { p_minutes: number }; Returns: string }
+      hx_free_commission_pct: { Args: never; Returns: number }
       hx_ingest_ip_hash: { Args: never; Returns: string }
       hx_inst_alert_autoresolve: {
         Args: { p_at: string; p_obs: string; p_patient: string }
@@ -5769,8 +5781,10 @@ export type Database = {
         Args: { p_require_care?: boolean; p_text: string }
         Returns: string
       }
+      hx_paid_plans: { Args: never; Returns: string[] }
       hx_ping_map: { Args: never; Returns: undefined }
       hx_ping_service_offers: { Args: never; Returns: undefined }
+      hx_plan_visibility_boost: { Args: { p_user: string }; Returns: number }
       hx_presence_ttl: { Args: never; Returns: string }
       hx_pro_label: {
         Args: { p_full_name: string; p_short: boolean }
@@ -6273,7 +6287,19 @@ export type Database = {
           status: string
         }[]
       }
+      my_booking_commission_pct: {
+        Args: { p_professional: string }
+        Returns: number
+      }
       my_career_stats: { Args: never; Returns: Json }
+      my_circle_quota: {
+        Args: never
+        Returns: {
+          circle_limit: number
+          plan: string
+          used: number
+        }[]
+      }
       my_offer_applications: {
         Args: { p_limit?: number }
         Returns: {
@@ -6438,6 +6464,7 @@ export type Database = {
       }
       party_display_name: { Args: { p_user: string }; Returns: string }
       plan_key_for: { Args: { p_user: string }; Returns: string }
+      plan_tier_rank: { Args: { _plan: string }; Returns: number }
       platform_commission_pct: { Args: { p_user_id: string }; Returns: number }
       professional_dimension_averages: {
         Args: { p_user: string }
