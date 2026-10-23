@@ -172,3 +172,31 @@ describe("suscripción con plan asociado", () => {
     });
   });
 });
+
+import { brickPaymentRequest as _bpr } from "../../supabase/functions/_shared/planBilling";
+describe("PSE envía dirección y teléfono aunque el formulario no los pida", () => {
+  it("completa address, phone e IP válida", () => {
+    const r = _bpr({
+      form: {
+        payment_method_id: "pse",
+        payer: { email: "a@b.co", identification: { type: "CC", number: "123456" } },
+        transaction_details: { financial_institution: "1007" },
+      },
+      userId: "u1",
+      plan: "pro_monthly" as never,
+      accountEmail: "a@b.co",
+      accountName: "Ana Gómez",
+      accountPhone: "+57 310 555 1234",
+      accountCity: "Pasto",
+      ip: "unknown",
+      callbackUrl: "https://humanix.lat/pago/exito",
+      notificationUrl: "https://humanix.lat/api/public/mercadopago/webhook",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const payer = r.body.payer as Record<string, any>;
+    expect(payer.phone).toEqual({ area_code: "57", number: "3105551234" });
+    expect(payer.address.city).toBe("Pasto");
+    expect((r.body.additional_info as any).ip_address).toBe("127.0.0.1");
+  });
+});

@@ -704,6 +704,8 @@ export function brickPaymentRequest(input: {
   plan: PaidPlan;
   accountEmail: string | null;
   accountName?: string | null;
+  accountPhone?: string | null;
+  accountCity?: string | null;
   ip: string;
   callbackUrl: string;
   notificationUrl: string;
@@ -776,13 +778,30 @@ export function brickPaymentRequest(input: {
       const v = str(address[k], 80);
       if (v) addr[k] = v;
     }
-    if (Object.keys(addr).length) payer.address = addr;
+    // PSE (Mercado Pago Colombia) rechaza el cobro ("BankTransfers Api fail") sin dirección y teléfono, pero el
+    // formulario mínimo no los pide: se completan con datos de la cuenta o valores neutros.
+    const city = str(input.accountCity, 60) ?? "Bogotá";
+    payer.address = {
+      zip_code: "110111",
+      street_name: "Calle",
+      street_number: "1",
+      neighborhood: "Centro",
+      city,
+      federal_unit: city,
+      ...addr,
+    };
     const phone = (payerIn.phone ?? {}) as Record<string, unknown>;
-    const phoneNumber = str(phone.number, 20);
-    if (phoneNumber)
-      payer.phone = { area_code: str(phone.area_code, 6) ?? "57", number: phoneNumber };
+    const phoneNumber =
+      str(phone.number, 20) ??
+      (str(input.accountPhone, 20) ?? "").replace(/\D/g, "").replace(/^57(?=\d{10}$)/, "") ??
+      "";
+    payer.phone = {
+      area_code: str(phone.area_code, 6) ?? "57",
+      number: /^\d{7,10}$/.test(phoneNumber) ? phoneNumber : "3000000000",
+    };
     body.transaction_details = { financial_institution: bank };
-    body.additional_info = { ip_address: input.ip };
+    const ip = /^[0-9a-f.:]{3,45}$/i.test(input.ip) ? input.ip : "127.0.0.1";
+    body.additional_info = { ip_address: ip };
     body.callback_url = input.callbackUrl;
   }
 
