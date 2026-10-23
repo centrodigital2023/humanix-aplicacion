@@ -1,4 +1,4 @@
-// Ingresos reales del profesional (plan Esencial) — lógica pura.
+// Ingresos reales del profesional (plan Pro) — lógica pura.
 //
 // Con las reservas del propio profesional (lo que ya puede leer) arma lo ganado por mes (el neto que le queda), lo
 // acordado que falta, una proyección del mes con sus supuestos a la vista, qué días rinde más, cuántas familias vuelven,
@@ -83,9 +83,9 @@ export interface EarningsReport {
     gross90: number;
     /** Comisión efectiva sobre lo pagado en 90 días (0 si está en un plan sin comisión). */
     effectivePct: number | null;
-    /** Lo que cuesta el plan Esencial por los mismos 3 meses. */
+    /** Lo que cuesta el plan Pro por los mismos 3 meses. */
     essentialCost90: number;
-    /** Lo que habría ahorrado con el plan Esencial en 90 días; null si no pagó comisión o no le compensa. */
+    /** Lo que habría ahorrado con el plan Pro en 90 días; null si no pagó comisión o no le compensa. */
     savingWithEssential90: number | null;
   };
   weekdays: WeekdayEarnings[];
@@ -146,7 +146,7 @@ export function buildEarningsReport(args: {
   const paidMonth = sum(
     args.bookings.filter((b) => isDone(b) && bogotaMonthKey(doneAt(b)) === monthKey).map(fee),
   );
-  const essentialCost90 = PLAN_CATALOG.essential_monthly.amountCOP * 3;
+  const essentialCost90 = PLAN_CATALOG.pro_monthly.amountCOP * 3; // el plan sin comisión del profesional (Pro)
   const commission = {
     paid90,
     paidMonth,
@@ -309,7 +309,7 @@ export function earningsInsights(r: EarningsReport): EarningsInsight[] {
         id: "commission_saving",
         severity: "warn",
         title: `En 90 días pagaste ${money(k.paid90)} de comisión`,
-        detail: `El plan Esencial (${PLAN_CATALOG.essential_monthly.priceLabel}${PLAN_CATALOG.essential_monthly.priceNote}) no cobra comisión: con tu volumen habrías conservado unos ${money(k.savingWithEssential90)} después de pagar el plan.`,
+        detail: `El plan Pro (${PLAN_CATALOG.pro_monthly.priceLabel}${PLAN_CATALOG.pro_monthly.priceNote}) no cobra comisión: con tu volumen habrías conservado unos ${money(k.savingWithEssential90)} después de pagar el plan.`,
         action: "Compara los planes; la suscripción se hace en la página web.",
       });
     } else {
@@ -317,7 +317,7 @@ export function earningsInsights(r: EarningsReport): EarningsInsight[] {
         id: "commission_info",
         severity: "info",
         title: `En 90 días pagaste ${money(k.paid90)} de comisión`,
-        detail: `Con tu volumen actual el plan Esencial todavía no se paga solo (costaría ${money(k.essentialCost90)} en 3 meses). Si tus horas suben, vuelve a mirarlo.`,
+        detail: `Con tu volumen actual el plan Pro todavía no se paga solo (costaría ${money(k.essentialCost90)} en 3 meses). Si tus horas suben, vuelve a mirarlo.`,
       });
     }
   }

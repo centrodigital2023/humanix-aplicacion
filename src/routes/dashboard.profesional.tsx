@@ -352,8 +352,7 @@ function ProDashboard() {
             }[]
           ).map((b) => {
             const c = clientMap.get(b.client_id) as
-              | { full_name: string; avatar_url: string }
-              | undefined;
+              { full_name: string; avatar_url: string } | undefined;
             const o = b.job_offer_id
               ? (offerMap2.get(b.job_offer_id) as { title: string; city: string } | undefined)
               : undefined;
@@ -546,24 +545,34 @@ function ProDashboard() {
     if (Array.isArray(p.certifications)) setCerts((p.certifications as string[]).join(", "));
     if (Array.isArray(p.languages)) setLanguages((p.languages as string[]).join(", "));
     if (typeof p.bio === "string") setBio(p.bio);
-    if (Array.isArray(p.work_experience) && p.work_experience.length) setWorkExp(p.work_experience as WorkExp[]);
+    if (Array.isArray(p.work_experience) && p.work_experience.length)
+      setWorkExp(p.work_experience as WorkExp[]);
     if (typeof p.full_name === "string") setFullName(p.full_name);
   };
 
   const acceptImportedProfile = async (extracted: ExtractedProfile) => {
     applyExtraction(extracted as unknown as Record<string, unknown>);
     if (userId && extracted.references.length) {
-      const { data: existing, error } = await supabase.from("professional_references").select("phone").eq("user_id", userId);
+      const { data: existing, error } = await supabase
+        .from("professional_references")
+        .select("phone")
+        .eq("user_id", userId);
       if (error) throw error;
       const fresh = newReferences(extracted.references, existing ?? []);
       if (fresh.length) {
-        const inserted = await supabase.from("professional_references").insert(fresh.map((r) => ({ ...r, user_id: userId })));
+        const inserted = await supabase
+          .from("professional_references")
+          .insert(fresh.map((r) => ({ ...r, user_id: userId })));
         if (inserted.error) throw inserted.error;
       }
       setRefsKey((key) => key + 1);
     }
     if (userId) {
-      const { data } = await supabase.from("professional_documents").select("doc_type").eq("user_id", userId).neq("status", "rejected");
+      const { data } = await supabase
+        .from("professional_documents")
+        .select("doc_type")
+        .eq("user_id", userId)
+        .neq("status", "rejected");
       if (data) setDocSummary(Object.fromEntries(data.map((d) => [d.doc_type, true])));
     }
     setDocsKey((key) => key + 1);
@@ -589,14 +598,23 @@ function ProDashboard() {
       .map((s) => s.trim())
       .filter(Boolean),
     bio: bio || null,
-    languages: languages.split(",").map((value) => value.trim()).filter(Boolean),
+    languages: languages
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
     work_experience: workExp,
   });
 
   const saveProfile = async () => {
     if (!userId) return;
-    const nameUpdate = await supabase.from("profiles").update({ full_name: fullName }).eq("user_id", userId);
-    if (nameUpdate.error) { toast.error(friendlyError(nameUpdate.error)); return; }
+    const nameUpdate = await supabase
+      .from("profiles")
+      .update({ full_name: fullName })
+      .eq("user_id", userId);
+    if (nameUpdate.error) {
+      toast.error(friendlyError(nameUpdate.error));
+      return;
+    }
     const { data, error } = await supabase
       .from("professional_profiles")
       .update(buildPayload())
@@ -1226,7 +1244,11 @@ function ProDashboard() {
             {/* Suscripción */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
-                <MercadoPagoSubscription userId={userId} />
+                <MercadoPagoSubscription
+                  userId={userId}
+                  defaultPlan="pro_monthly"
+                  plans={["pro_monthly", "pro_premium_monthly"]}
+                />
               </div>
             )}
           </div>
@@ -1421,8 +1443,16 @@ function ProDashboard() {
                 </FormSection>
 
                 <FormSection label="Nombre e idiomas">
-                  <Field label="Nombre completo"><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
-                  <Field label="Idiomas"><Input value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="Español, inglés" /></Field>
+                  <Field label="Nombre completo">
+                    <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                  </Field>
+                  <Field label="Idiomas">
+                    <Input
+                      value={languages}
+                      onChange={(e) => setLanguages(e.target.value)}
+                      placeholder="Español, inglés"
+                    />
+                  </Field>
                 </FormSection>
 
                 {/* Bio */}
@@ -1519,7 +1549,9 @@ function ProDashboard() {
               {/* Save + publish */}
               {userId && (
                 <div className="mt-5 pt-5 border-t border-border">
-                  <Button variant="hero" onClick={() => void saveProfile()} className="mb-4">Guardar perfil</Button>
+                  <Button variant="hero" onClick={() => void saveProfile()} className="mb-4">
+                    Guardar perfil
+                  </Button>
                   <PublishGate
                     userId={userId}
                     profilePayload={{
@@ -1618,10 +1650,8 @@ function ProDashboard() {
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold">Documentos requeridos</p>
                 <span className="text-sm font-bold text-biosensor">
-                  {
-                    REQUIRED_PROFESSIONAL_DOCUMENTS.filter((type) => docSummary[type]).length
-                  }
-                  /{REQUIRED_PROFESSIONAL_DOCUMENTS.length}
+                  {REQUIRED_PROFESSIONAL_DOCUMENTS.filter((type) => docSummary[type]).length}/
+                  {REQUIRED_PROFESSIONAL_DOCUMENTS.length}
                 </span>
               </div>
               <Progress

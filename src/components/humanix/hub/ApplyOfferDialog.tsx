@@ -58,7 +58,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   userId: string;
   intro: ProIntro;
-  /** Plan con la función «negociar el valor» (Esencial o superior). */
+  /** Plan con la función «negociar el valor» (Pro o superior). */
   canNegotiate: boolean;
   /** 12 en plan Free, 0 en planes de pago. */
   commissionPct: number;
@@ -97,7 +97,7 @@ function buildSchema(offer: InstitutionOffer) {
 type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 /**
- * Postulación a una oferta de una institución (turnos a cubrir) o de una familia (sin turnos): mensaje y, con plan Esencial o
+ * Postulación a una oferta de una institución (turnos a cubrir) o de una familia (sin turnos): mensaje y, con plan Pro o
  * superior, otro valor — por hora, por turno, mensual o por paquete, según la oferta.
  */
 export function ApplyOfferDialog({
@@ -298,7 +298,7 @@ export function ApplyOfferDialog({
             {!canNegotiate ? (
               <p className="text-xs text-muted-foreground">
                 Puedes postularte al valor publicado. Proponer otro valor está disponible desde el
-                plan Esencial (COP 9.000/mes), que además no cobra comisión.{" "}
+                plan Pro (COP 19.900/mes), que además no cobra comisión.{" "}
                 <button
                   type="button"
                   className="font-medium text-biosensor underline-offset-2 hover:underline"
@@ -368,8 +368,8 @@ export function ApplyOfferDialog({
             </div>
             <p className="text-[11px] text-muted-foreground">
               No incluyas teléfono, correo ni datos de pago. La dirección exacta y el WhatsApp se
-              ven al aceptar la reserva (la dirección) o con plan Esencial o superior (el contacto).
-              Los pagos se hacen únicamente en la página web.
+              ven al aceptar la reserva (la dirección) o con plan Pro o superior (el contacto). Los
+              pagos se hacen únicamente en la página web.
             </p>
           </div>
 

@@ -426,7 +426,7 @@ export function CareRitualsCard({
               <p className="text-xs text-muted-foreground">
                 {passport.usesLogs || premium
                   ? "El certificado no lleva nombre, fechas ni datos de salud."
-                  : "Con el plan Esencial también cuentan comidas, juego y controles de los partes. El certificado no lleva nombre, fechas ni datos de salud."}
+                  : "Con el plan Familiar también cuentan comidas, juego y controles de los partes. El certificado no lleva nombre, fechas ni datos de salud."}
               </p>
             </section>
           )}

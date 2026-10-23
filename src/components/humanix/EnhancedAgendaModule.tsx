@@ -8,7 +8,7 @@
 // Según el plan (se lee de `mp_subscriptions`; la puerta es de interfaz porque son cuentas sobre datos propios):
 //  - Todas las instituciones: la semana con estados reales, contadores, posiciones sin cubrir, alertas explicadas y
 //    recordatorios por WhatsApp que solo se preparan (sin exponer teléfonos ni hablar de pagos).
-//  - IPS Mejorado (`inst_agenda_insights`): riesgo de inasistencia por profesional, reporte de utilización de 30 días y
+//  - Institucional (`inst_agenda_insights`): riesgo de inasistencia por profesional, reporte de utilización de 30 días y
 //    exportación en CSV e iCal.
 // Los cambios de estado de un servicio se hacen en su página (`/servicio/$bookingId`), donde viven las reglas reales.
 import { useMemo, useState } from "react";
@@ -546,7 +546,7 @@ export function EnhancedAgendaModule({ userId }: { userId: string }) {
                   </div>
                 ) : !premium ? (
                   <p className="text-xs text-muted-foreground">
-                    Con el plan IPS Mejorado ves aquí el riesgo de inasistencia de esta persona
+                    Con el plan Institucional ves aquí el riesgo de inasistencia de esta persona
                     según su historial con tu institución.
                   </p>
                 ) : null}

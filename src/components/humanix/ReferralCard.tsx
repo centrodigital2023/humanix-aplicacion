@@ -73,7 +73,7 @@ export function ReferralCard({ userId }: Props) {
           <h3 className="font-semibold text-foreground">Invita colegas · Gana meses gratis</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Por cada colega que se suscriba con tu enlace, ganas{" "}
-            <strong>1 mes del Plan Esencial gratis</strong>.
+            <strong>1 mes del Plan Familiar gratis</strong>.
           </p>
         </div>
       </div>

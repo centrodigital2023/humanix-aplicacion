@@ -351,14 +351,14 @@ describe("contratos", () => {
   });
 });
 
-describe("calidad (plan IPS Mejorado)", () => {
+describe("calidad (plan Institucional)", () => {
   it("con indicadores en rojo avisa, con el más bajo, y lo marca como del plan", () => {
     const i = find(
       brief({ quality: { alerts: 2, worst: { label: "Llegadas puntuales", value: 62 } } }),
       "quality_attention",
     )!;
     expect(i.priority).toBe("medium");
-    expect(i.badge).toBe("Plan IPS Mejorado");
+    expect(i.badge).toBe("Plan Institucional");
     expect(i.title).toBe("2 indicadores de calidad piden atención");
     expect(i.detail).toBe("El más bajo: Llegadas puntuales (62 %).");
     expect(i.cta.target).toEqual({ kind: "quality" });
@@ -452,7 +452,7 @@ describe("invitación al plan", () => {
     const i = find(brief({ premium: false, completedServices: 3 }), "upgrade")!;
     expect(i.priority).toBe("low");
     expect(i.detail).toContain("costos");
-    expect(i.cta).toEqual({ label: "Ver el plan IPS Mejorado", target: { kind: "plans" } });
+    expect(i.cta).toEqual({ label: "Ver el plan Institucional", target: { kind: "plans" } });
     expect(ids(brief({ premium: false, completedServices: 2 }))).not.toContain("upgrade");
     expect(ids(brief({ premium: true, completedServices: 30 }))).not.toContain("upgrade");
   });

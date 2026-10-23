@@ -35,6 +35,17 @@ export async function fetchPublicProfessionals(
   return (data ?? []) as PublicProfessional[];
 }
 
+/**
+ * Quiénes de `ids` llevan el badge «verificado destacado» (plan Premium Profesional). Si la función aún no existe en la
+ * base (migración 20261023100000 sin aplicar) o falla, nadie lo lleva: el directorio sigue igual.
+ */
+export async function fetchFeaturedProfessionals(ids: readonly string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const { data, error } = await sb.rpc("featured_professionals", { p_ids: ids.slice(0, 500) });
+  if (error || !Array.isArray(data)) return new Set();
+  return new Set((data as Array<{ user_id: string }>).map((r) => r.user_id));
+}
+
 /** Cuántos profesionales publicados cumplen los filtros (hasta el tope de 500 de la función). */
 export async function countPublicProfessionals(
   filters: PublicProfessionalFilters = {},

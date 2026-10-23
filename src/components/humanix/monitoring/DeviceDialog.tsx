@@ -1,5 +1,5 @@
 // Emparejar un reloj, celular, sensor o monitor con un paciente. El código se muestra UNA sola vez (en la base solo queda su huella); con él el
-// dispositivo envía sus lecturas sin sesión, con freno a quien falla muchas veces. Plan IPS Mejorado. Aquí también se ve la salud de cada
+// dispositivo envía sus lecturas sin sesión, con freno a quien falla muchas veces. Plan Institucional. Aquí también se ve la salud de cada
 // dispositivo (en línea, callado, sin conexión) y se revoca.
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -123,7 +123,7 @@ export function PairDeviceDialog({
           <div className="flex items-start gap-3 rounded-2xl border border-copper/30 bg-copper/5 p-4 text-sm">
             <Lock className="mt-0.5 h-4 w-4 shrink-0 text-copper" aria-hidden />
             <p>
-              Conectar relojes y dispositivos es parte del plan IPS Mejorado. Mientras tanto puedes
+              Conectar relojes y dispositivos es parte del plan Institucional. Mientras tanto puedes
               registrar los signos a mano.
             </p>
           </div>

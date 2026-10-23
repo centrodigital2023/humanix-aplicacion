@@ -42,7 +42,8 @@ export function TestimonialComposer() {
 
   const authorRole = user ? pickAuthorRole(user.roles) : null;
   const eligibleRole = !!authorRole && ELIGIBLE.includes(authorRole);
-  const isPaying = plan.has("pro_monthly");
+  // «Disponible para planes de pago»: cualquiera (Familiar, Pro, Premium o Institucional).
+  const isPaying = plan.plan !== "free";
   const canCompose = !!user && eligibleRole && isPaying;
 
   useEffect(() => {

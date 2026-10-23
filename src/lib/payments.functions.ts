@@ -12,9 +12,6 @@ import {
   type ConfirmResult,
 } from "./paymentReturn";
 import {
-  PLAN_PRICE_COP,
-  PLAN_TITLE,
-  PLAN_TITLE_ONCE,
   brickPaymentRequest,
   brickPaymentView,
   cardSubscriptionRequest,
@@ -23,12 +20,15 @@ import {
   isCardToken,
   isEmail,
   preferenceRequest,
+  quoteTitle,
   returnPathFor,
   subscriptionPlanRequest,
+  type BillingCycle,
   type BrickPaymentView,
   type MpPreapproval,
   type MpSubscriptionPlan,
   type PaidPlan,
+  type PlanQuote,
   type SubscriptionRow,
 } from "./planBilling";
 import { clientIp } from "./clientIp";
@@ -176,9 +176,12 @@ export type StartPaymentResult =
       ends_at?: string | null;
     };
 
+const cycleInput = z.enum(["monthly", "annual", "anual"]).nullish();
+
 const startInput = z.object({
   plan: z.string().max(40),
   returnTo: z.string().max(60).nullish(),
+  cycle: cycleInput,
 });
 
 /**
@@ -195,25 +198,13 @@ export const startPlanPayment = createServerFn({ method: "POST" })
     const rest = makeRest(cfg.supabaseUrl, cfg.serviceKey);
     const userId = context.userId;
 
-    const [subs, roles] = await Promise.all([
-      rest(
-        `mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end,mp_preapproval_id`,
-      ).then((r) => r.json() as Promise<SubscriptionRow[]>),
+    const [check, roles] = await Promise.all([
+      checkPlan(rest, userId, data.plan, data.cycle),
       rest(`user_roles?user_id=eq.${userId}&select=role`)
         .then((r) => r.json() as Promise<Array<{ role: string }>>)
         .catch(() => []),
     ]);
-    const decision = checkoutDecision(subs[0] ?? null, data.plan, Date.now());
-    if (!decision.ok) {
-      return decision.error === "unknown_plan"
-        ? { ok: false, error: "unknown_plan" }
-        : {
-            ok: false,
-            error: decision.error,
-            current_plan: decision.current,
-            ends_at: decision.endsAt,
-          };
-    }
+    if (!check.ok) return check;
 
     const rawOrigin = getRequestHeader("origin") ?? "";
     const origin = /^https:\/\/([a-z0-9-]+\.)?humanix\.lat$/i.test(rawOrigin)
@@ -230,7 +221,8 @@ export const startPlanPayment = createServerFn({ method: "POST" })
         body: JSON.stringify(
           preferenceRequest({
             userId,
-            plan: decision.plan,
+            plan: check.plan,
+            quote: check.quote,
             email,
             origin,
             returnPath: returnPathFor(
@@ -246,20 +238,7 @@ export const startPlanPayment = createServerFn({ method: "POST" })
     if (!url) return { ok: false, error: "mp_error" };
 
     // Marcar «pendiente» solo a quien no tiene un plan vigente: abrir un pago no puede quitar lo ya pagado.
-    if (decision.writePending) {
-      await rest("mp_subscriptions?on_conflict=user_id", {
-        method: "POST",
-        headers: { Prefer: "resolution=merge-duplicates" },
-        body: JSON.stringify({
-          user_id: userId,
-          plan: decision.plan,
-          amount: decision.amount,
-          currency: "COP",
-          status: "pending",
-          mp_payer_email: email,
-        }),
-      }).catch(() => undefined);
-    }
+    if (check.writePending) await markPending(rest, userId, check.quote, email);
     return { ok: true, url };
   });
 
@@ -270,6 +249,7 @@ type PlanCheck =
       ok: true;
       plan: PaidPlan;
       amount: number;
+      quote: PlanQuote;
       writePending: boolean;
       current: SubscriptionRow | null;
     }
@@ -280,13 +260,29 @@ type PlanCheck =
       ends_at?: string | null;
     };
 
-async function checkPlan(rest: RestFn, userId: string, plan: unknown): Promise<PlanCheck> {
-  const subs = (await (
-    await rest(
+/** Sedes activas de una institución (al menos 1: la principal). Las cuenta el servidor, nunca el navegador. */
+async function activeBranches(rest: RestFn, userId: string): Promise<number> {
+  const rows = await rest(
+    `institution_branches?institution_id=eq.${userId}&status=eq.active&select=id`,
+  )
+    .then((r) => r.json() as Promise<Array<{ id: string }>>)
+    .catch(() => [] as Array<{ id: string }>);
+  return Math.max(1, Array.isArray(rows) ? rows.length : 1);
+}
+
+async function checkPlan(
+  rest: RestFn,
+  userId: string,
+  plan: unknown,
+  cycle?: unknown,
+): Promise<PlanCheck> {
+  const [subs, branches] = await Promise.all([
+    rest(
       `mp_subscriptions?user_id=eq.${userId}&select=plan,status,current_period_end,mp_preapproval_id`,
-    )
-  ).json()) as SubscriptionRow[];
-  const decision = checkoutDecision(subs[0] ?? null, plan, Date.now());
+    ).then((r) => r.json() as Promise<SubscriptionRow[]>),
+    plan === "institution_monthly" ? activeBranches(rest, userId) : Promise.resolve(1),
+  ]);
+  const decision = checkoutDecision(subs[0] ?? null, plan, Date.now(), { cycle, branches });
   if (!decision.ok) {
     return decision.error === "unknown_plan"
       ? { ok: false, error: "unknown_plan" }
@@ -301,6 +297,7 @@ async function checkPlan(rest: RestFn, userId: string, plan: unknown): Promise<P
     ok: true,
     plan: decision.plan,
     amount: decision.amount,
+    quote: decision.quote,
     writePending: decision.writePending,
     current: subs[0] ?? null,
   };
@@ -315,14 +312,14 @@ function accountEmail(claims: Record<string, unknown>): string | null {
   return isEmail(claims.email) ? claims.email : null;
 }
 
-async function markPending(rest: RestFn, userId: string, plan: PaidPlan, email: string | null) {
+async function markPending(rest: RestFn, userId: string, quote: PlanQuote, email: string | null) {
   await rest("mp_subscriptions?on_conflict=user_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates" },
     body: JSON.stringify({
       user_id: userId,
-      plan,
-      amount: PLAN_PRICE_COP[plan],
+      plan: quote.plan,
+      amount: quote.amount,
       currency: "COP",
       status: "pending",
       mp_payer_email: email,
@@ -336,6 +333,11 @@ export type PaySetupResult =
       publicKey: string;
       plan: PaidPlan;
       amount: number;
+      /** Ciclo, sedes y meses que cubre el pago (plan Institucional: sedes activas y contrato anual). */
+      cycle: BillingCycle;
+      branches: number;
+      months: number;
+      monthlyCOP: number;
       title: string;
       titleRecurring: string;
       email: string | null;
@@ -349,7 +351,7 @@ export type PaySetupResult =
       ends_at?: string | null;
     };
 
-const setupInput = z.object({ plan: z.string().max(40) });
+const setupInput = z.object({ plan: z.string().max(40), cycle: cycleInput });
 
 /** Lo que /pagar necesita para dibujar los formularios: precio del servidor, Public Key y si el plan se puede pagar. */
 export const getPlanPaymentSetup = createServerFn({ method: "POST" })
@@ -365,6 +367,7 @@ export const getPlanPaymentSetup = createServerFn({ method: "POST" })
       makeRest(cfg.supabaseUrl, cfg.serviceKey),
       context.userId,
       data.plan,
+      data.cycle,
     );
     if (!check.ok) return check;
     return {
@@ -372,8 +375,12 @@ export const getPlanPaymentSetup = createServerFn({ method: "POST" })
       publicKey,
       plan: check.plan,
       amount: check.amount,
-      title: PLAN_TITLE_ONCE[check.plan],
-      titleRecurring: PLAN_TITLE[check.plan],
+      cycle: check.quote.cycle,
+      branches: check.quote.branches,
+      months: check.quote.months,
+      monthlyCOP: check.quote.monthlyCOP,
+      title: quoteTitle(check.quote, "once"),
+      titleRecurring: quoteTitle(check.quote, "recurring"),
       email: accountEmail(context.claims),
       renew: !check.writePending && check.current?.plan === check.plan,
     };
@@ -395,6 +402,7 @@ export type InAppPayResult =
 
 const payInput = z.object({
   plan: z.string().max(40),
+  cycle: cycleInput,
   returnTo: z.string().max(60).nullish(),
   attemptId: z.string().uuid(),
   form: z.record(z.string(), z.unknown()),
@@ -413,7 +421,7 @@ export const payPlanInApp = createServerFn({ method: "POST" })
     if (!cfg) return { ok: false, error: "not_configured" };
     const rest = makeRest(cfg.supabaseUrl, cfg.serviceKey);
     const userId = context.userId;
-    const check = await checkPlan(rest, userId, data.plan);
+    const check = await checkPlan(rest, userId, data.plan, data.cycle);
     if (!check.ok) return { ok: false, error: check.error };
 
     const roles = await rest(`user_roles?user_id=eq.${userId}&select=role`)
@@ -435,6 +443,7 @@ export const payPlanInApp = createServerFn({ method: "POST" })
       form: data.form,
       userId,
       plan: check.plan,
+      quote: check.quote,
       accountEmail: email,
       accountName: me?.full_name ?? null,
       accountPhone: me?.phone ?? null,
@@ -456,15 +465,14 @@ export const payPlanInApp = createServerFn({ method: "POST" })
       body: JSON.stringify(built.body),
     }).catch(() => null);
     const payment = (await r?.json().catch(() => null)) as
-      | (MpPayment & { message?: string })
-      | null;
+      (MpPayment & { message?: string }) | null;
     if (!r || !r.ok || !payment?.id) {
       console.error("payPlanInApp: mp", r?.status ?? "network", payment?.message ?? "");
       return { ok: false, error: "mp_error", message: payment?.message };
     }
 
     if (check.writePending && payment.status !== "approved") {
-      await markPending(rest, userId, check.plan, email);
+      await markPending(rest, userId, check.quote, email);
     }
     // Registrar y, si ya está aprobado, activar el plan (idempotente con el aviso del webhook).
     const outcome = await processMercadoPagoPayment(payment, {
@@ -484,16 +492,21 @@ export const payPlanInApp = createServerFn({ method: "POST" })
     return { ok: true, state, ...brickPaymentView(payment, built.method) };
   });
 
-async function subscriptionPlanId(token: string, plan: PaidPlan): Promise<string> {
+/**
+ * El plan de suscripción de Mercado Pago para lo que se cobra (uno por plan, y en el Institucional uno por sedes y
+ * ciclo). Se busca por nombre y precio y se crea la primera vez: al cambiar un precio nace uno nuevo y las suscripciones
+ * viejas siguen en el suyo.
+ */
+async function subscriptionPlanId(token: string, quote: PlanQuote): Promise<string> {
   const found = await mpFetch<{ results?: MpSubscriptionPlan[] }>(
     token,
-    `/preapproval_plan/search?status=active&limit=100&q=${encodeURIComponent(PLAN_TITLE[plan])}`,
+    `/preapproval_plan/search?status=active&limit=100&q=${encodeURIComponent(quoteTitle(quote, "recurring"))}`,
   ).catch(() => null);
-  const existing = findSubscriptionPlan(found?.results, plan);
+  const existing = findSubscriptionPlan(found?.results, quote);
   if (existing) return existing;
   const created = await mpFetch<{ id?: string }>(token, "/preapproval_plan", {
     method: "POST",
-    body: JSON.stringify(subscriptionPlanRequest(plan, "https://humanix.lat/pago/exito")),
+    body: JSON.stringify(subscriptionPlanRequest(quote, "https://humanix.lat/pago/exito")),
   });
   if (!created?.id) throw new Error("mp_plan_missing");
   return created.id;
@@ -515,6 +528,7 @@ export type InAppSubscribeResult =
 
 const subscribeInput = z.object({
   plan: z.string().max(40),
+  cycle: cycleInput,
   cardToken: z.string().max(128),
   email: z.string().max(254).nullish(),
 });
@@ -533,14 +547,14 @@ export const subscribePlanInApp = createServerFn({ method: "POST" })
     if (!isCardToken(data.cardToken)) return { ok: false, error: "invalid_form" };
     const rest = makeRest(cfg.supabaseUrl, cfg.serviceKey);
     const userId = context.userId;
-    const check = await checkPlan(rest, userId, data.plan);
+    const check = await checkPlan(rest, userId, data.plan, data.cycle);
     if (!check.ok) return { ok: false, error: check.error };
     const email = isEmail(data.email) ? data.email : accountEmail(context.claims);
     if (!email) return { ok: false, error: "invalid_form" };
 
     let planId: string;
     try {
-      planId = await subscriptionPlanId(cfg.token, check.plan);
+      planId = await subscriptionPlanId(cfg.token, check.quote);
     } catch (e) {
       console.error("subscribePlanInApp: plan", e instanceof Error ? e.message : e);
       return { ok: false, error: "mp_error" };
@@ -553,6 +567,7 @@ export const subscribePlanInApp = createServerFn({ method: "POST" })
           subscriptionPlanId: planId,
           userId,
           plan: check.plan,
+          quote: check.quote,
           email,
           cardTokenId: data.cardToken,
           backUrl: `${siteOrigin()}/pago/exito`,
@@ -568,6 +583,6 @@ export const subscribePlanInApp = createServerFn({ method: "POST" })
       console.error("subscribePlanInApp: mp", r?.status ?? "network", pre?.message ?? "");
       return { ok: false, error: "mp_error", message: pre?.message };
     }
-    if (check.writePending) await markPending(rest, userId, check.plan, email);
+    if (check.writePending) await markPending(rest, userId, check.quote, email);
     return { ok: true, preapprovalId: pre.id, status: String(pre.status ?? "") };
   });

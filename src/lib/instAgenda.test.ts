@@ -264,7 +264,7 @@ describe("alertas que explican su motivo", () => {
   });
 });
 
-describe("confiabilidad por profesional (IPS Mejorado)", () => {
+describe("confiabilidad por profesional (Institucional)", () => {
   const past = (daysAgo: number, over: Partial<InstBooking> = {}) =>
     bk({ at: NOW - daysAgo * DAY, status: "completed", ...over });
 
@@ -327,7 +327,7 @@ describe("confiabilidad por profesional (IPS Mejorado)", () => {
   });
 });
 
-describe("reporte de utilización de 30 días (IPS Mejorado)", () => {
+describe("reporte de utilización de 30 días (Institucional)", () => {
   const past = (daysAgo: number, over: Partial<InstBooking> = {}) =>
     bk({ at: NOW - daysAgo * DAY, status: "completed", ...over });
 

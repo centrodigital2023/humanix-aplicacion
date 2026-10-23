@@ -471,7 +471,7 @@ function FamilyDashboard() {
             <MercadoPagoSubscription
               userId={user.id}
               defaultPlan="essential_monthly"
-              plans={["essential_monthly"]}
+              plans={["essential_monthly", "family_premium_monthly"]}
             />
           )}
         </section>

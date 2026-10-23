@@ -87,9 +87,17 @@ describe("abrir un pago", () => {
     expect(checkoutDecision(null, "essential_monthly", NOW)).toEqual({
       ok: true,
       plan: "essential_monthly",
-      amount: 9000,
+      amount: 9900,
       writePending: true,
       kind: "new",
+      quote: {
+        plan: "essential_monthly",
+        cycle: "monthly",
+        branches: 1,
+        months: 1,
+        monthlyCOP: 9900,
+        amount: 9900,
+      },
     });
     expect(checkoutDecision(row("pro_monthly", "active", -3), "pro_monthly", NOW)).toMatchObject({
       writePending: true,
@@ -152,7 +160,7 @@ describe("pago aprobado: qué plan se activa", () => {
     const r = row("institution_monthly", "pending", null);
     const out = subscriptionAfterApproval({
       row: r,
-      payment: pay("essential_monthly", 9000),
+      payment: pay("essential_monthly", 9900),
       now: NOW,
     });
     expect(out).toMatchObject({
@@ -218,7 +226,7 @@ describe("pago aprobado: qué plan se activa", () => {
   it("nuevo: un mes desde hoy", () => {
     const out = subscriptionAfterApproval({
       row: null,
-      payment: pay("essential_monthly", 9000),
+      payment: pay("essential_monthly", 9900),
       now: NOW,
     });
     expect(out.ok && out.patch.current_period_end).toBe("2026-11-15T15:00:00.000Z");
@@ -241,16 +249,16 @@ describe("pago aprobado: qué plan se activa", () => {
   it("subir de plan convierte los días que quedaban al valor del plan nuevo", () => {
     const r = row("essential_monthly", "active", 20);
     const out = subscriptionAfterApproval({ row: r, payment: pay("pro_monthly", 29000), now: NOW });
-    // 20 × 9.000 / 29.000 = 6,2 → 6 días
-    expect(out).toMatchObject({ ok: true, kind: "upgrade", carriedDays: 6 });
-    expect(out.ok && out.patch.current_period_end).toBe("2026-11-21T15:00:00.000Z");
+    // 20 × 9.900 / 19.900 = 9,95 → 9 días
+    expect(out).toMatchObject({ ok: true, kind: "upgrade", carriedDays: 9 });
+    expect(out.ok && out.patch.current_period_end).toBe("2026-11-24T15:00:00.000Z");
   });
 
   it("si llega un pago de un plan menor con uno vigente, se respeta lo pagado sin arrastre", () => {
     const r = row("pro_monthly", "active", 20);
     const out = subscriptionAfterApproval({
       row: r,
-      payment: pay("essential_monthly", 9000),
+      payment: pay("essential_monthly", 9900),
       now: NOW,
     });
     expect(out).toMatchObject({
@@ -279,8 +287,9 @@ describe("días de arrastre", () => {
   it("nunca negativos y redondeados hacia abajo", () => {
     expect(carryOverDays("essential_monthly", "pro_monthly", -DAY)).toBe(0);
     expect(carryOverDays("essential_monthly", "pro_monthly", 0)).toBe(0);
-    expect(carryOverDays("pro_monthly", "institution_monthly", 30 * DAY)).toBe(2);
-    expect(carryOverDays("essential_monthly", "pro_monthly", 3 * DAY)).toBe(0);
+    // 30 × 19.900 / 299.000 = 1,99 → 1; 1 × 9.900 / 19.900 = 0,49 → 0
+    expect(carryOverDays("pro_monthly", "institution_monthly", 30 * DAY)).toBe(1);
+    expect(carryOverDays("essential_monthly", "pro_monthly", DAY)).toBe(0);
   });
 });
 

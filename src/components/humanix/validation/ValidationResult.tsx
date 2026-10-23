@@ -167,7 +167,7 @@ export function ValidationResult({
         </div>
       ) : result.benefit === "already_redeemed" ? (
         <div className="rounded-2xl bg-muted/60 p-5" role="status">
-          <p className="font-bold">Este contacto ya canjeó su mes del plan Esencial.</p>
+          <p className="font-bold">Este contacto ya canjeó su mes del plan Familiar.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Gracias por volver a ayudarnos: tus nuevas respuestas también cuentan.
           </p>

@@ -1,14 +1,14 @@
 /**
- * IpsBranchBilling — Plan IPS Mejorado: cobro por sucursales
+ * IpsBranchBilling — Plan Institucional: cobro por sedes
  * ----------------------------------------------------------------------------
  * Permite a una institución (red de IPS/clínicas) gestionar sus sedes y ver,
  * en vivo, cuánto le cuesta su plan según el número de sedes activas:
- *   COP 299.000 base (incluye 1 sede + 10 profesionales)
- *   + COP  50.000 por cada sede adicional
- *   + COP   5.000 por cada profesional adicional sobre el cupo incluido
+ *   COP 299.000/mes (incluye la sede principal)
+ *   + COP  50.000/mes por cada sede adicional
+ *   Contrato anual: 12 meses por el precio de 10
  *
- * Backend: institution_branches (migración 20260606150000_institution_branches.sql)
- * Cálculo: useInstitutionBilling() → src/lib/plans.ts (INSTITUTION_BILLING)
+ * Backend: institution_branches (migración 20261020120000_institution_branches.sql)
+ * Cálculo: useInstitutionBilling() → planQuote() en planBilling, el mismo que usa el servidor al cobrar en /pagar.
  */
 import { useEffect, useState } from "react";
 import {
@@ -39,7 +39,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useInstitutionBilling } from "@/hooks/use-institution-billing";
-import { COP } from "@/lib/plans";
+import { COP, INSTITUTION_BILLING } from "@/lib/plans";
+import { payPageHref } from "@/lib/checkout";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { friendlyError } from "@/lib/friendlyError";
 import { confirmAction } from "@/components/humanix/ConfirmHost";
@@ -100,7 +101,7 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
   }, [institutionId]);
 
   const activeBranches = branches.filter((b) => b.status === "active").length;
-  const billing = useInstitutionBilling(Math.max(1, activeBranches), 10, "monthly");
+  const billing = useInstitutionBilling(Math.max(1, activeBranches), "monthly");
 
   // Mantener el contador de sedes sincronizado con el real de la BD
   useEffect(() => {
@@ -174,16 +175,17 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
             </div>
             <div>
               <p className="text-sm font-bold font-display flex items-center gap-1.5">
-                Plan IPS Mejorado
+                Plan Institucional
                 <Badge
                   variant="outline"
                   className="text-[10px] gap-1 border-fuchsia-neural/30 text-fuchsia-neural"
                 >
-                  <Sparkles className="h-3 w-3" /> Cobro por sucursales
+                  <Sparkles className="h-3 w-3" /> Cobro por sedes
                 </Badge>
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {COP(299_000)} base (1 sede) + {COP(50_000)} por cada sede adicional
+                {COP(INSTITUTION_BILLING.basePriceCOP)}/mes (1 sede) +{" "}
+                {COP(INSTITUTION_BILLING.extraBranchCOP)} por cada sede adicional
               </p>
             </div>
           </div>
@@ -192,7 +194,8 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
               {billing.totalFormatted}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              /mes · {activeBranches} sede{activeBranches !== 1 ? "s" : ""} activa
+              {billing.cycle === "annual" ? `/${INSTITUTION_BILLING.annualMonths} meses` : "/mes"} ·{" "}
+              {activeBranches} sede{activeBranches !== 1 ? "s" : ""} activa
               {activeBranches !== 1 ? "s" : ""}
             </p>
           </div>
@@ -201,9 +204,32 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
 
       {/* Desglose de facturación */}
       <Card className="p-4 space-y-2.5">
-        <p className="text-xs font-semibold flex items-center gap-1.5">
-          <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" /> Desglose mensual
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold flex items-center gap-1.5">
+            <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" />
+            {billing.cycle === "annual" ? "Desglose del contrato anual" : "Desglose mensual"}
+          </p>
+          <div className="inline-flex rounded-full border border-border p-0.5 text-[11px]">
+            {(["monthly", "annual"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => billing.setCycle(c)}
+                aria-pressed={billing.cycle === c}
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 transition",
+                  billing.cycle === c
+                    ? "bg-fuchsia-neural text-white"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {c === "monthly"
+                  ? "Mensual"
+                  : `Anual · ${INSTITUTION_BILLING.annualMonths} por ${INSTITUTION_BILLING.annualPaidMonths}`}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="space-y-1.5">
           {billing.breakdown.lines.map((line, i) => (
             <div key={i} className="flex items-center justify-between text-xs">
@@ -223,9 +249,25 @@ export function IpsBranchBilling({ institutionId }: { institutionId: string }) {
             </span>
           </div>
         </div>
+        {billing.cycle === "annual" && (
+          <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+            Equivale a {billing.monthlyEquivalentFormatted}/mes: ahorras {billing.savingPercent} %.
+          </p>
+        )}
+        <Button asChild size="sm" variant="hero" className="w-full mt-1">
+          <a
+            href={payPageHref("institution_monthly", {
+              cycle: billing.cycle,
+              returnTo: "/dashboard/institucion",
+            })}
+          >
+            Pagar {billing.totalFormatted}
+          </a>
+        </Button>
         <p className="text-[10px] text-muted-foreground flex items-center gap-1 pt-1">
           <ShieldCheck className="h-3 w-3" />
-          Prueba gratuita de {billing.trialDays} días · {billing.graceDays} días de gracia ante mora
+          Se cobra por las sedes activas al momento del pago; las sedes nuevas entran en el
+          siguiente cobro.
         </p>
       </Card>
 

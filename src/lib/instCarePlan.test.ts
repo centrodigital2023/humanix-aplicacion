@@ -9,7 +9,7 @@ import {
   type PlanFeature,
 } from "./plans";
 
-/** Las funciones de pacientes y monitoreo clínico: todas son del plan IPS Mejorado (Free las prueba con topes chicos). */
+/** Las funciones de pacientes y monitoreo clínico: todas son del plan Institucional (Free las prueba con topes chicos). */
 const CARE_FEATURES = [
   "inst_care_scale",
   "inst_devices",
@@ -20,7 +20,10 @@ const CARE_FEATURES = [
 ] as const satisfies readonly PlanFeature[];
 
 const SQL = readFileSync(
-  require("node:path").resolve(process.cwd(), "supabase/migrations/20261014100000_institution_care_core.sql"),
+  require("node:path").resolve(
+    process.cwd(),
+    "supabase/migrations/20261014100000_institution_care_core.sql",
+  ),
   "utf8",
 );
 
@@ -38,7 +41,7 @@ function dbLimits(): {
 }
 
 describe("funciones de pacientes y monitoreo clínico en los planes", () => {
-  it("se desbloquean con IPS Mejorado y con ningún plan de abajo", () => {
+  it("se desbloquean con Institucional y con ningún plan de abajo", () => {
     for (const f of CARE_FEATURES) {
       expect(FEATURE_MIN_PLAN[f]).toBe("institution_monthly");
       expect(canUseFeature("institution_monthly", f)).toBe(true);
@@ -76,7 +79,7 @@ describe("funciones de pacientes y monitoreo clínico en los planes", () => {
     expect({ ...FREE_LIMITS }).toEqual(free);
   });
 
-  it("lo que anuncia la invitación a mejorar coincide con los topes de IPS Mejorado", () => {
+  it("lo que anuncia la invitación a mejorar coincide con los topes de Institucional", () => {
     const { premium } = dbLimits();
     const perks = PREMIUM_PERKS.join(" | ");
     expect(perks).toContain(`${thousandsEs(premium.patients as number)} pacientes`);
@@ -93,12 +96,12 @@ describe("funciones de pacientes y monitoreo clínico en los planes", () => {
       export: "inst_care_export",
     };
     for (const [flag, feature] of Object.entries(byFlag)) {
-      expect(premium[flag], `${flag} en IPS Mejorado`).toBe(true);
+      expect(premium[flag], `${flag} en Institucional`).toBe(true);
       expect(free[flag], `${flag} en Free`).toBe(false);
       expect(canUseFeature("institution_monthly", feature)).toBe(true);
       expect(canUseFeature("free", feature)).toBe(false);
     }
-    // Los dispositivos y la escala son números: Free no tiene dispositivos, IPS Mejorado sí.
+    // Los dispositivos y la escala son números: Free no tiene dispositivos, Institucional sí.
     expect(free.devices).toBe(0);
     expect(premium.devices as number).toBeGreaterThan(0);
     expect(premium.patients as number).toBeGreaterThan(free.patients as number);

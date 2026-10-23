@@ -1,4 +1,4 @@
-// Ingresos reales del profesional (plan Esencial): lo que le queda por mes, lo acordado, la proyección, su día más fuerte,
+// Ingresos reales del profesional (plan Pro): lo que le queda por mes, lo acordado, la proyección, su día más fuerte,
 // las familias que vuelven y su tarifa frente al rango de la ciudad (lógica en `lib/proEarnings`). Informa; no mueve
 // dinero: los pagos se hacen solo en la página web de Humanix, y no es asesoría tributaria.
 import { HeartHandshake, Sparkles, TrendingUp, Wallet } from "lucide-react";

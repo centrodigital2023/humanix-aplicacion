@@ -4,7 +4,7 @@
 // inyectando el cliente de base de datos (con la llave de servicio, que solo existe aquí).
 //
 // Quién puede: SOLO la cuenta de la institución (rol `institution` en `user_roles`). El personal no tiene roles, así que
-// nunca puede administrar al equipo. Para CREAR además se exige el plan IPS Mejorado (`plan_key_for` → institution_monthly,
+// nunca puede administrar al equipo. Para CREAR además se exige el plan Institucional (`plan_key_for` → institution_monthly,
 // que solo puede ejecutar el service role); editar, suspender, reiniciar y quitar siguen disponibles aunque el plan venza
 // (siempre se puede cortar un acceso).
 //
@@ -63,7 +63,7 @@ export type MemberResult =
 export const MESSAGES: Record<MemberErrorCode, string> = {
   invalid_input: "Revisa los datos del formulario.",
   not_institution: "Solo la cuenta de la institución puede administrar al personal.",
-  plan_required: "Agregar personal con acceso propio es parte del plan IPS Mejorado.",
+  plan_required: "Agregar personal con acceso propio es parte del plan Institucional.",
   limit_reached: `Una institución puede tener hasta ${MAX_STAFF_PER_INSTITUTION} personas en su equipo.`,
   username_taken: "Ese usuario ya está en uso. Elige otro.",
   weak_password: "Elige una contraseña más segura.",

@@ -8,7 +8,7 @@ import {
   type PlanFeature,
 } from "./plans";
 
-/** Las funciones premium del panel de instituciones (EPS, IPS, clínicas y hospitales): todas son del plan IPS Mejorado. */
+/** Las funciones premium del panel de instituciones (EPS, IPS, clínicas y hospitales): todas son del plan Institucional. */
 const INSTITUTION_PREMIUM: PlanFeature[] = [
   "inst_cost_intel",
   "inst_quality_compliance",
@@ -23,7 +23,13 @@ describe("funciones premium del panel de instituciones", () => {
     for (const f of INSTITUTION_PREMIUM) {
       expect(FEATURE_MIN_PLAN[f]).toBe("institution_monthly");
       expect(canUseFeature("institution_monthly", f)).toBe(true);
-      for (const lower of ["free", "essential_monthly", "pro_monthly"]) {
+      for (const lower of [
+        "free",
+        "essential_monthly",
+        "family_premium_monthly",
+        "pro_monthly",
+        "pro_premium_monthly",
+      ]) {
         expect(canUseFeature(lower, f), `${f} con ${lower}`).toBe(false);
       }
     }
@@ -58,19 +64,30 @@ describe("funciones premium del panel de instituciones", () => {
     expect(label).toMatch(/utilización/);
   });
 
-  it("no cambió ningún precio", () => {
+  it("precios de la tabla de oct 2026", () => {
     expect(PLAN_CATALOG.free.amountCOP).toBe(0);
-    expect(PLAN_CATALOG.essential_monthly.amountCOP).toBe(9000);
-    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(29000);
+    expect(PLAN_CATALOG.essential_monthly.amountCOP).toBe(9900);
+    expect(PLAN_CATALOG.family_premium_monthly.amountCOP).toBe(24900);
+    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(19900);
+    expect(PLAN_CATALOG.pro_premium_monthly.amountCOP).toBe(39900);
     expect(PLAN_CATALOG.institution_monthly.amountCOP).toBe(299_000);
   });
 
-  it("todas las funciones de cada plan se desbloquean exactamente con ese plan", () => {
+  it("cada función la abre el plan más barato que la incluye, y los planes caros incluyen a los baratos de su perfil", () => {
     for (const key of PLAN_ORDER) {
       for (const f of PLAN_CATALOG[key].features) {
-        expect(FEATURE_MIN_PLAN[f], `${f} en ${key}`).toBe(key);
+        expect(canUseFeature(key, f), `${f} en ${key}`).toBe(true);
         expect(tierOf(key)).toBeGreaterThanOrEqual(tierOf(FEATURE_MIN_PLAN[f]));
       }
+    }
+    for (const [cheap, rich] of [
+      ["essential_monthly", "family_premium_monthly"],
+      ["pro_monthly", "pro_premium_monthly"],
+      ["family_premium_monthly", "institution_monthly"],
+      ["pro_premium_monthly", "institution_monthly"],
+    ] as const) {
+      for (const f of PLAN_CATALOG[cheap].features)
+        expect(PLAN_CATALOG[rich].features).toContain(f);
     }
   });
 

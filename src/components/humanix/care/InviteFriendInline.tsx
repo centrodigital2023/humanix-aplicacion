@@ -39,7 +39,7 @@ export function InviteFriendInline({
           : "¿Un colega querría esto también?"}
       </p>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        Por cada persona que se suscriba con tu enlace ganas 1 mes del Plan Esencial gratis.
+        Por cada persona que se suscriba con tu enlace ganas 1 mes del Plan Familiar gratis.
       </p>
       <ShareTextButtons
         text={text}

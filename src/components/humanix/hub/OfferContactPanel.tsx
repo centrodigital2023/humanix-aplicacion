@@ -99,8 +99,8 @@ export function OfferContactPanel({
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <span>
             <strong className="text-foreground">Contacto y WhatsApp de {institutionName}</strong> se
-            desbloquean con el plan Esencial ({PLAN_CATALOG.essential_monthly.priceLabel}
-            {PLAN_CATALOG.essential_monthly.priceNote}), que además no cobra comisión.
+            desbloquean con el plan Pro ({PLAN_CATALOG.pro_monthly.priceLabel}
+            {PLAN_CATALOG.pro_monthly.priceNote}), que además no cobra comisión.
             {accepted ? " La dirección del servicio ya está en tu reserva." : ""}
           </span>
         </p>

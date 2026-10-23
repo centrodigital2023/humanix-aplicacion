@@ -1,5 +1,5 @@
 // Acciones sobre un paciente: dar de alta, cambiar la escala de saturación (solo por indicación médica), contarle a la familia cómo va y
-// exportar la historia (plan IPS Mejorado). Todo lo que cambia datos lo hace el servidor; aquí se piden los datos y se muestran los resultados.
+// exportar la historia (plan Institucional). Todo lo que cambia datos lo hace el servidor; aquí se piden los datos y se muestran los resultados.
 import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -496,7 +496,7 @@ export function ExportMenu({
         ) : (
           <div className="flex items-start gap-2 px-2 py-2 text-xs text-muted-foreground">
             <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span>Exportar la historia (FHIR y CSV) es parte del plan IPS Mejorado.</span>
+            <span>Exportar la historia (FHIR y CSV) es parte del plan Institucional.</span>
           </div>
         )}
       </DropdownMenuContent>

@@ -338,7 +338,7 @@ export function negotiationState(c: ApplicantCard): { state: NegotiationState; r
   }
   if (c.canNegotiate) return { state: "available", reason: "Puedes proponer otro valor por hora." };
   if (c.plan === "free")
-    return { state: "locked_plan", reason: "Negociar el valor está en el plan Esencial." };
+    return { state: "locked_plan", reason: "Negociar el valor está en el plan Familiar." };
   return { state: "closed", reason: "No se puede negociar ahora." };
 }
 
@@ -353,7 +353,7 @@ export function contactState(c: ApplicantCard): ContactState {
 }
 
 export const CONTACT_STATE_COPY: Record<ContactState, string> = {
-  plan: "El WhatsApp del profesional se desbloquea desde el plan Esencial.",
+  plan: "El WhatsApp del profesional se desbloquea desde el plan Familiar.",
   unlocked: "Contacto desbloqueado hoy.",
   no_phone:
     "Este profesional aún no registró un teléfono. Coordina desde la reserva cuando lo aceptes.",
@@ -497,13 +497,13 @@ export function applicantError(err: ServerError | null | undefined): ApplicantEr
     case "negotiate_plan":
       return {
         kind: "negotiate_plan",
-        message: "Negociar el valor está disponible desde el plan Esencial.",
+        message: "Negociar el valor está disponible desde el plan Familiar.",
         upsell: true,
       };
     case "plan_required":
       return {
         kind: "contact_plan",
-        message: "Ver el WhatsApp del profesional está disponible desde el plan Esencial.",
+        message: "Ver el WhatsApp del profesional está disponible desde el plan Familiar.",
         upsell: true,
       };
     case "quota":

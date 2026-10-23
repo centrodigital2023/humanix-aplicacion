@@ -1,4 +1,4 @@
-// «Canjear código» de Planes: activa 1 mes del plan Esencial con el código que se gana al llenar /validacion.
+// «Canjear código» de Planes: activa 1 mes del plan Familiar con el código que se gana al llenar /validacion.
 // La activación la hace el servidor (`redeemMarketBenefit` → `redeem_validation_benefit`); aquí solo se pide el código.
 import { useEffect, useState } from "react";
 import { Gift, Loader2 } from "lucide-react";
@@ -87,7 +87,7 @@ export function PromoCodeRedeemCard({
 
           {endText ? (
             <p role="status" className="mt-3 font-semibold text-ok">
-              ¡Listo! Tu plan Esencial está activo hasta el {endText}.
+              ¡Listo! Tu plan Familiar está activo hasta el {endText}.
             </p>
           ) : signedIn ? (
             <form

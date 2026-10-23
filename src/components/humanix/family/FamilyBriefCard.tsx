@@ -68,7 +68,7 @@ export function FamilyBriefCard({
     priority: item.priority,
     title: item.title,
     detail: item.detail,
-    badge: item.premium ? "Esencial" : undefined,
+    badge: item.premium ? "Familiar" : undefined,
     cta: <Action item={item} onAction={onAction} />,
   }));
 

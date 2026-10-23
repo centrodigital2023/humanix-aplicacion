@@ -212,8 +212,8 @@ export function BookNowButton({
                     {hours} h × {COP(hourlyRate)}/h
                   </div>
                 </div>
-                {/* Misma regla que el servidor (platform_commission_pct): la comisión se descuenta al profesional
-                    — 12 % si está en el plan Free, 0 % con un plan de pago —; quien contrata paga el total. */}
+                {/* Misma regla que el servidor (booking_commission_pct): la comisión se descuenta al profesional
+                    — 10 % si nadie tiene plan de pago, 0 % si él o quien contrata lo tiene —; quien contrata paga el total. */}
                 <div className="border-t border-biosensor/20 pt-2">
                   <PriceBreakdownCard
                     hourlyRate={hourlyRate}

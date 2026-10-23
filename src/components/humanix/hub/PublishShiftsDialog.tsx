@@ -461,9 +461,9 @@ export function PublishShiftsDialog({ open, onOpenChange, defaultCity, onPublish
             </div>
             <p className="text-xs text-muted-foreground">
               Rango permitido: {formatCOP(bounds.floor)} a {formatCOP(bounds.cap)} (
-              {MODALITY_LABEL[modality]}). Los profesionales con plan Esencial o superior pueden
-              proponer entre 0,8× y 2× de este valor; tú decides si aceptas. Los pagos se hacen
-              únicamente en la página web de Humanix.
+              {MODALITY_LABEL[modality]}). Los profesionales con plan Pro o superior pueden proponer
+              entre 0,8× y 2× de este valor; tú decides si aceptas. Los pagos se hacen únicamente en
+              la página web de Humanix.
             </p>
           </fieldset>
 

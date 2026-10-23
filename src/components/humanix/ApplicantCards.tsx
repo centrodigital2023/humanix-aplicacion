@@ -277,7 +277,7 @@ function Applicant({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p
               className="truncate font-semibold"
-              title={card.nameIsShort ? "Nombre completo con el plan Esencial" : undefined}
+              title={card.nameIsShort ? "Nombre completo con el plan Familiar" : undefined}
             >
               {card.displayName}
             </p>
@@ -362,7 +362,7 @@ function Applicant({
             {neg.state === "locked_plan" && (
               <Button size="sm" variant="outline" asChild title={neg.reason}>
                 <Link to="/planes">
-                  <Lock className="h-3.5 w-3.5" aria-hidden /> Negociar (plan Esencial)
+                  <Lock className="h-3.5 w-3.5" aria-hidden /> Negociar (plan Familiar)
                 </Link>
               </Button>
             )}
@@ -383,7 +383,7 @@ function Applicant({
         {contact === "plan" ? (
           <Button size="sm" variant="ghost" asChild title={CONTACT_STATE_COPY.plan}>
             <Link to="/planes">
-              <Lock className="h-3.5 w-3.5" aria-hidden /> Ver contacto (plan Esencial)
+              <Lock className="h-3.5 w-3.5" aria-hidden /> Ver contacto (plan Familiar)
             </Link>
           </Button>
         ) : contact === "ready" || (contact === "unlocked" && !revealed) ? (
@@ -598,7 +598,7 @@ export function ApplicantCards({
                 <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-copper" aria-hidden />
                 <span>
                   Con el plan gratuito ves nombres abreviados y puedes aceptar o rechazar. Con el{" "}
-                  <strong>plan Esencial</strong>: nombre completo, WhatsApp del profesional y
+                  <strong>plan Familiar</strong>: nombre completo, WhatsApp del profesional y
                   negociar el valor.
                 </span>
               </span>

@@ -18,42 +18,185 @@
 //     el vencimiento; subir de plan convierte los días que quedaban al valor del plan nuevo (no se pierden).
 //  5. Un pago rechazado o cancelado no le quita a nadie un plan que sigue vigente.
 //  6. Con una suscripción activa del mismo plan no se abre otra (sería un cobro doble).
+//  7. El plan Institucional se cobra por sedes activas (las cuenta el servidor) y puede pagarse anual: 12 meses por el
+//     precio de 10. Los demás planes son un mes al precio de la tabla (`PLAN_PRICE_COP`).
 
-export const PAID_PLANS = ["essential_monthly", "pro_monthly", "institution_monthly"] as const;
+export const PAID_PLANS = [
+  "essential_monthly",
+  "pro_monthly",
+  "family_premium_monthly",
+  "pro_premium_monthly",
+  "institution_monthly",
+] as const;
 export type PaidPlan = (typeof PAID_PLANS)[number];
 
-/** Precio mensual en COP. Debe coincidir con `PLAN_CATALOG` de `src/lib/plans.ts` (hay una prueba que lo exige). */
+/**
+ * Precio mensual en COP (tabla de precios de oct 2026). Debe coincidir con `PLAN_CATALOG` de `src/lib/plans.ts` (hay una
+ * prueba que lo exige). La clave `essential_monthly` es el plan Familiar: se conserva la clave para no tocar las filas
+ * que ya existen en `mp_subscriptions` ni las funciones SQL que la usan.
+ *  - Familia: Familiar 9.900 · Premium Familiar 24.900
+ *  - Profesional: Pro 19.900 · Premium 39.900
+ *  - Institución: desde 299.000 (1 sede) + 50.000 por sede adicional; anual = 12 meses por el precio de 10
+ */
 export const PLAN_PRICE_COP: Record<PaidPlan, number> = {
-  essential_monthly: 9000,
-  pro_monthly: 29000,
+  essential_monthly: 9900,
+  pro_monthly: 19900,
+  family_premium_monthly: 24900,
+  pro_premium_monthly: 39900,
   institution_monthly: 299000,
 };
 
+/**
+ * Precios con los que se vendieron estos planes antes de la tabla de oct 2026. Las suscripciones de Mercado Pago creadas
+ * entonces siguen cobrando ese valor: sus cobros se aceptan y el plan se renueva igual (nadie pierde su plan por el
+ * cambio de precios).
+ */
+export const LEGACY_PRICE_COP: Partial<Record<PaidPlan, number>> = {
+  essential_monthly: 9000,
+  pro_monthly: 29000,
+};
+
+/** Orden por precio: decide qué es subir y qué es bajar de plan. */
 export const PLAN_TIER: Record<string, number> = {
   free: 0,
   essential_monthly: 1,
   pro_monthly: 2,
-  institution_monthly: 3,
+  family_premium_monthly: 3,
+  pro_premium_monthly: 4,
+  institution_monthly: 5,
 };
 
 export const PLAN_LABEL: Record<PaidPlan, string> = {
-  essential_monthly: "Esencial",
-  pro_monthly: "Pro Profesional",
-  institution_monthly: "IPS Mejorado",
+  essential_monthly: "Familiar",
+  pro_monthly: "Pro",
+  family_premium_monthly: "Premium Familiar",
+  pro_premium_monthly: "Premium Profesional",
+  institution_monthly: "Institucional",
 };
 
 export const PLAN_TITLE: Record<PaidPlan, string> = {
-  essential_monthly: "Humanix Esencial · mensual",
+  essential_monthly: "Humanix Familiar · mensual",
   pro_monthly: "Humanix Pro · mensual",
-  institution_monthly: "Humanix IPS Mejorado · mensual",
+  family_premium_monthly: "Humanix Premium Familiar · mensual",
+  pro_premium_monthly: "Humanix Premium Profesional · mensual",
+  institution_monthly: "Humanix Institucional · mensual",
 };
 
 /** Título del pago único de un mes (Checkout Pro). */
 export const PLAN_TITLE_ONCE: Record<PaidPlan, string> = {
-  essential_monthly: "Humanix Esencial · 1 mes",
+  essential_monthly: "Humanix Familiar · 1 mes",
   pro_monthly: "Humanix Pro · 1 mes",
-  institution_monthly: "Humanix IPS Mejorado · 1 mes",
+  family_premium_monthly: "Humanix Premium Familiar · 1 mes",
+  pro_premium_monthly: "Humanix Premium Profesional · 1 mes",
+  institution_monthly: "Humanix Institucional · 1 mes",
 };
+
+// ─── Plan Institucional: sedes y ciclo anual ──────────────────────────────────
+
+export type BillingCycle = "monthly" | "annual";
+
+export const INSTITUTION_PRICING = {
+  /** Precio mensual con la sede principal incluida (COP). */
+  baseCOP: 299_000,
+  /** Cada sede adicional, por mes (COP). */
+  extraBranchCOP: 50_000,
+  includedBranches: 1,
+  /** Tope de sedes (el mismo de `guard_institution_branches` en SQL). */
+  maxBranches: 200,
+  /** Contrato anual: 12 meses de servicio por el precio de 10. */
+  annualMonths: 12,
+  annualPaidMonths: 10,
+} as const;
+
+/** Ciclo pedido por la web («anual»/«annual»); cualquier otra cosa es mensual. */
+export function billingCycleOf(v: unknown): BillingCycle {
+  return v === "annual" || v === "anual" ? "annual" : "monthly";
+}
+
+/** Lo que se cobra por un plan: lo calcula siempre el servidor (nunca un monto que venga del navegador). */
+export interface PlanQuote {
+  plan: PaidPlan;
+  cycle: BillingCycle;
+  /** Sedes activas cobradas (1 en los planes que no son institucionales). */
+  branches: number;
+  /** Meses de servicio que da el pago: 1, o 12 en el contrato anual. */
+  months: number;
+  /** Valor mensual antes del descuento anual. */
+  monthlyCOP: number;
+  /** Total a cobrar en este pago. */
+  amount: number;
+}
+
+function branchCount(v: unknown): number {
+  const n = Math.trunc(Number(v));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, INSTITUTION_PRICING.maxBranches);
+}
+
+/**
+ * Cuánto cuesta un pago de `plan`. Solo el plan Institucional tiene sedes y ciclo anual; los demás son siempre un mes al
+ * precio de la tabla.
+ */
+export function planQuote(
+  plan: PaidPlan,
+  opts: { cycle?: unknown; branches?: unknown } = {},
+): PlanQuote {
+  if (plan !== "institution_monthly") {
+    const price = PLAN_PRICE_COP[plan];
+    return { plan, cycle: "monthly", branches: 1, months: 1, monthlyCOP: price, amount: price };
+  }
+  const p = INSTITUTION_PRICING;
+  const branches = branchCount(opts.branches);
+  const cycle = billingCycleOf(opts.cycle);
+  const monthlyCOP = p.baseCOP + Math.max(0, branches - p.includedBranches) * p.extraBranchCOP;
+  return cycle === "annual"
+    ? {
+        plan,
+        cycle,
+        branches,
+        months: p.annualMonths,
+        monthlyCOP,
+        amount: monthlyCOP * p.annualPaidMonths,
+      }
+    : { plan, cycle, branches, months: 1, monthlyCOP, amount: monthlyCOP };
+}
+
+/**
+ * Nombre del cobro en Mercado Pago. Con una sola sede y ciclo mensual es el mismo de siempre (`PLAN_TITLE`/
+ * `PLAN_TITLE_ONCE`); las sedes y el ciclo anual van en el nombre para que cada combinación tenga su propio plan de
+ * suscripción en Mercado Pago.
+ */
+export function quoteTitle(q: PlanQuote, mode: CheckoutMode): string {
+  if (q.plan !== "institution_monthly" || (q.branches === 1 && q.cycle === "monthly")) {
+    return mode === "recurring" ? PLAN_TITLE[q.plan] : PLAN_TITLE_ONCE[q.plan];
+  }
+  const sedes = q.branches > 1 ? ` · ${q.branches} sedes` : "";
+  const period =
+    mode === "recurring"
+      ? q.cycle === "annual"
+        ? " · anual"
+        : " · mensual"
+      : q.cycle === "annual"
+        ? ` · ${INSTITUTION_PRICING.annualMonths} meses (pagas ${INSTITUTION_PRICING.annualPaidMonths})`
+        : " · 1 mes";
+  return `Humanix Institucional${sedes}${period}`;
+}
+
+/** Meses que da un pago según la metadata que fijó el servidor: 12 (anual) o 1. */
+export function monthsOf(v: unknown): number {
+  return Number(v) === INSTITUTION_PRICING.annualMonths ? INSTITUTION_PRICING.annualMonths : 1;
+}
+
+/**
+ * Lo mínimo que puede valer un pago de `plan` por `months` meses: el precio más bajo con el que se ha vendido ese plan
+ * (el actual o el de antes) por los meses que se pagan (en el anual, 10).
+ */
+export function minAcceptedPrice(plan: PaidPlan, months: number): number {
+  const monthly = Math.min(PLAN_PRICE_COP[plan], LEGACY_PRICE_COP[plan] ?? Infinity);
+  return months === INSTITUTION_PRICING.annualMonths
+    ? monthly * INSTITUTION_PRICING.annualPaidMonths
+    : monthly;
+}
 
 export type CheckoutMode = "once" | "recurring";
 
@@ -114,6 +257,13 @@ export function addOneMonth(t: number): number {
   return out.getTime();
 }
 
+/** Suma `months` meses calendario (UTC) sin saltar de mes. */
+export function addMonths(t: number, months: number): number {
+  let out = t;
+  for (let i = 0; i < months; i++) out = addOneMonth(out);
+  return out;
+}
+
 // ─── Abrir un pago ─────────────────────────────────────────────────────────────
 
 export type CheckoutDecision =
@@ -121,6 +271,8 @@ export type CheckoutDecision =
       ok: true;
       plan: PaidPlan;
       amount: number;
+      /** Lo que se cobra (sedes, ciclo y meses en el plan Institucional). */
+      quote: PlanQuote;
       /** Escribir la fila «pendiente»: solo si no hay un plan vigente que se pueda pisar. */
       writePending: boolean;
       kind: "new" | "renew" | "upgrade";
@@ -129,17 +281,22 @@ export type CheckoutDecision =
   | { ok: false; error: "already_subscribed"; current: PaidPlan; endsAt: string | null }
   | { ok: false; error: "downgrade_while_active"; current: PaidPlan; endsAt: string | null };
 
-/** Qué hacer cuando alguien pide pagar `requested`. Sin plan pedido se mantiene el valor de siempre (Pro). */
+/**
+ * Qué hacer cuando alguien pide pagar `requested`. Sin plan pedido se mantiene el valor de siempre (Pro). `opts` solo
+ * cuenta en el plan Institucional: ciclo pedido y sedes activas (las cuenta el servidor, nunca el navegador).
+ */
 export function checkoutDecision(
   row: SubscriptionRow | null | undefined,
   requested: unknown,
   now: number,
+  opts: { cycle?: unknown; branches?: unknown } = {},
 ): CheckoutDecision {
   const plan = requested === undefined || requested === null ? "pro_monthly" : requested;
   if (!isPaidPlan(plan)) return { ok: false, error: "unknown_plan" };
   const current = activePaidPlan(row, now);
-  const amount = PLAN_PRICE_COP[plan];
-  if (!current) return { ok: true, plan, amount, writePending: true, kind: "new" };
+  const quote = planQuote(plan, opts);
+  const amount = quote.amount;
+  if (!current) return { ok: true, plan, amount, quote, writePending: true, kind: "new" };
   if (tierOfPlan(plan) < tierOfPlan(current)) {
     return {
       ok: false,
@@ -161,6 +318,7 @@ export function checkoutDecision(
     ok: true,
     plan,
     amount,
+    quote,
     writePending: false,
     kind: plan === current ? "renew" : "upgrade",
   };
@@ -170,7 +328,7 @@ export function checkoutDecision(
 
 /**
  * Días que quedaban del plan anterior, convertidos al valor del plan nuevo (redondeo hacia abajo). Subir de
- * Esencial a Pro con 20 días pendientes suma 6 días de Pro: 20 × 9.000 / 29.000.
+ * Familiar a Premium Familiar con 20 días pendientes suma 7 días de Premium: 20 × 9.900 / 24.900.
  */
 export function carryOverDays(from: PaidPlan, to: PaidPlan, remainingMs: number): number {
   if (remainingMs <= 0) return 0;
@@ -216,9 +374,9 @@ export type ApprovalResult =
 
 /**
  * Cómo queda la suscripción tras un pago aprobado.
- *  - Nuevo (sin plan vigente): un mes desde hoy.
- *  - Renovación (mismo plan vigente): un mes desde el vencimiento actual (no se pierden días).
- *  - Subida de plan: un mes desde hoy + los días que quedaban, convertidos al valor del plan nuevo.
+ *  - Nuevo (sin plan vigente): un mes (o 12 en el contrato anual) desde hoy.
+ *  - Renovación (mismo plan vigente): los meses pagados desde el vencimiento actual (no se pierden días).
+ *  - Subida de plan: los meses pagados desde hoy + los días que quedaban, convertidos al valor del plan nuevo.
  *  - Cambio a un plan menor con uno vigente (el checkout ya no lo permite; si llega, se respeta lo pagado): un mes
  *    desde hoy, sin días de arrastre.
  */
@@ -233,8 +391,15 @@ export function subscriptionAfterApproval(input: {
   if (String(payment.currency_id ?? "COP") !== "COP")
     return { ok: false, error: "currency_mismatch" };
   const amount = Math.round(Number(payment.transaction_amount ?? 0));
+  const months = monthsOf(payment.metadata?.months);
+  // El precio lo fijó nuestro servidor al crear el cobro (sedes, ciclo, o el precio con el que se vendió una
+  // suscripción antigua); nunca puede quedar por debajo de lo mínimo que se ha cobrado por ese plan.
   const metaPrice = Number(payment.metadata?.price_cop);
-  const expected = Number.isFinite(metaPrice) && metaPrice > 0 ? metaPrice : PLAN_PRICE_COP[plan];
+  const floor = minAcceptedPrice(plan, months);
+  const expected =
+    Number.isFinite(metaPrice) && metaPrice >= floor
+      ? metaPrice
+      : planQuote(plan, { cycle: months === 1 ? "monthly" : "annual" }).amount;
   if (!(amount > 0) || amount < expected) return { ok: false, error: "amount_mismatch" };
 
   const current = activePaidPlan(row, now);
@@ -251,7 +416,7 @@ export function subscriptionAfterApproval(input: {
   } else if (current) {
     kind = "change";
   }
-  const periodEnd = addOneMonth(start) + carriedDays * DAY_MS;
+  const periodEnd = addMonths(start, months) + carriedDays * DAY_MS;
   const iso = new Date(periodEnd).toISOString();
   const preapprovalId = payment.metadata?.preapproval_id;
   return {
@@ -283,7 +448,7 @@ export function statusAfterFailure(
 
 // ─── Recompensa por referido ───────────────────────────────────────────────────
 
-/** Lo que gana quien refiere cuando la persona referida paga su primer plan: un mes del plan Esencial. */
+/** Lo que gana quien refiere cuando la persona referida paga su primer plan: un mes del plan Familiar. */
 export const REFERRAL_REWARD_PLAN: PaidPlan = "essential_monthly";
 
 export interface ReferralRewardPatch {
@@ -297,11 +462,11 @@ export interface ReferralRewardPatch {
 }
 
 /**
- * Cómo queda el plan de quien refiere tras ganar la recompensa (un mes de Esencial).
- *  - Sin plan vigente: Esencial por un mes desde hoy.
- *  - Con Esencial vigente: un mes más desde el vencimiento.
- *  - Con un plan mayor vigente: se conserva ese plan y se suman los días que vale un mes de Esencial al precio de
- *    ese plan (misma conversión que al subir de plan, con un mes de 30 días). Un mes de Esencial en Pro son 9 días.
+ * Cómo queda el plan de quien refiere tras ganar la recompensa (un mes del plan Familiar).
+ *  - Sin plan vigente: Familiar por un mes desde hoy.
+ *  - Con Familiar vigente: un mes más desde el vencimiento.
+ *  - Con un plan mayor vigente: se conserva ese plan y se suman los días que vale un mes de Familiar al precio de
+ *    ese plan (misma conversión que al subir de plan, con un mes de 30 días). Un mes de Familiar en Pro son 14 días.
  */
 export function subscriptionAfterReferralReward(
   row: SubscriptionRow | null | undefined,
@@ -435,16 +600,27 @@ export const PREAPPROVAL_TOPIC = "subscription_preapproval";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** `external_reference` de la suscripción: quién y qué plan, fijados por nuestro servidor. */
-export function preapprovalReference(userId: string, plan: PaidPlan): string {
-  return `sub:${userId}:${plan}`;
+/**
+ * `external_reference` de la suscripción: quién, qué plan y, si es anual, el ciclo; lo fija nuestro servidor.
+ * `sub:<usuario>:<plan>` (mensual, como siempre) o `sub:<usuario>:<plan>:annual`.
+ */
+export function preapprovalReference(
+  userId: string,
+  plan: PaidPlan,
+  cycle: BillingCycle = "monthly",
+): string {
+  return cycle === "annual" ? `sub:${userId}:${plan}:annual` : `sub:${userId}:${plan}`;
 }
 
-export function parsePreapprovalReference(ref: unknown): { userId: string; plan: PaidPlan } | null {
+export function parsePreapprovalReference(
+  ref: unknown,
+): { userId: string; plan: PaidPlan; cycle: BillingCycle } | null {
   const parts = typeof ref === "string" ? ref.split(":") : [];
-  if (parts.length !== 3 || parts[0] !== "sub") return null;
+  if (parts[0] !== "sub" || (parts.length !== 3 && !(parts.length === 4 && parts[3] === "annual")))
+    return null;
   const [, userId, plan] = parts;
-  return UUID.test(userId) && isPaidPlan(plan) ? { userId, plan } : null;
+  if (!UUID.test(userId) || !isPaidPlan(plan)) return null;
+  return { userId, plan, cycle: parts.length === 4 ? "annual" : "monthly" };
 }
 
 /**
@@ -457,15 +633,17 @@ export function preapprovalRequest(input: {
   plan: PaidPlan;
   email: string;
   backUrl: string;
+  quote?: PlanQuote;
 }) {
+  const q = input.quote ?? planQuote(input.plan);
   return {
-    reason: PLAN_TITLE[input.plan],
-    external_reference: preapprovalReference(input.userId, input.plan),
+    reason: quoteTitle(q, "recurring"),
+    external_reference: preapprovalReference(input.userId, input.plan, q.cycle),
     payer_email: input.email,
     auto_recurring: {
-      frequency: 1,
+      frequency: q.months,
       frequency_type: "months",
-      transaction_amount: PLAN_PRICE_COP[input.plan],
+      transaction_amount: q.amount,
       currency_id: "COP",
     },
     back_url: input.backUrl,
@@ -484,15 +662,17 @@ export function preferenceRequest(input: {
   origin: string;
   returnPath: string;
   notificationUrl: string;
+  quote?: PlanQuote;
 }) {
   const { plan, origin } = input;
-  const amount = PLAN_PRICE_COP[plan];
+  const q = input.quote ?? planQuote(plan);
+  const amount = q.amount;
   const from = encodeURIComponent(input.returnPath);
   return {
     items: [
       {
         id: plan,
-        title: PLAN_TITLE_ONCE[plan],
+        title: quoteTitle(q, "once"),
         quantity: 1,
         unit_price: amount,
         currency_id: "COP",
@@ -511,8 +691,20 @@ export function preferenceRequest(input: {
     external_reference: input.userId,
     notification_url: input.notificationUrl,
     statement_descriptor: "HUMANIX",
-    // Lo que el webhook usa para activar: el plan y el precio que fijó este servidor.
-    metadata: { user_id: input.userId, plan, price_cop: amount },
+    // Lo que el webhook usa para activar: el plan, el precio y los meses que fijó este servidor.
+    metadata: quoteMetadata(input.userId, q),
+  };
+}
+
+/** Metadata de un cobro: lo único que el webhook usa para activar el plan (lo fija este servidor). */
+export function quoteMetadata(userId: string, q: PlanQuote) {
+  return {
+    user_id: userId,
+    plan: q.plan,
+    price_cop: q.amount,
+    months: q.months,
+    cycle: q.cycle,
+    branches: q.branches,
   };
 }
 
@@ -537,13 +729,23 @@ export function withSubscriptionMetadata<P extends PaidPayment>(
   const id = typeof preapproval.id === "string" ? preapproval.id : "";
   if (!ref || !id) return null;
   if (String(preapproval.auto_recurring?.currency_id ?? "COP") !== "COP") return null;
+  const months = ref.cycle === "annual" ? INSTITUTION_PRICING.annualMonths : 1;
+  // El valor de la suscripción lo fijó nuestro servidor al crearla (sedes, ciclo o el precio de ese momento); si no
+  // llega o es menor que lo mínimo que se ha cobrado por ese plan, se exige el precio de hoy.
+  const recurring = Math.round(Number(preapproval.auto_recurring?.transaction_amount));
+  const price =
+    Number.isFinite(recurring) && recurring >= minAcceptedPrice(ref.plan, months)
+      ? recurring
+      : planQuote(ref.plan, { cycle: ref.cycle }).amount;
   return {
     ...payment,
     metadata: {
       ...(payment.metadata ?? {}),
       user_id: ref.userId,
       plan: ref.plan,
-      price_cop: PLAN_PRICE_COP[ref.plan],
+      price_cop: price,
+      months,
+      cycle: ref.cycle,
       preapproval_id: id,
     },
   };
@@ -557,9 +759,7 @@ export function preapprovalIdOfPayment(payment: {
   const fromMeta = payment.metadata?.preapproval_id;
   if (typeof fromMeta === "string" && fromMeta) return fromMeta;
   const poi = payment.point_of_interaction as
-    | { transaction_data?: { subscription_id?: unknown } | null }
-    | null
-    | undefined;
+    { transaction_data?: { subscription_id?: unknown } | null } | null | undefined;
   const fromPoi = poi?.transaction_data?.subscription_id;
   return typeof fromPoi === "string" && fromPoi ? fromPoi : null;
 }
@@ -594,14 +794,18 @@ export function subscriptionAfterPreapprovalStatus(
 // solo manda lo que el formulario recogió (token de la tarjeta, banco de PSE, documento); el servidor arma el cobro
 // con el plan, el precio y la referencia que fija él mismo. Nunca se usa un monto que venga del navegador.
 
-/** Cuerpo de `POST /preapproval_plan`: el plan de suscripción de Mercado Pago para un plan de Humanix. */
-export function subscriptionPlanRequest(plan: PaidPlan, backUrl: string) {
+/**
+ * Cuerpo de `POST /preapproval_plan`: el plan de suscripción de Mercado Pago para un plan de Humanix (y, en el
+ * Institucional, para sus sedes y su ciclo: el anual cobra cada 12 meses).
+ */
+export function subscriptionPlanRequest(planOrQuote: PaidPlan | PlanQuote, backUrl: string) {
+  const q = typeof planOrQuote === "string" ? planQuote(planOrQuote) : planOrQuote;
   return {
-    reason: PLAN_TITLE[plan],
+    reason: quoteTitle(q, "recurring"),
     auto_recurring: {
-      frequency: 1,
+      frequency: q.months,
       frequency_type: "months",
-      transaction_amount: PLAN_PRICE_COP[plan],
+      transaction_amount: q.amount,
       currency_id: "COP",
     },
     back_url: backUrl,
@@ -623,16 +827,17 @@ export interface MpSubscriptionPlan {
  */
 export function findSubscriptionPlan(
   results: readonly MpSubscriptionPlan[] | null | undefined,
-  plan: PaidPlan,
+  planOrQuote: PaidPlan | PlanQuote,
 ): string | null {
+  const q = typeof planOrQuote === "string" ? planQuote(planOrQuote) : planOrQuote;
   const match = (results ?? [])
     .filter(
       (p) =>
         typeof p.id === "string" &&
         p.id &&
         p.status === "active" &&
-        p.reason === PLAN_TITLE[plan] &&
-        Number(p.auto_recurring?.transaction_amount) === PLAN_PRICE_COP[plan] &&
+        p.reason === quoteTitle(q, "recurring") &&
+        Number(p.auto_recurring?.transaction_amount) === q.amount &&
         String(p.auto_recurring?.currency_id ?? "") === "COP",
     )
     .sort((a, b) => String(a.date_created ?? "").localeCompare(String(b.date_created ?? "")));
@@ -650,11 +855,13 @@ export function cardSubscriptionRequest(input: {
   email: string;
   cardTokenId: string;
   backUrl: string;
+  quote?: PlanQuote;
 }) {
+  const q = input.quote ?? planQuote(input.plan);
   return {
     preapproval_plan_id: input.subscriptionPlanId,
-    reason: PLAN_TITLE[input.plan],
-    external_reference: preapprovalReference(input.userId, input.plan),
+    reason: quoteTitle(q, "recurring"),
+    external_reference: preapprovalReference(input.userId, input.plan, q.cycle),
     payer_email: input.email,
     card_token_id: input.cardTokenId,
     back_url: input.backUrl,
@@ -709,8 +916,10 @@ export function brickPaymentRequest(input: {
   ip: string;
   callbackUrl: string;
   notificationUrl: string;
+  quote?: PlanQuote;
 }): BrickPaymentBuild {
   const { form, plan, userId } = input;
+  const q = input.quote ?? planQuote(plan);
   const method = brickMethodOf(form);
   if (!method) return { ok: false, error: "invalid_form" };
   const payerIn = (form.payer ?? {}) as Record<string, unknown>;
@@ -736,17 +945,16 @@ export function brickPaymentRequest(input: {
   if (firstName) payer.first_name = firstName;
   if (lastName) payer.last_name = lastName;
 
-  const amount = PLAN_PRICE_COP[plan];
   const body: Record<string, unknown> = {
-    transaction_amount: amount,
-    description: PLAN_TITLE_ONCE[plan],
+    transaction_amount: q.amount,
+    description: quoteTitle(q, "once"),
     payment_method_id: str(form.payment_method_id, 40),
     payer,
     external_reference: userId,
     notification_url: input.notificationUrl,
     statement_descriptor: "HUMANIX",
     binary_mode: false,
-    metadata: { user_id: userId, plan, price_cop: amount },
+    metadata: quoteMetadata(userId, q),
   };
 
   if (method === "card") {

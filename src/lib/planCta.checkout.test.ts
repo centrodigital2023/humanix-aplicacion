@@ -52,7 +52,7 @@ describe("tarjetas de plan → pagar dentro de Humanix", () => {
     ).toEqual({ kind: "navigate", href: "/pagar?plan=pro_monthly" });
   });
 
-  it("IPS Mejorado también se paga en /pagar", () => {
+  it("Institucional también se paga en /pagar", () => {
     expect(
       runChoose("institution_monthly", {
         userId: "u1",

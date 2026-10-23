@@ -19,15 +19,15 @@ describe("computeCta — logged out", () => {
     expect(r.action.kind).toBe("free");
   });
 
-  it("Essential → 'Empezar con Esencial', login redirect carries plan", () => {
+  it("Familiar → 'Empezar con Familiar', login redirect carries plan", () => {
     const r = computeCta("essential_monthly", LOGGED_OUT);
-    expect(r.label).toBe("Empezar con Esencial");
+    expect(r.label).toBe("Empezar con Familiar");
     expect(r.action).toEqual({ kind: "login", redirectTo: "/planes?plan=essential_monthly" });
   });
 
-  it("IPS Mejorado se paga como los demás planes: login y vuelve al plan", () => {
+  it("Institucional se paga como los demás planes: login y vuelve al plan", () => {
     const r = computeCta("institution_monthly", LOGGED_OUT);
-    expect(r.label).toBe("Empezar con IPS Mejorado");
+    expect(r.label).toBe("Empezar con Institucional");
     expect(r.action).toEqual({ kind: "login", redirectTo: "/planes?plan=institution_monthly" });
   });
 });
@@ -41,15 +41,15 @@ describe("computeCta — on Free (upgrades)", () => {
     });
   });
 
-  it("Essential → 'Mejorar a Esencial' triggers checkout", () => {
+  it("Familiar → 'Mejorar a Familiar' triggers checkout", () => {
     const r = computeCta("essential_monthly", ON_FREE);
-    expect(r.label).toBe("Mejorar a Esencial");
+    expect(r.label).toBe("Mejorar a Familiar");
     expect(r.action.kind).toBe("checkout");
     expect(r.disabled).toBe(false);
   });
 
-  it("Pro → 'Mejorar a Pro Profesional'", () => {
-    expect(computeCta("pro_monthly", ON_FREE).label).toBe("Mejorar a Pro Profesional");
+  it("Pro → 'Mejorar a Pro'", () => {
+    expect(computeCta("pro_monthly", ON_FREE).label).toBe("Mejorar a Pro");
   });
 });
 
@@ -82,8 +82,8 @@ describe("computeCta — paid plan (downgrade / sidegrade / cancel pending)", ()
     expect(computeCta("pro_monthly", { ...ON_PRO, renewSoon: false }).action.kind).toBe("current");
   });
 
-  it("Essential user → Pro card says 'Mejorar a Pro Profesional'", () => {
-    expect(computeCta("pro_monthly", ON_ESSENTIAL).label).toBe("Mejorar a Pro Profesional");
+  it("Essential user → Pro card says 'Mejorar a Pro'", () => {
+    expect(computeCta("pro_monthly", ON_ESSENTIAL).label).toBe("Mejorar a Pro");
   });
 
   it("Paid user → Free card explains it arrives when the plan ends", () => {
@@ -91,9 +91,9 @@ describe("computeCta — paid plan (downgrade / sidegrade / cancel pending)", ()
     expect(r).toEqual({ label: "Al terminar tu plan", action: { kind: "later" }, disabled: true });
   });
 
-  it("Pro user → IPS Mejorado es una mejora que se paga en la web", () => {
+  it("Pro user → Institucional es una mejora que se paga en la web", () => {
     expect(computeCta("institution_monthly", ON_PRO)).toEqual({
-      label: "Mejorar a IPS Mejorado",
+      label: "Mejorar a Institucional",
       action: { kind: "checkout" },
       disabled: false,
     });

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/validacion")({
       title: `Registro de usuario y beneficio premium — ${SITE_NAME}`,
       path: "/validacion",
       description:
-        "Cuéntanos qué necesitas o qué ofreces en salud en casa (4 minutos) y gana 1 mes del plan Esencial. Familias, IPS/EPS y profesionales.",
+        "Cuéntanos qué necesitas o qué ofreces en salud en casa (4 minutos) y gana 1 mes del plan Familiar. Familias, IPS/EPS y profesionales.",
     }),
   component: ValidacionPage,
 });

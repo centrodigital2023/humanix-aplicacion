@@ -1,7 +1,7 @@
 // Formulario inteligente de validación de mercado — lógica pura (sin red ni base de datos).
 //
 // «Registro de usuario y beneficio premium»: la persona cuenta qué necesita (o qué ofrece), cómo resuelve hoy
-// ese problema y cuánto pagaría; al verificar su contacto gana 1 mes del plan Esencial (el plan básico de pago).
+// ese problema y cuánto pagaría; al verificar su contacto gana 1 mes del plan Familiar (el plan básico de pago).
 // Cada formulario lleno llega al panel de superadmin, que lo tabula solo.
 //
 // Este archivo concentra TODO lo que se puede probar sin servidor:
@@ -70,11 +70,11 @@ export const CITIES = [
   "Otra ciudad",
 ] as const;
 
-/** Beneficio por llenar el formulario: 1 mes del plan Esencial (el plan básico de pago). */
+/** Beneficio por llenar el formulario: 1 mes del plan Familiar (el plan básico de pago). */
 export const BENEFIT = {
   plan: "essential_monthly",
   months: 1,
-  label: "1 mes del plan Esencial",
+  label: "1 mes del plan Familiar",
   /** Días que el código sigue vigente tras verificar el contacto. */
   validDays: 60,
 } as const;
@@ -243,11 +243,7 @@ export interface QuestionCopy {
   example: string;
 }
 export type QuestionKey =
-  | "serviceOffer"
-  | "painPoint"
-  | "targetAudience"
-  | "dailyChange"
-  | "comments";
+  "serviceOffer" | "painPoint" | "targetAudience" | "dailyChange" | "comments";
 
 const BASE_QUESTIONS: Record<QuestionKey, Omit<QuestionCopy, "example">> = {
   serviceOffer: {

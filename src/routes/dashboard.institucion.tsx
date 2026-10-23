@@ -1267,7 +1267,7 @@ function InstitutionDashboard() {
 
             <div className="space-y-2">
               <p className="text-sm font-semibold flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 text-fuchsia-neural" /> Plan IPS Mejorado y sedes
+                <Building2 className="h-4 w-4 text-fuchsia-neural" /> Plan Institucional y sedes
               </p>
               <IpsBranchBilling institutionId={user.id} />
             </div>

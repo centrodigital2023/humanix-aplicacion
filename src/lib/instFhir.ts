@@ -1,4 +1,4 @@
-// Exportación de la historia de un paciente en HL7 FHIR R4 (paquete «collection») — lógica pura (plan IPS Mejorado).
+// Exportación de la historia de un paciente en HL7 FHIR R4 (paquete «collection») — lógica pura (plan Institucional).
 //
 // Para que la historia viaje a otro sistema (EPS, IPS, hospital): Patient, Condition, AllergyIntolerance, EpisodeOfCare (los casos),
 // Observation (signos vitales con LOINC y unidades UCUM, como pide el perfil de signos vitales de FHIR) y ClinicalImpression (las notas,

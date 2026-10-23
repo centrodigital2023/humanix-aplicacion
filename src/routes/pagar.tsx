@@ -26,7 +26,13 @@ import {
   startPlanPayment,
   subscribePlanInApp,
 } from "@/lib/payments.functions";
-import { COP, PLAN_CATALOG, type PlanKey } from "@/lib/plans";
+import {
+  COP,
+  INSTITUTION_BILLING,
+  PLAN_CATALOG,
+  type BillingCycle,
+  type PlanKey,
+} from "@/lib/plans";
 import { buildSeo } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +63,11 @@ function PagarPage() {
   const plan = search.get("plan") ?? "";
   const from = search.get("from");
   const [mode, setMode] = useState<PayMode>(payModeOf(search.get("modo")));
+  // Solo el plan Institucional tiene contrato anual (12 meses por el precio de 10).
+  const isInstitution = plan === "institution_monthly";
+  const [cycle, setCycle] = useState<BillingCycle>(
+    isInstitution && search.get("ciclo") === "anual" ? "annual" : "monthly",
+  );
   const navigate = useNavigate();
   const { user, loading: userLoading } = useAppUser({ requireAuth: false });
   const setupFn = useServerFn(getPlanPaymentSetup);
@@ -72,8 +83,8 @@ function PagarPage() {
   useEffect(() => setMounted(true), []);
 
   const setup = useQuery({
-    queryKey: ["pay-setup", plan, user?.id],
-    queryFn: () => setupFn({ data: { plan } }),
+    queryKey: ["pay-setup", plan, cycle, user?.id],
+    queryFn: () => setupFn({ data: { plan, cycle } }),
     enabled: !!user,
     retry: 1,
     staleTime: 60_000,
@@ -87,14 +98,14 @@ function PagarPage() {
     [plan, from],
   );
 
-  // Cambiar de forma de pago dibuja otro formulario.
+  // Cambiar de forma de pago (o de ciclo, que cambia el monto) dibuja otro formulario.
   useEffect(() => {
     setFormReady(false);
     setFormError(null);
-  }, [mode]);
+  }, [mode, cycle]);
 
   const payOnce = async (form: Record<string, unknown>) => {
-    const r = await payFn({ data: { plan, returnTo: from, attemptId, form } });
+    const r = await payFn({ data: { plan, cycle, returnTo: from, attemptId, form } });
     if (!r.ok) {
       setAttemptId(newAttempt());
       toast(checkoutErrorMessage(r, plan as PlanKey));
@@ -127,6 +138,7 @@ function PagarPage() {
     const r = await subscribeFn({
       data: {
         plan,
+        cycle,
         cardToken: String(form.token ?? ""),
         email: typeof payer.email === "string" ? payer.email : null,
       },
@@ -144,7 +156,7 @@ function PagarPage() {
 
   const openFallback = async () => {
     setRedirecting(true);
-    const r = await fallbackFn({ data: { plan, returnTo: from } }).catch(() => null);
+    const r = await fallbackFn({ data: { plan, cycle, returnTo: from } }).catch(() => null);
     if (r?.ok) {
       openOutside(r.url);
       return;
@@ -227,26 +239,54 @@ function PagarPage() {
       </div>
     );
   } else {
+    const annual = s.cycle === "annual";
+    const period = annual ? `${s.months} meses` : "1 mes";
     body = (
       <div className="space-y-4">
+        {isInstitution && (
+          <div className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Ciclo de pago">
+              <ModeOption
+                active={cycle === "monthly"}
+                onClick={() => setCycle("monthly")}
+                title="Mensual"
+                note={`${COP(s.monthlyCOP)} al mes`}
+              />
+              <ModeOption
+                active={cycle === "annual"}
+                onClick={() => setCycle("annual")}
+                title={`Anual · ${INSTITUTION_BILLING.annualMonths} por ${INSTITUTION_BILLING.annualPaidMonths}`}
+                note={`${COP(s.monthlyCOP * INSTITUTION_BILLING.annualPaidMonths)} por ${INSTITUTION_BILLING.annualMonths} meses`}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {s.branches} sede{s.branches === 1 ? "" : "s"} activa{s.branches === 1 ? "" : "s"}:{" "}
+              {COP(INSTITUTION_BILLING.basePriceCOP)} con la principal
+              {s.branches > 1
+                ? ` + ${s.branches - 1} × ${COP(INSTITUTION_BILLING.extraBranchCOP)} por sede adicional`
+                : ""}
+              .{annual ? " Con el contrato anual pagas 10 meses y recibes 12." : ""}
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Forma de pago">
           <ModeOption
             active={mode === "once"}
             onClick={() => setMode("once")}
-            title={s.renew ? "Sumar 1 mes" : "Pagar 1 mes"}
+            title={s.renew ? `Sumar ${period}` : `Pagar ${period}`}
             note="Tarjeta, PSE o Efecty"
           />
           <ModeOption
             active={mode === "recurring"}
             onClick={() => setMode("recurring")}
             title="Cobro automático"
-            note="Cada mes, con tarjeta de crédito"
+            note={annual ? "Cada año, con tarjeta de crédito" : "Cada mes, con tarjeta de crédito"}
           />
         </div>
         <p className="text-xs text-muted-foreground">
           {mode === "once"
             ? "Con PSE eliges tu banco (Bancolombia, Nequi, Davivienda y los demás) y el banco te pide autorizar el pago en su página. Luego vuelves aquí."
-            : "Se cobra cada mes a tu tarjeta. Puedes cancelar la renovación desde tu panel cuando quieras y conservas el plan hasta el vencimiento."}
+            : `Se cobra ${annual ? "cada año" : "cada mes"} a tu tarjeta. Puedes cancelar la renovación desde tu panel cuando quieras y conservas el plan hasta el vencimiento.`}
         </p>
 
         <div className="relative min-h-[320px] rounded-2xl border border-border bg-card p-2 sm:p-4">
@@ -269,7 +309,7 @@ function PagarPage() {
             mounted && (
               <Suspense fallback={null}>
                 <InAppCheckout
-                  key={mode}
+                  key={`${mode}:${s.amount}`}
                   publicKey={s.publicKey}
                   mode={mode}
                   amount={s.amount}
@@ -314,7 +354,9 @@ function PagarPage() {
         {def && def.amountCOP > 0 && (
           <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
             <CalendarClock className="h-4 w-4" aria-hidden="true" />
-            {COP(s?.ok ? s.amount : def.amountCOP)} al mes, en pesos colombianos
+            {s?.ok && s.cycle === "annual"
+              ? `${COP(s.amount)} por ${s.months} meses, en pesos colombianos`
+              : `${COP(s?.ok ? s.amount : def.amountCOP)} al mes, en pesos colombianos`}
           </p>
         )}
         <div className="mt-6">{body}</div>

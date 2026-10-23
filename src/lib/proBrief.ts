@@ -86,7 +86,7 @@ export interface ProSnapshot {
   /** «Gracias» recibidos en los últimos 7 días. */
   kudosThisWeek: number;
   completedServices: number;
-  /** Plan Esencial o superior. */
+  /** Plan de pago (Pro o superior; Esencial antiguo). */
   premium: boolean;
   /** Comisión que le cobraron este mes (solo aplica al plan gratuito). */
   commissionMonth: number;
@@ -453,7 +453,7 @@ export function buildProBrief(s: ProSnapshot): ProBriefItem[] {
       priority: "low",
       title: `Este mes llevas ${formatCOP(s.commissionMonth)} en comisión`,
       detail:
-        "El plan Esencial no cobra comisión. Mira si con tu volumen te conviene; la suscripción se hace en la página web.",
+        "El plan Pro no cobra comisión. Mira si con tu volumen te conviene; la suscripción se hace en la página web.",
       cta: { label: "Ver los planes", target: { kind: "plans" } },
     });
   } else if (!s.premium && s.completedServices >= PRO_UPGRADE_MIN_SERVICES) {
@@ -462,8 +462,8 @@ export function buildProBrief(s: ProSnapshot): ProBriefItem[] {
       priority: "low",
       title: "Conoce tus números",
       detail:
-        "Con el plan Esencial ves cuánto ganas por mes, tu mejor día, tu carga de trabajo y tu tarifa frente al mercado.",
-      cta: { label: "Ver el plan Esencial", target: { kind: "plans" } },
+        "Con el plan Pro ves cuánto ganas por mes, tu mejor día, tu carga de trabajo y tu tarifa frente al mercado.",
+      cta: { label: "Ver el plan Pro", target: { kind: "plans" } },
     });
   }
 

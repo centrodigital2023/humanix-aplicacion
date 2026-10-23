@@ -418,7 +418,7 @@ export function FamilySmartCenter({
         </div>
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as TabKey)}>
           <TabsList
-            aria-label="Herramientas del plan Esencial"
+            aria-label="Herramientas del plan Familiar"
             className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4"
           >
             {(
@@ -433,7 +433,7 @@ export function FamilySmartCenter({
                 <Icon className="h-4 w-4" aria-hidden="true" />
                 {label}
                 {!premium && !plan.loading && (
-                  <Lock className="h-3 w-3 text-copper" aria-label="Con el plan Esencial" />
+                  <Lock className="h-3 w-3 text-copper" aria-label="Con el plan Familiar" />
                 )}
               </TabsTrigger>
             ))}

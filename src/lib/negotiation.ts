@@ -8,7 +8,7 @@
 //  · El valor debe estar entre 0,8× y 2× de la tarifa que publicó la familia y nunca bajo el piso de
 //    plataforma: así no hay carrera a la baja entre profesionales ni abusos al alza.
 //  · Solo responde quien NO hizo la última oferta.
-//  · Se muestra siempre cuánto queda neto después de la comisión (12 % en plan Free, 0 % en pagos).
+//  · Se muestra siempre cuánto queda neto después de la comisión (10 % en plan Free, 0 % con plan de pago).
 
 import { buildPriceBreakdown } from "./pricing";
 
@@ -32,12 +32,7 @@ export const MIN_WAGE_PER_HOUR = Math.ceil(SMMLV_2026 / 240);
 
 export type NegotiationRole = "family" | "professional";
 export type ProposalStatus =
-  | "pending"
-  | "accepted"
-  | "rejected"
-  | "cancelled"
-  | "expired"
-  | "countered";
+  "pending" | "accepted" | "rejected" | "cancelled" | "expired" | "countered";
 
 const ceilTo = (n: number, step: number) => Math.ceil(n / step) * step;
 const floorTo = (n: number, step: number) => Math.floor(n / step) * step;
