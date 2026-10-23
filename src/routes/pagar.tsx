@@ -104,7 +104,7 @@ function PagarPage() {
       // PSE: el banco abre su página y vuelve a /pago/exito.
       savePendingPayment(r.paymentId);
       setRedirecting(true);
-      window.location.assign(r.redirectUrl);
+      openOutside(r.redirectUrl);
       return;
     }
     if (r.voucherUrl) {
@@ -146,7 +146,7 @@ function PagarPage() {
     setRedirecting(true);
     const r = await fallbackFn({ data: { plan, returnTo: from } }).catch(() => null);
     if (r?.ok) {
-      window.location.assign(r.url);
+      openOutside(r.url);
       return;
     }
     setRedirecting(false);
@@ -357,4 +357,19 @@ function Notice(props: { title: string; text: string; action: React.ReactNode })
       </Button>
     </div>
   );
+}
+
+/** Bancos (PSE) y Mercado Pago no se dejan abrir dentro de un marco: si Humanix está embebido (vista previa), abre una pestaña nueva. */
+function openOutside(url: string) {
+  let framed = false;
+  try {
+    framed = window.self !== window.top;
+  } catch {
+    framed = true;
+  }
+  if (framed) {
+    const w = window.open(url, "_blank", "noopener");
+    if (w) return;
+  }
+  window.location.assign(url);
 }
