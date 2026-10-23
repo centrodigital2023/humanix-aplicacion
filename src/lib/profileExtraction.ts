@@ -98,7 +98,7 @@ export function normalizeExtraction(input: unknown): ExtractedProfile {
       if (seen.has(key)) return null;
       seen.add(key);
       const ref: ExtractedReference = {
-        ref_type: o.ref_type === "family" || o.ref_type === "personal" ? "family" : "work",
+        ref_type: /fam|pers/i.test(String(o.ref_type ?? "")) ? "family" : "work",
         full_name,
         phone,
         relation: s(o.relation, 60) ?? null,
