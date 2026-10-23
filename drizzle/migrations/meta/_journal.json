@@ -120,6 +120,27 @@
       "when": 1792717435034,
       "tag": "0016_remove_utility_bill_publish_requirement",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792718360196,
+      "tag": "0017_restore_trigger_function_execute",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792718650415,
+      "tag": "0018_storage_update_policies_with_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792718686458,
+      "tag": "0019_avatars_select_own_for_upsert",
+      "breakpoints": true
     }
   ]
 }
