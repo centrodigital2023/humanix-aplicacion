@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { extractProfessionalProfile } from "@/lib/profileExtract.functions";
+import { prepareProfileImport, PROFILE_FILE_ACCEPT } from "@/lib/profileImport.client";
 import {
   FileText,
   IdCard,
@@ -91,7 +94,7 @@ const REGULAR_TYPES: DocDef[] = [
     value: "cv",
     label: "Hoja de vida",
     icon: <FileText className="h-4 w-4" />,
-    hint: "PDF · La IA extrae tus datos.",
+    hint: "PDF, Word, imagen o texto.",
     cvParse: true,
     required: true,
   },
@@ -235,6 +238,7 @@ export function DocumentsManager({
   userId: string;
   onCvExtracted?: (profile: Record<string, unknown>) => void;
 }) {
+  const extractProfile = useServerFn(extractProfessionalProfile);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [busyType, setBusyType] = useState<DocType | null>(null);
   const [extractingCv, setExtractingCv] = useState(false);
@@ -316,12 +320,11 @@ export function DocumentsManager({
       if (type === "cv" && onCvExtracted) {
         setExtractingCv(true);
         try {
-          const { data: ext, error: e2 } = await supabase.functions.invoke("cv-extractor", {
-            body: { file_url: signed.signedUrl, mime_type: file.type },
-          });
-          if (e2) throw e2;
-          if (ext?.profile) {
-            onCvExtracted(ext.profile);
+          const prepared = await prepareProfileImport("", file);
+          const ext = await extractProfile({ data: { ...prepared, save_documents: true } });
+          if (!ext.ok) throw new Error(ext.message || "No se pudo analizar el CV");
+          if (ext.profile) {
+            onCvExtracted(ext.profile as unknown as Record<string, unknown>);
             toast.success("✨ Datos extraídos del CV. Revísalos antes de guardar.");
           }
         } catch (e) {
@@ -330,6 +333,9 @@ export function DocumentsManager({
           setExtractingCv(false);
         }
       }
+
+      // Non-PDF CV imports are documents pending review, not verified images.
+      if (type === "cv" && file.type !== "application/pdf" && !file.type.startsWith("image/")) return;
 
       // Verificación IA
       setVerifyingId(newDoc.id);
@@ -568,7 +574,7 @@ function DocCard({
           ref={inputRef}
           data-doc={t.value}
           type="file"
-          accept=".pdf,image/*"
+          accept={t.cvParse ? PROFILE_FILE_ACCEPT : ".pdf,image/*"}
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
