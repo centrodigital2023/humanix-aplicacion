@@ -100,7 +100,7 @@ export function normalizeExtraction(input: unknown): ExtractedProfile {
       const role = s(o.role, 100);
       const employer = s(o.employer, 120);
       if (!role && !employer) return null;
-      const e: ExtractedWorkExp = { role: role ?? "Cargo", employer: employer ?? "Empleador" };
+      const e: ExtractedWorkExp = { role: role ?? "", employer: employer ?? "" };
       const city = s(o.city, 60);
       const start = s(o.start, 20);
       const end = s(o.end, 20);

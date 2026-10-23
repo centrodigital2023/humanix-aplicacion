@@ -1517,6 +1517,7 @@ function ProDashboard() {
               {/* Save + publish */}
               {userId && (
                 <div className="mt-5 pt-5 border-t border-border">
+                  <Button variant="hero" onClick={() => void saveProfile()} className="mb-4">Guardar perfil</Button>
                   <PublishGate
                     userId={userId}
                     profilePayload={{
