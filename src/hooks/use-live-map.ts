@@ -4,14 +4,13 @@
 //
 // En vivo: la base emite un aviso sin datos («algo que ve el mapa cambió») por un canal privado de difusión; aquí se escucha y se
 // vuelven a pedir los datos por las funciones seguras. Una sola suscripción compartida por todos los componentes. Los visitantes sin
-// sesión no pueden escuchar canales privados: para ellos se escuchan los cambios de profesionales publicados (son públicos).
+// sesión escuchan un canal público separado que solo emite avisos vacíos, nunca filas ni ubicaciones.
 // Además se programa UNA recarga justo cuando vence el «en vivo» más próximo (una presencia que se apaga sin avisar no genera evento).
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import type { LatLng } from "@/lib/geo";
 import {
   countsFromLegacy,
@@ -68,43 +67,56 @@ function isQuiet(err: { code?: string; message?: string } | null): boolean {
 
 const DEBOUNCE_MS = 800;
 /** Quién escucha, con cuántos componentes lo usan: un aviso recarga UNA vez por cliente de consultas, no una vez por componente. */
-const clients = new Map<QueryClient, number>();
-let channel: ReturnType<typeof sb.channel> | null = null;
-let timer: ReturnType<typeof setTimeout> | undefined;
-let offersTimer: ReturnType<typeof setTimeout> | undefined;
+function mapSubscriptionState() {
+  return {
+    clients: new Map<QueryClient, number>(),
+    channel: null as ReturnType<typeof sb.channel> | null,
+    timer: undefined as ReturnType<typeof setTimeout> | undefined,
+    offersTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+  };
+}
+const privateMapState = mapSubscriptionState();
+const publicMapState = mapSubscriptionState();
 
-function subscribeMapPing(qc: QueryClient): () => void {
+function subscribeMapPing(qc: QueryClient, publicMode = false): () => void {
+  const state = publicMode ? publicMapState : privateMapState;
+  const { clients } = state;
+  const refresh = () => {
+    clearTimeout(state.timer);
+    state.timer = setTimeout(() => {
+      clients.forEach((_n, client) => void client.invalidateQueries({ queryKey: ROOT }));
+    }, DEBOUNCE_MS);
+  };
   clients.set(qc, (clients.get(qc) ?? 0) + 1);
-  if (!channel) {
-    channel = sb
-      .channel("live_map_ping", { config: { private: true } })
-      .on("broadcast", { event: "map_changed" }, () => {
-        // Varios cambios seguidos (una oferta y su aviso, un turno que cierra) se agrupan en una sola recarga.
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          clients.forEach((_n, client) => void client.invalidateQueries({ queryKey: ROOT }));
-        }, DEBOUNCE_MS);
+  if (!state.channel) {
+    state.channel = sb
+      .channel(publicMode ? "live_map_public_ping" : "live_map_ping", {
+        config: { private: !publicMode },
       })
+      .on("broadcast", { event: "map_changed" }, refresh)
       .on("broadcast", { event: "service_offers_changed" }, () => {
         // Un profesional publica, pausa o cierra una oferta de servicio: las familias e instituciones recargan su lista segura.
-        clearTimeout(offersTimer);
-        offersTimer = setTimeout(() => {
+        clearTimeout(state.offersTimer);
+        state.offersTimer = setTimeout(() => {
           clients.forEach(
             (_n, client) => void client.invalidateQueries({ queryKey: SERVICE_OFFERS_ROOT }),
           );
         }, DEBOUNCE_MS);
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Reconcile events missed while disconnected, including a new professional arriving.
+        if (status === "SUBSCRIBED") refresh();
+      });
   }
   return () => {
     const left = (clients.get(qc) ?? 1) - 1;
     if (left <= 0) clients.delete(qc);
     else clients.set(qc, left);
-    if (clients.size === 0 && channel) {
-      clearTimeout(timer);
-      clearTimeout(offersTimer);
-      void sb.removeChannel(channel);
-      channel = null;
+    if (clients.size === 0 && state.channel) {
+      clearTimeout(state.timer);
+      clearTimeout(state.offersTimer);
+      void sb.removeChannel(state.channel);
+      state.channel = null;
     }
   };
 }
@@ -121,19 +133,10 @@ export function useLiveMapPing(enabled = true) {
 /** Recarga todo lo del mapa cuando la base avisa que algo cambió. Con sesión, por el canal privado; sin sesión, por lo público. */
 export function useLiveMapRefresh(authed: boolean, enabled = true) {
   const qc = useQueryClient();
-  const refresh = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: ROOT });
-  }, [qc]);
   useEffect(() => {
-    if (!authed || !enabled) return;
-    return subscribeMapPing(qc);
+    if (!enabled) return;
+    return subscribeMapPing(qc, !authed);
   }, [authed, enabled, qc]);
-  useRealtimeRefresh(
-    "live-map-public",
-    [{ table: "professional_profiles" }],
-    refresh,
-    !authed && enabled,
-  );
 }
 
 /** Una recarga programada para cuando venza el «en vivo» más próximo (sin sondeo: solo si alguien está en vivo). */
@@ -225,7 +228,7 @@ export function useValidatedMapProfessionals(opts: MapQueryOptions = {}) {
     if (dirQ.isError) return [];
     return dirQ.data ? validatedMapProfessionals(pros, dirQ.data) : undefined;
   }, [pros, dirQ.data, dirQ.isError]);
-  return { data, isLoading: data === undefined && enabled, isError: prosQ.isError };
+  return { data, isLoading: data === undefined && enabled, isError: prosQ.isError || dirQ.isError };
 }
 
 /** Familias e instituciones con ofertas u horas abiertas, un pin por quien publica. Solo para profesionales y personal. */

@@ -40,9 +40,20 @@ export function directoryIdsKey(map: readonly Pick<MapProfessional, "id">[]): st
   return [...new Set(map.map((p) => p.id))].sort().join(",");
 }
 
+/** Selection always reads the latest authorized pin, never a retained location or availability. */
+export function currentMapSelection<T extends { id: string }>(
+  pins: readonly T[],
+  id: string | null,
+): T | null {
+  return id === null ? null : (pins.find((pin) => pin.id === id) ?? null);
+}
+
 /** «Enfermería · Pasto · 12 turnos» */
-export function proSubtitle(p: Pick<ValidatedMapProfessional, "specialty" | "city" | "turns">): string {
-  const turns = p.turns === 0 ? "Nuevo en Humanix" : `${p.turns} ${p.turns === 1 ? "turno" : "turnos"}`;
+export function proSubtitle(
+  p: Pick<ValidatedMapProfessional, "specialty" | "city" | "turns">,
+): string {
+  const turns =
+    p.turns === 0 ? "Nuevo en Humanix" : `${p.turns} ${p.turns === 1 ? "turno" : "turnos"}`;
   return [p.specialty?.trim() || "Cuidado en casa", p.city, turns].join(" · ");
 }
 

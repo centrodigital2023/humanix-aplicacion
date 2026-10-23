@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MapProfessional } from "./liveMap";
 import {
   directoryIdsKey,
+  currentMapSelection,
   lastSeenText,
   presenceLine,
   proSubtitle,
@@ -10,6 +11,18 @@ import {
 } from "./mapDirectory";
 
 const NOW = Date.parse("2026-10-19T22:00:00Z");
+
+describe("currentMapSelection — cambios en tiempo real", () => {
+  it("usa la nueva ubicación y disponibilidad del profesional seleccionado", () => {
+    const old = { id: "p1", lat: 4.61, status: "available" };
+    const moved = { id: "p1", lat: 4.62, status: "busy" };
+    expect(currentMapSelection([old], "p1")).toBe(old);
+    expect(currentMapSelection([moved], "p1")).toEqual({ id: "p1", lat: 4.62, status: "busy" });
+  });
+  it("retira la selección cuando el perfil deja de ser visible", () => {
+    expect(currentMapSelection([{ id: "p2" }], "p1")).toBeNull();
+  });
+});
 
 const pin = (over: Partial<MapProfessional> = {}): MapProfessional => ({
   id: "p1",
@@ -49,7 +62,13 @@ describe("validatedMapProfessionals — el mapa usa los datos validados del busc
   });
 
   it("oculta a quien no tiene fila en el directorio o la tiene incompleta", () => {
-    const map = [pin({ id: "a" }), pin({ id: "b" }), pin({ id: "c" }), pin({ id: "d" }), pin({ id: "e" })];
+    const map = [
+      pin({ id: "a" }),
+      pin({ id: "b" }),
+      pin({ id: "c" }),
+      pin({ id: "d" }),
+      pin({ id: "e" }),
+    ];
     const out = validatedMapProfessionals(map, [
       dir({ user_id: "b", full_name: "Profesional Humanix" }),
       dir({ user_id: "c", home_city: null, service_cities: [] }),

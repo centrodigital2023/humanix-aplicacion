@@ -7,6 +7,7 @@ import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-lea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2, LocateFixed, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-has-session";
 import {
   useMapDemand,
@@ -16,7 +17,7 @@ import {
 import { BOGOTA, distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
 import { demandHeadline, STATUS_LABEL, withPosition, type MapDemand } from "@/lib/liveMap";
 import { trustBadgeText } from "@/lib/trustScore";
-import { presenceLine, proSubtitle } from "@/lib/mapDirectory";
+import { currentMapSelection, presenceLine, proSubtitle } from "@/lib/mapDirectory";
 import { displayCity, idleInstitutions } from "@/lib/proMapDemand";
 import { useVoice } from "./voice";
 import type { MapPin, SimpleLiveMapProps } from "./SimpleLiveMap";
@@ -107,7 +108,7 @@ export function SimpleLiveMap({
   center,
 }: SimpleLiveMapProps) {
   const { say } = useVoice();
-  const [selected, setSelected] = useState<MapPin | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [me, setMe] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
   const [flyTarget, setFlyTarget] = useState<LatLng | null>(null);
@@ -115,10 +116,17 @@ export function SimpleLiveMap({
 
   // Profesionales (familias e instituciones) u oferta abierta (profesionales). Solo se pide lo que ese mapa necesita.
   // Los profesionales llegan con los datos validados del buscador: sin nombre, ciudad o turnos no hay pin.
-  const prosQ = useValidatedMapProfessionals({ authed: session.has, enabled: mode === "pros" });
+  const prosQ = useValidatedMapProfessionals({
+    authed: session.has,
+    enabled: mode === "pros",
+    limit: 500,
+  });
   const demandQ = useMapDemand({ authed: session.has, enabled: mode === "offers" && session.has });
   // Instituciones visibles sin turnos abiertos: también salen en el mapa del profesional (atenuadas). Las familias, solo con solicitud.
-  const instQ = useMapInstitutions({ authed: session.has, enabled: mode === "offers" && session.has });
+  const instQ = useMapInstitutions({
+    authed: session.has,
+    enabled: mode === "offers" && session.has,
+  });
 
   const pins = useMemo<MapPin[] | null>(() => {
     if (mode === "pros") {
@@ -167,6 +175,8 @@ export function SimpleLiveMap({
   }, [mode, prosQ.data, demandQ.data, instQ.data, session.has, session.ready]);
 
   const merged = useMemo(() => pins ?? [], [pins]);
+  const selected = currentMapSelection(merged, selectedId);
+  const failed = mode === "pros" ? prosQ.isError : demandQ.isError || instQ.isError;
 
   const ordered = useMemo(() => {
     if (!me) return merged;
@@ -196,7 +206,7 @@ export function SimpleLiveMap({
   };
 
   const select = (pin: MapPin) => {
-    setSelected(pin);
+    setSelectedId(pin.id);
     say(`${pin.title}. ${pin.price ?? ""}`);
   };
 
@@ -218,7 +228,7 @@ export function SimpleLiveMap({
         />
         <FitPins pins={merged} enabled={!me} />
         <FlyTo target={flyTarget} />
-        <ClickAway onClick={() => setSelected(null)} />
+        <ClickAway onClick={() => setSelectedId(null)} />
         {me && <Marker position={[me.lat, me.lng]} icon={ME_ICON()} />}
         {ordered.map((p) => (
           <Marker
@@ -234,7 +244,15 @@ export function SimpleLiveMap({
       </MapContainer>
 
       {/* Contador en vivo (dato real) */}
-      <div className="pointer-events-none absolute left-3 top-3 z-[500] flex flex-wrap gap-2">
+      <div
+        className="pointer-events-none absolute left-3 right-20 top-3 z-[500] flex flex-wrap gap-2"
+        aria-live="polite"
+      >
+        {mode === "pros" && pins !== null && (
+          <span className="rounded-full bg-card px-3.5 py-2 text-sm font-bold text-card-foreground shadow-md">
+            {merged.length} en el mapa
+          </span>
+        )}
         <span className="inline-flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-2 text-sm font-bold text-trust-deep shadow-md">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -258,7 +276,7 @@ export function SimpleLiveMap({
         )}
       </div>
 
-      <button
+      <Button
         type="button"
         onClick={locate}
         disabled={locating}
@@ -270,7 +288,7 @@ export function SimpleLiveMap({
           <LocateFixed className="h-5 w-5" aria-hidden="true" />
         )}
         Yo
-      </button>
+      </Button>
 
       {/* Leyenda con imágenes */}
       {!selected && (
@@ -300,27 +318,29 @@ export function SimpleLiveMap({
         </div>
       )}
 
-      {pins !== null && pins.length === 0 && (
+      {(failed || (pins !== null && pins.length === 0)) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-16 z-[500] mx-auto w-fit max-w-[90%] rounded-full bg-white/95 px-4 py-2 text-center text-base font-bold text-trust-deep shadow-md">
-          {mode === "pros"
-            ? "Pronto habrá profesionales aquí"
-            : session.has
-              ? "Pronto habrá solicitudes aquí"
-              : "Entra como profesional para ver solicitudes cerca de ti"}
+          {failed
+            ? "No pudimos cargar el mapa. Intenta de nuevo."
+            : mode === "pros"
+              ? "Aún no hay perfiles publicados con ubicación"
+              : session.has
+                ? "Pronto habrá solicitudes aquí"
+                : "Entra como profesional para ver solicitudes cerca de ti"}
         </div>
       )}
 
       {/* Tarjeta grande del pin elegido */}
       {selected && (
         <div className="absolute inset-x-3 bottom-3 z-[600] rounded-3xl bg-white p-4 text-ink shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-          <button
+          <Button
             type="button"
-            onClick={() => setSelected(null)}
+            onClick={() => setSelectedId(null)}
             aria-label="Cerrar"
             className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 active:scale-90"
           >
             <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+          </Button>
           <div className="flex items-center gap-4 pr-10">
             {selected.avatarUrl ? (
               <img
@@ -354,7 +374,7 @@ export function SimpleLiveMap({
           </div>
           {selected.price && <p className="mt-3 text-2xl font-bold">{selected.price}</p>}
           <div className={`mt-3 grid gap-2 ${secondary ? "grid-cols-[1fr_auto]" : ""}`}>
-            <button
+            <Button
               type="button"
               onClick={() => onPrimary(selected)}
               disabled={mode === "pros" && selected.dim}
@@ -367,7 +387,7 @@ export function SimpleLiveMap({
                 : typeof primaryLabel === "function"
                   ? primaryLabel(selected)
                   : primaryLabel}
-            </button>
+            </Button>
             {secondary && (
               <a
                 href={secondary.href(selected)}
