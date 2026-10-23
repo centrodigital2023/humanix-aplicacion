@@ -1,5 +1,5 @@
 # Retirar requisito de recibo de servicios públicos
-- [ ] Eliminar la solicitud y exigencia en formularios y verificaciones, conservar documentos históricos y comprobar las reglas.
+- [x] Eliminada la solicitud en formularios familiares/profesionales y la exigencia en evaluación IA y publicación; documentos históricos conservados; 47 pruebas aprobadas y Docs verificado con sesión real mostrando 2/2 sin recibo.
 
 # Mercado Pago dentro de Humanix
 - [x] Pago de 1 mes en /pagar (Payment Brick): tarjeta, PSE (Bancolombia, Nequi y demás bancos) y Efecty.
