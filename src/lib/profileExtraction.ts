@@ -50,14 +50,31 @@ export function normalizeDocumentEvidence(input: unknown, pageCount: number): Do
   return input.flatMap((value) => {
     if (!value || typeof value !== "object") return [];
     const d = value as Record<string, unknown>;
-    if (typeof d.doc_type !== "string" || !allowed.has(d.doc_type) || seen.has(d.doc_type)) return [];
+    if (typeof d.doc_type !== "string" || !allowed.has(d.doc_type) || seen.has(d.doc_type))
+      return [];
     const start = d.page_start;
     const end = d.page_end;
     const evidence = typeof d.evidence === "string" ? d.evidence.trim() : "";
-    if (typeof start !== "number" || typeof end !== "number" || !Number.isInteger(start) ||
-      !Number.isInteger(end) || start < 1 || end < start || end > pageCount || !evidence) return [];
+    if (
+      typeof start !== "number" ||
+      typeof end !== "number" ||
+      !Number.isInteger(start) ||
+      !Number.isInteger(end) ||
+      start < 1 ||
+      end < start ||
+      end > pageCount ||
+      !evidence
+    )
+      return [];
     seen.add(d.doc_type);
-    return [{ doc_type: d.doc_type as DocumentEvidence["doc_type"], page_start: start, page_end: end, evidence: evidence.slice(0, 500) }];
+    return [
+      {
+        doc_type: d.doc_type as DocumentEvidence["doc_type"],
+        page_start: start,
+        page_end: end,
+        evidence: evidence.slice(0, 500),
+      },
+    ];
   });
 }
 

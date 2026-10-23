@@ -3,7 +3,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { normalizeDocumentEvidence, normalizeExtraction, type ExtractedProfile } from "./profileExtraction";
+import {
+  normalizeDocumentEvidence,
+  normalizeExtraction,
+  type ExtractedProfile,
+} from "./profileExtraction";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-3-flash-preview";
@@ -34,25 +38,40 @@ Si hay un PDF, agrega document_evidence: array de {doc_type (cv, id_document, re
 
 export type ExtractResult =
   | { ok: true; profile: ExtractedProfile; savedDocuments?: number; documentWarning?: string }
-  | { ok: false; error: "empty" | "not_configured" | "ai_busy" | "no_credits" | "ai_error"; message?: string };
+  | {
+      ok: false;
+      error: "empty" | "not_configured" | "ai_busy" | "no_credits" | "ai_error";
+      message?: string;
+    };
 
 export const extractProfessionalProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => input.parse(d))
   .handler(async ({ data, context }): Promise<ExtractResult> => {
     const key = process.env.LOVABLE_API_KEY;
-    if (!key) return { ok: false, error: "not_configured", message: "La lectura con IA no está configurada." };
+    if (!key)
+      return {
+        ok: false,
+        error: "not_configured",
+        message: "La lectura con IA no está configurada.",
+      };
 
     const content: unknown[] = [{ type: "text", text: PROMPT }];
     if (data.text?.trim()) content.push({ type: "text", text: `Contenido:\n${data.text.trim()}` });
     if (data.file?.kind === "pdf") {
       content.push({
         type: "file",
-        file: { filename: data.file.name, file_data: `data:application/pdf;base64,${data.file.base64}` },
+        file: {
+          filename: data.file.name,
+          file_data: `data:application/pdf;base64,${data.file.base64}`,
+        },
       });
     } else if (data.file?.kind === "image") {
       const mime = /^image\/(png|jpeg|webp)$/.test(data.file.mime) ? data.file.mime : "image/jpeg";
-      content.push({ type: "image_url", image_url: { url: `data:${mime};base64,${data.file.base64}` } });
+      content.push({
+        type: "image_url",
+        image_url: { url: `data:${mime};base64,${data.file.base64}` },
+      });
     }
 
     const res = await fetch(GATEWAY, {
@@ -75,7 +94,10 @@ export const extractProfessionalProfile = createServerFn({ method: "POST" })
       const status = res?.status ?? 0;
       const payload = res ? await res.json().catch(() => null) : null;
       const upstreamMessage = payload?.message ?? payload?.error?.message;
-      const message = typeof upstreamMessage === "string" ? upstreamMessage : "No pudimos leer la información. Inténtalo más tarde.";
+      const message =
+        typeof upstreamMessage === "string"
+          ? upstreamMessage
+          : "No pudimos leer la información. Inténtalo más tarde.";
       if (status === 429) return { ok: false, error: "ai_busy", message };
       if (status === 402) return { ok: false, error: "no_credits", message };
       return { ok: false, error: "ai_error", message };
@@ -112,20 +134,35 @@ export const extractProfessionalProfile = createServerFn({ method: "POST" })
       let savedDocuments = 0;
       let documentWarning: string | undefined;
       if (data.save_documents) {
-        const { data: existing, error: readError } = await context.supabase.from("professional_documents")
-          .select("doc_type").eq("user_id", context.userId).neq("status", "rejected");
+        const { data: existing, error: readError } = await context.supabase
+          .from("professional_documents")
+          .select("doc_type")
+          .eq("user_id", context.userId)
+          .neq("status", "rejected");
         if (readError) {
-          documentWarning = "Los datos se extrajeron, pero no pudimos consultar los soportes guardados.";
+          documentWarning =
+            "Los datos se extrajeron, pero no pudimos consultar los soportes guardados.";
         } else {
           const present = new Set((existing ?? []).map((d) => d.doc_type as string));
           try {
-            const uploadDocument = async (type: "cv" | "id_document" | "diploma" | "rethus" | "work_experience", bytes: Uint8Array, filename: string, mime: string) => {
+            const uploadDocument = async (
+              type: "cv" | "id_document" | "diploma" | "rethus" | "work_experience",
+              bytes: Uint8Array,
+              filename: string,
+              mime: string,
+            ) => {
               if (present.has(type)) return;
               const path = `${context.userId}/${type}-${crypto.randomUUID()}-${filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-              const upload = await context.supabase.storage.from("professional-docs").upload(path, bytes, { contentType: mime });
+              const upload = await context.supabase.storage
+                .from("professional-docs")
+                .upload(path, bytes, { contentType: mime });
               if (upload.error) throw upload.error;
               const inserted = await context.supabase.from("professional_documents").insert({
-                user_id: context.userId, doc_type: type, file_url: path, file_name: filename, status: "pending",
+                user_id: context.userId,
+                doc_type: type,
+                file_url: path,
+                file_name: filename,
+                status: "pending",
               });
               if (inserted.error) {
                 await context.supabase.storage.from("professional-docs").remove([path]);
@@ -139,22 +176,40 @@ export const extractProfessionalProfile = createServerFn({ method: "POST" })
               if (data.file.kind === "pdf") {
                 const { PDFDocument } = await import("pdf-lib");
                 const pdf = await PDFDocument.load(bytes);
-                profile.document_evidence = normalizeDocumentEvidence(raw.document_evidence, pdf.getPageCount());
+                profile.document_evidence = normalizeDocumentEvidence(
+                  raw.document_evidence,
+                  pdf.getPageCount(),
+                );
                 for (const evidence of profile.document_evidence) {
                   const part = await PDFDocument.create();
-                  const indices = Array.from({ length: evidence.page_end - evidence.page_start + 1 }, (_, i) => evidence.page_start - 1 + i);
+                  const indices = Array.from(
+                    { length: evidence.page_end - evidence.page_start + 1 },
+                    (_, i) => evidence.page_start - 1 + i,
+                  );
                   const pages = await part.copyPages(pdf, indices);
                   pages.forEach((page) => part.addPage(page));
-                  await uploadDocument(evidence.doc_type, await part.save(), `${evidence.doc_type}-${data.file.name}`, "application/pdf");
+                  await uploadDocument(
+                    evidence.doc_type,
+                    await part.save(),
+                    `${evidence.doc_type}-${data.file.name}`,
+                    "application/pdf",
+                  );
                 }
               } else {
-                documentWarning = "La imagen llenó tus datos; sube cada soporte en su categoría para revisión.";
+                documentWarning =
+                  "La imagen llenó tus datos; sube cada soporte en su categoría para revisión.";
               }
             } else if (profile.specialty || profile.work_experience.length) {
-              await uploadDocument("cv", new TextEncoder().encode(data.text ?? ""), "Hoja-de-vida-importada.txt", "text/plain");
+              await uploadDocument(
+                "cv",
+                new TextEncoder().encode(data.text ?? ""),
+                "Hoja-de-vida-importada.txt",
+                "text/plain",
+              );
             }
           } catch {
-            documentWarning = "Los datos se extrajeron, pero algunos soportes no se guardaron. Puedes subirlos por separado.";
+            documentWarning =
+              "Los datos se extrajeron, pero algunos soportes no se guardaron. Puedes subirlos por separado.";
           }
         }
       }
