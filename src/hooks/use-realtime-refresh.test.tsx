@@ -9,8 +9,14 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     channel: () => {
       const channel = {
-        on: (_kind: string, _filter: unknown, callback: () => void) => { mock.event = callback; return channel; },
-        subscribe: (callback: (status: string) => void) => { mock.status = callback; return channel; },
+        on: (_kind: string, _filter: unknown, callback: () => void) => {
+          mock.event = callback;
+          return channel;
+        },
+        subscribe: (callback: (status: string) => void) => {
+          mock.status = callback;
+          return channel;
+        },
       };
       return channel;
     },
@@ -20,7 +26,9 @@ vi.mock("@/integrations/supabase/client", () => ({
 import { useRealtimeRefresh } from "./use-realtime-refresh";
 it("refreshes after subscribing, live changes and reconnecting, then removes the channel", () => {
   const refresh = vi.fn();
-  const hook = renderHook(() => useRealtimeRefresh("requests", [{ table: "service_bookings" }], refresh));
+  const hook = renderHook(() =>
+    useRealtimeRefresh("requests", [{ table: "service_bookings" }], refresh),
+  );
   act(() => mock.status?.("SUBSCRIBED"));
   expect(refresh).toHaveBeenCalledTimes(1);
   act(() => mock.event?.());

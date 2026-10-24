@@ -67,9 +67,14 @@ export function NotificationsBell({ userId }: { userId: string }) {
         (payload) => {
           if (!active) return;
           const notification = payload.new as Notification;
-          setItems((prev) => [notification, ...prev.filter((n) => n.id !== notification.id)].slice(0, 20));
+          setItems((prev) =>
+            [notification, ...prev.filter((n) => n.id !== notification.id)].slice(0, 20),
+          );
           if (notification.type === "booking_requested") {
-            toast(notification.title, { id: notification.id, description: notification.body ?? undefined });
+            toast(notification.title, {
+              id: notification.id,
+              description: notification.body ?? undefined,
+            });
           }
         },
       )

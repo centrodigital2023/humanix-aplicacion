@@ -23,7 +23,9 @@ export function usePendingBookings(userId: string) {
   useRealtimeRefresh(
     `pending-bookings-${userId}`,
     [{ table: "service_bookings", filter: `professional_id=eq.${userId}` }],
-    () => { void qc.invalidateQueries({ queryKey: pendingBookingsKey(userId) }); },
+    () => {
+      void qc.invalidateQueries({ queryKey: pendingBookingsKey(userId) });
+    },
     Boolean(userId),
   );
   return query;
