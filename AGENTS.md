@@ -20,6 +20,7 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - Search cards, map and agent results share validated directory rows from `searchProfessionalDetails`; display only server-authorized names so incomplete data and privacy rules stay consistent.
 - Async data via TanStack Query; live updates via Supabase Realtime, not polling.
 - Direct pending bookings have a dedicated professional inbox; database INSERT triggers create recipient-only notifications so every booking entry point alerts consistently.
+- Service flow (Pedido → Aceptado → En camino → Cuidando → Terminado) lives in `src/lib/serviceFlow.ts`; `LiveServiceAlerts` (mounted once in `__root`) uses `useRealtimeProfessionalFeed` for app-wide alerts, so new request/status notification types must be added to `ALERT_TYPES` there.
 - Map visitors share a payload-free public broadcast subscription; signed-in viewers retain the private channel, and selection reads current authorized pins to prevent stale locations or actions.
 - Forms use react-hook-form + Zod — single validation path.
 - Roles live only in `public.user_roles`; check with `has_role()` / `is_staff()` — prevents privilege escalation.
