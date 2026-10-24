@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@tanstack/react-router";
 import { notificationTone } from "@/lib/careLoop";
-import { toast } from "sonner";
 
 type Notification = {
   id: string;
@@ -70,12 +69,7 @@ export function NotificationsBell({ userId }: { userId: string }) {
           setItems((prev) =>
             [notification, ...prev.filter((n) => n.id !== notification.id)].slice(0, 20),
           );
-          if (notification.type === "booking_requested") {
-            toast(notification.title, {
-              id: notification.id,
-              description: notification.body ?? undefined,
-            });
-          }
+          // La alerta flotante con sonido la muestra `LiveServiceAlerts` en toda la app.
         },
       )
       .subscribe((status) => {

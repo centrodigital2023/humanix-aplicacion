@@ -6,13 +6,16 @@ export function JourneySteps({
   status,
   proName,
   compact = false,
+  sentence: sentenceOverride,
 }: {
   status: string;
   proName: string;
   compact?: boolean;
+  /** Frase propia (por ejemplo, la del profesional); por defecto, la de la familia. */
+  sentence?: string;
 }) {
   const current = journeyIndex(status);
-  const sentence = journeySentence(status, proName);
+  const sentence = sentenceOverride ?? journeySentence(status, proName);
 
   if (current === -1) {
     return (
