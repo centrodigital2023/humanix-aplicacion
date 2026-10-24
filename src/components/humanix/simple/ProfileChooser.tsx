@@ -1,5 +1,6 @@
 // Primera pantalla: "¿Quién eres?" — 3 tarjetas grandes con imagen.
 // Después de elegir, todo el sitio muestra solo ese perfil.
+import { ArrowRight, Check } from "lucide-react";
 import { AUDIENCES, AUDIENCE_COPY, type Audience } from "@/lib/audience";
 import { TINTS, type Tint } from "./ui";
 import { useSpeakOnChange, useVoice } from "./voice";
@@ -62,7 +63,7 @@ export function ProfileChooser({ onChoose }: { onChoose: (a: Audience) => void }
                   say(c.tab);
                   onChoose(a);
                 }}
-                className={`card-hover group flex min-h-64 w-full flex-col items-start gap-4 rounded-[2rem] p-6 text-left shadow-lg shadow-trust/10 ring-1 ring-border transition duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-trust/40 ${AUDIENCE_GRADIENT[a]}`}
+                className={`card-hover group flex min-h-72 w-full flex-col items-start gap-4 rounded-[2rem] p-6 text-left shadow-lg shadow-trust/10 ring-1 ring-border transition duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-trust/40 ${AUDIENCE_GRADIENT[a]}`}
               >
                 <span
                   aria-hidden="true"
@@ -74,21 +75,22 @@ export function ProfileChooser({ onChoose }: { onChoose: (a: Audience) => void }
                   <span className="block font-display text-2xl font-bold">{c.tab}</span>
                   <span className="mt-0.5 block text-sm text-muted-foreground">{HINT[a]}</span>
                 </div>
-                {/* micro-copy bullets — appear on hover via group */}
-                <ul
-                  className="mt-auto space-y-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-                  aria-hidden="true"
-                >
+                {/* Beneficios siempre visibles: en el celular no hay "hover". */}
+                <ul className="space-y-1.5">
                   {hints.map((h) => (
-                    <li
-                      key={h}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"
-                    >
-                      <span className="text-ok">✓</span>
+                    <li key={h} className="flex items-center gap-2 text-sm font-semibold">
+                      <Check className="h-4 w-4 shrink-0 text-ok" aria-hidden="true" />
                       {h}
                     </li>
                   ))}
                 </ul>
+                <span className="mt-auto inline-flex min-h-11 items-center gap-2 self-stretch justify-center rounded-2xl bg-trust px-4 text-base font-bold text-trust-foreground shadow-md transition group-hover:bg-trust/90">
+                  Entrar
+                  <ArrowRight
+                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                    aria-hidden="true"
+                  />
+                </span>
               </button>
             </li>
           );

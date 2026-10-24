@@ -136,9 +136,15 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-CO">
+    <html lang="es-CO" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Modo oscuro por defecto, aplicado antes de pintar (sin destello claro); «Claro» queda guardado por persona. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('humanix-theme');document.documentElement.classList.toggle('dark',t!=='light');}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
         {/* Swap font stylesheet to all media once loaded (non-blocking) */}
         <script
           dangerouslySetInnerHTML={{
