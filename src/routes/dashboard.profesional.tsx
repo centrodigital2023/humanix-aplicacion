@@ -452,6 +452,11 @@ function ProDashboard() {
         filter: userId ? `professional_id=eq.${userId}` : undefined,
       },
       { table: "job_offers", event: "*" },
+      {
+        table: "service_bookings",
+        event: "*",
+        filter: userId ? `professional_id=eq.${userId}` : undefined,
+      },
     ],
     () => {
       if (userId) void loadAll(userId);

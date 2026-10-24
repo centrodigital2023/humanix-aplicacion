@@ -1,5 +1,5 @@
 # Solicitudes directas al profesional
-- [ ] Corregir la recepción de reservas pendientes y sus alertas en tiempo real; verificar la solicitud real existente.
+- [x] Corregida la bandeja de reservas pendientes y sus alertas en vivo; solicitud real y aviso verificados con sesión del profesional, acceso a «Aceptar servicio» sin modificar la reserva; 25 pruebas aprobadas.
 
 # Importación completa y aplicación instalable
 - [x] Unificar PDF, Word, imágenes y texto pegado para rellenar perfil, experiencia y referencias editables; 14 pruebas aprobadas.
