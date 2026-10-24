@@ -4,6 +4,7 @@ import {
   directoryIdsKey,
   currentMapSelection,
   lastSeenText,
+  pendingMapProfessionals,
   presenceLine,
   proSubtitle,
   validatedMapProfessionals,
@@ -43,6 +44,7 @@ const pin = (over: Partial<MapProfessional> = {}): MapProfessional => ({
   status: "available",
   live: false,
   lastSeen: null,
+  verification: "verified",
   ...over,
 });
 const dir = (over: Partial<DirectoryRow> = {}): DirectoryRow => ({
@@ -143,5 +145,17 @@ describe("presenceLine — disponible aunque el aparato esté apagado", () => {
   it("ocupado o no disponible: el estado ya lo dice", () => {
     expect(presenceLine({ status: "busy", live: true, lastSeen: null }, NOW)).toBeNull();
     expect(presenceLine({ status: "unavailable", live: false, lastSeen: null }, NOW)).toBeNull();
+  });
+});
+
+describe("verificación documental en el mapa", () => {
+  it("un perfil con documentos pendientes no pasa como contratable aunque esté en el directorio", () => {
+    expect(validatedMapProfessionals([pin({ verification: "pending" })], [dir()])).toEqual([]);
+  });
+  it("los pendientes salen aparte, con el nombre que dio la base", () => {
+    const list = [pin(), pin({ id: "p2", name: "Vannesa U.", verification: "pending" })];
+    expect(pendingMapProfessionals(list).map((p) => [p.id, p.name])).toEqual([
+      ["p2", "Vannesa U."],
+    ]);
   });
 });

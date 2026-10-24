@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   COUNTER_KEYS,
@@ -22,10 +23,13 @@ import {
   type MapProfessionalRow,
 } from "./liveMap";
 
-const MIGRATION = readFileSync(
-  require("node:path").resolve(process.cwd(), "supabase/migrations/20261012210000_live_map.sql"),
-  "utf8",
-);
+// La definición vigente de cada función es la de la migración más reciente que la redefine.
+const migration = (name: string) =>
+  readFileSync(resolve(process.cwd(), `supabase/migrations/${name}`), "utf8");
+const MIGRATION = [
+  migration("20261024120000_map_verification.sql"),
+  migration("20261012210000_live_map.sql"),
+].join("\n");
 
 const proRow = (over: Partial<MapProfessionalRow> = {}): MapProfessionalRow => ({
   pro_id: "p1",
@@ -46,6 +50,7 @@ const proRow = (over: Partial<MapProfessionalRow> = {}): MapProfessionalRow => (
   status: "available",
   live: true,
   last_seen: "2026-10-14T14:59:00Z",
+  verification_status: "verified",
   ...over,
 });
 
@@ -65,6 +70,7 @@ const demandRow = (over: Partial<MapDemandRow> = {}): MapDemandRow => ({
   trust_level: "building",
   trust_enough: false,
   distance_band: null,
+  verification_status: "pending",
   ...over,
 });
 
@@ -99,6 +105,7 @@ describe("el contrato con la base", () => {
       status: "idle",
       live: false,
       open_offers: 0,
+      verification_status: "pending",
     };
     expect(outCols("map_institutions").sort()).toEqual(keysOf(row));
   });
