@@ -1,3 +1,6 @@
+# Solicitudes directas al profesional
+- [ ] Corregir la recepción de reservas pendientes y sus alertas en tiempo real; verificar la solicitud real existente.
+
 # Importación completa y aplicación instalable
 - [x] Unificar PDF, Word, imágenes y texto pegado para rellenar perfil, experiencia y referencias editables; 14 pruebas aprobadas.
 - [x] Guardar el archivo de origen y registrar soportes realmente presentes como pendientes de revisión, sin inventar ni aprobar documentos.
