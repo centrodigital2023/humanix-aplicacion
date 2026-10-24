@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@tanstack/react-router";
 import { notificationTone } from "@/lib/careLoop";
+import { toast } from "sonner";
 
 type Notification = {
   id: string;
@@ -54,7 +55,7 @@ export function NotificationsBell({ userId }: { userId: string }) {
 
     // Realtime
     const channel = supabase
-      .channel(`notif-${userId}`)
+      .channel(`notif-${userId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
@@ -64,10 +65,17 @@ export function NotificationsBell({ userId }: { userId: string }) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          setItems((prev) => [payload.new as Notification, ...prev].slice(0, 20));
+          if (!active) return;
+          const notification = payload.new as Notification;
+          setItems((prev) => [notification, ...prev.filter((n) => n.id !== notification.id)].slice(0, 20));
+          if (notification.type === "booking_requested") {
+            toast(notification.title, { id: notification.id, description: notification.body ?? undefined });
+          }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void load();
+      });
 
     return () => {
       active = false;

@@ -19,6 +19,7 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - Business logic as pure functions in `src/lib/` with Vitest tests — testable without the DB.
 - Search cards, map and agent results share validated directory rows from `searchProfessionalDetails`; display only server-authorized names so incomplete data and privacy rules stay consistent.
 - Async data via TanStack Query; live updates via Supabase Realtime, not polling.
+- Direct pending bookings have a dedicated professional inbox; database INSERT triggers create recipient-only notifications so every booking entry point alerts consistently.
 - Map visitors share a payload-free public broadcast subscription; signed-in viewers retain the private channel, and selection reads current authorized pins to prevent stale locations or actions.
 - Forms use react-hook-form + Zod — single validation path.
 - Roles live only in `public.user_roles`; check with `has_role()` / `is_staff()` — prevents privilege escalation.
