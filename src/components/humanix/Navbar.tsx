@@ -81,7 +81,7 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
             type="button"
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "Modo claro" : "Modo oscuro"}
-            className="hidden h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground sm:inline-flex"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground"
           >
             {theme === "dark" ? (
               <Sun className="h-5 w-5" aria-hidden="true" />

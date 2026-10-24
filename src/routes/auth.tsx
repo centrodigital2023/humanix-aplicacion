@@ -24,6 +24,7 @@ import { CONTACT } from "@/lib/social";
 import { SocialIcons } from "@/components/humanix/SocialIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
+import { dashboardPathForRoles } from "@/lib/homeRadar";
 import { toast } from "sonner";
 import { friendlyAuthError } from "@/lib/friendlyError";
 import { applyStoredReferralCode, rememberReferralCode } from "@/lib/referralCode";
@@ -208,20 +209,17 @@ function AuthPage() {
       return () => sub.subscription.unsubscribe();
     }
 
-    // No redirect param: pick the correct dashboard by the user's primary role.
+    // No redirect param: straight to the role's panel (no /dashboard hop, which reloads the page to decide).
     const resolveTarget = async (session: import("@supabase/supabase-js").Session) => {
       const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id);
       const roles = (rolesData?.map((r) => r.role) ?? []) as string[];
-      if (roles.includes("superadmin")) return "/superadmin";
-      if (roles.includes("hr_staff")) return "/talento-humano";
-      if (roles.includes("evaluator")) return "/evaluador";
-      if (roles.includes("institution") || role === "institution") return "/dashboard/institucion";
-      if (roles.includes("professional") || role === "professional")
-        return "/dashboard/profesional";
-      return "/dashboard";
+      // Rol del registro (metadatos); el de la URL solo si no es el «family» por defecto, para que el personal de una
+      // institución (sin roles propios) siga pasando por /dashboard.
+      const metaRole = session.user.user_metadata?.role as Role | undefined;
+      return dashboardPathForRoles(roles, metaRole ?? (role !== "family" ? role : undefined));
     };
 
     supabase.auth.getSession().then(async ({ data }) => {
@@ -242,7 +240,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}${search.redirect ?? (role === "institution" ? "/dashboard/institucion" : role === "professional" ? "/dashboard/profesional" : "/dashboard")}`,
+            emailRedirectTo: `${window.location.origin}${search.redirect ?? dashboardPathForRoles([], role)}`,
             data: {
               full_name: fullName,
               phone,

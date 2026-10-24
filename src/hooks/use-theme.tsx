@@ -4,13 +4,22 @@ type Theme = "light" | "dark";
 
 const STORAGE_KEY = "humanix-theme";
 
+/** Oscuro salvo que la persona haya elegido «claro» (el script de `__root` lo aplica antes de pintar). */
+export function readTheme(stored: string | null): Theme {
+  return stored === "light" ? "light" : "dark";
+}
+
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>("light");
+  const [theme, setThemeState] = useState<Theme>("dark");
 
   useEffect(() => {
-    const stored =
-      typeof window !== "undefined" ? (localStorage.getItem(STORAGE_KEY) as Theme | null) : null;
-    const initial: Theme = stored ?? "light";
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      /* almacenamiento bloqueado: queda el oscuro */
+    }
+    const initial = readTheme(stored);
     setThemeState(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
   }, []);
