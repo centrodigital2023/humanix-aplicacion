@@ -1,6 +1,6 @@
 // Profesionales: un interruptor gigante (disponible / no disponible),
 // ofertas cercanas con 3 botones y perfil en 3 pasos.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Check, Clock, MapPin, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +107,32 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
     };
   }, [user, isPro]);
 
+  // Radar en vivo: cada oferta nueva o que cambia recarga el feed, sin recargar la página.
+  const [reloadTick, setReloadTick] = useState(0);
+  const [freshAlert, setFreshAlert] = useState<string | null>(null);
+  const sayRef = useRef(say);
+  sayRef.current = say;
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel(`home-pro-offers-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "job_offers" }, (payload) => {
+        const row = payload.new as { status?: string; title?: string; city?: string } | null;
+        if (payload.eventType === "INSERT" && row?.status === "open") {
+          const msg = `Nueva oferta${row.city ? ` en ${row.city}` : ""}`;
+          setFreshAlert(msg);
+          sayRef.current(msg);
+        }
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => setReloadTick((t) => t + 1), 400);
+      })
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -124,7 +150,7 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
     return () => {
       active = false;
     };
-  }, [proCity]);
+  }, [proCity, reloadTick]);
 
   const goSignup = () =>
     navigate({
@@ -245,6 +271,21 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
           Ofertas {proCity ? `en ${proCity}` : "nuevas"}
         </h3>
 
+        {freshAlert && (
+          <button
+            type="button"
+            onClick={() => setFreshAlert(null)}
+            role="status"
+            className="mt-4 flex w-full items-center gap-3 rounded-2xl bg-ok px-4 py-3 text-left text-base font-bold text-ok-foreground shadow-lg shadow-ok/25 animate-in fade-in slide-in-from-top-2 duration-300"
+          >
+            <span aria-hidden="true" className="text-2xl">
+              🔔
+            </span>
+            <span className="flex-1">{freshAlert}</span>
+            <X className="h-5 w-5 shrink-0" aria-label="Cerrar aviso" />
+          </button>
+        )}
+
         {offers === null && (
           <div className="mt-5 space-y-3" aria-busy="true" aria-label="Cargando ofertas">
             {[0, 1, 2].map((i) => (
@@ -258,7 +299,7 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
             <p className="text-5xl" aria-hidden="true">
               🔔
             </p>
-            <p className="mt-3 text-xl font-bold">Te avisamos cuando haya ofertas</p>
+            <p className="mt-3 text-xl font-bold">Te avisamos cuando haya ofertas cerca de ti</p>
           </div>
         )}
 

@@ -1,9 +1,9 @@
 // Home "Humanix simple": una pantalla que cambia según quién eres
 // (Familias / IPS-EPS / Profesionales). Imágenes grandes + pocas palabras,
 // guía por voz para quien no lee, sin publicidad ni urgencias falsas.
-import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { MessageCircle } from "lucide-react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ChevronRight, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
@@ -14,6 +14,7 @@ import { InstitutionFlow } from "@/components/humanix/simple/InstitutionFlow";
 import { ProfessionalFlow } from "@/components/humanix/simple/ProfessionalFlow";
 import { TINTS, type Tint } from "@/components/humanix/simple/ui";
 import { LiveNearby } from "@/components/humanix/simple/LiveNearby";
+import { NearbyProRadar } from "@/components/humanix/simple/NearbyProRadar";
 import { FeatureHub } from "@/components/humanix/simple/FeatureHub";
 import { PlanStrip } from "@/components/humanix/simple/PlanStrip";
 import { MyBookings } from "@/components/humanix/simple/MyBookings";
@@ -25,6 +26,27 @@ import { AUDIENCE_COPY, parseAudience, whatsappLink, type Audience } from "@/lib
 import { LeadCaptureWidget } from "@/components/humanix/LeadCaptureWidget";
 import { CONTACT } from "@/lib/social";
 import { buildSeo, SITE_NAME } from "@/lib/seo";
+
+const FloatingWAChat = lazy(() =>
+  import("@/components/humanix/FloatingWAChat").then((m) => ({ default: m.FloatingWAChat })),
+);
+
+/** Burbuja de WhatsApp en la home: aparece al bajar, para no tapar el botón principal en el celular. */
+function FloatingHelpOnScroll() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 600);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  if (!show) return null;
+  return (
+    <Suspense fallback={null}>
+      <FloatingWAChat />
+    </Suspense>
+  );
+}
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { para?: Audience; pedir?: "1" } => {
@@ -87,26 +109,76 @@ function NorthStarStrip() {
     };
   }, []);
 
-  if (!stats) return null;
+  const n = (v: number | undefined) => (v == null ? "—" : v.toLocaleString("es-CO"));
+  const goMap = () =>
+    document.getElementById("mapa")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  const items = [
-    { n: stats.services_today, label: "Servicios hoy", emoji: "🩺" },
-    { n: stats.pros_available, label: "Profesionales disponibles ahora", emoji: "🟢" },
-    { n: stats.families_month, label: "Familias atendidas este mes", emoji: "👨‍👩‍👧" },
+  // Cada contador es un botón pequeño que abre lo que cuenta.
+  const items: Array<{
+    n: string;
+    label: string;
+    emoji: string;
+    open: string;
+    to?: "/buscar" | "/confianza";
+  }> = [
+    {
+      n: n(stats?.services_today),
+      label: "Servicios hoy",
+      emoji: "🩺",
+      open: "Pedir",
+      to: "/buscar",
+    },
+    {
+      n: n(stats?.pros_available),
+      label: "Profesionales disponibles ahora",
+      emoji: "🟢",
+      open: "Mapa",
+    },
+    {
+      n: n(stats?.families_month),
+      label: "Familias atendidas este mes",
+      emoji: "👨‍👩‍👧",
+      open: "Opiniones",
+      to: "/confianza",
+    },
   ];
+
+  // Celular: 3 tarjetas en fila (número grande arriba). Desde sm: píldoras en línea.
+  const pill =
+    "stat-live group flex h-full flex-col items-center gap-1 rounded-3xl bg-card p-3 text-center text-xs font-semibold shadow-sm ring-1 ring-border transition hover:-translate-y-0.5 hover:ring-trust active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-trust/40 sm:min-h-12 sm:flex-row sm:gap-2 sm:rounded-full sm:py-1.5 sm:pl-4 sm:pr-1.5 sm:text-left sm:text-sm";
+  const body = (item: (typeof items)[number]) => (
+    <>
+      <span aria-hidden="true" className="text-xl sm:text-base">
+        {item.emoji}
+      </span>
+      <span className="font-display text-2xl font-bold tabular-nums sm:font-sans sm:text-sm">
+        {item.n}
+      </span>
+      <span className="leading-tight text-muted-foreground">{item.label}</span>
+      <span className="mt-auto inline-flex sm:ml-1 sm:mt-0 items-center gap-0.5 rounded-full bg-trust/10 px-2.5 py-1 text-xs font-bold text-trust">
+        {item.open}
+        <ChevronRight
+          className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </span>
+    </>
+  );
 
   return (
     <div aria-label="Actividad en vivo" className="mx-auto max-w-6xl px-4 sm:px-6">
-      <ul className="flex flex-wrap justify-center gap-3">
+      <ul className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center sm:gap-3">
         {items.map((item, i) => (
-          <li
-            key={item.label}
-            style={{ animationDelay: `${i * 120}ms` }}
-            className="stat-live inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-semibold shadow-sm ring-1 ring-border"
-          >
-            <span aria-hidden="true">{item.emoji}</span>
-            <span className="font-bold tabular-nums">{item.n.toLocaleString("es-CO")}</span>
-            <span className="text-muted-foreground">{item.label}</span>
+          <li key={item.label} style={{ animationDelay: `${i * 120}ms` }}>
+            {item.to ? (
+              <Link to={item.to} className={pill}>
+                {body(item)}
+              </Link>
+            ) : (
+              <button type="button" onClick={goMap} className={pill}>
+                {body(item)}
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -284,9 +356,9 @@ function Home() {
           </div>
         </section>
 
-        <NorthStarStrip />
+        {audience === "familias" && <NorthStarStrip />}
 
-        <section className="mx-auto max-w-6xl px-4 pb-10 sm:px-6" aria-label={copy.cta}>
+        <section className="mx-auto max-w-6xl px-4 pb-10 pt-5 sm:px-6" aria-label={copy.cta}>
           {audience === "familias" && (
             <div className="space-y-5">
               <PendingBookingResume
@@ -297,6 +369,7 @@ function Home() {
                 }
               />
               {user && <MyBookings userId={user.id} />}
+              <NearbyProRadar />
               <FamilyFlow />
             </div>
           )}
@@ -316,9 +389,18 @@ function Home() {
           {audience === "profesionales" && <ProfessionalFlow user={user} />}
         </section>
 
-        <section aria-labelledby="map-title" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <section
+          id="mapa"
+          aria-labelledby="map-title"
+          className="mx-auto max-w-6xl scroll-mt-24 px-4 py-8 sm:px-6"
+        >
           <h2 id="map-title" className="font-display text-2xl font-bold sm:text-3xl">
-            📍 {audience === "profesionales" ? "Ofertas en el mapa" : "Cerca de ti, en vivo"}
+            📍{" "}
+            {audience === "profesionales"
+              ? "Solicitudes en el mapa"
+              : audience === "instituciones"
+                ? "Sedes y personal en terreno"
+                : "Cerca de ti, en vivo"}
           </h2>
           <div className="mt-5">
             <LiveNearby audience={audience} user={user} />
@@ -391,6 +473,7 @@ function Home() {
         </section>
       </main>
       <LeadCaptureWidget userId={user?.id} />
+      <FloatingHelpOnScroll />
     </>,
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,12 +23,8 @@ const PRIORITY: AppRole[] = [
   "institution_staff",
 ];
 
-function hardRedirect(to: string) {
-  if (typeof window === "undefined") return;
-  window.location.replace(to);
-}
-
 function DashboardRouter() {
+  const navigate = useNavigate();
   const [msg, setMsg] = useState("Verificando sesión...");
 
   useEffect(() => {
@@ -37,7 +33,8 @@ function DashboardRouter() {
     const go = (to: string) => {
       if (done) return;
       done = true;
-      hardRedirect(to);
+      // Navegación dentro de la app: sin recargar la página ni pasar por una pantalla en blanco.
+      void navigate({ href: to, replace: true });
     };
 
     const safety = setTimeout(() => {
@@ -125,7 +122,7 @@ function DashboardRouter() {
     return () => {
       clearTimeout(safety);
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center text-muted-foreground">
