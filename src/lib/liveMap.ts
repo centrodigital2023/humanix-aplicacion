@@ -11,6 +11,22 @@ import { trustFromColumns, type TrustSummary } from "./trustScore";
 
 export type PinStatus = "available" | "busy" | "unavailable";
 
+/**
+ * Estado documental de quien sale en el mapa (columna `verification_status`, migración 20261024120000_map_verification.sql):
+ *  - "verified": documentos completos y validados → pin activo, se puede pedir o asignar.
+ *  - "pending": documentos incompletos o en revisión → pin ámbar «Documentos pendientes», sin contratación directa.
+ */
+export type VerificationStatus = "verified" | "pending";
+
+/** Normaliza la columna; si la base aún no la trae (migración sin aplicar), decide el respaldo que se le pase. */
+export function verificationFrom(
+  v: string | null | undefined,
+  fallbackVerified: boolean,
+): VerificationStatus {
+  if (v === "verified" || v === "pending") return v;
+  return fallbackVerified ? "verified" : "pending";
+}
+
 export const STATUS_LABEL: Record<PinStatus, string> = {
   available: "Disponible",
   busy: "Ocupado",
@@ -47,6 +63,8 @@ export interface MapProfessionalRow {
   status: string | null;
   live: boolean | null;
   last_seen: string | null;
+  /** Opcional mientras la migración 20261024120000 no esté aplicada. */
+  verification_status?: string | null;
 }
 
 export interface MapProfessional {
@@ -68,6 +86,7 @@ export interface MapProfessional {
   status: PinStatus;
   live: boolean;
   lastSeen: string | null;
+  verification: VerificationStatus;
 }
 
 export function fromProfessionalRow(r: MapProfessionalRow): MapProfessional {
@@ -97,6 +116,7 @@ export function fromProfessionalRow(r: MapProfessionalRow): MapProfessional {
     status: status(r.status),
     live: !!r.live,
     lastSeen: r.last_seen,
+    verification: verificationFrom(r.verification_status, !!(r.verified || r.rethus_verified)),
   };
 }
 
@@ -118,6 +138,7 @@ export interface MapDemandRow {
   trust_level: string | null;
   trust_enough: boolean | null;
   distance_band: number | null;
+  verification_status?: string | null;
 }
 
 export interface MapDemand {
@@ -135,6 +156,7 @@ export interface MapDemand {
   offerId: string | null;
   trust: TrustSummary;
   distanceBand: number | null;
+  verification: VerificationStatus;
 }
 
 export function fromDemandRow(r: MapDemandRow): MapDemand {
@@ -153,6 +175,8 @@ export function fromDemandRow(r: MapDemandRow): MapDemand {
     offerId: r.offer_id,
     trust: trustFromColumns(r.trust_score, r.trust_level, r.trust_enough),
     distanceBand: r.distance_band,
+    // Sin la columna no se sabe: no se marca a nadie como pendiente por una migración sin aplicar.
+    verification: verificationFrom(r.verification_status, true),
   };
 }
 
@@ -183,6 +207,7 @@ export interface MapInstitutionRow {
   status: string | null;
   live: boolean | null;
   open_offers: number | null;
+  verification_status?: string | null;
 }
 
 export type InstitutionStatus = "available" | "busy" | "idle";
@@ -198,6 +223,7 @@ export interface MapInstitution {
   status: InstitutionStatus;
   live: boolean;
   openOffers: number;
+  verification: VerificationStatus;
 }
 
 export function fromInstitutionRow(r: MapInstitutionRow): MapInstitution {
@@ -212,6 +238,7 @@ export function fromInstitutionRow(r: MapInstitutionRow): MapInstitution {
     status: r.status === "available" || r.status === "busy" ? r.status : "idle",
     live: !!r.live,
     openOffers: Number(r.open_offers ?? 0),
+    verification: verificationFrom(r.verification_status, !!r.verified),
   };
 }
 

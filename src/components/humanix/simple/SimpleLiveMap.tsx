@@ -3,6 +3,8 @@
 import { lazy, Suspense } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import type { LatLng } from "@/lib/geo";
+import type { VerificationStatus } from "@/lib/liveMap";
+import type { PinKind } from "@/lib/mapVerification";
 
 export type MapPin = {
   id: string;
@@ -26,6 +28,10 @@ export type MapPin = {
   statusLabel?: string;
   /** «Disponible · se conectó hace 3 horas»: disponible sigue encendido aunque el profesional no tenga Humanix abierto. */
   presence?: string | null;
+  /** Quién es: decide qué se puede hacer desde el pin. */
+  kind?: PinKind;
+  /** Documentos validados o pendientes: los pendientes salen ámbar y no se pueden pedir ni asignar. */
+  verification?: VerificationStatus;
   raw?: unknown;
 };
 

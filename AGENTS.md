@@ -20,6 +20,7 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - Search cards, map and agent results share validated directory rows from `searchProfessionalDetails`; display only server-authorized names so incomplete data and privacy rules stay consistent.
 - Async data via TanStack Query; live updates via Supabase Realtime, not polling.
 - Direct pending bookings have a dedicated professional inbox; database INSERT triggers create recipient-only notifications so every booking entry point alerts consistently.
+- Map pins follow `verification_status` from the map SQL functions: only verified pros (approved docs) are bookable; pending ones show amber with the Habeas Data notice (`src/lib/mapVerification.ts`). Pros share service location only in `in_route`/`in_progress`, enforced by `tracking_pings` RLS.
 - Map visitors share a payload-free public broadcast subscription; signed-in viewers retain the private channel, and selection reads current authorized pins to prevent stale locations or actions.
 - Forms use react-hook-form + Zod — single validation path.
 - Roles live only in `public.user_roles`; check with `has_role()` / `is_staff()` — prevents privilege escalation.

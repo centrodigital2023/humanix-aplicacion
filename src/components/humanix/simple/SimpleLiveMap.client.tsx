@@ -1,13 +1,23 @@
 // Mapa en vivo, versión simple: pines grandes con emoji y datos reales por las funciones seguras de la base (`map_professionals` y
 // `map_open_demand`, ver `hooks/use-live-map.ts`): nunca teléfono ni dirección, posiciones en cuadrícula de ~1 km y, si alguien no
 // tiene ubicación, simplemente no es un pin (no se inventa un sitio). Se actualiza solo cuando la base avisa que algo cambió.
-// Al tocar un pin aparece una tarjeta grande abajo con 1-2 botones.
+// Al tocar un pin aparece una tarjeta grande abajo con 1-2 botones. Quien tiene documentos pendientes sale en ámbar con ⚠ y, al tocarlo,
+// se abre el aviso de documentos (Habeas Data) en lugar de poder pedirlo (`lib/mapVerification.ts`).
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Loader2, LocateFixed, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Loader2, LocateFixed, ShieldAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useSession } from "@/hooks/use-has-session";
 import {
   useMapDemand,
@@ -19,6 +29,7 @@ import { demandHeadline, STATUS_LABEL, withPosition, type MapDemand } from "@/li
 import { trustBadgeText } from "@/lib/trustScore";
 import { currentMapSelection, presenceLine, proSubtitle } from "@/lib/mapDirectory";
 import { displayCity, idleInstitutions } from "@/lib/proMapDemand";
+import { PIN_TONE_COLOR, canActFromMap, pendingDocsCopy, pinTone } from "@/lib/mapVerification";
 import { useVoice } from "./voice";
 import type { MapPin, SimpleLiveMapProps } from "./SimpleLiveMap";
 
@@ -29,18 +40,32 @@ const COP = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
+const escapeAttr = (v: string) =>
+  v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
 function pinIcon(pin: MapPin, selected: boolean) {
-  const ring = pin.live ? "#10b981" : pin.dim ? "#9ca3af" : "#0f4c81";
+  const tone = pinTone(pin);
+  const ring = PIN_TONE_COLOR[tone];
   const size = selected ? 58 : 46;
   const pulse = pin.live
     ? `<span style="position:absolute;inset:-6px;border-radius:9999px;border:3px solid ${ring};opacity:.55;animation:hxPulse 1.4s infinite"></span>`
     : "";
-  const badge = pin.badge
-    ? `<span style="position:absolute;left:50%;top:100%;transform:translate(-50%,4px);white-space:nowrap;background:${ring};color:#fff;font:700 12px/1 system-ui;padding:4px 7px;border-radius:9999px;box-shadow:0 2px 6px rgba(0,0,0,.25)">${pin.badge}</span>`
+  const label = tone === "pending" ? "⚠ Docs" : pin.badge;
+  const badge = label
+    ? `<span style="position:absolute;left:50%;top:100%;transform:translate(-50%,4px);white-space:nowrap;background:${ring};color:#fff;font:700 12px/1 system-ui;padding:4px 7px;border-radius:9999px;box-shadow:0 2px 6px rgba(0,0,0,.25)">${label}</span>`
     : "";
+  // Verificado con foto: la foto es el pin. Pendiente: siempre el emoji (sin foto) con el aviso.
+  const face =
+    tone !== "pending" && pin.avatarUrl
+      ? `<img src="${escapeAttr(pin.avatarUrl)}" alt="" style="width:100%;height:100%;border-radius:9999px;object-fit:cover" />`
+      : pin.emoji;
+  const warn =
+    tone === "pending"
+      ? `<span style="position:absolute;right:-4px;top:-4px;width:20px;height:20px;border-radius:9999px;background:${ring};color:#fff;font:700 13px/20px system-ui;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.3)">!</span>`
+      : "";
   return L.divIcon({
     className: "hx-simple-pin",
-    html: `<div style="position:relative;width:${size}px;height:${size}px">${pulse}<div style="width:100%;height:100%;border-radius:9999px;background:#fff;border:4px solid ${ring};display:flex;align-items:center;justify-content:center;font-size:${selected ? 30 : 24}px;box-shadow:0 6px 16px rgba(15,76,129,.30);opacity:${pin.dim ? 0.75 : 1}">${pin.emoji}</div>${badge}</div>`,
+    html: `<div style="position:relative;width:${size}px;height:${size}px">${pulse}<div style="width:100%;height:100%;border-radius:9999px;background:#fff;border:4px solid ${ring};display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:${selected ? 30 : 24}px;box-shadow:0 6px 16px rgba(15,76,129,.30);opacity:${pin.dim && tone !== "pending" ? 0.75 : 1}">${face}</div>${warn}${badge}</div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
@@ -94,6 +119,8 @@ function demandPins(list: MapDemand[]): MapPin[] {
         price: d.topHourly ? `Hasta ${COP(d.topHourly)} / hora` : null,
         badge: d.topHourly ? `${Math.round(d.topHourly / 1000)}k` : undefined,
         trust: d.trust.score != null ? trustBadgeText(d.trust) : null,
+        kind: d.kind,
+        verification: d.verification,
         raw: d,
       }) satisfies MapPin,
   );
@@ -112,6 +139,10 @@ export function SimpleLiveMap({
   const [me, setMe] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
   const [flyTarget, setFlyTarget] = useState<LatLng | null>(null);
+  /** Pin con documentos pendientes cuyo aviso está abierto. */
+  const [docsPin, setDocsPin] = useState<MapPin | null>(null);
+  /** Mapa de ofertas: filtro rápido por tipo de quien publica. */
+  const [kindFilter, setKindFilter] = useState<"all" | "family" | "institution">("all");
   const session = useSession();
 
   // Profesionales (familias e instituciones) u oferta abierta (profesionales). Solo se pide lo que ese mapa necesita.
@@ -132,7 +163,7 @@ export function SimpleLiveMap({
     if (mode === "pros") {
       if (!prosQ.data) return null;
       const now = Date.now();
-      return withPosition(prosQ.data).map(
+      const verified = withPosition(prosQ.data).map(
         (p) =>
           ({
             id: p.id,
@@ -150,9 +181,30 @@ export function SimpleLiveMap({
             trust: p.trust.score != null ? trustBadgeText(p.trust) : null,
             statusLabel: STATUS_LABEL[p.status],
             presence: presenceLine(p, now),
+            kind: "pro",
+            verification: "verified",
             raw: p,
           }) satisfies MapPin,
       );
+      const pending = withPosition(prosQ.pending).map(
+        (p) =>
+          ({
+            id: p.id,
+            lat: p.lat,
+            lng: p.lng,
+            emoji: "👩‍⚕️",
+            title: p.name,
+            subtitle: [p.specialty?.trim() || "Cuidado en casa", displayCity(p.city)]
+              .filter(Boolean)
+              .join(" · "),
+            statusLabel: "⚠ Documentos pendientes",
+            live: p.live,
+            kind: "pro",
+            verification: "pending",
+            raw: p,
+          }) satisfies MapPin,
+      );
+      return [...verified, ...pending];
     }
     if (!session.has) return session.ready ? [] : null;
     if (!demandQ.data) return null;
@@ -168,13 +220,21 @@ export function SimpleLiveMap({
           dim: true,
           live: i.live,
           verified: i.verified,
+          kind: "institution",
+          verification: i.verification,
           raw: { offerId: null, kind: "institution", id: i.id },
         }) satisfies MapPin,
     );
     return [...demandPins(demandQ.data), ...idle];
-  }, [mode, prosQ.data, demandQ.data, instQ.data, session.has, session.ready]);
+  }, [mode, prosQ.data, prosQ.pending, demandQ.data, instQ.data, session.has, session.ready]);
 
-  const merged = useMemo(() => pins ?? [], [pins]);
+  const merged = useMemo(
+    () =>
+      (pins ?? []).filter(
+        (p) => mode !== "offers" || kindFilter === "all" || p.kind === kindFilter,
+      ),
+    [pins, mode, kindFilter],
+  );
   const selected = currentMapSelection(merged, selectedId);
   const failed = mode === "pros" ? prosQ.isError : demandQ.isError || instQ.isError;
 
@@ -183,8 +243,9 @@ export function SimpleLiveMap({
     return [...merged].sort((a, b) => distanceKm(me, a) - distanceKm(me, b));
   }, [merged, me]);
 
-  const activeCount = merged.filter((p) => !p.dim).length;
-  const busyCount = merged.filter((p) => p.dim).length;
+  const activeCount = merged.filter((p) => pinTone(p) === "available").length;
+  const busyCount = merged.filter((p) => pinTone(p) === "busy").length;
+  const pendingCount = merged.filter((p) => pinTone(p) === "pending").length;
   const liveCount = merged.filter((p) => p.live).length;
 
   const locate = async () => {
@@ -197,7 +258,7 @@ export function SimpleLiveMap({
     }
     setMe(pos);
     setFlyTarget(pos);
-    const near = merged.filter((p) => !p.dim && distanceKm(pos, p) <= 5).length;
+    const near = merged.filter((p) => pinTone(p) === "available" && distanceKm(pos, p) <= 5).length;
     say(
       mode === "pros"
         ? `Hay ${near} profesionales a menos de 5 kilómetros.`
@@ -206,9 +267,19 @@ export function SimpleLiveMap({
   };
 
   const select = (pin: MapPin) => {
+    if (pin.verification === "pending") {
+      // Documentos pendientes: el aviso va primero (sin contratación ni asignación directa).
+      setSelectedId(null);
+      setDocsPin(pin);
+      say(`${pin.title}. Documentos pendientes.`);
+      return;
+    }
     setSelectedId(pin.id);
     say(`${pin.title}. ${pin.price ?? ""}`);
   };
+  const docsCopy = docsPin
+    ? pendingDocsCopy(docsPin.kind ?? "pro", !!session.userId && session.userId === docsPin.id)
+    : null;
 
   const initialCenter = center ?? BOGOTA;
 
@@ -274,6 +345,11 @@ export function SimpleLiveMap({
             ⚪ {busyCount} ocupados
           </span>
         )}
+        {pendingCount > 0 && (
+          <span className="rounded-full bg-warn px-3.5 py-2 text-sm font-bold text-warn-foreground shadow-md">
+            ⚠ {pendingCount} en revisión
+          </span>
+        )}
       </div>
 
       <Button
@@ -290,30 +366,52 @@ export function SimpleLiveMap({
         Yo
       </Button>
 
-      {/* Leyenda con imágenes */}
+      {/* Leyenda (perfiles) o filtros rápidos por tipo (ofertas) */}
       {!selected && (
-        <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex flex-wrap gap-2 text-sm font-bold">
+        <div className="absolute bottom-3 left-3 right-3 z-[500] flex flex-wrap gap-2 text-sm font-bold">
           {mode === "pros" ? (
             <>
-              <span className="rounded-full bg-white/95 px-3 py-1.5 text-trust-deep shadow">
-                🔵 Disponible
+              <span className="pointer-events-none rounded-full bg-white/95 px-3 py-1.5 text-trust-deep shadow">
+                🔵 Yo
               </span>
-              <span className="rounded-full bg-white/95 px-3 py-1.5 text-emerald-700 shadow">
-                🟢 En vivo
+              <span className="pointer-events-none rounded-full bg-white/95 px-3 py-1.5 text-ok shadow">
+                🟢 Disponible
               </span>
-              <span className="rounded-full bg-white/95 px-3 py-1.5 text-gray-600 shadow">
+              <span className="pointer-events-none rounded-full bg-white/95 px-3 py-1.5 text-gray-600 shadow">
                 ⚪ Ocupado
+              </span>
+              <span className="pointer-events-none rounded-full bg-white/95 px-3 py-1.5 text-warn shadow">
+                ⚠ Documentos pendientes
               </span>
             </>
           ) : (
-            <>
-              <span className="rounded-full bg-white/95 px-3 py-1.5 text-trust-deep shadow">
-                🏠 Familia
+            <div role="group" aria-label="Filtrar por tipo" className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["all", "Todos"],
+                  ["family", "🏠 Familia"],
+                  ["institution", "🏥 EPS · IPS · Clínica"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={kindFilter === key}
+                  onClick={() => {
+                    setKindFilter(key);
+                    setSelectedId(null);
+                  }}
+                  className={`min-h-10 rounded-full px-3.5 py-1.5 shadow transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-trust/40 ${
+                    kindFilter === key ? "bg-trust-deep text-white" : "bg-white/95 text-trust-deep"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <span className="pointer-events-none rounded-full bg-white/95 px-3 py-1.5 text-warn shadow">
+                ⚠ Sin validar
               </span>
-              <span className="rounded-full bg-white/95 px-3 py-1.5 text-trust-deep shadow">
-                🏥 EPS / IPS / clínica
-              </span>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -377,10 +475,15 @@ export function SimpleLiveMap({
             <Button
               type="button"
               onClick={() => onPrimary(selected)}
-              disabled={mode === "pros" && selected.dim}
+              disabled={
+                !canActFromMap({
+                  ...selected,
+                  kind: selected.kind ?? (mode === "pros" ? "pro" : "family"),
+                })
+              }
               className="min-h-14 rounded-2xl bg-trust-deep px-4 text-lg font-bold text-white active:scale-[0.98] disabled:opacity-50"
             >
-              {mode === "pros" && selected.dim
+              {mode === "pros" && !canActFromMap({ ...selected, kind: "pro" })
                 ? (selected.raw as { status?: string } | undefined)?.status === "busy"
                   ? "Ocupado ahora"
                   : "No disponible ahora"
@@ -402,6 +505,54 @@ export function SimpleLiveMap({
           </div>
         </div>
       )}
+
+      <Dialog open={!!docsPin} onOpenChange={(open) => !open && setDocsPin(null)}>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-warn" aria-hidden="true" />
+              {docsCopy?.title}
+            </DialogTitle>
+            <DialogDescription className="text-base text-foreground">
+              {docsCopy?.body}
+            </DialogDescription>
+          </DialogHeader>
+          {docsPin && (
+            <p className="text-sm text-muted-foreground">
+              {docsPin.title}
+              {docsPin.subtitle ? ` · ${docsPin.subtitle}` : ""}
+            </p>
+          )}
+          <DialogFooter className="gap-2 sm:gap-2">
+            {docsCopy?.cta && (
+              <Button asChild className="min-h-12 rounded-2xl text-base font-bold">
+                <Link to={docsCopy.cta.to}>{docsCopy.cta.label}</Link>
+              </Button>
+            )}
+            {docsPin && docsPin.kind !== "pro" && (
+              <Button
+                type="button"
+                className="min-h-12 rounded-2xl text-base font-bold"
+                onClick={() => {
+                  const pin = docsPin;
+                  setDocsPin(null);
+                  onPrimary(pin);
+                }}
+              >
+                {typeof primaryLabel === "function" ? primaryLabel(docsPin) : primaryLabel}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-12 rounded-2xl text-base font-bold"
+              onClick={() => setDocsPin(null)}
+            >
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

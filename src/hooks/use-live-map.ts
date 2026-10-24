@@ -31,6 +31,7 @@ import {
 import { PRESENCE_TTL_MS, nextLiveExpiry, toCell } from "@/lib/presence";
 import {
   directoryIdsKey,
+  pendingMapProfessionals,
   validatedMapProfessionals,
   type ValidatedMapProfessional,
 } from "@/lib/mapDirectory";
@@ -206,12 +207,16 @@ export function useMapProfessionals(opts: MapQueryOptions = {}) {
 /**
  * Profesionales del mapa para familias e IPS/EPS, solo con los datos validados del buscador (`searchProfessionalDetails`): nombre
  * autorizado, ciudad y turnos. Quien no los tiene no aparece (ver `lib/mapDirectory.ts`). Se actualiza con el mismo aviso en vivo.
+ * `data` solo trae perfiles con documentos validados (se pueden pedir); `pending`, los que tienen documentos pendientes (pin ámbar).
  */
 export function useValidatedMapProfessionals(opts: MapQueryOptions = {}) {
   const enabled = opts.enabled ?? true;
   const prosQ = useMapProfessionals(opts);
   const pros = prosQ.data;
-  const idsKey = useMemo(() => (pros ? directoryIdsKey(pros) : ""), [pros]);
+  const idsKey = useMemo(
+    () => (pros ? directoryIdsKey(pros.filter((p) => p.verification === "verified")) : ""),
+    [pros],
+  );
   const dirQ = useQuery({
     queryKey: liveMapKeys.directory(idsKey),
     enabled: enabled && idsKey !== "",
@@ -223,12 +228,21 @@ export function useValidatedMapProfessionals(opts: MapQueryOptions = {}) {
   });
   const data = useMemo<ValidatedMapProfessional[] | undefined>(() => {
     if (!pros) return undefined;
-    if (pros.length === 0) return [];
+    if (idsKey === "") return [];
     // Si el directorio falla no se muestra nada sin validar.
     if (dirQ.isError) return [];
     return dirQ.data ? validatedMapProfessionals(pros, dirQ.data) : undefined;
-  }, [pros, dirQ.data, dirQ.isError]);
-  return { data, isLoading: data === undefined && enabled, isError: prosQ.isError || dirQ.isError };
+  }, [pros, idsKey, dirQ.data, dirQ.isError]);
+  const pending = useMemo<MapProfessional[]>(
+    () => (pros ? pendingMapProfessionals(pros) : []),
+    [pros],
+  );
+  return {
+    data,
+    pending,
+    isLoading: data === undefined && enabled,
+    isError: prosQ.isError || dirQ.isError,
+  };
 }
 
 /** Familias e instituciones con ofertas u horas abiertas, un pin por quien publica. Solo para profesionales y personal. */

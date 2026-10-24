@@ -344,7 +344,11 @@ function ServicePage() {
           {!cancelled && !completed && (
             <div className={`mt-6 grid gap-4 ${isViewer ? "" : "lg:grid-cols-[1fr_360px]"}`}>
               <div className="space-y-4">
-                {!isViewer && <LiveTracking booking={booking} isProfessional={isProfessional} />}
+                <LiveTracking
+                  booking={booking}
+                  isProfessional={isProfessional}
+                  readOnly={isViewer}
+                />
 
                 {canAct && (
                   <div className="rounded-2xl border border-border bg-card p-5">
