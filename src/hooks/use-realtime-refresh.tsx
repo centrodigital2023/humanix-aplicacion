@@ -49,7 +49,10 @@ export function useRealtimeRefresh(
       supabase.channel(uniqueName),
     );
 
-    ch.subscribe();
+    ch.subscribe((status) => {
+      // Cierra el hueco entre lectura y suscripción, y recupera cambios tras reconectar.
+      if (status === "SUBSCRIBED") refreshRef.current();
+    });
 
     return () => {
       supabase.removeChannel(ch);

@@ -75,6 +75,7 @@ import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
 import { CareerCard } from "@/components/humanix/care/CareerCard";
 import { ProHero } from "@/components/humanix/pro/ProHero";
+import { PendingBookingRequests } from "@/components/humanix/pro/PendingBookingRequests";
 import { ProSmartCenter, type GrowKey } from "@/components/humanix/pro/ProSmartCenter";
 import { scrollToId } from "@/components/humanix/premium/scroll";
 import type { ProBriefTarget } from "@/lib/proBrief";
@@ -863,6 +864,8 @@ function ProDashboard() {
               />
             )}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
+
+            {userId && <PendingBookingRequests userId={userId} />}
 
             {/* Alertas SOS de las personas que atiendo (solo aparece si hay alguna) */}
             {userId && <SosAlertsPanel userId={userId} />}
@@ -1705,6 +1708,7 @@ function ProDashboard() {
         {/* ══ TAB: OFERTAS ══ */}
         {tab === "ofertas" && (
           <div className="space-y-4">
+            {userId && <PendingBookingRequests userId={userId} />}
             {/* Agenda: familias y EPS/IPS/clínicas. Postularse, negociar el valor y desbloquear contacto */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-4">
