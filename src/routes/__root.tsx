@@ -30,6 +30,12 @@ const {
 import appCss from "../styles.css?url";
 import { ConfirmHost } from "@/components/humanix/ConfirmHost";
 
+// Alertas en vivo del servicio (solicitudes al profesional, cambios de estado a familia y EPS/IPS).
+const LiveServiceAlerts = lazy(() =>
+  import("@/components/humanix/realtime/LiveServiceAlerts").then((module) => ({
+    default: module.LiveServiceAlerts,
+  })),
+);
 const FloatingWAChat = lazy(() =>
   import("@/components/humanix/FloatingWAChat").then((module) => ({
     default: module.FloatingWAChat,
@@ -219,6 +225,9 @@ function RootComponent() {
           <FloatingWAChat />
         </Suspense>
       )}
+      <Suspense fallback={null}>
+        <LiveServiceAlerts />
+      </Suspense>
       <Toaster richColors position="top-right" />
       <ConfirmHost />
       <GlobalExperience />

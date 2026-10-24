@@ -1,7 +1,7 @@
 // Página de seguimiento activo de un servicio contratado.
 // Mapa + ETA + emergencia + chat + parte del turno en vivo + gracias y valoración al finalizar.
 // La comparten el cliente (familia o institución), el profesional y, en solo lectura, el círculo de cuidado.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Loader2,
@@ -13,6 +13,7 @@ import {
   Flag,
   XCircle,
   Eye,
+  Lock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/humanix/Navbar";
@@ -39,8 +40,7 @@ import { KudosCard } from "@/components/humanix/care/KudosCard";
 import { useCareReport } from "@/hooks/use-care-loop";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
-
-const PAID_STATUSES = new Set(["confirmed", "in_route", "in_progress", "completed"]);
+import { flowSentence, isContactUnlocked, nextProfessionalAction } from "@/lib/serviceFlow";
 
 export const Route = createFileRoute("/servicio/$bookingId")({
   head: () => ({
@@ -127,6 +127,7 @@ function ServicePage() {
   const [hasRating, setHasRating] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [clientOrigin, setClientOrigin] = useState<"institution" | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,6 +163,16 @@ function ServicePage() {
         .maybeSingle();
       if (!cancelled) setPeerName(prof?.full_name ?? "");
 
+      // El profesional ve si quien pide es una EPS/IPS (si no puede leerlo, la frase queda neutra).
+      if (uid === data.professional_id) {
+        const { data: inst } = await supabase
+          .from("institution_profiles")
+          .select("user_id")
+          .eq("user_id", data.client_id)
+          .maybeSingle();
+        if (!cancelled && inst) setClientOrigin("institution");
+      }
+
       // Conversación: buscar la primera relacionada al profesional+cliente
       const { data: conv } = await supabase
         .from("conversations")
@@ -189,11 +200,22 @@ function ServicePage() {
     };
   }, [bookingId, navigate]);
 
-  // Realtime al booking
+  // Estado en vivo: cualquier cambio (aceptar, en camino, llegar, terminar, cancelar) se ve al instante en
+  // las tres pantallas. Nombre de canal único por montaje (supabase-js reutiliza canales por nombre) y
+  // relectura al suscribirse para no perder un cambio ocurrido mientras cargaba o tras reconectar.
+  const refetchBooking = useCallback(async () => {
+    const { data } = await supabase
+      .from("service_bookings")
+      .select("*")
+      .eq("id", bookingId)
+      .maybeSingle();
+    if (data) setBooking(data as Booking);
+  }, [bookingId]);
+
   useEffect(() => {
     if (!bookingId) return;
     const ch = supabase
-      .channel(`booking:${bookingId}`)
+      .channel(`booking-${bookingId}-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         "postgres_changes",
         {
@@ -202,13 +224,34 @@ function ServicePage() {
           table: "service_bookings",
           filter: `id=eq.${bookingId}`,
         },
-        (p) => setBooking(p.new as Booking),
+        (p) => setBooking((prev) => ({ ...(prev ?? {}), ...(p.new as Booking) }) as Booking),
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void refetchBooking();
+      });
     return () => {
-      supabase.removeChannel(ch);
+      void supabase.removeChannel(ch);
     };
-  }, [bookingId]);
+  }, [bookingId, refetchBooking]);
+
+  // Al aceptar se abre el chat: si aún no hay conversación de la reserva, se crea (la función lo
+  // permite solo desde «Aceptado» y solo a las partes del servicio).
+  const contactOpen = booking ? isContactUnlocked(booking.status) : false;
+  const isParty =
+    !!booking && !!userId && (userId === booking.client_id || userId === booking.professional_id);
+  const askedConversation = useRef(false);
+  useEffect(() => {
+    if (!contactOpen || !isParty || conversationId || askedConversation.current) return;
+    askedConversation.current = true;
+    void (async () => {
+      const { data, error } = await supabase.rpc(
+        "get_or_create_booking_conversation" as never,
+        { _booking_id: bookingId } as never,
+      );
+      const id = typeof data === "string" ? data : (data as { id?: string } | null)?.id;
+      if (!error && id) setConversationId(id);
+    })();
+  }, [contactOpen, isParty, conversationId, bookingId]);
 
   const isProfessional = !!booking && userId === booking.professional_id;
   const isClient = !!booking && userId === booking.client_id;
@@ -246,6 +289,7 @@ function ServicePage() {
   const completed = booking.status === "completed";
   const cancelled = booking.status === "cancelled";
   const canAct = (isProfessional || isClient) && !completed && !cancelled;
+  const proAction = nextProfessionalAction(booking.status);
   const firstName = displayPeer.split(" ")[0];
 
   return (
@@ -335,11 +379,18 @@ function ServicePage() {
             />
           )}
 
-          {isClient && (
-            <div className="mt-6 rounded-[2rem] border-2 border-primary/20 bg-card p-5 shadow-lg shadow-primary/5 sm:p-6">
-              <JourneySteps status={booking.status} proName={displayPeer} />
-            </div>
-          )}
+          <div className="mt-6 rounded-[2rem] border-2 border-primary/20 bg-card p-5 shadow-lg shadow-primary/5 sm:p-6">
+            <JourneySteps
+              status={booking.status}
+              proName={displayPeer}
+              sentence={flowSentence(
+                booking.status,
+                isProfessional ? "professional" : isClient ? "client" : "viewer",
+                displayPeer,
+                clientOrigin,
+              )}
+            />
+          </div>
 
           {!cancelled && !completed && (
             <div className={`mt-6 grid gap-4 ${isViewer ? "" : "lg:grid-cols-[1fr_360px]"}`}>
@@ -352,38 +403,27 @@ function ServicePage() {
                       Acciones del servicio
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {isProfessional && booking.status === "pending" && (
+                      {isProfessional && proAction && !proAction.needsDialog && (
                         <ActionButton
-                          icon={<CheckCircle2 className="h-4 w-4" />}
-                          label="Aceptar servicio"
-                          onClick={() => void updateStatus({ status: "confirmed" })}
-                          tone="bio"
-                        />
-                      )}
-                      {isProfessional && booking.status === "confirmed" && (
-                        <ActionButton
-                          icon={<PlayCircle className="h-4 w-4" />}
-                          label="Iniciar trayecto"
+                          icon={
+                            proAction.next === "in_route" ? (
+                              <PlayCircle className="h-4 w-4" />
+                            ) : proAction.next === "in_progress" ? (
+                              <Flag className="h-4 w-4" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4" />
+                            )
+                          }
+                          label={proAction.label}
                           onClick={() =>
                             void updateStatus({
-                              status: "in_route",
-                              started_at: new Date().toISOString(),
+                              status: proAction.next,
+                              ...(proAction.stamp
+                                ? { [proAction.stamp]: new Date().toISOString() }
+                                : {}),
                             })
                           }
-                          tone="copper"
-                        />
-                      )}
-                      {isProfessional && booking.status === "in_route" && (
-                        <ActionButton
-                          icon={<Flag className="h-4 w-4" />}
-                          label="Llegué al sitio"
-                          onClick={() =>
-                            void updateStatus({
-                              status: "in_progress",
-                              arrived_at: new Date().toISOString(),
-                            })
-                          }
-                          tone="bio"
+                          tone={proAction.next === "in_route" ? "copper" : "bio"}
                         />
                       )}
                       {booking.status === "in_progress" && (
@@ -431,7 +471,7 @@ function ServicePage() {
                   <PaidContactCard
                     bookingId={booking.id}
                     peerName={displayPeer}
-                    isPaid={PAID_STATUSES.has(booking.status)}
+                    isPaid={contactOpen}
                     amountCOP={booking.total_amount}
                   />
                   {booking.status !== "pending" && (isClient || isProfessional) && (
@@ -446,11 +486,22 @@ function ServicePage() {
                       }
                     />
                   )}
-                  <BookingChat
-                    conversationId={conversationId}
-                    currentUserId={userId}
-                    peerName={displayPeer}
-                  />
+                  {contactOpen ? (
+                    <BookingChat
+                      conversationId={conversationId}
+                      currentUserId={userId}
+                      peerName={displayPeer}
+                    />
+                  ) : (
+                    <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-card/70 p-5 text-sm text-muted-foreground">
+                      <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                      <p>
+                        {isProfessional
+                          ? "El chat se abre en cuanto aceptes el servicio."
+                          : `El chat se abre en cuanto ${firstName} acepte. Te avisamos al instante.`}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
