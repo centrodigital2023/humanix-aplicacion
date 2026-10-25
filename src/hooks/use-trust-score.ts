@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import {
   trustFromColumns,
+  type IdentityParts,
   type TrustComponents,
   type TrustKind,
   type TrustSummary,
@@ -26,7 +27,12 @@ interface TrustRow {
   completed_services: number | null;
   verified: boolean | null;
   source: string | null;
-  components: Partial<Record<keyof TrustComponents, number>> | null;
+  components:
+    | (Partial<Record<keyof TrustComponents, number>> & {
+        identity_parts?: IdentityParts | null;
+        ai_validation?: number | null;
+      })
+    | null;
 }
 
 export interface TrustScoreInfo {
@@ -38,16 +44,29 @@ export interface TrustScoreInfo {
   completedServices: number;
   /** Solo para la propia cuenta y el personal. */
   components: TrustComponents | null;
+  /** Qué pieza de la identidad está entregada (solo la propia cuenta y el personal). */
+  identityParts: IdentityParts | null;
+  /** Profesionales: el número de la validación con IA, que ahora es solo una pieza de la identidad. */
+  aiValidation: number | null;
 }
 
 export const trustKeys = {
   one: (id: string) => ["trust", "one", id] as const,
 };
 
+/** Tras guardar el perfil o un documento: el puntaje se vuelve a pedir para que la tarjeta muestre lo nuevo. */
+export function refreshTrustScore(
+  qc: ReturnType<typeof useQueryClient>,
+  userId: string | null | undefined,
+) {
+  if (!userId) return;
+  void qc.invalidateQueries({ queryKey: trustKeys.one(userId) });
+}
+
 function toComponents(raw: TrustRow["components"]): TrustComponents | null {
   if (!raw || typeof raw !== "object") return null;
   const n = (k: keyof TrustComponents) => Number(raw[k] ?? 0);
-  // El profesional trae `ai_validation` en vez del desglose de familias e instituciones: sin desglose.
+  // Una base sin la migración 20261025100000 aún trae solo `ai_validation` para el profesional: sin desglose.
   if (!("base" in raw)) return null;
   return {
     base: n("base"),
@@ -70,6 +89,12 @@ function fromRow(row: TrustRow): TrustScoreInfo {
     starsAvg: row.stars_avg == null ? null : Number(row.stars_avg),
     completedServices: Number(row.completed_services ?? 0),
     components: toComponents(row.components),
+    identityParts:
+      row.components && typeof row.components.identity_parts === "object"
+        ? (row.components.identity_parts ?? null)
+        : null,
+    aiValidation:
+      row.components?.ai_validation == null ? null : Number(row.components.ai_validation),
   };
 }
 
@@ -85,11 +110,15 @@ function isQuietError(err: { code?: string; message?: string }): boolean {
 }
 
 /** El Trust Score de `targetId` (lo que el rol de quien mira puede ver). `null` si no hay o no se puede ver. */
-export function useTrustScore(targetId: string | null | undefined, enabled = true) {
+export function useTrustScore(
+  targetId: string | null | undefined,
+  enabled = true,
+  staleTime = 60_000,
+) {
   return useQuery({
     queryKey: trustKeys.one(targetId ?? ""),
     enabled: !!targetId && enabled,
-    staleTime: 60_000,
+    staleTime,
     queryFn: async (): Promise<TrustScoreInfo | null> => {
       const { data, error } = await sb.rpc("get_trust_score", { p_user: targetId });
       if (error) {
@@ -106,17 +135,21 @@ export function useTrustScore(targetId: string | null | undefined, enabled = tru
  * El puntaje de la propia cuenta, con desglose, en vivo: cambia cuando llega una calificación o termina un servicio (Realtime;
  * las políticas de la base filtran lo que se puede escuchar).
  */
-export function useOwnTrustScore(userId: string | null | undefined) {
+export function useOwnTrustScore(userId: string | null | undefined, kind: TrustKind = "family") {
   const qc = useQueryClient();
-  const query = useTrustScore(userId);
+  // Siempre fresco al volver a la tarjeta: lo que se completa en el perfil o en Documentos tiene que verse enseguida.
+  const query = useTrustScore(userId, true, 0);
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: trustKeys.one(userId ?? "") });
   }, [qc, userId]);
   useRealtimeRefresh(
-    "own-trust-score",
+    `own-trust-score-${kind}`,
     [
       { table: "service_ratings", filter: `rated_id=eq.${userId}` },
-      { table: "service_bookings", filter: `client_id=eq.${userId}` },
+      {
+        table: "service_bookings",
+        filter: kind === "professional" ? `professional_id=eq.${userId}` : `client_id=eq.${userId}`,
+      },
     ],
     refresh,
     !!userId,

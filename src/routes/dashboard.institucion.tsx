@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { OwnTrustCard } from "@/components/humanix/OwnTrustCard";
 import {
   Building2,
   Briefcase,
@@ -718,6 +719,16 @@ function InstitutionDashboard() {
                 aria-label="Revisando tu día"
               />
             )}
+
+            {/* Tu Trust Score: lo que ven los profesionales junto a tus ofertas y qué falta para subirlo */}
+            <div id="confianza" className="scroll-mt-24">
+              <OwnTrustCard
+                userId={user.id}
+                kind="institution"
+                completeLabel="Completar perfil de la institución"
+                onCompleteIdentity={() => void navigate({ to: "/institution/profile" })}
+              />
+            </div>
 
             <div id="cobertura" className="scroll-mt-24">
               <CoverageCenter

@@ -5,6 +5,7 @@ import {
   FAMILY_IDENTITY_POINTS,
   FRAUD_PENALTY,
   INSTITUTION_IDENTITY_POINTS,
+  PROFESSIONAL_IDENTITY_POINTS,
   TRUST_BASE,
   TRUST_CAPS,
   TRUST_LEVEL_LABEL,
@@ -16,6 +17,7 @@ import {
   distanceBand,
   distanceBandLabel,
   distanceBandRank,
+  identityParts,
   trustBadgeText,
   trustFromColumns,
   trustLevel,
@@ -25,8 +27,18 @@ import {
   type PartyTrustInput,
 } from "./trustScore";
 
-const SQL = readFileSync(
-  resolve(__dirname, "../../supabase/migrations/20261012190000_offer_alerts_and_plans.sql"),
+// Niveles y cercanía siguen en 20261012190000; el cálculo vigente (los tres roles) en 20261025100000.
+const SQL =
+  readFileSync(
+    resolve(__dirname, "../../supabase/migrations/20261012190000_offer_alerts_and_plans.sql"),
+    "utf-8",
+  ) +
+  readFileSync(
+    resolve(__dirname, "../../supabase/migrations/20261025100000_trust_score_all_roles.sql"),
+    "utf-8",
+  );
+const CALC = readFileSync(
+  resolve(__dirname, "../../supabase/migrations/20261025100000_trust_score_all_roles.sql"),
   "utf-8",
 );
 
@@ -46,40 +58,58 @@ const FULL_INSTITUTION = { verified: true, nit: true, chamber: true };
 
 describe("espejo de las constantes de la base (hx_trust_calc, hx_trust_level, hx_distance_band)", () => {
   it("base, tope de estrellas, servicios, antigüedad y castigo", () => {
-    expect(SQL).toContain(`${TRUST_BASE} + v_rating + v_services + v_ident + v_senior - v_flags`);
-    expect(SQL).toContain(`round((v_avg - 1) / 4 * ${TRUST_CAPS.ratings})`);
-    expect(SQL).toContain(`CASE WHEN v_n >= ${TRUST_MIN_RATINGS} THEN round(`);
-    expect(SQL).toContain(`round(LEAST(v_done, ${TRUST_SERVICES_CAP}) * 1.5)`);
-    expect(SQL).toContain(
+    expect(CALC).toContain(`${TRUST_BASE} + v_rating + v_services + v_ident + v_senior - v_flags`);
+    expect(CALC).toContain(`round((v_avg - 1) / 4 * ${TRUST_CAPS.ratings})`);
+    expect(CALC).toContain(`CASE WHEN v_n >= ${TRUST_MIN_RATINGS} THEN round(`);
+    expect(CALC).toContain(`round(LEAST(v_done, ${TRUST_SERVICES_CAP}) * 1.5)`);
+    expect(CALC).toContain(
       `2592000.0, 0), ${TRUST_SENIORITY_MONTHS_CAP}) / ${TRUST_SENIORITY_MONTHS_CAP} * ${TRUST_CAPS.seniority}`,
     );
-    expect(SQL).toContain(`v_flags := LEAST(COALESCE(v_flags, 0), ${TRUST_CAPS.adjustments});`);
-    expect(SQL).toContain(
+    expect(CALC).toContain(`v_flags := LEAST(COALESCE(v_flags, 0), ${TRUST_CAPS.adjustments});`);
+    expect(CALC).toContain(
       `v_enough := v_n >= ${TRUST_MIN_RATINGS} OR v_done >= ${TRUST_MIN_RATINGS};`,
     );
   });
 
   it("el castigo por alerta sin resolver", () => {
-    expect(SQL).toContain(
+    expect(CALC).toContain(
       `WHEN 'low' THEN ${FRAUD_PENALTY.low} WHEN 'medium' THEN ${FRAUD_PENALTY.medium} WHEN 'high' THEN ${FRAUD_PENALTY.high} ELSE ${FRAUD_PENALTY.critical}`,
     );
   });
 
-  it("los puntos de identidad de familias (5 + 5 + 5) y de instituciones (9 + 3 + 3)", () => {
+  it("los puntos de identidad de familias (5 + 5 + 5), instituciones (9 + 3 + 3) y profesionales (5 + 5 + 5)", () => {
     const f = FAMILY_IDENTITY_POINTS;
-    expect(SQL).toContain(`COALESCE(fp.habeas_data_accepted, false) THEN ${f.habeas} ELSE 0`);
-    expect(SQL).toContain(`COALESCE(fp.id_number, '')), '') IS NOT NULL THEN ${f.idNumber} ELSE 0`);
-    expect(SQL).toContain(
-      `COALESCE(fp.id_doc_url, '')), '') IS NOT NULL THEN ${f.idDocument} ELSE 0`,
-    );
     const i = INSTITUTION_IDENTITY_POINTS;
-    expect(SQL).toContain(`COALESCE(ip.verified, false) THEN ${i.verified} ELSE 0`);
-    expect(SQL).toContain(`COALESCE(ip.nit, '')), '') IS NOT NULL THEN ${i.nit} ELSE 0`);
-    expect(SQL).toContain(
-      `COALESCE(ip.chamber_of_commerce_number, '')), '') IS NOT NULL THEN ${i.chamber} ELSE 0`,
+    const p = PROFESSIONAL_IDENTITY_POINTS;
+    // Familia: habeas, número, documento (en ese orden en la base); institución: verificada, NIT, cámara; profesional: cédula,
+    // RETHUS, validado.
+    expect(CALC).toContain(
+      `v_ident := (CASE WHEN v_a THEN ${f.habeas} ELSE 0 END) + (CASE WHEN v_b THEN ${f.idNumber} ELSE 0 END) + (CASE WHEN v_c THEN ${f.idDocument} ELSE 0 END);`,
+    );
+    expect(CALC).toContain(
+      `v_ident := (CASE WHEN v_a THEN ${i.verified} ELSE 0 END) + (CASE WHEN v_b THEN ${i.nit} ELSE 0 END) + (CASE WHEN v_c THEN ${i.chamber} ELSE 0 END);`,
+    );
+    expect(CALC).toContain(
+      `v_ident := (CASE WHEN v_a THEN ${p.idDocument} ELSE 0 END) + (CASE WHEN v_b THEN ${p.rethus} ELSE 0 END) + (CASE WHEN v_c THEN ${p.validated} ELSE 0 END);`,
+    );
+    expect(CALC).toContain(
+      "jsonb_build_object('habeas', v_a, 'id_number', v_b, 'id_document', v_c)",
+    );
+    expect(CALC).toContain("jsonb_build_object('verified', v_a, 'nit', v_b, 'chamber', v_c)");
+    expect(CALC).toContain(
+      "jsonb_build_object('id_document', v_a, 'rethus', v_b, 'validated', v_c)",
     );
     expect(f.habeas + f.idNumber + f.idDocument).toBe(TRUST_CAPS.identity);
     expect(i.verified + i.nit + i.chamber).toBe(TRUST_CAPS.identity);
+    expect(p.idDocument + p.rethus + p.validated).toBe(TRUST_CAPS.identity);
+  });
+
+  it("las piezas de identidad que la pantalla nombra son las que la base entrega", () => {
+    for (const kind of ["family", "institution", "professional"] as const) {
+      for (const part of identityParts(kind, null)) {
+        expect(CALC).toContain(`'${part.key}', v_`);
+      }
+    }
   });
 
   it("los niveles", () => {
@@ -410,5 +440,53 @@ describe("cercanía por rangos", () => {
     ]);
     const sorted = [100, null, 5, 2, 50].sort((a, b) => distanceBandRank(a) - distanceBandRank(b));
     expect(sorted).toEqual([2, 5, 50, 100, null]);
+  });
+});
+
+describe("el profesional, con la misma fórmula", () => {
+  const pro = (over: Partial<PartyTrustInput> = {}): PartyTrustInput => ({
+    kind: "professional",
+    ratingsCount: 0,
+    starsAvg: null,
+    completedServices: 0,
+    identity: {},
+    accountAgeDays: null,
+    flags: [],
+    ...over,
+  });
+
+  it("nuevo y sin credenciales: 30; con cédula, RETHUS y perfil validado: 45 y verificado", () => {
+    expect(computePartyTrust(pro()).score).toBe(30);
+    const full = computePartyTrust(
+      pro({ identity: { idDocument: true, rethus: true, validated: true } }),
+    );
+    expect(full.score).toBe(45);
+    expect(full.components.identity).toBe(15);
+    expect(full.verified).toBe(true);
+  });
+
+  it("calificaciones de familias e instituciones, y el consejo dice qué falta", () => {
+    const c = computePartyTrust(pro({ identity: { rethus: true } })).components;
+    const parts = identityParts("professional", {
+      id_document: false,
+      rethus: true,
+      validated: false,
+    });
+    const lines = trustLines(c, "professional", { ratingsCount: 1, completedServices: 2 });
+    expect(lines.find((l) => l.key === "ratings")?.hint).toMatch(
+      /familias e instituciones\. Llevas 1 de 3/,
+    );
+    expect(lines.find((l) => l.key === "services")?.hint).toMatch(/Llevas 2 de 10/);
+    expect(lines.find((l) => l.key === "identity")?.label).toBe("Identidad y credenciales");
+    const tips = trustTips(c, "professional", parts);
+    expect(tips.some((t) => /Te falta: cédula en tus documentos, perfil validado\./.test(t))).toBe(
+      true,
+    );
+  });
+
+  it("las piezas de la familia: lo entregado y lo que falta", () => {
+    const parts = identityParts("family", { habeas: true, id_number: false, id_document: false });
+    expect(parts.filter((p) => p.done).map((p) => p.key)).toEqual(["habeas"]);
+    expect(parts.reduce((s, p) => s + p.points, 0)).toBe(TRUST_CAPS.identity);
   });
 });

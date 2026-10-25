@@ -95,6 +95,8 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendlyError";
 import { buildSeo } from "@/lib/seo";
+import { OwnTrustCard } from "@/components/humanix/OwnTrustCard";
+import { useOwnTrustScore } from "@/hooks/use-trust-score";
 import { REQUIRED_PROFESSIONAL_DOCUMENTS } from "../../supabase/functions/_shared/professionalDocumentRequirements";
 
 export const Route = createFileRoute("/dashboard/profesional")({
@@ -250,7 +252,11 @@ function ProDashboard() {
   const [bio, setBio] = useState("");
   const [workExp, setWorkExp] = useState<WorkExp[]>([]);
 
-  const trust = profile?.trust_score ?? 0;
+  // El Trust Score es el de la plataforma (el mismo que ven familias e instituciones); el de la validación con IA es una pieza de
+  // la identidad y se muestra aparte como «Validación IA».
+  const ownTrust = useOwnTrustScore(userId, "professional");
+  const aiScore = profile?.trust_score ?? 0;
+  const trust = ownTrust.data?.summary.score ?? aiScore;
   const greetingName = useMemo(() => fullName.split(" ")[0] || "profesional", [fullName]);
 
   // Profile completion steps
@@ -1178,6 +1184,18 @@ function ProDashboard() {
               </div>
             )}
 
+            {/* Tu Trust Score: lo que ven familias e instituciones y qué falta para subirlo */}
+            {userId && (
+              <div id="confianza" className="scroll-mt-4">
+                <OwnTrustCard
+                  userId={userId}
+                  kind="professional"
+                  completeLabel="Ir a Documentos"
+                  onCompleteIdentity={() => setTab("documentos")}
+                />
+              </div>
+            )}
+
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-3">
               <QuickAction
@@ -1201,7 +1219,7 @@ function ProDashboard() {
               <QuickAction
                 icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />}
                 label="Re-evaluar Trust"
-                sub={`Score: ${trust}/100`}
+                sub={`Validación IA: ${aiScore}/100`}
                 onClick={validateWithAI}
                 loading={validating}
               />
@@ -1616,9 +1634,11 @@ function ProDashboard() {
             <div className="rounded-2xl border border-border bg-card/95 p-4 flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold">
-                  Trust Score: <span className="text-biosensor">{trust}/100</span>
+                  Validación con IA: <span className="text-biosensor">{aiScore}/100</span>
                 </p>
-                <p className="text-xs text-muted-foreground">≥70 = pre-aprobado por IA</p>
+                <p className="text-xs text-muted-foreground">
+                  ≥70 = pre-aprobado por IA: suma 5 puntos a tu Trust Score ({trust}/100)
+                </p>
               </div>
               <Button variant="glass" size="sm" onClick={validateWithAI} disabled={validating}>
                 {validating ? (
