@@ -1,5 +1,5 @@
 // Insignia del Trust Score: el número, el nivel y, al tocarla, de dónde sale. Nunca inventa nada: si la base no trae puntaje
-// (profesional sin validar) dice «Sin validar»; si la cuenta es nueva dice «Nuevo».
+// dice «Sin validar»; si la cuenta es nueva dice «Nuevo».
 import { ShieldCheck, ShieldQuestion } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,7 @@ const TONE_CLASS: Record<TrustTone, string> = {
 
 const EXPLAIN: Record<TrustKind, string> = {
   professional:
-    "El Trust Score del profesional es el puntaje de confianza de Humanix (0–100). Sale de la validación de su perfil, sus documentos y su RETHUS. «Sin validar» significa que aún no se ha calculado: no es una mala señal por sí sola.",
+    "El Trust Score del profesional (0–100) sube con las calificaciones de familias e instituciones, los servicios completados, su cédula, su RETHUS verificado, su perfil validado y la antigüedad. «Nuevo» significa que aún tiene pocas calificaciones o servicios: no es una mala señal por sí sola.",
   family:
     "El Trust Score de la familia (0–100) sube con las calificaciones de profesionales, los servicios completados, la identidad entregada y la antigüedad. «Nuevo» significa que aún tiene pocas calificaciones o servicios.",
   institution:

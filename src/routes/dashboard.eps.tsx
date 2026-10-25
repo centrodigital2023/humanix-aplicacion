@@ -11,6 +11,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAppUser } from "@/hooks/use-app-user";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { EPSDashboard } from "@/components/humanix/EPSDashboard";
+import { OwnTrustCard } from "@/components/humanix/OwnTrustCard";
 import { PatientsHub } from "@/components/humanix/patients/PatientsHub";
 import { MonitoringHub } from "@/components/humanix/monitoring/MonitoringHub";
 import { ownerScope } from "@/components/humanix/instcare/scope";
@@ -157,7 +158,17 @@ function EPSPortalPage() {
           ))}
         </div>
 
-        {tab === "overview" && <EPSDashboard institutionId={user.id} title={`Resumen · ${name}`} />}
+        {tab === "overview" && (
+          <>
+            <OwnTrustCard
+              userId={user.id}
+              kind="institution"
+              completeLabel="Completar perfil de la institución"
+              onCompleteIdentity={() => void navigate({ to: "/institution/profile" })}
+            />
+            <EPSDashboard institutionId={user.id} title={`Resumen · ${name}`} />
+          </>
+        )}
 
         {tab === "patients" && (
           <PatientsHub

@@ -444,7 +444,16 @@ function FamilyDashboard() {
             aria-label="Confianza y soporte"
             className="scroll-mt-4 grid items-start gap-4 lg:grid-cols-2"
           >
-            <OwnTrustCard userId={user.id} kind="family" />
+            <OwnTrustCard
+              userId={user.id}
+              kind="family"
+              completeLabel="Completar en Mi perfil"
+              onCompleteIdentity={() => {
+                const el = document.getElementById("mis-datos");
+                if (el instanceof HTMLDetailsElement) el.open = true;
+                el?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
             <div id="pqrs" className="scroll-mt-4">
               <MyPqrsCard userId={user.id} name={user.fullName} email={user.email} />
             </div>

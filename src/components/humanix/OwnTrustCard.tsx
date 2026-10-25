@@ -1,25 +1,45 @@
-// «Tu Trust Score»: el puntaje de confianza de la propia cuenta (familia o institución) y de dónde sale cada punto. Es lo que ven los
-// profesionales cuando miran una oferta o una solicitud tuya. El desglose y los consejos solo los ve la propia cuenta.
+// «Tu Trust Score»: el puntaje de confianza de la propia cuenta (familia, profesional o institución) y de dónde sale cada punto. Es
+// lo que ve la otra parte junto a una oferta, una solicitud o una postulación. El desglose, qué falta de la identidad y los consejos
+// solo los ve la propia cuenta.
 
-import { ShieldCheck } from "lucide-react";
+import { CheckCircle2, Circle, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrustBadge } from "@/components/humanix/TrustBadge";
 import { useOwnTrustScore } from "@/hooks/use-trust-score";
 import { cn } from "@/lib/utils";
-import { TRUST_LEVEL_LABEL, trustLines, trustTips } from "@/lib/trustScore";
+import {
+  TRUST_CAPS,
+  TRUST_LEVEL_LABEL,
+  identityParts,
+  trustLines,
+  trustTips,
+  type TrustKind,
+} from "@/lib/trustScore";
+
+const WHO_SEES: Record<TrustKind, string> = {
+  family: "Los profesionales lo ven junto a tu solicitud. ",
+  institution: "Los profesionales lo ven junto a las ofertas de tu institución. ",
+  professional: "Las familias y las instituciones lo ven junto a tu perfil y tus postulaciones. ",
+};
 
 export function OwnTrustCard({
   userId,
   kind,
+  onCompleteIdentity,
+  completeLabel = "Completar mi identidad",
   className,
 }: {
   userId: string;
-  kind: "family" | "institution";
+  kind: TrustKind;
+  /** Lleva a donde se completa la identidad (perfil, Documentos o el perfil de la institución). */
+  onCompleteIdentity?: () => void;
+  completeLabel?: string;
   className?: string;
 }) {
-  const trust = useOwnTrustScore(userId);
+  const trust = useOwnTrustScore(userId, kind);
 
   if (trust.isLoading) {
     return <Skeleton className={cn("h-40 w-full rounded-2xl", className)} />;
@@ -29,8 +49,13 @@ export function OwnTrustCard({
   if (!info || info.summary.score == null) return null;
 
   const { summary, components } = info;
-  const lines = components ? trustLines(components, kind) : [];
-  const tips = components ? trustTips(components, kind) : [];
+  const progress = { ratingsCount: info.ratingsCount, completedServices: info.completedServices };
+  const parts = identityParts(kind, info.identityParts);
+  const lines = components ? trustLines(components, kind, progress) : [];
+  const tips = components
+    ? trustTips(components, kind, info.identityParts ? parts : undefined)
+    : [];
+  const identityMissing = !!components && components.identity < TRUST_CAPS.identity;
   const level = TRUST_LEVEL_LABEL[summary.level];
 
   return (
@@ -54,9 +79,7 @@ export function OwnTrustCard({
           className="h-2 bg-trust/15 [&>div]:bg-trust"
         />
         <p className="text-xs text-muted-foreground">
-          {kind === "family"
-            ? "Los profesionales lo ven junto a tu solicitud. "
-            : "Los profesionales lo ven junto a las ofertas de tu institución. "}
+          {WHO_SEES[kind]}
           {summary.enough
             ? `Se calcula con ${info.ratingsCount} calificaci${info.ratingsCount === 1 ? "ón" : "ones"} y ${info.completedServices} servicio${info.completedServices === 1 ? "" : "s"} completado${info.completedServices === 1 ? "" : "s"}.`
             : "Tu cuenta es nueva en Humanix: el número se afianza con las primeras calificaciones y servicios."}
@@ -70,6 +93,39 @@ export function OwnTrustCard({
               <div className="min-w-0">
                 <p className="font-medium">{l.label}</p>
                 <p className="text-xs text-muted-foreground">{l.hint}</p>
+                {l.key === "identity" && info.identityParts && (
+                  <ul className="mt-1.5 space-y-1" aria-label="Qué tienes y qué falta">
+                    {parts.map((p) => (
+                      <li
+                        key={p.key}
+                        className={cn(
+                          "flex items-center gap-1.5 text-xs",
+                          p.done ? "text-ok" : "text-muted-foreground",
+                        )}
+                      >
+                        {p.done ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        ) : (
+                          <Circle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        )}
+                        <span>
+                          {p.label} · {p.done ? "entregado" : `falta (+${p.points})`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {l.key === "identity" && identityMissing && onCompleteIdentity && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 h-8 text-xs"
+                    onClick={onCompleteIdentity}
+                  >
+                    {completeLabel}
+                  </Button>
+                )}
               </div>
               <p
                 className={cn(
