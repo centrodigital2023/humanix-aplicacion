@@ -52,7 +52,14 @@ describe("pago de un mes desde el formulario de Mercado Pago", () => {
     if (!r.ok) return;
     expect(r.method).toBe("card");
     expect(r.body.transaction_amount).toBe(PLAN_PRICE_COP.pro_monthly);
-    expect(r.body.metadata).toEqual({ user_id: USER, plan: "pro_monthly", price_cop: 29000 });
+    expect(r.body.metadata).toEqual({
+      user_id: USER,
+      plan: "pro_monthly",
+      price_cop: 19900,
+      months: 1,
+      cycle: "monthly",
+      branches: 1,
+    });
     expect(r.body.external_reference).toBe(USER);
     expect(r.body.notification_url).toBe(base.notificationUrl);
     expect(r.body.installments).toBe(3);
@@ -68,7 +75,7 @@ describe("pago de un mes desde el formulario de Mercado Pago", () => {
     expect(r.body.additional_info).toEqual({ ip_address: "190.0.0.1" });
     expect(r.body.callback_url).toBe(base.callbackUrl);
     expect((r.body.payer as Record<string, unknown>).entity_type).toBe("individual");
-    expect(r.body.transaction_amount).toBe(29000);
+    expect(r.body.transaction_amount).toBe(19900);
   });
 
   it("PSE sin banco o sin documento no se envía", () => {
@@ -118,7 +125,7 @@ describe("suscripción con plan asociado", () => {
       auto_recurring: {
         frequency: 1,
         frequency_type: "months",
-        transaction_amount: 9000,
+        transaction_amount: 9900,
         currency_id: "COP",
       },
       back_url: "https://humanix.lat/pago/exito",
@@ -131,7 +138,7 @@ describe("suscripción con plan asociado", () => {
       status: "active",
       reason: PLAN_TITLE.pro_monthly,
       date_created: date,
-      auto_recurring: { transaction_amount: 29000, currency_id: "COP" },
+      auto_recurring: { transaction_amount: 19900, currency_id: "COP" },
     });
     expect(
       findSubscriptionPlan(
@@ -170,5 +177,33 @@ describe("suscripción con plan asociado", () => {
       back_url: "https://humanix.lat/pago/exito",
       status: "authorized",
     });
+  });
+});
+
+import { brickPaymentRequest as _bpr } from "../../supabase/functions/_shared/planBilling";
+describe("PSE envía dirección y teléfono aunque el formulario no los pida", () => {
+  it("completa address, phone e IP válida", () => {
+    const r = _bpr({
+      form: {
+        payment_method_id: "pse",
+        payer: { email: "a@b.co", identification: { type: "CC", number: "123456" } },
+        transaction_details: { financial_institution: "1007" },
+      },
+      userId: "u1",
+      plan: "pro_monthly" as never,
+      accountEmail: "a@b.co",
+      accountName: "Ana Gómez",
+      accountPhone: "+57 310 555 1234",
+      accountCity: "Pasto",
+      ip: "unknown",
+      callbackUrl: "https://humanix.lat/pago/exito",
+      notificationUrl: "https://humanix.lat/api/public/mercadopago/webhook",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const payer = r.body.payer as Record<string, any>;
+    expect(payer.phone).toEqual({ area_code: "57", number: "3105551234" });
+    expect(payer.address.city).toBe("Pasto");
+    expect((r.body.additional_info as any).ip_address).toBe("127.0.0.1");
   });
 });

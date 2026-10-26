@@ -177,29 +177,32 @@ describe("invitación al círculo de cuidado", () => {
 });
 
 describe("funciones premium del lazo de cuidado", () => {
-  it("historia exportable: desde el plan Esencial (también IPS), no en Free", () => {
+  it("historia exportable: desde el plan Familiar (también Institucional), no en Free", () => {
     expect(FEATURE_MIN_PLAN.care_history_export).toBe("essential_monthly");
     expect(canUseFeature("free", "care_history_export")).toBe(false);
     expect(canUseFeature(null, "care_history_export")).toBe(false);
     expect(canUseFeature("essential_monthly", "care_history_export")).toBe(true);
-    expect(canUseFeature("pro_monthly", "care_history_export")).toBe(true);
+    expect(canUseFeature("family_premium_monthly", "care_history_export")).toBe(true);
     expect(canUseFeature("institution_monthly", "care_history_export")).toBe(true);
   });
-  it("pasaporte profesional: desde Pro", () => {
-    expect(FEATURE_MIN_PLAN.career_passport).toBe("pro_monthly");
+  it("pasaporte profesional: herramienta de reputación de Premium Profesional", () => {
+    expect(FEATURE_MIN_PLAN.career_passport).toBe("pro_premium_monthly");
     expect(canUseFeature("essential_monthly", "career_passport")).toBe(false);
-    expect(canUseFeature("pro_monthly", "career_passport")).toBe(true);
+    expect(canUseFeature("pro_monthly", "career_passport")).toBe(false);
+    expect(canUseFeature("pro_premium_monthly", "career_passport")).toBe(true);
     expect(canUseFeature("institution_monthly", "career_passport")).toBe(true);
   });
   it("el catálogo lista cada función en el plan que la desbloquea, con su texto", () => {
     expect(PLAN_CATALOG.essential_monthly.features).toContain("care_history_export");
-    expect(PLAN_CATALOG.pro_monthly.features).toContain("career_passport");
-    expect(PLAN_CATALOG.essential_monthly.featuresLabel.join(" ")).toMatch(/Historia de cuidado/);
-    expect(PLAN_CATALOG.pro_monthly.featuresLabel.join(" ")).toMatch(/Pasaporte profesional/);
+    expect(PLAN_CATALOG.pro_premium_monthly.features).toContain("career_passport");
+    expect(PLAN_CATALOG.essential_monthly.featuresLabel.join(" ")).toMatch(/historia exportable/);
+    expect(PLAN_CATALOG.pro_premium_monthly.featuresLabel.join(" ")).toMatch(
+      /pasaporte profesional/,
+    );
   });
-  it("el precio no cambió (la fuente de verdad es el servidor de pagos)", () => {
-    expect(PLAN_CATALOG.essential_monthly.amountCOP).toBe(9000);
-    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(29000);
+  it("el precio es el del servidor de pagos", () => {
+    expect(PLAN_CATALOG.essential_monthly.amountCOP).toBe(9900);
+    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(19900);
     expect(PLAN_CATALOG.institution_monthly.amountCOP).toBe(299_000);
   });
 });

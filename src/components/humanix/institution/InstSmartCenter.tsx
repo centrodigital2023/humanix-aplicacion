@@ -1,5 +1,5 @@
 // Centro de gestión de la institución: costos, calidad y cumplimiento, equipo, pronóstico de cobertura e informe para la
-// gerencia (plan IPS Mejorado). El resumen del día vive en el héroe de Inicio (`InstHero`) y es para todas las
+// gerencia (plan Institucional). El resumen del día vive en el héroe de Inicio (`InstHero`) y es para todas las
 // instituciones.
 //
 // Aquí solo se piden los datos (hooks de `use-inst-intel` y del hub de la institución), se pasan a las funciones puras de

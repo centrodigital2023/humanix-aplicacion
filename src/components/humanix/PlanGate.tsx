@@ -1,13 +1,19 @@
 // UI primitives for plan-based feature gating.
 //
 // Example:
-//   <PlanGate feature="whatsapp_contact" fallback={<UpgradeCta min="essential_monthly" />}>
+//   <PlanGate feature="whatsapp_contact">   ← sin `fallback`, ofrece el plan de SU perfil que abre la función
 //     <WhatsAppButton ... />
 //   </PlanGate>
 import { Link } from "@tanstack/react-router";
-import { Lock, Sparkles, Crown, Building2 } from "lucide-react";
+import { Lock, Sparkles, Crown, Building2, Heart, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FEATURE_MIN_PLAN, PLAN_CATALOG, type PlanFeature, type PlanKey } from "@/lib/plans";
+import {
+  PLAN_CATALOG,
+  segmentOfRoles,
+  upgradePlanFor,
+  type PlanFeature,
+  type PlanKey,
+} from "@/lib/plans";
 import { usePlan } from "@/hooks/use-plan";
 import { useAppUser } from "@/hooks/use-app-user";
 
@@ -28,14 +34,18 @@ export function PlanGate({ feature, min, children, fallback }: GateProps) {
   if (allowed) return <>{children}</>;
 
   if (fallback !== undefined) return <>{fallback}</>;
-  const minPlan: PlanKey = min ?? (feature ? FEATURE_MIN_PLAN[feature] : "essential_monthly");
+  // A una familia se le ofrece un plan de familia y a un profesional uno de profesional.
+  const minPlan: PlanKey =
+    min ?? (feature ? upgradePlanFor(feature, segmentOfRoles(user?.roles)) : "essential_monthly");
   return <UpgradeCta min={minPlan} />;
 }
 
 const ICON_BY_PLAN: Record<PlanKey, typeof Sparkles> = {
   free: Lock,
-  essential_monthly: Sparkles,
-  pro_monthly: Crown,
+  essential_monthly: Heart,
+  family_premium_monthly: Sparkles,
+  pro_monthly: Stethoscope,
+  pro_premium_monthly: Crown,
   institution_monthly: Building2,
 };
 
@@ -97,7 +107,9 @@ export function PlanBadge({ plan }: { plan: PlanKey }) {
   const styles: Record<PlanKey, string> = {
     free: "border-border bg-muted text-muted-foreground",
     essential_monthly: "border-copper/40 bg-copper/10 text-copper",
+    family_premium_monthly: "border-copper/60 bg-copper/15 text-copper",
     pro_monthly: "border-biosensor/40 bg-biosensor/10 text-biosensor",
+    pro_premium_monthly: "border-biosensor/60 bg-biosensor/15 text-biosensor",
     institution_monthly: "border-fuchsia-neural/40 bg-fuchsia-neural/10 text-fuchsia-neural",
   };
   return (

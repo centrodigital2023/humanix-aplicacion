@@ -1,16 +1,17 @@
 {
-  "name": "Humanix · Talento humano en salud",
+  "id": "/",
+  "name": "Humanix · Cuidado en casa",
   "short_name": "Humanix",
-  "description": "Enfermería y cuidado a domicilio con profesionales verificados en Colombia.",
   "lang": "es-CO",
-  "start_url": "/?source=pwa",
+  "description": "Coordina cuidado en casa, profesionales, servicios y agenda en Humanix.",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0A192F",
-  "theme_color": "#0A192F",
+  "background_color": "#f9fafb",
+  "theme_color": "#0f4c81",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icons/humanix-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/humanix-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/humanix-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

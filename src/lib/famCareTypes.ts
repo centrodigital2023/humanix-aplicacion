@@ -516,13 +516,13 @@ export interface FamLimits {
   moments: number;
 }
 
-/** Límites que aplica la base de datos según el plan que lee de `mp_subscriptions` (Free vs Esencial). */
+/** Límites que aplica la base de datos según el plan que lee de `mp_subscriptions` (Free vs plan de pago). */
 export const FAM_LIMITS: Record<"free" | "essential", FamLimits> = {
   free: { persons: 1, openSteps: 6, openAsks: 3, moments: 60 },
   essential: { persons: 5, openSteps: 60, openAsks: 30, moments: 400 },
 };
 
-/** El plan de pago de la familia es solo Esencial; Pro e Institución también lo incluyen por jerarquía. */
+/** Cualquier plan de pago (Familiar, Premium Familiar y los demás) da los límites amplios. */
 export function famLimitsFor(plan: string | null | undefined): FamLimits {
   return plan && plan !== "free" ? FAM_LIMITS.essential : FAM_LIMITS.free;
 }

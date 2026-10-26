@@ -31,7 +31,10 @@ import { BookNowButton } from "@/components/humanix/BookNowButton";
 import { distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { buildSeo } from "@/lib/seo";
-import { fetchPublicProfessionals } from "@/hooks/use-public-professionals";
+import {
+  fetchFeaturedProfessionals,
+  fetchPublicProfessionals,
+} from "@/hooks/use-public-professionals";
 import { searchProfessionalDetails } from "@/lib/publicProfessionals";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
@@ -99,6 +102,8 @@ type Pro = {
   avg_rating: number | null;
   verified: boolean | null;
   rethus_verified: boolean | null;
+  /** Plan Premium Profesional: badge «verificado destacado». */
+  featured?: boolean;
   total_jobs: number;
   ai_summary: string | null;
   available: boolean | null;
@@ -243,7 +248,10 @@ function BuscarPage() {
           p.ai_summary?.toLowerCase().includes(needle),
       );
     }
-    setPros(rows);
+    const featured = await fetchFeaturedProfessionals(rows.map((p) => p.user_id)).catch(
+      () => new Set<string>(),
+    );
+    setPros(featured.size ? rows.map((p) => ({ ...p, featured: featured.has(p.user_id) })) : rows);
     setLoading(false);
   }, [
     tab,
@@ -772,6 +780,11 @@ function ProCard({
       </div>
 
       <div className="mt-3 flex items-center gap-2 flex-wrap">
+        {pro.featured && (
+          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-copper text-white border border-copper font-semibold">
+            ★ Verificado destacado
+          </span>
+        )}
         {pro.rethus_verified && (
           <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-biosensor/15 text-biosensor border border-biosensor/30">
             RETHUS

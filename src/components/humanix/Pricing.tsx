@@ -20,7 +20,7 @@ export function Pricing() {
   const hrefFor = (key: PlanKey, action: CtaAction): string => {
     switch (action.kind) {
       case "sales":
-        return "mailto:hola@humanix.lat?subject=Plan Institución Humanix (IPS)";
+        return "mailto:hola@humanix.lat?subject=Plan Institucional Humanix (IPS)";
       case "free":
         return user ? "/dashboard" : "/auth";
       case "login":
@@ -101,6 +101,16 @@ export function Pricing() {
             );
           })}
         </div>
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          ¿Quieres más? También hay{" "}
+          <a href="/planes" className="font-semibold text-foreground underline underline-offset-2">
+            {PLAN_CATALOG.family_premium_monthly.label} (
+            {PLAN_CATALOG.family_premium_monthly.priceLabel}/mes) y{" "}
+            {PLAN_CATALOG.pro_premium_monthly.label} ({PLAN_CATALOG.pro_premium_monthly.priceLabel}
+            /mes)
+          </a>
+          .
+        </p>
       </div>
     </section>
   );

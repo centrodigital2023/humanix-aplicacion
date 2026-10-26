@@ -1,4 +1,4 @@
-// «Cuida a quien cuida» (plan Esencial): carga de trabajo, días seguidos, noches y descansos del profesional, con un día
+// «Cuida a quien cuida» (plan Pro): carga de trabajo, días seguidos, noches y descansos del profesional, con un día
 // libre sugerido (lógica en `lib/proWorkload`). Es orientación de bienestar: no es asesoría laboral ni médica y solo lo ve
 // la propia persona.
 import { BedDouble, HeartHandshake, Leaf, Sprout } from "lucide-react";

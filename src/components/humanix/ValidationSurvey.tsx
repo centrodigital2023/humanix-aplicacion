@@ -1,6 +1,6 @@
 // Formulario inteligente de validación de mercado: «Registro de usuario y beneficio premium».
 // Flujo: 4 secciones → verificación del contacto (código de 6 dígitos) → resultado con el beneficio
-// (1 mes del plan Esencial). Cada formulario lleno llega al panel de superadmin, que lo tabula solo.
+// (1 mes del plan Familiar). Cada formulario lleno llega al panel de superadmin, que lo tabula solo.
 //
 // Lo «inteligente»: los ejemplos y las pistas se adaptan al perfil, el borrador se guarda solo en el
 // dispositivo, se pide claridad con sugerencias (sin IA ni envío de datos), las respuestas vacías o copiadas

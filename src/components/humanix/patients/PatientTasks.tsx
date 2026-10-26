@@ -1,5 +1,5 @@
 // Tareas: lo que falta hacer por cada paciente (llamar, visitar, laboratorio…) y, en el tablero, la bandeja de lo que vence hoy. Con el plan
-// IPS Mejorado el sistema agenda solo los seguimientos de cada caso; aquí se marcan como hechos u omitidos.
+// Institucional el sistema agenda solo los seguimientos de cada caso; aquí se marcan como hechos u omitidos.
 import { useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { extractProfessionalProfile } from "@/lib/profileExtract.functions";
+import { prepareProfileImport, PROFILE_FILE_ACCEPT } from "@/lib/profileImport";
 import {
   FileText,
   IdCard,
@@ -11,7 +14,6 @@ import {
   Clock,
   XCircle,
   Sparkles,
-  Receipt,
   Briefcase,
   ShieldAlert,
   Stethoscope,
@@ -37,13 +39,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendlyError";
 import { confirmAction } from "@/components/humanix/ConfirmHost";
+import { missingProfessionalDocuments } from "../../../supabase/functions/_shared/professionalDocumentRequirements";
 
 type DocType =
   | "cv"
   | "rethus"
   | "diploma"
   | "id_document"
-  | "utility_bill"
   | "work_experience"
   | "public_function_cv"
   | "medical_exam"
@@ -92,7 +94,7 @@ const REGULAR_TYPES: DocDef[] = [
     value: "cv",
     label: "Hoja de vida",
     icon: <FileText className="h-4 w-4" />,
-    hint: "PDF · La IA extrae tus datos.",
+    hint: "PDF, Word, imagen o texto.",
     cvParse: true,
     required: true,
   },
@@ -115,13 +117,6 @@ const REGULAR_TYPES: DocDef[] = [
     label: "Cédula",
     icon: <IdCard className="h-4 w-4" />,
     hint: "Frente y reverso.",
-    required: true,
-  },
-  {
-    value: "utility_bill",
-    label: "Recibo de servicios públicos",
-    icon: <Receipt className="h-4 w-4" />,
-    hint: "Reciente (últimos 60 días). Verifica tu dirección.",
     required: true,
   },
   {
@@ -243,6 +238,7 @@ export function DocumentsManager({
   userId: string;
   onCvExtracted?: (profile: Record<string, unknown>) => void;
 }) {
+  const extractProfile = useServerFn(extractProfessionalProfile);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [busyType, setBusyType] = useState<DocType | null>(null);
   const [extractingCv, setExtractingCv] = useState(false);
@@ -254,7 +250,6 @@ export function DocumentsManager({
     rethus: null,
     diploma: null,
     id_document: null,
-    utility_bill: null,
     work_experience: null,
     public_function_cv: null,
     medical_exam: null,
@@ -325,12 +320,11 @@ export function DocumentsManager({
       if (type === "cv" && onCvExtracted) {
         setExtractingCv(true);
         try {
-          const { data: ext, error: e2 } = await supabase.functions.invoke("cv-extractor", {
-            body: { file_url: signed.signedUrl, mime_type: file.type },
-          });
-          if (e2) throw e2;
-          if (ext?.profile) {
-            onCvExtracted(ext.profile);
+          const prepared = await prepareProfileImport("", file);
+          const ext = await extractProfile({ data: { ...prepared, save_documents: true } });
+          if (!ext.ok) throw new Error(ext.message || "No se pudo analizar el CV");
+          if (ext.profile) {
+            onCvExtracted(ext.profile as unknown as Record<string, unknown>);
             toast.success("✨ Datos extraídos del CV. Revísalos antes de guardar.");
           }
         } catch (e) {
@@ -339,6 +333,9 @@ export function DocumentsManager({
           setExtractingCv(false);
         }
       }
+
+      // Non-PDF CV imports are documents pending review, not verified images.
+      if (type === "cv" && file.type !== "application/pdf" && !file.type.startsWith("image/")) return;
 
       // Verificación IA
       setVerifyingId(newDoc.id);
@@ -424,9 +421,9 @@ export function DocumentsManager({
   const docsByType = (t: DocType) => docs.filter((d) => d.doc_type === t);
   const hasDoc = (t: DocType) => docs.some((d) => d.doc_type === t && d.status !== "rejected");
 
-  const requiredMissing = REGULAR_TYPES.filter((t) => t.required && !hasDoc(t.value)).length;
-  const credencialMissing = !hasDoc("rethus") && !hasDoc("diploma");
-  const totalMissing = requiredMissing + (credencialMissing ? 1 : 0);
+  const missingDocuments = missingProfessionalDocuments(docs);
+  const credencialMissing = missingDocuments.includes("rethus_o_diploma");
+  const totalMissing = missingDocuments.length;
 
   const publicUploaded = PUBLIC_TYPES.filter((t) => hasDoc(t.value)).length;
 
@@ -577,7 +574,7 @@ function DocCard({
           ref={inputRef}
           data-doc={t.value}
           type="file"
-          accept=".pdf,image/*"
+          accept={t.cvParse ? PROFILE_FILE_ACCEPT : ".pdf,image/*"}
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

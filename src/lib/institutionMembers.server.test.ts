@@ -334,7 +334,7 @@ describe("crear", () => {
     expect(db.tables.institution_members).toHaveLength(0);
   });
 
-  it("exige el plan IPS Mejorado para crear", async () => {
+  it("exige el plan Institucional para crear", async () => {
     for (const plan of ["free", "essential_monthly", "pro_monthly"]) {
       db.plans[OWNER] = plan;
       const r = await handleCreateMember(goodCreate, ctx, deps());

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { OwnTrustCard } from "@/components/humanix/OwnTrustCard";
 import {
   Building2,
   Briefcase,
@@ -35,6 +36,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/humanix/Logo";
 import { HiringCopilot } from "@/components/humanix/HiringCopilot";
+import { InstallAppButton } from "@/components/humanix/InstallAppButton";
+import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { EnhancedBulkOffersModule } from "@/components/humanix/EnhancedBulkOffersModule";
 import { CoverageSemaphore } from "@/components/humanix/CoverageSemaphore";
 import { EnhancedAgendaModule } from "@/components/humanix/EnhancedAgendaModule";
@@ -654,6 +657,8 @@ function InstitutionDashboard() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            <InstallAppButton />
+            <ShareAppButton />
             {user.id && <NotificationsBell userId={user.id} />}
             <div className="hidden sm:block">
               <HiringCopilot />
@@ -714,6 +719,16 @@ function InstitutionDashboard() {
                 aria-label="Revisando tu día"
               />
             )}
+
+            {/* Tu Trust Score: lo que ven los profesionales junto a tus ofertas y qué falta para subirlo */}
+            <div id="confianza" className="scroll-mt-24">
+              <OwnTrustCard
+                userId={user.id}
+                kind="institution"
+                completeLabel="Completar perfil de la institución"
+                onCompleteIdentity={() => void navigate({ to: "/institution/profile" })}
+              />
+            </div>
 
             <div id="cobertura" className="scroll-mt-24">
               <CoverageCenter
@@ -1263,7 +1278,7 @@ function InstitutionDashboard() {
 
             <div className="space-y-2">
               <p className="text-sm font-semibold flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 text-fuchsia-neural" /> Plan IPS Mejorado y sedes
+                <Building2 className="h-4 w-4 text-fuchsia-neural" /> Plan Institucional y sedes
               </p>
               <IpsBranchBilling institutionId={user.id} />
             </div>

@@ -18,11 +18,16 @@ type Card = { key: PlanKey; emoji: string; perks: string[] };
 
 const BY_AUDIENCE: Record<Audience, Card[]> = {
   familias: [
-    { key: "free", emoji: "🌱", perks: ["Buscar y pedir", "Mapa en vivo"] },
+    { key: "free", emoji: "🌱", perks: ["Buscar y pedir", "Mapa en vivo", "Crear cuenta gratis"] },
     {
       key: "essential_monthly",
       emoji: "💎",
-      perks: ["WhatsApp directo", "Ver quién llega y cuándo", "Verificación RETHUS"],
+      perks: ["Sin comisión", "Acuerdos digitales y bitácora", "Alertas y soporte prioritario"],
+    },
+    {
+      key: "family_premium_monthly",
+      emoji: "🌟",
+      perks: ["Círculo familiar", "Reportes para el médico", "Botón SOS y soporte dedicado"],
     },
   ],
   instituciones: [
@@ -30,19 +35,19 @@ const BY_AUDIENCE: Record<Audience, Card[]> = {
     {
       key: "institution_monthly",
       emoji: "🏥",
-      perks: ["Varios usuarios", "Puntaje IA de candidatos", "Alertas de documentos"],
+      perks: ["Multiusuario", "Vacantes, agenda y seguimiento", "COP 50.000 por sede adicional"],
     },
   ],
   profesionales: [
     {
-      key: "essential_monthly",
+      key: "pro_monthly",
       emoji: "💎",
-      perks: ["Postulaciones sin límite", "WhatsApp directo", "Sin comisión"],
+      perks: ["0 % de comisión", "Mejor visibilidad", "Acceso ilimitado a ofertas"],
     },
     {
-      key: "pro_monthly",
+      key: "pro_premium_monthly",
       emoji: "🚀",
-      perks: ["Sales primero", "Coach de carrera IA", "Mensajes con IA"],
+      perks: ["Prioridad alta", "Badge verificado destacado", "Más IA y reputación"],
     },
   ],
 };
@@ -116,7 +121,9 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
 
   return (
     <div>
-      <ul className="grid gap-4 sm:grid-cols-2">
+      <ul
+        className={`grid gap-4 sm:grid-cols-2 ${BY_AUDIENCE[audience].length === 3 ? "lg:grid-cols-3" : ""}`}
+      >
         {BY_AUDIENCE[audience].map((c) => {
           const def = PLAN_CATALOG[c.key];
           const cta = computeCta(c.key, {
@@ -166,7 +173,7 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
               </button>
               {paid && c.key !== "institution_monthly" && (
                 <p className="mt-2 text-center text-sm opacity-85">
-                  🔒 Mercado Pago · PSE, Nequi o tarjeta
+                  🔒 Pago seguro con Mercado Pago · PSE, Nequi o tarjeta
                 </p>
               )}
             </li>

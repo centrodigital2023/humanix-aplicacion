@@ -112,7 +112,7 @@ export function articleLd(opts: {
       "@type": "Organization",
       name: SITE_NAME,
       url: SITE_URL,
-      logo: { "@type": "ImageObject", url: `${SITE_URL}/favicon.ico` },
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/logo-humanix.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}${opts.path}` },
   } as const;

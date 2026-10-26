@@ -1,4 +1,4 @@
-// Centro de crecimiento del profesional: ingresos reales y descanso (plan Esencial), «Mi semana» y reputación en detalle
+// Centro de crecimiento del profesional: ingresos reales y descanso (plan Pro), «Mi semana» y reputación en detalle
 // (plan Pro). El resumen del día vive en el héroe de Inicio (`ProHero`) y es para todos.
 //
 // Aquí solo se piden los datos (hooks de `use-pro-intel` y del hub de oportunidades), se pasan a las funciones puras de
@@ -40,7 +40,7 @@ const TABS: Array<{
     key: "ingresos",
     label: "Ingresos",
     feature: "pro_income_pulse",
-    min: "essential_monthly",
+    min: "pro_monthly",
     Icon: Wallet,
   },
   {
@@ -54,14 +54,14 @@ const TABS: Array<{
     key: "descanso",
     label: "Descanso",
     feature: "pro_rest_guard",
-    min: "essential_monthly",
+    min: "pro_monthly",
     Icon: HeartHandshake,
   },
   {
     key: "reputacion",
     label: "Reputación",
     feature: "pro_reputation_lab",
-    min: "pro_monthly",
+    min: "pro_premium_monthly",
     Icon: Award,
   },
 ];
@@ -154,7 +154,8 @@ export function ProSmartCenter({
     reputacion: canRep,
   };
 
-  const proNote = `${PLAN_CATALOG.pro_monthly.priceLabel}${PLAN_CATALOG.pro_monthly.priceNote}, sin permanencia. Incluye todo lo del plan Esencial.`;
+  const proNote = `${PLAN_CATALOG.pro_monthly.priceLabel}${PLAN_CATALOG.pro_monthly.priceNote}, sin permanencia y sin comisión.`;
+  const premiumNote = `${PLAN_CATALOG.pro_premium_monthly.priceLabel}${PLAN_CATALOG.pro_premium_monthly.priceNote}, sin permanencia. Incluye todo lo del plan Pro.`;
   const monthEarned = earnings.flow.current.settledToDate;
   const fits = feed.model?.summary.shifts ?? 0;
 
@@ -195,12 +196,14 @@ export function ProSmartCenter({
               error={bookingsQ.isError}
             />,
             <PremiumPreview
+              min="pro_monthly"
+              ctaNote={proNote}
               icon={<Wallet className="h-4 w-4 text-ok" aria-hidden="true" />}
               title="Tus ingresos reales"
               description="Cuánto te queda por mes, cuánto tienes acordado y cuánto proyectamos, con tu día más fuerte y tu tarifa frente al mercado."
               bullets={[
                 "Ingresos netos por mes y proyección del mes en curso",
-                "Cuánta comisión pagaste y si el plan Esencial se paga solo con tu volumen",
+                "Cuánta comisión pagaste y si el plan Pro se paga solo con tu volumen",
                 "Tu día más fuerte, las familias que vuelven y tu tarifa frente a tu ciudad",
               ]}
               teaser={
@@ -250,6 +253,8 @@ export function ProSmartCenter({
               error={bookingsQ.isError}
             />,
             <PremiumPreview
+              min="pro_monthly"
+              ctaNote={proNote}
               icon={<HeartHandshake className="h-4 w-4 text-copper" aria-hidden="true" />}
               title="Cuida a quien cuida"
               description="Tu carga de trabajo, tus días seguidos y tus descansos, con un día libre sugerido. Solo tú lo ves."
@@ -276,8 +281,8 @@ export function ProSmartCenter({
               error={ratingsQ.isError}
             />,
             <PremiumPreview
-              min="pro_monthly"
-              ctaNote={proNote}
+              min="pro_premium_monthly"
+              ctaNote={premiumNote}
               icon={<Award className="h-4 w-4 text-copper" aria-hidden="true" />}
               title="Tu reputación en detalle"
               description="Qué opinan de ti en cada aspecto, tu fortaleza, un empujón para crecer y lo que dicen de ti."

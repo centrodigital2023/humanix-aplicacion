@@ -121,7 +121,7 @@ export function PlanMeters({
             {canManagePlan ? (
               <Button asChild variant="copper" size="sm" className="shrink-0">
                 <Link to="/planes">
-                  Conocer IPS Mejorado <ArrowUpRight aria-hidden />
+                  Conocer Institucional <ArrowUpRight aria-hidden />
                 </Link>
               </Button>
             ) : (

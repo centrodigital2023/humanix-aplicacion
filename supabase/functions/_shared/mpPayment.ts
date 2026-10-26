@@ -11,7 +11,7 @@
 // - Un estado que no existe en el enum `mp_payment_status` de producción (authorized, in_mediation, charged_back) se
 //   guarda con su equivalente: antes rompía la escritura y Mercado Pago reintentaba sin fin.
 // - Una notificación al usuario que falla no deshace ni repite una activación.
-// - El primer plan que paga una persona referida le da un mes de Esencial a quien la refirió (`applyReferralReward`),
+// - El primer plan que paga una persona referida le da un mes del plan Familiar a quien la refirió (`applyReferralReward`),
 //   una sola vez por persona referida. Si falla, el pago de la persona referida sigue aplicado.
 // - Los cobros de una suscripción (`/preapproval`) llegan aquí con la metadata que les pone el servidor
 //   (`withSubscriptionMetadata`). Al cambiar de plan, la suscripción anterior se cancela para no cobrar dos veces.
@@ -435,7 +435,7 @@ export async function applyReferralReward(
           body:
             reward.kind === "convert"
               ? `Alguien que invitaste se suscribió. Sumamos ${reward.days} días a tu plan, vigente hasta el ${until}.`
-              : `Alguien que invitaste se suscribió. Tu plan Esencial queda vigente hasta el ${until}.`,
+              : `Alguien que invitaste se suscribió. Tu plan Familiar queda vigente hasta el ${until}.`,
           link: "/dashboard",
         }),
       });

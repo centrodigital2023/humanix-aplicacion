@@ -9,18 +9,13 @@ import {
 
 export type { BillingCycle, InstitutionBillingBreakdown };
 
-export function useInstitutionBilling(
-  initialBranches = 1,
-  initialProfessionals = 10,
-  initialCycle: BillingCycle = "monthly",
-) {
+export function useInstitutionBilling(initialBranches = 1, initialCycle: BillingCycle = "monthly") {
   const [branches, setBranches] = useState(initialBranches);
-  const [professionals, setProfessionals] = useState(initialProfessionals);
   const [cycle, setCycle] = useState<BillingCycle>(initialCycle);
 
   const breakdown = useMemo(
-    () => calculateInstitutionBilling({ branches, professionals, cycle }),
-    [branches, professionals, cycle],
+    () => calculateInstitutionBilling({ branches, cycle }),
+    [branches, cycle],
   );
 
   const trialDays = INSTITUTION_BILLING.trialDays;
@@ -29,18 +24,14 @@ export function useInstitutionBilling(
   return {
     branches,
     setBranches,
-    professionals,
-    setProfessionals,
     cycle,
     setCycle,
     breakdown,
     totalFormatted: COP(breakdown.totalCOP),
-    monthlyEquivalentFormatted: COP(
-      cycle === "annual" ? Math.round(breakdown.totalCOP / 12) : breakdown.totalCOP,
-    ),
+    monthlyEquivalentFormatted: COP(Math.round(breakdown.totalCOP / breakdown.months)),
     trialDays,
     graceDays,
     isSaving: cycle === "annual",
-    savingPercent: INSTITUTION_BILLING.annualDiscount * 100,
+    savingPercent: Math.round(INSTITUTION_BILLING.annualDiscount * 100),
   };
 }

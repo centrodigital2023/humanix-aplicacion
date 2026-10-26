@@ -443,8 +443,8 @@ export function buildFamilyBrief(s: FamilySnapshot): BriefItem[] {
       priority: "low",
       title: "Entiende mejor el cuidado de tu familiar",
       detail:
-        "Con el plan Esencial ves tendencias de ánimo y signos vitales, comparas postulaciones, controlas el gasto y anticipas horas sin cubrir.",
-      cta: { label: "Ver el plan Esencial", target: { kind: "plans" } },
+        "Con el plan Familiar ves tendencias de ánimo y signos vitales, comparas postulaciones, controlas el gasto y anticipas horas sin cubrir.",
+      cta: { label: "Ver el plan Familiar", target: { kind: "plans" } },
     });
   }
 

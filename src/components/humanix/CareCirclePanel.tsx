@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { circleInviteText } from "@/lib/careLoop";
 import { ShareTextButtons } from "@/components/humanix/care/ShareTextButtons";
 import { toast } from "sonner";
+import { usePlan } from "@/hooks/use-plan";
+import { CIRCLE_LIMIT } from "@/lib/plans";
+import { UpgradeCta } from "@/components/humanix/PlanGate";
 
 const sb = supabase as unknown as SupabaseClient;
 const emailSchema = z.string().trim().email().max(254);
@@ -37,6 +40,7 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState<SharedBooking[]>([]);
   const [lastInvited, setLastInvited] = useState<string | null>(null);
+  const plan = usePlan(userId);
 
   const load = useCallback(async () => {
     const { data } = await sb
@@ -68,6 +72,10 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
   }, [load]);
 
   const mine = members.filter((m) => m.owner_id === userId);
+  // Mismo tope que la base (`hx_circle_limit`): las invitaciones rechazadas no cuentan.
+  const circleLimit = CIRCLE_LIMIT[plan.plan];
+  const circleUsed = mine.filter((m) => m.status !== "declined").length;
+  const circleFull = !plan.loading && !loading && circleUsed >= circleLimit;
   const invitationsForMe = members.filter(
     (m) =>
       m.owner_id !== userId &&
@@ -95,7 +103,11 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
     setBusy(false);
     if (error) {
       toast.error(
-        error.code === "23505" ? "Ya invitaste a esta persona" : "No se pudo enviar la invitación",
+        error.code === "23505"
+          ? "Ya invitaste a esta persona"
+          : error.hint === "circle_limit"
+            ? "Llegaste al tope de tu plan. Con Premium Familiar invitas hasta 10 personas."
+            : "No se pudo enviar la invitación",
       );
       return;
     }
@@ -149,32 +161,44 @@ export function CareCirclePanel({ userId, userEmail }: { userId: string; userEma
         </div>
       ))}
 
-      <form onSubmit={invite} className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]">
-        <Input
-          type="email"
-          required
-          placeholder="correo@familiar.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          aria-label="Correo del familiar"
+      <p className="text-xs text-muted-foreground">
+        {circleUsed} de {circleLimit} {circleLimit === 1 ? "persona" : "personas"} en tu círculo.
+      </p>
+
+      {circleFull ? (
+        <UpgradeCta
+          min="family_premium_monthly"
+          title="Tu círculo está completo"
+          description="Con Premium Familiar hasta 10 personas siguen tus servicios, con alertas prioritarias y aviso de SOS a todo el círculo."
         />
-        <Input
-          placeholder="Parentesco"
-          value={relation}
-          onChange={(e) => setRelation(e.target.value)}
-          maxLength={40}
-          aria-label="Parentesco"
-        />
-        <Button type="submit" disabled={busy}>
-          {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <UserPlus className="h-4 w-4 mr-1.5" /> Invitar
-            </>
-          )}
-        </Button>
-      </form>
+      ) : (
+        <form onSubmit={invite} className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]">
+          <Input
+            type="email"
+            required
+            placeholder="correo@familiar.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-label="Correo del familiar"
+          />
+          <Input
+            placeholder="Parentesco"
+            value={relation}
+            onChange={(e) => setRelation(e.target.value)}
+            maxLength={40}
+            aria-label="Parentesco"
+          />
+          <Button type="submit" disabled={busy}>
+            {busy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4 mr-1.5" /> Invitar
+              </>
+            )}
+          </Button>
+        </form>
+      )}
 
       {lastInvited && (
         <div className="rounded-xl border border-dashed border-biosensor/40 bg-biosensor/5 p-3">

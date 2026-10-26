@@ -1,6 +1,7 @@
 // Validador holístico: cruza datos del formulario con documentos y referencias.
 // Bloquea publicación solo ante errores críticos. Advertencias no bloquean.
 import { buildCorsHeaders, requireUser } from "../_shared/auth.ts";
+import { currentVerificationDocuments, missingProfessionalDocuments } from "../_shared/professionalDocumentRequirements.ts";
 
 const TOOL = {
   type: "function",
@@ -66,13 +67,16 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
-    const docsSummary = (documents ?? []).map((d: Record<string, unknown>) => ({
+    const activeDocuments = currentVerificationDocuments(
+      (documents ?? []) as { doc_type: string; status: string }[],
+    );
+    const docsSummary = activeDocuments.map((d) => ({
       type: d.doc_type,
       status: d.status,
-      ai_verified: d.ai_verified,
-      ai_score: d.ai_score,
-      ai_notes: d.ai_notes,
-      extracted: d.ai_extracted,
+      ai_verified: (d as Record<string, unknown>).ai_verified,
+      ai_score: (d as Record<string, unknown>).ai_score,
+      ai_notes: (d as Record<string, unknown>).ai_notes,
+      extracted: (d as Record<string, unknown>).ai_extracted,
     }));
 
     const refsByType = (references ?? []).reduce(
@@ -85,11 +89,7 @@ Deno.serve(async (req) => {
       {},
     );
 
-    const REQUIRED_DOCS = ["cv", "id_document", "utility_bill"];
-    const has = (t: string) =>
-      docsSummary.some((d: Record<string, unknown>) => d.type === t && d.status !== "rejected");
-    const missingDocs = REQUIRED_DOCS.filter((t) => !has(t));
-    if (!has("rethus") && !has("diploma")) missingDocs.push("rethus_o_diploma");
+    const missingDocs = missingProfessionalDocuments(activeDocuments);
     const workRefs = (refsByType.work ?? []).length;
     const familyRefs = (refsByType.family ?? []).length;
 
@@ -97,7 +97,8 @@ Deno.serve(async (req) => {
       "Eres un revisor estricto pero justo de perfiles profesionales de salud en Colombia. " +
       "Tu trabajo: validar que el formulario, los documentos y las referencias sean COHERENTES y SUFICIENTES para publicar el perfil. " +
       "REGLAS CRÍTICAS (bloquean publicación, is_publishable=false):\n" +
-      "- Algún documento obligatorio (cv, id_document, utility_bill) está rechazado, falso o ausente.\n" +
+      "- Algún documento obligatorio (cv, id_document) está rechazado, falso o ausente.\n" +
+      "- No solicites recibos de servicios públicos ni pruebas de domicilio; no forman parte de la evaluación.\n" +
       "- No hay NI documento RETHUS NI diploma profesional (al menos uno es obligatorio).\n" +
       "- El nombre del CV o cédula NO coincide con el nombre del perfil.\n" +
       "- Si declaró número RETHUS, NO coincide con el extraído del documento RETHUS.\n" +

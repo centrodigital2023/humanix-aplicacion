@@ -118,16 +118,16 @@ describe("comisión", () => {
   });
 
   it("con volumen alto calcula el ahorro después de descontar el plan, y no hay empate falso", () => {
-    // 3 meses de plan = 27.000; con 2 servicios de 18.000 (36.000) se ahorrarían 9.000
+    // 3 meses de Pro = 59.700; con 2 servicios de 30.000 de comisión (60.000) se ahorrarían 300
     const r = report([free(2), free(4)].map((b) => ({ ...b, platform_fee_amount: 30_000 })));
     expect(r.commission.paid90).toBe(60_000);
-    expect(r.commission.savingWithEssential90).toBe(60_000 - 27_000);
+    expect(r.commission.savingWithEssential90).toBe(60_000 - 59_700);
     const i = find(r.insights, "commission_saving")!;
     expect(i.severity).toBe("warn");
     expect(i.detail).toMatch(/habrías conservado/);
 
     // exactamente igual al costo del plan: no ahorra nada
-    const equal = report([free(2, { platform_fee_amount: 27_000 })]);
+    const equal = report([free(2, { platform_fee_amount: 59_700 })]);
     expect(equal.commission.savingWithEssential90).toBeNull();
   });
 

@@ -5,7 +5,7 @@
 // Qué ve cada familia:
 //  - Todas: la ruta, la etapa, los «días con cuidado» (un contador que solo suma), qué mirar, cuándo llamar y la
 //    carta de la semana con lo que ya consta en las reservas.
-//  - Con el plan Esencial (el mismo `family_wellbeing_report`; no hay precio nuevo): las metas de la semana y la carta
+//  - Con el plan Familiar (el mismo `family_wellbeing_report`; no hay precio nuevo): las metas de la semana y la carta
 //    y la hoja para la cita enriquecidas con los partes del turno.
 //
 // No diagnostica ni recomienda medicamentos. El 123 está siempre a un toque junto a las señales de alarma. Compartir
@@ -456,7 +456,7 @@ export function CareJourneyCard({
               </h4>
               {!premium && (
                 <span className="text-xs text-muted-foreground">
-                  Con el plan Esencial suma comidas, medicamentos y ánimo.
+                  Con el plan Familiar suma comidas, medicamentos y ánimo.
                 </span>
               )}
             </div>
@@ -529,7 +529,7 @@ export function CareJourneyCard({
                 <span className="text-xs text-ok">Incluye lo que cambió en los partes</span>
               ) : !premium ? (
                 <span className="text-xs text-muted-foreground">
-                  Con el plan Esencial añade lo que cambió en los partes.
+                  Con el plan Familiar añade lo que cambió en los partes.
                 </span>
               ) : null}
             </div>

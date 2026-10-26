@@ -1,5 +1,5 @@
 // Centro de alertas: cada alerta con su plazo corriendo (crítica 10 min, urgente 30 min, atención 2 h), la guía de qué hacer y los dos pasos
-// que importan: «Ya la vi» (queda quién y cuándo) y «Resolver» (cómo se resolvió). Con el plan IPS Mejorado, la que nadie ve a tiempo se escala
+// que importan: «Ya la vi» (queda quién y cuándo) y «Resolver» (cómo se resolvió). Con el plan Institucional, la que nadie ve a tiempo se escala
 // sola. Esto apoya la decisión clínica; no la reemplaza.
 import { useEffect, useState } from "react";
 import {

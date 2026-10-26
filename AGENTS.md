@@ -12,10 +12,17 @@ Healthcare home-care platform (Colombia). Stack: TanStack Start + React 19, file
 - `supabase/functions/` existing Edge Functions (maintain only, never add new ones).
 
 ## Rules
+- Profile uploads share `ProfileImporter`; extracted PDF support pages are bounded and saved as independent pending files through authenticated server code, never as approved/verified documents.
+- Installability uses a web manifest and existing-brand icons only, with no offline worker or clinical-data caching; native store packages remain a separate Capacitor release process.
+- Professional document requirements are shared in the browser-safe `supabase/functions/_shared/professionalDocumentRequirements.ts` module by the panel and existing validator, so completion and publication checks remain consistent.
 - UI only with shadcn/Radix/Tailwind; icons from lucide-react; semantic color tokens, no arbitrary hex in new code — keeps theming consistent.
 - Business logic as pure functions in `src/lib/` with Vitest tests — testable without the DB.
 - Search cards, map and agent results share validated directory rows from `searchProfessionalDetails`; display only server-authorized names so incomplete data and privacy rules stay consistent.
 - Async data via TanStack Query; live updates via Supabase Realtime, not polling.
+- Direct pending bookings have a dedicated professional inbox; database INSERT triggers create recipient-only notifications so every booking entry point alerts consistently.
+- Map pins follow `verification_status` from the map SQL functions: only verified pros (approved docs) are bookable; pending ones show amber with the Habeas Data notice (`src/lib/mapVerification.ts`). Pros share service location only in `in_route`/`in_progress`, enforced by `tracking_pings` RLS.
+- Service flow (Pedido → Aceptado → En camino → Cuidando → Terminado) lives in `src/lib/serviceFlow.ts`; `LiveServiceAlerts` (mounted once in `__root`) uses `useRealtimeProfessionalFeed` for app-wide alerts, so new request/status notification types must be added to `ALERT_TYPES` there.
+- Map visitors share a payload-free public broadcast subscription; signed-in viewers retain the private channel, and selection reads current authorized pins to prevent stale locations or actions.
 - Forms use react-hook-form + Zod — single validation path.
 - Roles live only in `public.user_roles`; check with `has_role()` / `is_staff()` — prevents privilege escalation.
 - Every new public table: GRANTs + RLS in the same migration — Data API needs both.

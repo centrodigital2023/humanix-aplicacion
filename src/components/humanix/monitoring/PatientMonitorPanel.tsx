@@ -347,7 +347,7 @@ export function PatientMonitorPanel({
           <p className="rounded-xl border border-dashed border-border p-3 text-xs text-muted-foreground">
             {overview.limits.devices > 0
               ? "Sin dispositivos. Empareja un reloj o sensor y los signos llegan solos."
-              : "Conectar relojes y sensores es parte del plan IPS Mejorado. Mientras tanto, registra los signos a mano."}
+              : "Conectar relojes y sensores es parte del plan Institucional. Mientras tanto, registra los signos a mano."}
           </p>
         ) : (
           <DevicesList devices={devices} now={now} actions={actions} canWrite={canWrite} />

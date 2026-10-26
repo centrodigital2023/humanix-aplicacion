@@ -14,6 +14,7 @@ const inst = (over: Partial<MapInstitution> = {}): MapInstitution => ({
   status: "idle",
   live: false,
   openOffers: 0,
+  verification: "pending",
   ...over,
 });
 const dem = (over: Partial<MapDemand> = {}): MapDemand => ({
@@ -30,6 +31,7 @@ const dem = (over: Partial<MapDemand> = {}): MapDemand => ({
   offerId: "o1",
   trust: {} as MapDemand["trust"],
   distanceBand: null,
+  verification: "verified",
   ...over,
 });
 

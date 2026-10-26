@@ -54,7 +54,7 @@ export function NotificationsBell({ userId }: { userId: string }) {
 
     // Realtime
     const channel = supabase
-      .channel(`notif-${userId}`)
+      .channel(`notif-${userId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
@@ -64,10 +64,17 @@ export function NotificationsBell({ userId }: { userId: string }) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          setItems((prev) => [payload.new as Notification, ...prev].slice(0, 20));
+          if (!active) return;
+          const notification = payload.new as Notification;
+          setItems((prev) =>
+            [notification, ...prev.filter((n) => n.id !== notification.id)].slice(0, 20),
+          );
+          // La alerta flotante con sonido la muestra `LiveServiceAlerts` en toda la app.
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void load();
+      });
 
     return () => {
       active = false;

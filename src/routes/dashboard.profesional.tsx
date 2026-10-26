@@ -11,7 +11,6 @@ import {
   Briefcase,
   MapPin,
   Wand2,
-  Send,
   LogOut,
   CheckCircle2,
   TrendingUp,
@@ -52,6 +51,10 @@ import { UnplacedDemandList } from "@/components/humanix/UnplacedDemandList";
 import { LocationPicker } from "@/components/humanix/LocationPicker";
 import { toCell } from "@/lib/presence";
 import { ReferencesManager } from "@/components/humanix/ReferencesManager";
+import { ProfileImporter } from "@/components/humanix/ProfileImporter";
+import { InstallAppButton } from "@/components/humanix/InstallAppButton";
+import { ShareAppButton } from "@/components/humanix/ShareAppButton";
+import { newReferences, normalizeExtraction, type ExtractedProfile } from "@/lib/profileExtraction";
 import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
@@ -72,6 +75,7 @@ import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
 import { CareerCard } from "@/components/humanix/care/CareerCard";
 import { ProHero } from "@/components/humanix/pro/ProHero";
+import { PendingBookingRequests } from "@/components/humanix/pro/PendingBookingRequests";
 import { ProSmartCenter, type GrowKey } from "@/components/humanix/pro/ProSmartCenter";
 import { scrollToId } from "@/components/humanix/premium/scroll";
 import type { ProBriefTarget } from "@/lib/proBrief";
@@ -91,6 +95,9 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendlyError";
 import { buildSeo } from "@/lib/seo";
+import { OwnTrustCard } from "@/components/humanix/OwnTrustCard";
+import { useOwnTrustScore } from "@/hooks/use-trust-score";
+import { REQUIRED_PROFESSIONAL_DOCUMENTS } from "../../supabase/functions/_shared/professionalDocumentRequirements";
 
 export const Route = createFileRoute("/dashboard/profesional")({
   head: () =>
@@ -226,8 +233,9 @@ function ProDashboard() {
   const [docSummary, setDocSummary] = useState<Record<string, boolean>>({});
 
   // IA onboarding
-  const [aiText, setAiText] = useState("");
-  const [aiBusy, setAiBusy] = useState(false);
+  const [languages, setLanguages] = useState("");
+  const [docsKey, setDocsKey] = useState(0);
+  const [refsKey, setRefsKey] = useState(0);
   const [validating, setValidating] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
 
@@ -244,7 +252,11 @@ function ProDashboard() {
   const [bio, setBio] = useState("");
   const [workExp, setWorkExp] = useState<WorkExp[]>([]);
 
-  const trust = profile?.trust_score ?? 0;
+  // El Trust Score es el de la plataforma (el mismo que ven familias e instituciones); el de la validación con IA es una pieza de
+  // la identidad y se muestra aparte como «Validación IA».
+  const ownTrust = useOwnTrustScore(userId, "professional");
+  const aiScore = profile?.trust_score ?? 0;
+  const trust = ownTrust.data?.summary.score ?? aiScore;
   const greetingName = useMemo(() => fullName.split(" ")[0] || "profesional", [fullName]);
 
   // Profile completion steps
@@ -257,7 +269,6 @@ function ProDashboard() {
       { label: "Ciudades de servicio", done: cities.trim().length > 0 },
       { label: "Hoja de vida", done: !!docSummary["cv"] },
       { label: "Cédula", done: !!docSummary["id_document"] },
-      { label: "Recibo servicios", done: !!docSummary["utility_bill"] },
       { label: "RETHUS o Diploma", done: !!(docSummary["rethus"] || docSummary["diploma"]) },
     ],
     [profile?.avatar_url, specialty, bio, years, cities, docSummary],
@@ -348,8 +359,7 @@ function ProDashboard() {
             }[]
           ).map((b) => {
             const c = clientMap.get(b.client_id) as
-              | { full_name: string; avatar_url: string }
-              | undefined;
+              { full_name: string; avatar_url: string } | undefined;
             const o = b.job_offer_id
               ? (offerMap2.get(b.job_offer_id) as { title: string; city: string } | undefined)
               : undefined;
@@ -391,6 +401,7 @@ function ProDashboard() {
           Array.isArray(pp.certifications) ? (pp.certifications as string[]).join(", ") : "",
         );
         setBio(pp.bio ?? "");
+        setLanguages((pp.languages ?? []).join(", "));
         setWorkExp(Array.isArray(pp.work_experience) ? pp.work_experience : []);
       } else {
         const ins = await supabase.from("professional_profiles").insert({ user_id: uid });
@@ -447,6 +458,11 @@ function ProDashboard() {
         filter: userId ? `professional_id=eq.${userId}` : undefined,
       },
       { table: "job_offers", event: "*" },
+      {
+        table: "service_bookings",
+        event: "*",
+        filter: userId ? `professional_id=eq.${userId}` : undefined,
+      },
     ],
     () => {
       if (userId) void loadAll(userId);
@@ -539,30 +555,39 @@ function ProDashboard() {
     if (Array.isArray(p.service_cities)) setCities((p.service_cities as string[]).join(", "));
     if (Array.isArray(p.sub_specialties)) setSubs((p.sub_specialties as string[]).join(", "));
     if (Array.isArray(p.certifications)) setCerts((p.certifications as string[]).join(", "));
-    if (typeof p.bio === "string" && !bio) setBio(p.bio);
-    if (Array.isArray(p.work_experience)) setWorkExp(p.work_experience as WorkExp[]);
-    if (typeof p.full_name === "string" && !fullName) setFullName(p.full_name);
+    if (Array.isArray(p.languages)) setLanguages((p.languages as string[]).join(", "));
+    if (typeof p.bio === "string") setBio(p.bio);
+    if (Array.isArray(p.work_experience) && p.work_experience.length)
+      setWorkExp(p.work_experience as WorkExp[]);
+    if (typeof p.full_name === "string") setFullName(p.full_name);
   };
 
-  const extractFromText = async () => {
-    const text = aiText.trim();
-    if (!text) {
-      toast.error("Cuéntame primero sobre tu experiencia");
-      return;
-    }
-    setAiBusy(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("onboarding-extractor", {
-        body: { text },
-      });
+  const acceptImportedProfile = async (extracted: ExtractedProfile) => {
+    applyExtraction(extracted as unknown as Record<string, unknown>);
+    if (userId && extracted.references.length) {
+      const { data: existing, error } = await supabase
+        .from("professional_references")
+        .select("phone")
+        .eq("user_id", userId);
       if (error) throw error;
-      applyExtraction(data?.profile ?? {});
-      toast.success("✨ Listo. Revisa los campos antes de guardar.");
-    } catch (e) {
-      toast.error(friendlyError(e, "Error procesando con IA"));
-    } finally {
-      setAiBusy(false);
+      const fresh = newReferences(extracted.references, existing ?? []);
+      if (fresh.length) {
+        const inserted = await supabase
+          .from("professional_references")
+          .insert(fresh.map((r) => ({ ...r, user_id: userId })));
+        if (inserted.error) throw inserted.error;
+      }
+      setRefsKey((key) => key + 1);
     }
+    if (userId) {
+      const { data } = await supabase
+        .from("professional_documents")
+        .select("doc_type")
+        .eq("user_id", userId)
+        .neq("status", "rejected");
+      if (data) setDocSummary(Object.fromEntries(data.map((d) => [d.doc_type, true])));
+    }
+    setDocsKey((key) => key + 1);
   };
 
   const buildPayload = () => ({
@@ -585,11 +610,23 @@ function ProDashboard() {
       .map((s) => s.trim())
       .filter(Boolean),
     bio: bio || null,
+    languages: languages
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
     work_experience: workExp,
   });
 
   const saveProfile = async () => {
     if (!userId) return;
+    const nameUpdate = await supabase
+      .from("profiles")
+      .update({ full_name: fullName })
+      .eq("user_id", userId);
+    if (nameUpdate.error) {
+      toast.error(friendlyError(nameUpdate.error));
+      return;
+    }
     const { data, error } = await supabase
       .from("professional_profiles")
       .update(buildPayload())
@@ -788,6 +825,8 @@ function ProDashboard() {
           </div>
 
           <div className="flex items-center gap-1">
+            <InstallAppButton />
+            <ShareAppButton />
             {userId && <NotificationsBell userId={userId} />}
             <Button variant="ghost" size="icon" onClick={logout} title="Salir">
               <LogOut className="h-4 w-4" />
@@ -836,6 +875,8 @@ function ProDashboard() {
               />
             )}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
+
+            {userId && <PendingBookingRequests userId={userId} />}
 
             {/* Alertas SOS de las personas que atiendo (solo aparece si hay alguna) */}
             {userId && <SosAlertsPanel userId={userId} />}
@@ -1143,6 +1184,18 @@ function ProDashboard() {
               </div>
             )}
 
+            {/* Tu Trust Score: lo que ven familias e instituciones y qué falta para subirlo */}
+            {userId && (
+              <div id="confianza" className="scroll-mt-4">
+                <OwnTrustCard
+                  userId={userId}
+                  kind="professional"
+                  completeLabel="Ir a Documentos"
+                  onCompleteIdentity={() => setTab("documentos")}
+                />
+              </div>
+            )}
+
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-3">
               <QuickAction
@@ -1166,7 +1219,7 @@ function ProDashboard() {
               <QuickAction
                 icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />}
                 label="Re-evaluar Trust"
-                sub={`Score: ${trust}/100`}
+                sub={`Validación IA: ${aiScore}/100`}
                 onClick={validateWithAI}
                 loading={validating}
               />
@@ -1217,7 +1270,11 @@ function ProDashboard() {
             {/* Suscripción */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
-                <MercadoPagoSubscription userId={userId} />
+                <MercadoPagoSubscription
+                  userId={userId}
+                  defaultPlan="pro_monthly"
+                  plans={["pro_monthly", "pro_premium_monthly"]}
+                />
               </div>
             )}
           </div>
@@ -1267,39 +1324,7 @@ function ProDashboard() {
               </div>
             )}
 
-            {/* IA onboarding */}
-            <div className="rounded-2xl border border-fuchsia-neural/20 bg-fuchsia-neural/5 p-5">
-              <div className="flex items-center gap-2 mb-1">
-                <Wand2 className="h-4 w-4 text-fuchsia-neural" />
-                <p className="text-sm font-semibold">Llena tu perfil con IA</p>
-              </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Cuéntame en una frase tu experiencia y completo los campos por ti. O sube tu hoja de
-                vida en Documentos.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Textarea
-                  value={aiText}
-                  onChange={(e) => setAiText(e.target.value)}
-                  rows={2}
-                  placeholder='Ej: "Soy enfermera, 7 años en cuidado adulto mayor, RETHUS 12345, atiendo Bogotá y Soacha, tengo BLS vigente."'
-                  className="flex-1 text-sm"
-                />
-                <Button
-                  onClick={extractFromText}
-                  disabled={aiBusy}
-                  variant="hero"
-                  className="shrink-0"
-                >
-                  {aiBusy ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-1.5" />
-                  )}
-                  Extraer
-                </Button>
-              </div>
-            </div>
+            <ProfileImporter onExtracted={acceptImportedProfile} />
 
             {/* Public profile preview link */}
             {userId && (
@@ -1443,6 +1468,19 @@ function ProDashboard() {
                   )}
                 </FormSection>
 
+                <FormSection label="Nombre e idiomas">
+                  <Field label="Nombre completo">
+                    <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                  </Field>
+                  <Field label="Idiomas">
+                    <Input
+                      value={languages}
+                      onChange={(e) => setLanguages(e.target.value)}
+                      placeholder="Español, inglés"
+                    />
+                  </Field>
+                </FormSection>
+
                 {/* Bio */}
                 <FormSection label="Bio profesional">
                   <Field label="Lo que ven familias e IPS">
@@ -1537,6 +1575,9 @@ function ProDashboard() {
               {/* Save + publish */}
               {userId && (
                 <div className="mt-5 pt-5 border-t border-border">
+                  <Button variant="hero" onClick={() => void saveProfile()} className="mb-4">
+                    Guardar perfil
+                  </Button>
                   <PublishGate
                     userId={userId}
                     profilePayload={{
@@ -1593,9 +1634,11 @@ function ProDashboard() {
             <div className="rounded-2xl border border-border bg-card/95 p-4 flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold">
-                  Trust Score: <span className="text-biosensor">{trust}/100</span>
+                  Validación con IA: <span className="text-biosensor">{aiScore}/100</span>
                 </p>
-                <p className="text-xs text-muted-foreground">≥70 = pre-aprobado por IA</p>
+                <p className="text-xs text-muted-foreground">
+                  ≥70 = pre-aprobado por IA: suma 5 puntos a tu Trust Score ({trust}/100)
+                </p>
               </div>
               <Button variant="glass" size="sm" onClick={validateWithAI} disabled={validating}>
                 {validating ? (
@@ -1614,7 +1657,7 @@ function ProDashboard() {
                 <p className="text-xs text-muted-foreground mb-4">
                   Mínimo 2 laborales y 2 familiares (nombre y celular).
                 </p>
-                <ReferencesManager userId={userId} />
+                <ReferencesManager key={refsKey} userId={userId} />
               </div>
             )}
 
@@ -1629,36 +1672,28 @@ function ProDashboard() {
         {/* ══ TAB: DOCUMENTOS ══ */}
         {tab === "documentos" && (
           <div className="space-y-4">
+            <ProfileImporter onExtracted={acceptImportedProfile} />
             {/* Progreso docs */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold">Documentos requeridos</p>
                 <span className="text-sm font-bold text-biosensor">
-                  {
-                    [
-                      docSummary["cv"],
-                      docSummary["id_document"],
-                      docSummary["utility_bill"],
-                    ].filter(Boolean).length
-                  }
-                  /3
+                  {REQUIRED_PROFESSIONAL_DOCUMENTS.filter((type) => docSummary[type]).length}/
+                  {REQUIRED_PROFESSIONAL_DOCUMENTS.length}
                 </span>
               </div>
               <Progress
                 value={
-                  ([docSummary["cv"], docSummary["id_document"], docSummary["utility_bill"]].filter(
-                    Boolean,
-                  ).length /
-                    3) *
+                  (REQUIRED_PROFESSIONAL_DOCUMENTS.filter((type) => docSummary[type]).length /
+                    REQUIRED_PROFESSIONAL_DOCUMENTS.length) *
                   100
                 }
                 className="h-2"
               />
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {[
                   { key: "cv", label: "CV" },
                   { key: "id_document", label: "Cédula" },
-                  { key: "utility_bill", label: "Recibo" },
                 ].map((d) => (
                   <div
                     key={d.key}
@@ -1683,11 +1718,9 @@ function ProDashboard() {
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-5">
                 <DocumentsManager
+                  key={docsKey}
                   userId={userId}
-                  onCvExtracted={(p) => {
-                    applyExtraction(p);
-                    setTab("perfil");
-                  }}
+                  onCvExtracted={(p) => void acceptImportedProfile(normalizeExtraction(p))}
                 />
               </div>
             )}
@@ -1700,6 +1733,7 @@ function ProDashboard() {
         {/* ══ TAB: OFERTAS ══ */}
         {tab === "ofertas" && (
           <div className="space-y-4">
+            {userId && <PendingBookingRequests userId={userId} />}
             {/* Agenda: familias y EPS/IPS/clínicas. Postularse, negociar el valor y desbloquear contacto */}
             {userId && (
               <div className="rounded-2xl border border-border bg-card/95 p-4">

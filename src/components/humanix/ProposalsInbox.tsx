@@ -376,7 +376,7 @@ export function ProposalsInbox({ userId, role }: { userId: string; role: Negotia
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          toast.info("Negociar el valor está disponible desde el plan Esencial", {
+                          toast.info("Negociar el valor está disponible con un plan de pago", {
                             action: {
                               label: "Ver planes",
                               onClick: () => void navigate({ to: "/planes" }),
@@ -384,7 +384,7 @@ export function ProposalsInbox({ userId, role }: { userId: string; role: Negotia
                           });
                         }}
                       >
-                        <Lock className="mr-1 h-3 w-3" aria-hidden /> Contraofertar (Esencial)
+                        <Lock className="mr-1 h-3 w-3" aria-hidden /> Contraofertar (plan de pago)
                       </Button>
                     ))}
                   {options.reject && (

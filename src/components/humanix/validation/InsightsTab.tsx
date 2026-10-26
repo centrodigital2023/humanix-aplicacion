@@ -167,7 +167,7 @@ export function InsightsTab({ rows }: { rows: ResponseRow[] }) {
     { label: "Respuestas", n: fun.responses, rate: null as number | null },
     { label: "Contacto verificado", n: fun.verified, rate: fun.verifiedRate },
     { label: "Con código del beneficio", n: fun.withCode, rate: fun.codeRate },
-    { label: "Mes Esencial canjeado", n: fun.redeemed, rate: fun.redeemRate },
+    { label: "Mes Familiar canjeado", n: fun.redeemed, rate: fun.redeemRate },
   ];
 
   return (
@@ -284,7 +284,7 @@ export function InsightsTab({ rows }: { rows: ResponseRow[] }) {
 
       <Panel
         title="Embudo del beneficio"
-        caption="De quien llena el formulario a quien activa su mes del plan Esencial."
+        caption="De quien llena el formulario a quien activa su mes del plan Familiar."
       >
         <ol className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="Etapas del embudo">
           {steps.map((s, i) => (

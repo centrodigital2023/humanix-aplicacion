@@ -569,7 +569,7 @@ export function leadScore(
   if (flags.includes("low_effort")) score -= 15;
 
   const stage: LeadStage = isRedeemed(r) ? "redeemed" : hasOwnCode(r) ? "code" : "verified";
-  if (stage === "redeemed") reasons.unshift("Ya probó el plan Esencial: conviértelo en pago");
+  if (stage === "redeemed") reasons.unshift("Ya probó el plan Familiar: conviértelo en pago");
 
   return {
     score: Math.round(Math.min(100, Math.max(0, score))),
@@ -616,7 +616,7 @@ export function leadGreeting(l: Pick<Lead, "name" | "stage">): string {
     ? `Hola ${first}, soy del equipo de Humanix.`
     : "Hola, soy del equipo de Humanix.";
   return l.stage === "redeemed"
-    ? `${hello} ¿Cómo te ha ido con tu mes del plan Esencial? Me encantaría saber qué te ha servido y qué te falta. ¿Tienes 5 minutos?`
+    ? `${hello} ¿Cómo te ha ido con tu mes del plan Familiar? Me encantaría saber qué te ha servido y qué te falta. ¿Tienes 5 minutos?`
     : `${hello} Gracias por contarnos qué necesitas. ¿Te puedo hacer 3 preguntas rápidas para ayudarte mejor?`;
 }
 
@@ -1048,7 +1048,7 @@ export function buildInsights(all: ResponseRow[], now: number = Date.now()): Ins
     add({
       id: "funnel-redeem",
       severity: "warn",
-      title: `Solo ${f.redeemRate} % canjeó su mes del plan Esencial`,
+      title: `Solo ${f.redeemRate} % canjeó su mes del plan Familiar`,
       detail: `${f.unredeemed} ${plural(f.unredeemed, "código sigue vigente", "códigos siguen vigentes")} sin canjear.`,
       action: "Recuérdales entrar a /planes con su código.",
     });

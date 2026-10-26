@@ -815,6 +815,16 @@ export function LiveMarketplaceMap({
         )}
       </div>
 
+      {showPros &&
+        !prosQ.isLoading &&
+        (countsQ.data?.professionals.total ?? 0) > pros.length && (
+          <p className="text-xs text-muted-foreground" data-testid="map-hidden-pros">
+            {(countsQ.data?.professionals.total ?? 0) - pros.length} profesional(es) registrados aún
+            no aparecen: les falta completar nombre, ciudad o especialidad en su perfil.
+          </p>
+        )}
+
+
       {zoneSummary.length > 0 && (
         <Card className="p-2.5 flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px] mr-1">

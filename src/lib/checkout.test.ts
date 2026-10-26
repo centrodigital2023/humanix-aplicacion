@@ -40,7 +40,7 @@ describe("mensajes del servidor", () => {
 
   it("bajar de plan sin fecha o con un plan raro sigue siendo claro", () => {
     expect(checkoutErrorMessage({ error: "downgrade_while_active" }, "essential_monthly")).toBe(
-      "Tu plan actual sigue vigente. Podrás pasar a Esencial cuando termine: así no pierdes lo que ya pagaste.",
+      "Tu plan actual sigue vigente. Podrás pasar a Familiar cuando termine: así no pierdes lo que ya pagaste.",
     );
   });
 

@@ -90,7 +90,7 @@ export function staffGate(ctx: StaffContext | null): StaffGate {
   if (!ctx.planActive) {
     return {
       state: "paused",
-      message: `El acceso del equipo está en pausa porque ${ctx.institutionName} no tiene activo el plan IPS Mejorado. Avísale a quien administra la cuenta.`,
+      message: `El acceso del equipo está en pausa porque ${ctx.institutionName} no tiene activo el plan Institucional. Avísale a quien administra la cuenta.`,
     };
   }
   if (!ctx.modules.length) {

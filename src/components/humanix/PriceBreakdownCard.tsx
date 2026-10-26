@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPriceBreakdown, formatCOP } from "@/lib/pricing";
+import { FREE_COMMISSION_PCT } from "@/lib/plans";
 
 const sb = supabase as unknown as SupabaseClient;
-const DEFAULT_COMMISSION_PCT = 12;
+const DEFAULT_COMMISSION_PCT = FREE_COMMISSION_PCT;
 const pctCache = new Map<string, number>();
 
 interface Props {

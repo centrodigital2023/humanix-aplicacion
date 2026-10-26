@@ -33,8 +33,8 @@ npx cap add android
 
 # Íconos y splash a partir de resources/icon.png y resources/splash.png.
 npx --yes @capacitor/assets@3 generate --android \
-  --iconBackgroundColor '#0A192F' --iconBackgroundColorDark '#0A192F' \
-  --splashBackgroundColor '#0A192F' --splashBackgroundColorDark '#0A192F'
+  --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#ffffff' \
+  --splashBackgroundColor '#ffffff' --splashBackgroundColorDark '#ffffff'
 
 # Permisos que usa Humanix (ubicación para visitas/SOS y notificaciones).
 MANIFEST=android/app/src/main/AndroidManifest.xml

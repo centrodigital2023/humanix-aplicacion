@@ -310,7 +310,7 @@ describe("leadScore", () => {
   it("quien ya canjeó su mes es un lead para convertir a pago", () => {
     const s = leadScore({ ...strong, premium_activated: true, redeemed_at: iso(-DAY) }, NOW)!;
     expect(s.stage).toBe("redeemed");
-    expect(s.reasons[0]).toBe("Ya probó el plan Esencial: conviértelo en pago");
+    expect(s.reasons[0]).toBe("Ya probó el plan Familiar: conviértelo en pago");
   });
 
   it("el puntaje se limita a 0–100", () => {
@@ -744,7 +744,7 @@ describe("buildInsights", () => {
       benefit_expires_at: iso(2 * DAY),
     }));
     const ins = buildInsights(rows, NOW);
-    expect(byId(ins, "funnel-redeem")!.title).toBe("Solo 0 % canjeó su mes del plan Esencial");
+    expect(byId(ins, "funnel-redeem")!.title).toBe("Solo 0 % canjeó su mes del plan Familiar");
     expect(byId(ins, "funnel-expiring")!.title).toBe("6 códigos vencen en 7 días");
   });
 
@@ -907,7 +907,7 @@ describe("mensaje y exportación de contactos", () => {
       "Hola Marta, soy del equipo de Humanix. Gracias por contarnos qué necesitas. ¿Te puedo hacer 3 preguntas rápidas para ayudarte mejor?",
     );
     expect(leadGreeting({ name: "Luis Prado", stage: "redeemed" })).toContain(
-      "¿Cómo te ha ido con tu mes del plan Esencial?",
+      "¿Cómo te ha ido con tu mes del plan Familiar?",
     );
     expect(leadGreeting({ name: "Sin nombre", stage: "code" })).toMatch(/^Hola, soy del equipo/);
     expect(leadGreeting({ name: "", stage: "code" })).toMatch(/^Hola, soy del equipo/);

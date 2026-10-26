@@ -38,10 +38,13 @@ import { FamilyDocumentsManager } from "@/components/humanix/FamilyDocumentsMana
 import { toast } from "sonner";
 import { z } from "zod";
 import { friendlyError } from "@/lib/friendlyError";
+import { buildSeo } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/familia/onboarding")({
-  head: () => ({
-    meta: [{ title: "Completa tu perfil familiar · Humanix" }],
+  head: () => buildSeo({
+    title: "Completa tu perfil familiar · Humanix",
+    description: "Completa tus datos familiares, documentos de identidad y contacto de emergencia para coordinar cuidado en casa con Humanix.",
+    path: "/dashboard/familia/onboarding",
   }),
   validateSearch: (s: Record<string, unknown>) => ({
     step: typeof s.step === "string" ? s.step : undefined,
@@ -770,7 +773,7 @@ function FamilyOnboarding() {
                       familia
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Sube tu cédula, recibo de servicios y documentos del paciente. La IA verifica
+                      Sube tu cédula y documentos del paciente. La IA verifica
                       al instante.
                     </p>
                   </div>

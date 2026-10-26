@@ -1,5 +1,5 @@
 // Cumplimiento operativo del portal EPS/IPS: los indicadores reales de calidad y cumplimiento de los servicios de la
-// institución (lógica en `lib/instQuality`, plan IPS Mejorado) y dónde leer cómo se tratan los datos personales.
+// institución (lógica en `lib/instQuality`, plan Institucional) y dónde leer cómo se tratan los datos personales.
 //
 // Antes mostraba porcentajes fijos (87 %, 74 %, 92 %…) y una lista de sellos («HIPAA Ready», «GDPR Ready», «MFA
 // habilitado», «Encriptación TLS 1.3») que la aplicación no puede comprobar. Aquí solo hay cifras calculadas con los

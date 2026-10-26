@@ -33,8 +33,8 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 /**
  * Ofertas que publican las familias: las más cercanas y las mejor pagadas primero, con el Trust Score de la familia, la
- * negociación en curso y la postulación con el valor que tú propones (plan Esencial o superior). La dirección exacta llega con la
- * reserva aceptada; el WhatsApp, con plan Esencial o superior. Los pagos se hacen solo en la página web.
+ * negociación en curso y la postulación con el valor que tú propones (plan Pro o superior). La dirección exacta llega con la
+ * reserva aceptada; el WhatsApp, con plan Pro o superior. Los pagos se hacen solo en la página web.
  */
 export function FamilyOffersList({ userId }: { userId: string }) {
   const [filters, setFilters] = useState<OfferFilters>(DEFAULT_OFFER_FILTERS);
@@ -98,9 +98,9 @@ export function FamilyOffersList({ userId }: { userId: string }) {
           </h2>
           <p className="text-xs text-muted-foreground">
             Cuidado que las familias publican con su valor. Ordena por las más cercanas o las mejor
-            pagadas, mira el Trust Score de la familia y postúlate; con plan Esencial o superior
-            propones tu valor por hora y desbloqueas el contacto. Al aceptarte, la reserva queda con
-            la dirección.
+            pagadas, mira el Trust Score de la familia y postúlate; con plan Pro o superior propones
+            tu valor por hora y desbloqueas el contacto. Al aceptarte, la reserva queda con la
+            dirección.
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -210,7 +210,7 @@ export function FamilyOffersList({ userId }: { userId: string }) {
         <Card className="flex flex-col gap-2 border-biosensor/30 bg-biosensor/5 p-4 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p>
             <strong>Plan Free:</strong> pagas {FREE_COMMISSION_PCT}% de comisión, te postulas al
-            valor publicado y ves la dirección cuando te aceptan. Con <strong>Esencial</strong> (COP
+            valor publicado y ves la dirección cuando te aceptan. Con <strong>Pro</strong> (COP
             9.000/mes) no pagas comisión, propones tu valor por hora y desbloqueas el WhatsApp de la
             familia.
           </p>

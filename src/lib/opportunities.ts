@@ -634,7 +634,9 @@ export function whatsAppLink(number: string | null | undefined, message: string)
 export const REVEAL_DAILY_QUOTA = {
   free: 0,
   essential_monthly: 15,
+  family_premium_monthly: 40,
   pro_monthly: 40,
+  pro_premium_monthly: 80,
   institution_monthly: 40,
 } as const;
 

@@ -7,7 +7,7 @@
 // Qué ve cada plan (la puerta es de interfaz: son cuentas sobre datos propios):
 //  - Todas las instituciones: la semana con el estado real de cada turno, los contadores, las posiciones sin cubrir y
 //    las alertas de hoy (sin iniciar, sin confirmar, sin ir en camino, sin cerrar, sin cubrir).
-//  - IPS Mejorado (`inst_agenda_insights`): riesgo de inasistencia por profesional según su historial, reporte de
+//  - Institucional (`inst_agenda_insights`): riesgo de inasistencia por profesional según su historial, reporte de
 //    utilización de 30 días y exportación (CSV e iCal).
 
 import {
@@ -401,7 +401,7 @@ export function agendaHeadline(
     : "Todo en orden para esta semana.";
 }
 
-// ─── Confiabilidad por profesional (plan IPS Mejorado) ──────────────────────
+// ─── Confiabilidad por profesional (plan Institucional) ──────────────────────
 
 /** Historial de cada profesional con la institución en los últimos `RELIABILITY_DAYS` días. */
 export function proReliability(
@@ -511,7 +511,7 @@ export function reliabilityFor(
   return out;
 }
 
-// ─── Reporte de utilización (plan IPS Mejorado) ─────────────────────────────
+// ─── Reporte de utilización (plan Institucional) ─────────────────────────────
 
 export interface UtilizationReport {
   /** Turnos que debían ocurrir en la ventana (sin solicitudes sin confirmar ni cancelaciones de la institución). */

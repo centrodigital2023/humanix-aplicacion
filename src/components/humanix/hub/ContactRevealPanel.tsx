@@ -109,8 +109,8 @@ export function ContactRevealPanel({
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <span>
             <strong className="text-foreground">Dirección y WhatsApp de la familia</strong> se
-            desbloquean con el plan Esencial ({PLAN_CATALOG.essential_monthly.priceLabel}
-            {PLAN_CATALOG.essential_monthly.priceNote}), que además no cobra comisión.
+            desbloquean con el plan Pro ({PLAN_CATALOG.pro_monthly.priceLabel}
+            {PLAN_CATALOG.pro_monthly.priceNote}), que además no cobra comisión.
           </span>
         </p>
         <Button asChild size="sm" variant="hero">

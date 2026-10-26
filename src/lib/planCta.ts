@@ -51,7 +51,7 @@ export function computeCta(target: PlanKey, ctx: CtaContext): CtaPlan {
     return { label: "Al terminar tu plan", action: { kind: "later" }, disabled: true };
   }
 
-  // Planes de pago (Esencial, Pro e IPS Mejorado): se pagan en /pagar, dentro de Humanix.
+  // Planes de pago (Esencial, Pro e Institucional): se pagan en /pagar, dentro de Humanix.
   if (!isLoggedIn) {
     return {
       label: `Empezar con ${def.label}`,

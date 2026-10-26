@@ -304,7 +304,7 @@ describe("uso del plan", () => {
     expect(devices).toMatchObject({
       key: "devices",
       state: "locked",
-      message: "Disponible con IPS Mejorado",
+      message: "Disponible con Institucional",
     });
   });
 
@@ -341,7 +341,7 @@ describe("uso del plan", () => {
     expect(full.perks.length).toBeGreaterThan(4);
   });
 
-  it("IPS Mejorado no ve la oferta", () => {
+  it("Institucional no ve la oferta", () => {
     expect(upsellFor(parseOverview(RAW_OVERVIEW) as CareOverview).show).toBe(false);
   });
 });
@@ -386,7 +386,7 @@ describe("primeros pasos", () => {
     );
   });
 
-  it("IPS Mejorado: siete pasos, y el último es invitar al equipo", () => {
+  it("Institucional: siete pasos, y el último es invitar al equipo", () => {
     const o = careOnboarding(parseOverview(RAW_OVERVIEW) as CareOverview);
     expect(o.total).toBe(7);
     expect(o.steps.every((s) => !s.locked)).toBe(true);
@@ -777,7 +777,7 @@ describe("errores del servidor, traducidos", () => {
     expect(careErrorMessage(e("not_monitored"))).toBe("El paciente no está en monitoreo.");
     expect(careErrorMessage(e("empty_vitals"))).toBe("Escribe al menos un valor.");
     expect(careErrorMessage(e("note_immutable"))).toContain("agrega una corrección");
-    expect(careErrorMessage(e("devices_plan"))).toContain("IPS Mejorado");
+    expect(careErrorMessage(e("devices_plan"))).toContain("Institucional");
   });
 
   it("un tope del plan conserva el número exacto que dice el servidor", () => {

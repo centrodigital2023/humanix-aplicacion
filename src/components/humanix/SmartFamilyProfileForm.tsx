@@ -20,7 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { friendlyError } from "@/lib/friendlyError";
+import { refreshTrustScore } from "@/hooks/use-trust-score";
 
 type FormState = {
   full_name: string;
@@ -29,6 +32,7 @@ type FormState = {
   whatsapp: string;
   default_address: string;
   id_doc_url: string | null;
+  habeas_data_accepted: boolean;
 };
 
 const EMPTY: FormState = {
@@ -38,6 +42,7 @@ const EMPTY: FormState = {
   whatsapp: "",
   default_address: "",
   id_doc_url: null,
+  habeas_data_accepted: false,
 };
 
 export function SmartFamilyProfileForm({ userId }: { userId: string }) {
@@ -47,6 +52,9 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const camRef = useRef<HTMLInputElement | null>(null);
+  const qc = useQueryClient();
+  // Si ya la había aceptado, se conserva la fecha original de la aceptación.
+  const habeasAcceptedBefore = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -56,11 +64,12 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
           supabase.from("profiles").select("full_name, phone").eq("user_id", userId).maybeSingle(),
           supabase
             .from("family_profiles")
-            .select("id_number, whatsapp, default_address, id_doc_url")
+            .select("id_number, whatsapp, default_address, id_doc_url, habeas_data_accepted")
             .eq("user_id", userId)
             .maybeSingle(),
         ]);
         if (!active) return;
+        habeasAcceptedBefore.current = !!fam?.habeas_data_accepted;
         setForm({
           full_name: prof?.full_name ?? "",
           phone: prof?.phone ?? "",
@@ -68,6 +77,7 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
           whatsapp: fam?.whatsapp ?? "",
           default_address: fam?.default_address ?? "",
           id_doc_url: fam?.id_doc_url ?? null,
+          habeas_data_accepted: !!fam?.habeas_data_accepted,
         });
       } finally {
         if (active) setLoading(false);
@@ -92,6 +102,12 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
         .upload(path, file, { upsert: false, contentType: file.type });
       if (error) throw error;
       setForm((p) => ({ ...p, id_doc_url: path }));
+      // Queda guardada de una vez: suma a «Identidad entregada» aunque no se toque «Guardar».
+      const { error: e2 } = await supabase
+        .from("family_profiles")
+        .update({ id_doc_url: path })
+        .eq("user_id", userId);
+      if (!e2) refreshTrustScore(qc, userId);
       toast.success("Cédula adjuntada");
     } catch (e) {
       toast.error(friendlyError(e, "Error al subir"));
@@ -137,10 +153,18 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
           whatsapp: form.whatsapp.trim() || form.phone.trim(),
           default_address: form.default_address.trim() || null,
           id_doc_url: form.id_doc_url,
+          habeas_data_accepted: form.habeas_data_accepted,
+          ...(!form.habeas_data_accepted
+            ? { habeas_data_accepted_at: null }
+            : habeasAcceptedBefore.current
+              ? {}
+              : { habeas_data_accepted_at: new Date().toISOString() }),
         },
         { onConflict: "user_id" },
       );
       if (e2) throw e2;
+      habeasAcceptedBefore.current = form.habeas_data_accepted;
+      refreshTrustScore(qc, userId);
       toast.success("✅ Perfil guardado");
     } catch (e) {
       toast.error(friendlyError(e, "Error al guardar"));
@@ -284,6 +308,25 @@ export function SmartFamilyProfileForm({ userId }: { userId: string }) {
           />
         </div>
       </div>
+
+      <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+          checked={form.habeas_data_accepted}
+          onChange={(e) => setForm((p) => ({ ...p, habeas_data_accepted: e.target.checked }))}
+        />
+        <span>
+          Acepto el tratamiento de mis datos personales según la{" "}
+          <Link to="/habeas-data" className="font-medium text-primary underline">
+            política de Habeas Data
+          </Link>{" "}
+          (Ley 1581 de 2012).
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            Junto con tu cédula y su número, completa tu identidad en el Trust Score.
+          </span>
+        </span>
+      </label>
 
       <div className="flex flex-wrap justify-between gap-2">
         <Button

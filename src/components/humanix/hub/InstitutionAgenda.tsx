@@ -34,7 +34,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 /**
  * Agenda de EPS, IPS, clínicas, hospitales y hogares geriátricos: turnos abiertos sin dirección,
- * compatibilidad explicada, postulación al valor publicado, negociación (plan Esencial o superior) y
+ * compatibilidad explicada, postulación al valor publicado, negociación (plan Pro o superior) y
  * desbloqueo auditado del contacto. La dirección exacta llega con la reserva aceptada.
  */
 export function InstitutionAgenda({ userId }: { userId: string }) {
@@ -111,8 +111,8 @@ export function InstitutionAgenda({ userId }: { userId: string }) {
           </h2>
           <p className="text-xs text-muted-foreground">
             Turnos de hospitales, clínicas, IPS y hogares geriátricos verificados. Postúlate al
-            valor publicado; con plan Esencial o superior negocias el valor y desbloqueas el
-            contacto. Al aceptarte, la reserva queda con la dirección y el contrato para firmar.
+            valor publicado; con plan Pro o superior negocias el valor y desbloqueas el contacto. Al
+            aceptarte, la reserva queda con la dirección y el contrato para firmar.
           </p>
         </div>
         <Button size="sm" variant="ghost" onClick={feed.refetch} aria-label="Actualizar la agenda">
@@ -202,7 +202,7 @@ export function InstitutionAgenda({ userId }: { userId: string }) {
         <Card className="flex flex-col gap-2 border-biosensor/30 bg-biosensor/5 p-4 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p>
             <strong>Plan Free:</strong> pagas {FREE_COMMISSION_PCT}% de comisión, te postulas al
-            valor publicado y ves la dirección cuando te aceptan. Con <strong>Esencial</strong> (COP
+            valor publicado y ves la dirección cuando te aceptan. Con <strong>Pro</strong> (COP
             9.000/mes) no pagas comisión, negocias el valor con la institución y desbloqueas su
             WhatsApp y cómo ingresar.
           </p>

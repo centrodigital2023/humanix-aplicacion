@@ -4,6 +4,10 @@
 // autorizado a ver quien mira. Un pin solo se muestra si su fila del directorio pasa `searchProfessionalDetails` (nombre real, ciudad y
 // turnos): así el mapa, la lista «cerca de ti» y el buscador nunca muestran «Profesional» sin nombre ni perfiles a medias.
 //
+// Documentos: solo los perfiles «verified» (documentos completos y validados) pasan por aquí y se pueden pedir. Los «pending» salen
+// aparte (`pendingMapProfessionals`) como pin ámbar sin contratación: no están en el directorio, así que llevan el nombre abreviado
+// que ya autorizó la base (`map_professionals`), sin foto ni tarifa si no publicaron su perfil.
+//
 // «Disponible» vive en el perfil (no en el aparato): sigue encendido aunque el profesional cierre Humanix o apague el celular.
 // «En vivo» es otra cosa: la aplicación abierta en este momento.
 import type { MapProfessional } from "./liveMap";
@@ -27,6 +31,7 @@ export function validatedMapProfessionals(
   const byId = new Map(directory.map((d) => [d.user_id, d]));
   const out: ValidatedMapProfessional[] = [];
   for (const p of map) {
+    if (p.verification !== "verified") continue;
     const row = byId.get(p.id);
     const details = row ? searchProfessionalDetails(row) : null;
     if (!details) continue;
@@ -35,14 +40,30 @@ export function validatedMapProfessionals(
   return out;
 }
 
+/** Profesionales con documentos pendientes o en revisión: salen en el mapa (ámbar) pero nadie puede pedirlos ni asignarlos. */
+export function pendingMapProfessionals(map: readonly MapProfessional[]): MapProfessional[] {
+  return map.filter((p) => p.verification === "pending");
+}
+
 /** Clave estable de la consulta al directorio: los mismos ids en otro orden no vuelven a pedir. */
 export function directoryIdsKey(map: readonly Pick<MapProfessional, "id">[]): string {
   return [...new Set(map.map((p) => p.id))].sort().join(",");
 }
 
+/** Selection always reads the latest authorized pin, never a retained location or availability. */
+export function currentMapSelection<T extends { id: string }>(
+  pins: readonly T[],
+  id: string | null,
+): T | null {
+  return id === null ? null : (pins.find((pin) => pin.id === id) ?? null);
+}
+
 /** «Enfermería · Pasto · 12 turnos» */
-export function proSubtitle(p: Pick<ValidatedMapProfessional, "specialty" | "city" | "turns">): string {
-  const turns = p.turns === 0 ? "Nuevo en Humanix" : `${p.turns} ${p.turns === 1 ? "turno" : "turnos"}`;
+export function proSubtitle(
+  p: Pick<ValidatedMapProfessional, "specialty" | "city" | "turns">,
+): string {
+  const turns =
+    p.turns === 0 ? "Nuevo en Humanix" : `${p.turns} ${p.turns === 1 ? "turno" : "turnos"}`;
   return [p.specialty?.trim() || "Cuidado en casa", p.city, turns].join(" · ");
 }
 

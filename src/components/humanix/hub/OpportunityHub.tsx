@@ -147,8 +147,8 @@ export function OpportunityHub({ userId }: { userId: string }) {
             </span>
           </h2>
           <p className="text-xs text-muted-foreground">
-            Turnos que las familias publicaron. Postúlate y, con plan Esencial o superior, negocia
-            el valor y desbloquea la dirección y el WhatsApp.
+            Turnos que las familias publicaron. Postúlate y, con plan Pro o superior, negocia el
+            valor y desbloquea la dirección y el WhatsApp.
           </p>
         </div>
         <Button size="sm" variant="ghost" onClick={feed.refetch} aria-label="Actualizar la agenda">
@@ -325,7 +325,7 @@ export function OpportunityHub({ userId }: { userId: string }) {
         <Card className="flex flex-col gap-2 border-biosensor/30 bg-biosensor/5 p-4 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p>
             <strong>Plan Free:</strong> pagas {FREE_COMMISSION_PCT}% de comisión y ves a las
-            familias con nombre abreviado. Con <strong>Esencial</strong> (COP 9.000/mes) no pagas
+            familias con nombre abreviado. Con <strong>Pro</strong> (COP 19.900/mes) no pagas
             comisión, negocias el valor y ves dirección y WhatsApp de las familias a las que te
             postulas.
           </p>

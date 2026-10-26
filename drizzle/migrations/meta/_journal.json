@@ -106,6 +106,48 @@
       "when": 1791681088676,
       "tag": "0014_fix_function_search_path",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792713515059,
+      "tag": "0015_public_map_realtime_invalidation",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792717435034,
+      "tag": "0016_remove_utility_bill_publish_requirement",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792718360196,
+      "tag": "0017_restore_trigger_function_execute",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792718650415,
+      "tag": "0018_storage_update_policies_with_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792718686458,
+      "tag": "0019_avatars_select_own_for_upsert",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792856239499,
+      "tag": "0020_notify_direct_booking_requests",
+      "breakpoints": true
     }
   ]
 }

@@ -1,11 +1,11 @@
 // Trust Score y cercanía: lo que la pantalla muestra y explica. El cálculo con autoridad vive en la base
-// (`hx_trust_calc` y `get_trust_score`, migración 20261012190000_offer_alerts_and_plans.sql); aquí está su espejo puro para
-// explicarlo («¿cómo se calcula?», «qué hacer para subirlo») y para probar que ambos dicen lo mismo.
+// (`hx_trust_calc`, migración 20261025100000_trust_score_all_roles.sql, y `get_trust_score`, 20261012190000); aquí está su
+// espejo puro para explicarlo («¿cómo se calcula?», «qué hacer para subirlo») y para probar que ambos dicen lo mismo.
 //
-// Familias e instituciones (0–100):  30 de base
+// Familias, profesionales e instituciones (0–100):  30 de base
 //   + estrellas (0–35, solo desde 3 calificaciones)  + servicios completados (0–15, tope 10)
 //   + identidad (0–15)  + antigüedad (0–5, tope 12 meses)  − alertas de fraude sin resolver (tope 50).
-// Profesionales: el de la validación con IA (nulo mientras no se haya validado); la base no lo calcula.
+// Lo único que cambia por rol es qué cuenta como identidad (ver *_IDENTITY_POINTS).
 
 export type TrustKind = "professional" | "family" | "institution";
 export type TrustLevel = "excellent" | "high" | "medium" | "building" | "unrated";
@@ -31,6 +31,7 @@ export const FRAUD_PENALTY: Record<FraudSeverity, number> = {
 };
 export const FAMILY_IDENTITY_POINTS = { habeas: 5, idNumber: 5, idDocument: 5 } as const;
 export const INSTITUTION_IDENTITY_POINTS = { verified: 9, nit: 3, chamber: 3 } as const;
+export const PROFESSIONAL_IDENTITY_POINTS = { idDocument: 5, rethus: 5, validated: 5 } as const;
 
 export function trustLevel(score: number | null | undefined): TrustLevel {
   if (score == null || !Number.isFinite(score)) return "unrated";
@@ -95,7 +96,7 @@ export function trustFromColumns(
 // ─── Espejo del cálculo de la base (familias e instituciones) ────────────────
 
 export interface PartyTrustInput {
-  kind: "family" | "institution";
+  kind: TrustKind;
   ratingsCount: number;
   /** Promedio de estrellas (1–5) con dos decimales, como lo entrega la base. */
   starsAvg: number | null;
@@ -109,6 +110,9 @@ export interface PartyTrustInput {
     verified?: boolean;
     nit?: boolean;
     chamber?: boolean;
+    // Profesional (`idDocument` es la cédula cargada en Documentos)
+    rethus?: boolean;
+    validated?: boolean;
   };
   /** Días desde que se creó el perfil (nulo si no hay perfil). */
   accountAgeDays: number | null;
@@ -157,6 +161,13 @@ export function computePartyTrust(i: PartyTrustInput): PartyTrust {
       (i.identity.idNumber ? p.idNumber : 0) +
       (i.identity.idDocument ? p.idDocument : 0);
     verified = !!i.identity.idNumber && !!i.identity.idDocument;
+  } else if (i.kind === "professional") {
+    const p = PROFESSIONAL_IDENTITY_POINTS;
+    identity =
+      (i.identity.idDocument ? p.idDocument : 0) +
+      (i.identity.rethus ? p.rethus : 0) +
+      (i.identity.validated ? p.validated : 0);
+    verified = !!i.identity.rethus || !!i.identity.verified;
   } else {
     const p = INSTITUTION_IDENTITY_POINTS;
     identity =
@@ -206,8 +217,46 @@ export interface TrustLine {
   hint: string;
 }
 
+/** Lo que se lleva de cada componente que tiene un mínimo o un tope por cantidad («1 de 3 calificaciones»). */
+export interface TrustProgress {
+  ratingsCount: number;
+  completedServices: number;
+}
+
+const RATERS: Record<TrustKind, string> = {
+  family: "profesionales",
+  institution: "profesionales",
+  professional: "familias e instituciones",
+};
+
+const IDENTITY_LABEL: Record<TrustKind, string> = {
+  family: "Identidad entregada",
+  institution: "Institución verificada",
+  professional: "Identidad y credenciales",
+};
+
+const IDENTITY_HINT: Record<TrustKind, string> = {
+  family: "Documento, número de identificación y aceptación del tratamiento de datos.",
+  institution: "Verificación de Humanix, NIT y cámara de comercio.",
+  professional: "Cédula en tus documentos, RETHUS verificado y perfil validado.",
+};
+
 /** El desglose que ve la propia cuenta: de dónde sale cada punto. Los ajustes solo aparecen si restan. */
-export function trustLines(c: TrustComponents, kind: "family" | "institution"): TrustLine[] {
+export function trustLines(
+  c: TrustComponents,
+  kind: TrustKind,
+  progress?: TrustProgress,
+): TrustLine[] {
+  const ratingsHint =
+    progress && progress.ratingsCount < TRUST_MIN_RATINGS
+      ? `Cuentan desde ${TRUST_MIN_RATINGS} calificaciones de ${RATERS[kind]}. Llevas ${progress.ratingsCount} de ${TRUST_MIN_RATINGS}.`
+      : progress
+        ? `Promedio de tus ${progress.ratingsCount} calificaciones de ${RATERS[kind]}.`
+        : `Cuentan desde ${TRUST_MIN_RATINGS} calificaciones de ${RATERS[kind]}.`;
+  const servicesHint =
+    progress && progress.completedServices < TRUST_SERVICES_CAP
+      ? `Suma hasta ${TRUST_SERVICES_CAP} servicios. Llevas ${progress.completedServices} de ${TRUST_SERVICES_CAP}.`
+      : `Suma hasta ${TRUST_SERVICES_CAP} servicios.`;
   const lines: TrustLine[] = [
     {
       key: "base",
@@ -221,31 +270,28 @@ export function trustLines(c: TrustComponents, kind: "family" | "institution"): 
       label: "Calificaciones",
       value: c.ratings,
       max: TRUST_CAPS.ratings,
-      hint: `Cuentan desde ${TRUST_MIN_RATINGS} calificaciones de profesionales.`,
+      hint: ratingsHint,
     },
     {
       key: "services",
       label: "Servicios completados",
       value: c.services,
       max: TRUST_CAPS.services,
-      hint: `Suma hasta ${TRUST_SERVICES_CAP} servicios.`,
+      hint: servicesHint,
     },
     {
       key: "identity",
-      label: kind === "family" ? "Identidad entregada" : "Institución verificada",
+      label: IDENTITY_LABEL[kind],
       value: c.identity,
       max: TRUST_CAPS.identity,
-      hint:
-        kind === "family"
-          ? "Documento, número de identificación y aceptación del tratamiento de datos."
-          : "Verificación de Humanix, NIT y cámara de comercio.",
+      hint: IDENTITY_HINT[kind],
     },
     {
       key: "seniority",
       label: "Antigüedad",
       value: c.seniority,
       max: TRUST_CAPS.seniority,
-      hint: "Sube con los meses, hasta 12.",
+      hint: `Sube con los meses, hasta ${TRUST_SENIORITY_MONTHS_CAP}.`,
     },
   ];
   if (c.adjustments < 0) {
@@ -260,28 +306,95 @@ export function trustLines(c: TrustComponents, kind: "family" | "institution"): 
   return lines;
 }
 
+// ─── Piezas de la identidad (qué falta exactamente) ──────────────────────────
+
+/** Lo que la base entrega en `components.identity_parts`: cada pieza, entregada o no. */
+export type IdentityParts = Record<string, boolean>;
+
+export interface IdentityPart {
+  key: string;
+  label: string;
+  points: number;
+  done: boolean;
+}
+
+const IDENTITY_PARTS: Record<TrustKind, Array<{ key: string; label: string; points: number }>> = {
+  family: [
+    { key: "id_number", label: "Número de cédula", points: FAMILY_IDENTITY_POINTS.idNumber },
+    {
+      key: "id_document",
+      label: "Foto o PDF de la cédula",
+      points: FAMILY_IDENTITY_POINTS.idDocument,
+    },
+    {
+      key: "habeas",
+      label: "Aceptación del tratamiento de datos",
+      points: FAMILY_IDENTITY_POINTS.habeas,
+    },
+  ],
+  institution: [
+    { key: "nit", label: "NIT", points: INSTITUTION_IDENTITY_POINTS.nit },
+    { key: "chamber", label: "Cámara de comercio", points: INSTITUTION_IDENTITY_POINTS.chamber },
+    {
+      key: "verified",
+      label: "Verificación de Humanix",
+      points: INSTITUTION_IDENTITY_POINTS.verified,
+    },
+  ],
+  professional: [
+    {
+      key: "id_document",
+      label: "Cédula en tus documentos",
+      points: PROFESSIONAL_IDENTITY_POINTS.idDocument,
+    },
+    { key: "rethus", label: "RETHUS verificado", points: PROFESSIONAL_IDENTITY_POINTS.rethus },
+    { key: "validated", label: "Perfil validado", points: PROFESSIONAL_IDENTITY_POINTS.validated },
+  ],
+};
+
+/** Las piezas de la identidad de cada rol, con su estado. Sin datos de la base, ninguna aparece como entregada. */
+export function identityParts(
+  kind: TrustKind,
+  parts: IdentityParts | null | undefined,
+): IdentityPart[] {
+  return IDENTITY_PARTS[kind].map((p) => ({ ...p, done: !!parts?.[p.key] }));
+}
+
+// ─── Consejos ────────────────────────────────────────────────────────────────
+
+const IDENTITY_TIP: Record<TrustKind, string> = {
+  family: "Completa tu identidad (documento y aceptación de datos) en tu perfil.",
+  institution: "Completa NIT, cámara de comercio y la verificación de tu institución.",
+  professional:
+    "Sube tu cédula y verifica tu RETHUS en Documentos; valida tu perfil con IA en Perfil.",
+};
+
 /** Qué hacer para subir el puntaje, de lo que más suma a lo que menos (solo lo que de verdad falta). */
-export function trustTips(c: TrustComponents, kind: "family" | "institution"): string[] {
+export function trustTips(c: TrustComponents, kind: TrustKind, missing?: IdentityPart[]): string[] {
   const tips: Array<{ gain: number; text: string }> = [];
   if (c.identity < TRUST_CAPS.identity) {
+    const names = (missing ?? []).filter((p) => !p.done).map((p) => p.label.toLowerCase());
     tips.push({
       gain: TRUST_CAPS.identity - c.identity,
       text:
-        kind === "family"
-          ? "Completa tu identidad (documento y aceptación de datos) en tu perfil."
-          : "Completa NIT, cámara de comercio y la verificación de tu institución.",
+        names.length > 0
+          ? `${IDENTITY_TIP[kind]} Te falta: ${names.join(", ")}.`
+          : IDENTITY_TIP[kind],
     });
   }
   if (c.ratings < TRUST_CAPS.ratings) {
     tips.push({
       gain: TRUST_CAPS.ratings - c.ratings,
-      text: "Pide a quienes te atienden que te califiquen: cuentan desde 3 calificaciones.",
+      text:
+        kind === "professional"
+          ? `Pide a las familias e instituciones que atiendes que te califiquen: cuentan desde ${TRUST_MIN_RATINGS} calificaciones.`
+          : `Pide a quienes te atienden que te califiquen: cuentan desde ${TRUST_MIN_RATINGS} calificaciones.`,
     });
   }
   if (c.services < TRUST_CAPS.services) {
     tips.push({
       gain: TRUST_CAPS.services - c.services,
-      text: "Cada servicio completado suma hasta llegar a 10.",
+      text: `Cada servicio completado suma hasta llegar a ${TRUST_SERVICES_CAP}.`,
     });
   }
   if (c.seniority < TRUST_CAPS.seniority) {

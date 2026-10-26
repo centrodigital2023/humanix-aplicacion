@@ -30,6 +30,12 @@ const {
 import appCss from "../styles.css?url";
 import { ConfirmHost } from "@/components/humanix/ConfirmHost";
 
+// Alertas en vivo del servicio (solicitudes al profesional, cambios de estado a familia y EPS/IPS).
+const LiveServiceAlerts = lazy(() =>
+  import("@/components/humanix/realtime/LiveServiceAlerts").then((module) => ({
+    default: module.LiveServiceAlerts,
+  })),
+);
 const FloatingWAChat = lazy(() =>
   import("@/components/humanix/FloatingWAChat").then((module) => ({
     default: module.FloatingWAChat,
@@ -87,13 +93,12 @@ export const Route = createRootRoute({
         name: "robots",
         content: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
       },
-      { name: "theme-color", content: "#0A192F" },
+      { name: "theme-color", content: "#0f4c81" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "format-detection", content: "telephone=no" },
       { name: "apple-mobile-web-app-title", content: SITE_NAME },
       { name: "application-name", content: SITE_NAME },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: SITE_NAME },
       { property: "og:locale", content: DEFAULT_LOCALE },
@@ -104,14 +109,13 @@ export const Route = createRootRoute({
       { name: "twitter:title", content: `${SITE_NAME} · Talento humano en salud para Colombia` },
       { property: "og:description", content: SITE_DESCRIPTION },
       { name: "twitter:description", content: SITE_DESCRIPTION },
-      { property: "og:image", content: SOCIAL_IMAGE_URL },
-      { property: "og:image:alt", content: SOCIAL_IMAGE_ALT },
-      { property: "og:image:width", content: SOCIAL_IMAGE_WIDTH },
-      { property: "og:image:height", content: SOCIAL_IMAGE_HEIGHT },
-      { name: "twitter:image", content: SOCIAL_IMAGE_URL },
-      { name: "twitter:image:alt", content: SOCIAL_IMAGE_ALT },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", type: "image/png", sizes: "96x96", href: "/favicon.png" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/humanix-192.png" },
+      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
       { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
@@ -132,8 +136,6 @@ export const Route = createRootRoute({
         media: "print",
       },
       { rel: "sitemap", type: "application/xml", href: "/sitemap.xml" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -143,9 +145,15 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-CO">
+    <html lang="es-CO" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Modo oscuro por defecto, aplicado antes de pintar (sin destello claro); «Claro» queda guardado por persona. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('humanix-theme');document.documentElement.classList.toggle('dark',t!=='light');}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
         {/* Swap font stylesheet to all media once loaded (non-blocking) */}
         <script
           dangerouslySetInnerHTML={{
@@ -226,6 +234,9 @@ function RootComponent() {
           <FloatingWAChat />
         </Suspense>
       )}
+      <Suspense fallback={null}>
+        <LiveServiceAlerts />
+      </Suspense>
       <Toaster richColors position="top-right" />
       <ConfirmHost />
       <GlobalExperience />

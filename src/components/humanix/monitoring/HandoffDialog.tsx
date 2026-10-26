@@ -1,6 +1,6 @@
 // Relevo de turno (I-PASS): un borrador por paciente con los datos reales (gravedad sugerida por el NEWS2 y las alertas, resumen, acciones de
 // las próximas 12 horas, qué hacer si cambia) que la persona corrige. Copiar o descargar la hoja es libre; guardarla en la historia de cada
-// paciente es del plan IPS Mejorado. Es un borrador: no reemplaza el criterio clínico de quien entrega ni de quien recibe.
+// paciente es del plan Institucional. Es un borrador: no reemplaza el criterio clínico de quien entrega ni de quien recibe.
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ClipboardCopy, Download, Loader2, Lock, Repeat, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -326,7 +326,7 @@ export function HandoffDialog({
           <div className="flex flex-wrap items-center gap-2">
             {!canSave && (
               <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Lock className="h-3 w-3" aria-hidden /> Guardar en la historia: IPS Mejorado
+                <Lock className="h-3 w-3" aria-hidden /> Guardar en la historia: Institucional
               </span>
             )}
             <Button
