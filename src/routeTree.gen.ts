@@ -29,6 +29,7 @@ import { Route as CuidadoPostoperatorioRouteImport } from './routes/cuidado-post
 import { Route as CuidadorDomicilioRouteImport } from './routes/cuidador-domicilio'
 import { Route as CumplimientoRouteImport } from './routes/cumplimiento'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DescargarRouteImport } from './routes/descargar'
 import { Route as EnfermeriaBarranquillaRouteImport } from './routes/enfermeria-barranquilla'
 import { Route as EnfermeriaBogotaRouteImport } from './routes/enfermeria-bogota'
 import { Route as EnfermeriaBucaramangaRouteImport } from './routes/enfermeria-bucaramanga'
@@ -195,6 +196,11 @@ const CumplimientoRoute = CumplimientoRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DescargarRoute = DescargarRouteImport.update({
+  id: '/descargar',
+  path: '/descargar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EnfermeriaBarranquillaRoute = EnfermeriaBarranquillaRouteImport.update({
@@ -558,6 +564,7 @@ export interface FileRoutesByFullPath {
   '/cuidador-domicilio': typeof CuidadorDomicilioRoute
   '/cumplimiento': typeof CumplimientoRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/descargar': typeof DescargarRoute
   '/enfermeria-barranquilla': typeof EnfermeriaBarranquillaRoute
   '/enfermeria-bogota': typeof EnfermeriaBogotaRoute
   '/enfermeria-bucaramanga': typeof EnfermeriaBucaramangaRoute
@@ -646,6 +653,7 @@ export interface FileRoutesByTo {
   '/cuidado-postoperatorio': typeof CuidadoPostoperatorioRoute
   '/cuidador-domicilio': typeof CuidadorDomicilioRoute
   '/cumplimiento': typeof CumplimientoRoute
+  '/descargar': typeof DescargarRoute
   '/enfermeria-barranquilla': typeof EnfermeriaBarranquillaRoute
   '/enfermeria-bogota': typeof EnfermeriaBogotaRoute
   '/enfermeria-bucaramanga': typeof EnfermeriaBucaramangaRoute
@@ -735,6 +743,7 @@ export interface FileRoutesById {
   '/cuidador-domicilio': typeof CuidadorDomicilioRoute
   '/cumplimiento': typeof CumplimientoRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/descargar': typeof DescargarRoute
   '/enfermeria-barranquilla': typeof EnfermeriaBarranquillaRoute
   '/enfermeria-bogota': typeof EnfermeriaBogotaRoute
   '/enfermeria-bucaramanga': typeof EnfermeriaBucaramangaRoute
@@ -826,6 +835,7 @@ export interface FileRouteTypes {
     | '/cuidador-domicilio'
     | '/cumplimiento'
     | '/dashboard'
+    | '/descargar'
     | '/enfermeria-barranquilla'
     | '/enfermeria-bogota'
     | '/enfermeria-bucaramanga'
@@ -914,6 +924,7 @@ export interface FileRouteTypes {
     | '/cuidado-postoperatorio'
     | '/cuidador-domicilio'
     | '/cumplimiento'
+    | '/descargar'
     | '/enfermeria-barranquilla'
     | '/enfermeria-bogota'
     | '/enfermeria-bucaramanga'
@@ -1002,6 +1013,7 @@ export interface FileRouteTypes {
     | '/cuidador-domicilio'
     | '/cumplimiento'
     | '/dashboard'
+    | '/descargar'
     | '/enfermeria-barranquilla'
     | '/enfermeria-bogota'
     | '/enfermeria-bucaramanga'
@@ -1092,6 +1104,7 @@ export interface RootRouteChildren {
   CuidadorDomicilioRoute: typeof CuidadorDomicilioRoute
   CumplimientoRoute: typeof CumplimientoRoute
   DashboardRoute: typeof DashboardRouteWithChildren
+  DescargarRoute: typeof DescargarRoute
   EnfermeriaBarranquillaRoute: typeof EnfermeriaBarranquillaRoute
   EnfermeriaBogotaRoute: typeof EnfermeriaBogotaRoute
   EnfermeriaBucaramangaRoute: typeof EnfermeriaBucaramangaRoute
@@ -1280,6 +1293,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/descargar': {
+      id: '/descargar'
+      path: '/descargar'
+      fullPath: '/descargar'
+      preLoaderRoute: typeof DescargarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/enfermeria-barranquilla': {
@@ -1865,6 +1885,7 @@ const rootRouteChildren: RootRouteChildren = {
   CuidadorDomicilioRoute: CuidadorDomicilioRoute,
   CumplimientoRoute: CumplimientoRoute,
   DashboardRoute: DashboardRouteWithChildren,
+  DescargarRoute: DescargarRoute,
   EnfermeriaBarranquillaRoute: EnfermeriaBarranquillaRoute,
   EnfermeriaBogotaRoute: EnfermeriaBogotaRoute,
   EnfermeriaBucaramangaRoute: EnfermeriaBucaramangaRoute,
