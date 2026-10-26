@@ -5531,6 +5531,10 @@ export type Database = {
         Args: { p_booking: string; p_patient: string; p_type: string }
         Returns: boolean
       }
+      hx_can_track_booking: {
+        Args: { p_booking: string; p_uid: string }
+        Returns: boolean
+      }
       hx_can_trigger_sos: {
         Args: { p_booking: string; p_patient: string }
         Returns: boolean
@@ -5786,6 +5790,7 @@ export type Database = {
       hx_ping_service_offers: { Args: never; Returns: undefined }
       hx_plan_visibility_boost: { Args: { p_user: string }; Returns: number }
       hx_presence_ttl: { Args: never; Returns: string }
+      hx_pro_docs_complete: { Args: { p_uid: string }; Returns: boolean }
       hx_pro_label: {
         Args: { p_full_name: string; p_short: boolean }
         Returns: string
@@ -6156,6 +6161,7 @@ export type Database = {
           name: string
           open_offers: number
           status: string
+          verification_status: string
           verified: boolean
         }[]
       }
@@ -6182,6 +6188,7 @@ export type Database = {
           trust_enough: boolean
           trust_level: string
           trust_score: number
+          verification_status: string
         }[]
       }
       map_professionals: {
@@ -6208,6 +6215,7 @@ export type Database = {
           status: string
           sub_specialties: string[]
           trust_score: number
+          verification_status: string
           verified: boolean
           years_experience: number
         }[]
