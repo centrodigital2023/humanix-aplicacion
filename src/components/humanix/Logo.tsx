@@ -14,8 +14,8 @@ export function Logo({
         src={logoImage}
         alt=""
         aria-hidden="true"
-        width={34}
-        height={40}
+        width={40}
+        height={38}
         className="h-10 w-auto shrink-0 select-none drop-shadow-sm"
         draggable={false}
       />
