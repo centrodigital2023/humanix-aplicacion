@@ -1,6 +1,6 @@
 // Validación de documentos institucionales de las EPS/IPS: el superadmin abre cada archivo y lo aprueba o rechaza con una nota.
-// Con cámara de comercio, RUT y cédula del representante aprobados, la base marca la institución como verificada
-// (trigger hx_inst_docs_sync_verified en 20261028150000_institution_documents_review.sql).
+// Con cámara de comercio y RUT aprobados, la base marca la institución como verificada
+// (trigger hx_inst_docs_sync_verified; los obligatorios están en hx_inst_docs_complete).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
