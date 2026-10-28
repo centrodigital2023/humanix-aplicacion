@@ -43,7 +43,6 @@ import { DocumentsManager } from "@/components/humanix/DocumentsManager";
 import { RethusAutoVerification } from "@/components/humanix/RethusAutoVerification";
 import { HealthComplianceCard } from "@/components/humanix/HealthComplianceCard";
 import { AvailabilityCalendar } from "@/components/humanix/AvailabilityCalendar";
-import { OnboardingTour } from "@/components/humanix/OnboardingTour";
 import { AiFingerprintCard } from "@/components/humanix/AiFingerprintCard";
 import { SemanticOffers } from "@/components/humanix/SemanticOffers";
 import { LiveMapSection } from "@/components/humanix/LiveMapSection";
@@ -75,6 +74,13 @@ import { ContractsPanel } from "@/components/humanix/contracts/ContractsPanel";
 import { ActiveServicesCard } from "@/components/humanix/care/ActiveServicesCard";
 import { CareerCard } from "@/components/humanix/care/CareerCard";
 import { ProHero } from "@/components/humanix/pro/ProHero";
+import { ProWelcome, type ProWelcomeWork } from "@/components/humanix/pro/ProWelcome";
+import {
+  proWelcomeSteps,
+  readWelcomeDismissed,
+  rememberWelcomeDismissed,
+  shouldShowProWelcome,
+} from "@/lib/proWelcome";
 import { PendingBookingRequests } from "@/components/humanix/pro/PendingBookingRequests";
 import { ProSmartCenter, type GrowKey } from "@/components/humanix/pro/ProSmartCenter";
 import { scrollToId } from "@/components/humanix/premium/scroll";
@@ -226,7 +232,9 @@ function ProDashboard() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [apps, setApps] = useState<AppRow[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [showTour, setShowTour] = useState(false);
+  // Bienvenida simple del recién registrado: sale al entrar hasta cerrarla o completar los pasos; se reabre desde Inicio.
+  // `null` mientras se decide (así el panel no parpadea antes de la bienvenida).
+  const [welcomeOpen, setWelcomeOpen] = useState<boolean | null>(null);
   const [offersSubTab, setOffersSubTab] = useState("familias");
   const [isOnline, setIsOnline] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
@@ -431,12 +439,6 @@ function ProDashboard() {
       } finally {
         if (active) setLoading(false);
       }
-      try {
-        const seen = localStorage.getItem(`hx_tour_${uid}`);
-        if (!seen && active) setShowTour(true);
-      } catch {
-        /* ignore */
-      }
     })();
     const safety = setTimeout(() => {
       if (active) setLoading(false);
@@ -495,15 +497,76 @@ function ProDashboard() {
     !!userId,
   );
 
-  const closeTour = () => {
-    setShowTour(false);
-    if (userId) {
-      try {
-        localStorage.setItem(`hx_tour_${userId}`, "1");
-      } catch {
-        /* ignore */
-      }
+  const welcomeSteps = proWelcomeSteps({
+    avatarUrl: profile?.avatar_url,
+    specialty,
+    cities,
+    hourlyRate: hourly,
+    docs: docSummary,
+    available: isOnline,
+  });
+  const welcomeDone = welcomeSteps.filter((s) => s.done).length;
+
+  // Se decide una vez, con el perfil ya cargado; después solo la cierran sus botones (así ve el «¡Listo!» del último paso).
+  useEffect(() => {
+    if (loading || !userId || welcomeOpen !== null) return;
+    setWelcomeOpen(shouldShowProWelcome(readWelcomeDismissed(userId), welcomeSteps));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, userId, welcomeOpen]);
+
+  const refreshDocSummary = async () => {
+    if (!userId) return;
+    const { data } = await supabase
+      .from("professional_documents")
+      .select("doc_type")
+      .eq("user_id", userId)
+      .neq("status", "rejected");
+    if (data) setDocSummary(Object.fromEntries(data.map((d) => [d.doc_type, true])));
+  };
+
+  const openWelcome = () => {
+    setWelcomeOpen(true);
+    window.scrollTo({ top: 0 });
+    void refreshDocSummary();
+  };
+
+  // Salir de la bienvenida (a una pestaña del panel) la da por vista: no vuelve a salir sola.
+  const closeWelcome = (to: Tab = "inicio") => {
+    if (userId) rememberWelcomeDismissed(userId);
+    setWelcomeOpen(false);
+    setTab(to);
+    window.scrollTo({ top: 0 });
+  };
+
+  // Paso «Lo que haces» de la bienvenida: guarda solo especialidad, ciudad y tarifa (el resto del formulario no se toca).
+  const saveWelcomeWork = async (work: ProWelcomeWork): Promise<boolean> => {
+    if (!userId) return false;
+    const city = work.city.trim();
+    const otherCities = cities
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => c && c.toLowerCase() !== city.toLowerCase());
+    const nextCities = [city, ...otherCities];
+    const { data, error } = await supabase
+      .from("professional_profiles")
+      .update({
+        specialty: work.specialty.trim(),
+        service_cities: nextCities,
+        hourly_rate: work.hourly === "" ? null : Number(work.hourly),
+      })
+      .eq("user_id", userId)
+      .select()
+      .maybeSingle();
+    if (error) {
+      toast.error(friendlyError(error));
+      return false;
     }
+    setSpecialty(work.specialty.trim());
+    setCities(nextCities.join(", "));
+    setHourly(work.hourly);
+    if (data) setProfile(data as unknown as ProProfile);
+    toast.success("¡Guardado!");
+    return true;
   };
 
   // «Disponible» es la misma marca que usa el mapa y los contadores en vivo (`available`): no te oculta, te marca. Antes este interruptor
@@ -781,7 +844,7 @@ function ProDashboard() {
     setWorkExp((prev) => prev.map((e, idx) => (idx === i ? { ...e, [k]: v } : e)));
   const removeExp = (i: number) => setWorkExp((prev) => prev.filter((_, idx) => idx !== i));
 
-  if (authLoading || loading || !user) {
+  if (authLoading || loading || !user || welcomeOpen === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-3">
@@ -794,10 +857,31 @@ function ProDashboard() {
     );
   }
 
+  if (welcomeOpen && userId) {
+    return (
+      <ProWelcome
+        userId={userId}
+        name={fullName}
+        avatarUrl={profile?.avatar_url ?? null}
+        specialty={specialty}
+        cities={cities}
+        hourlyRate={hourly}
+        docs={docSummary}
+        available={isOnline}
+        togglingAvailable={togglingOnline}
+        onAvatar={(url) => setProfile((prev) => (prev ? { ...prev, avatar_url: url } : prev))}
+        onSaveWork={saveWelcomeWork}
+        onToggleAvailable={toggleOnline}
+        onGoDocs={() => closeWelcome("documentos")}
+        onGoOffers={() => closeWelcome("ofertas")}
+        onClose={() => closeWelcome("inicio")}
+        onLogout={logout}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground bg-aurora pb-20 sm:pb-0">
-      {showTour && <OnboardingTour onClose={closeTour} />}
-
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between gap-3">
@@ -901,30 +985,24 @@ function ProDashboard() {
             )}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
 
-            {/* Onboarding banner — only for new profiles (< 30%) */}
-            {completionPct < 30 && (
-              <div className="rounded-2xl bg-gradient-to-br from-biosensor/15 to-fuchsia-neural/10 border border-biosensor/30 p-5">
-                <div className="flex items-start gap-4">
-                  <div className="h-10 w-10 rounded-full bg-biosensor/20 flex items-center justify-center shrink-0">
-                    <Sparkles className="h-5 w-5 text-biosensor" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm">¡Bienvenido/a, {greetingName}! Empieza aquí</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Completa tu perfil para aparecer en el marketplace y recibir ofertas de
-                      familias e instituciones.
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button size="sm" variant="hero" onClick={() => setTab("perfil")}>
-                        <User className="h-3.5 w-3.5 mr-1.5" /> Completar perfil
-                      </Button>
-                      <Button size="sm" variant="glass" onClick={() => setTab("documentos")}>
-                        <FileText className="h-3.5 w-3.5 mr-1.5" /> Subir documentos
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Primeros pasos pendientes: un botón que reabre la bienvenida simple */}
+            {welcomeDone < welcomeSteps.length && (
+              <button
+                type="button"
+                onClick={openWelcome}
+                className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-biosensor/30 bg-gradient-to-br from-biosensor/15 to-fuchsia-neural/10 p-4 text-left"
+              >
+                <span aria-hidden="true" className="text-2xl">
+                  👋
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-bold">Tus primeros pasos</span>
+                  <span className="block text-sm text-muted-foreground">
+                    {welcomeDone} de {welcomeSteps.length} listos
+                  </span>
+                </span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-biosensor" />
+              </button>
             )}
 
             {/* Next booking preview */}
