@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Sparkles, Loader2, MapPin, Star, ShieldCheck, Wand2, X, Pencil, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,19 @@ const COP = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-export function HiringCopilot({ defaultCity }: { defaultCity?: string }) {
+export function HiringCopilot({
+  defaultCity,
+  label = "Publicar oferta gratis",
+  icon,
+  triggerClassName,
+}: {
+  defaultCity?: string;
+  /** Texto del botón que abre el asistente. */
+  label?: string;
+  /** Ícono o emoji del botón (por defecto, la varita). */
+  icon?: ReactNode;
+  triggerClassName?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState("");
   const [city, setCity] = useState(defaultCity ?? "");
@@ -161,9 +173,9 @@ export function HiringCopilot({ defaultCity }: { defaultCity?: string }) {
 
   return (
     <>
-      <Button variant="hero" onClick={() => setOpen(true)}>
-        <Wand2 className="h-4 w-4 mr-1.5" />
-        Publicar oferta gratis
+      <Button variant="hero" className={triggerClassName} onClick={() => setOpen(true)}>
+        {icon ?? <Wand2 className="h-4 w-4 mr-1.5" />}
+        {label}
       </Button>
 
       {open && (

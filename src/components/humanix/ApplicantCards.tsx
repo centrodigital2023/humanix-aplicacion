@@ -432,10 +432,13 @@ function Applicant({
 export function ApplicantCards({
   userId,
   familyName,
+  hideWhenEmpty = false,
   className,
 }: {
   userId: string;
   familyName?: string | null;
+  /** Sin postulaciones (y ya cargadas), no ocupa lugar: el inicio de la familia solo muestra lo que pide acción. */
+  hideWhenEmpty?: boolean;
   className?: string;
 }) {
   const qc = useQueryClient();
@@ -534,6 +537,8 @@ export function ApplicantCards({
     void qc.invalidateQueries({ queryKey: applicantKeys.list(userId) });
     setPending(null);
   };
+
+  if (hideWhenEmpty && !list.isError && (list.isLoading || cards.length === 0)) return null;
 
   return (
     <section
