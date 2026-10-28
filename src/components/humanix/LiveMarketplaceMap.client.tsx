@@ -42,7 +42,14 @@ import {
   useMapInstitutions,
   useValidatedMapProfessionals,
 } from "@/hooks/use-live-map";
-import { counterItems, demandHeadline, EMPTY_COUNTS, withPosition } from "@/lib/liveMap";
+import {
+  counterItems,
+  demandHeadline,
+  EMPTY_COUNTS,
+  spreadColocated,
+  withPosition,
+} from "@/lib/liveMap";
+import { pendingDocsCopy } from "@/lib/mapVerification";
 import { toCell } from "@/lib/presence";
 import { trustBadgeText } from "@/lib/trustScore";
 
@@ -75,6 +82,8 @@ type Point = {
   offerId?: string | null;
   /** Lo que hay abierto («2 ofertas · hasta $24.000/h»). */
   headline?: string | null;
+  /** Profesional con documentos en revisión: pin ámbar ⚠, no se puede pedir desde el mapa. */
+  pending?: boolean;
 };
 
 const COLORS = {
@@ -82,6 +91,8 @@ const COLORS = {
   family: "#f2b705", // premium yellow
   institution: "#d4145a", // fuchsia
 };
+/** Documentos pendientes (mismo ámbar que el mapa simple). */
+const PENDING_COLOR = "#d97706";
 
 function makeMarkerIcon(
   kind: "professional" | "family" | "institution",
@@ -89,10 +100,17 @@ function makeMarkerIcon(
   selected = false,
   hasExactLocation = true,
   isLive = false,
+  pending = false,
 ) {
   const shape = kind === "institution" ? "6px" : "9999px";
   const baseColor = COLORS[kind];
-  const color = status === "busy" ? "#f59e0b" : status === "away" ? "#9ca3af" : baseColor;
+  const color = pending
+    ? PENDING_COLOR
+    : status === "busy"
+      ? "#f59e0b"
+      : status === "away"
+        ? "#9ca3af"
+        : baseColor;
   // GPS en vivo → pulso rápido; disponible normal → pulso normal; ocupado → pulso lento
   const dur = isLive ? 0.9 : kind === "professional" ? 2 : kind === "family" ? 2.4 : 2.8;
   const pulse = isLive
@@ -117,9 +135,12 @@ function makeMarkerIcon(
   const liveIndicator = isLive
     ? `<span style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:9999px;background:#22c55e;border:2px solid white;box-shadow:0 0 5px #22c55e80"></span>`
     : "";
+  const pendingBadge = pending
+    ? `<span style="position:absolute;bottom:-6px;right:-8px;font-size:11px;line-height:1;background:white;border-radius:9999px;padding:1px 2px;box-shadow:0 1px 3px rgba(0,0,0,.35)">⚠</span>`
+    : "";
   return L.divIcon({
     className: "live-marker",
-    html: `<div style="position:relative;display:inline-block">${liveIndicator}<div style="width:${size}px;height:${size}px;border-radius:${shape};background:${color};${approxStyle};box-shadow:${ring};${pulse};transition:all .15s ease"></div></div>`,
+    html: `<div style="position:relative;display:inline-block">${liveIndicator}${pendingBadge}<div style="width:${size}px;height:${size}px;border-radius:${shape};background:${color};${approxStyle};box-shadow:${ring};${pulse};transition:all .15s ease"></div></div>`,
     iconSize: [size + 4, size + 4],
     iconAnchor: [(size + 4) / 2, (size + 4) / 2],
   });
@@ -437,6 +458,35 @@ export function LiveMarketplaceMap({
       })),
     [prosQ.data],
   );
+  // Profesionales recién registrados o con documentos en revisión: también se ven (ámbar ⚠), sin foto ni tarifa y sin poder pedirlos.
+  const pendingPros = useMemo<Point[]>(
+    () =>
+      withPosition(prosQ.pending ?? []).map((p) => ({
+        id: `pro-${p.id}`,
+        lat: p.lat,
+        lng: p.lng,
+        kind: "professional" as const,
+        title: p.specialty || "Profesional",
+        subtitle: p.city ?? "",
+        userId: p.id,
+        fullName: p.name,
+        city: p.city,
+        meta: p.specialty,
+        specialty: p.specialty,
+        gender: p.gender,
+        yearsExperience: p.yearsExperience,
+        subSpecialties: p.subSpecialties,
+        isLive: p.live,
+        pending: true,
+        availabilityStatus:
+          p.status === "busy"
+            ? ("busy" as const)
+            : p.status === "available"
+              ? ("available" as const)
+              : ("away" as const),
+      })),
+    [prosQ.pending],
+  );
   const families = useMemo<Point[]>(
     () =>
       withPosition((demandQ.data ?? []).filter((d) => d.kind === "family")).map((d) => ({
@@ -528,7 +578,7 @@ export function LiveMarketplaceMap({
 
   // Apply filters to professionals
   const filteredPros = useMemo<Point[]>(() => {
-    let list = pros.slice();
+    let list = [...pros, ...pendingPros];
     if (filterAvailability !== "all") {
       list = list.filter((p) => p.availabilityStatus === filterAvailability);
     }
@@ -589,6 +639,7 @@ export function LiveMarketplaceMap({
     return list;
   }, [
     pros,
+    pendingPros,
     filterAvailability,
     filterSpecialty,
     filterGender,
@@ -603,7 +654,8 @@ export function LiveMarketplaceMap({
 
   // Cada quien ve lo que le sirve: profesionales (azul), familias con ofertas abiertas (amarillo) e instituciones (fucsia).
   const visiblePoints = useMemo<Point[]>(
-    () => [...filteredPros, ...families, ...institutions],
+    // Cuentas en la misma celda (~1 km) se reparten un poco para que ningún pin tape a otro.
+    () => spreadColocated([...filteredPros, ...families, ...institutions]),
     [filteredPros, families, institutions],
   );
 
@@ -815,15 +867,12 @@ export function LiveMarketplaceMap({
         )}
       </div>
 
-      {showPros &&
-        !prosQ.isLoading &&
-        (countsQ.data?.professionals.total ?? 0) > pros.length && (
-          <p className="text-xs text-muted-foreground" data-testid="map-hidden-pros">
-            {(countsQ.data?.professionals.total ?? 0) - pros.length} profesional(es) registrados aún
-            no aparecen: les falta completar nombre, ciudad o especialidad en su perfil.
-          </p>
-        )}
-
+      {showPros && !prosQ.isLoading && (countsQ.data?.professionals.total ?? 0) > pros.length && (
+        <p className="text-xs text-muted-foreground" data-testid="map-hidden-pros">
+          {(countsQ.data?.professionals.total ?? 0) - pros.length} profesional(es) registrados aún
+          no aparecen: les falta completar nombre, ciudad o especialidad en su perfil.
+        </p>
+      )}
 
       {zoneSummary.length > 0 && (
         <Card className="p-2.5 flex flex-wrap items-center gap-2 text-xs">
@@ -1156,6 +1205,7 @@ export function LiveMarketplaceMap({
                 isSelected,
                 true,
                 p.isLive === true,
+                p.pending === true,
               );
               const Icon =
                 p.kind === "professional" ? HeartPulse : p.kind === "family" ? Users : Building2;
@@ -1179,7 +1229,12 @@ export function LiveMarketplaceMap({
                   : null;
               const offerLabel = p.offerId ? "Ver oferta" : "Ver oportunidades";
               const profileHref =
-                p.kind === "professional" && p.userId ? `/profesional/${p.userId}` : null;
+                p.kind === "professional" && p.userId && !p.pending
+                  ? `/profesional/${p.userId}`
+                  : null;
+              const docsNote = p.pending
+                ? pendingDocsCopy("pro", !!userId && p.userId === userId)
+                : null;
               return (
                 <Marker
                   key={p.id}
@@ -1270,6 +1325,37 @@ export function LiveMarketplaceMap({
                           {p.meta}
                           {p.city ? ` · ${p.city}` : ""}
                         </p>
+                      )}
+                      {docsNote && (
+                        <div
+                          role="note"
+                          style={{
+                            margin: "6px 0",
+                            padding: "6px 8px",
+                            borderRadius: 8,
+                            background: `${PENDING_COLOR}1a`,
+                            border: `1px solid ${PENDING_COLOR}55`,
+                          }}
+                        >
+                          <p
+                            className="text-xs"
+                            style={{ margin: 0, fontWeight: 700, color: PENDING_COLOR }}
+                          >
+                            ⚠ {docsNote.title}
+                          </p>
+                          <p className="text-[11px]" style={{ margin: "2px 0 0" }}>
+                            {docsNote.body}
+                          </p>
+                          {docsNote.cta && (
+                            <a
+                              href={docsNote.cta.to}
+                              className="text-[11px]"
+                              style={{ fontWeight: 700, color: PENDING_COLOR }}
+                            >
+                              {docsNote.cta.label} →
+                            </a>
+                          )}
+                        </div>
                       )}
                       {p.headline && (
                         <p className="text-xs font-medium" style={{ margin: "2px 0" }}>

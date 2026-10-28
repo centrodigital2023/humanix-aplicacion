@@ -17,6 +17,7 @@ import {
   sortProfessionals,
   summarizeProfessionals,
   withPosition,
+  spreadColocated,
   type LiveCountsRow,
   type MapDemandRow,
   type MapInstitutionRow,
@@ -467,5 +468,25 @@ describe("posición, orden y resumen", () => {
       live: 1,
       withoutPosition: 1,
     });
+  });
+
+  it("spreadColocated separa los pines de la misma celda sin salir de ella y deja quietos los solos", () => {
+    const pts = [
+      { id: "b", lat: 1.37, lng: -77.16 },
+      { id: "a", lat: 1.37, lng: -77.16 },
+      { id: "solo", lat: 1.2, lng: -77.28 },
+    ];
+    const out = spreadColocated(pts);
+    expect(out.map((p) => p.id)).toEqual(["b", "a", "solo"]);
+    expect(out[2]).toBe(pts[2]);
+    const [b, a] = out;
+    expect(`${a.lat},${a.lng}`).not.toBe(`${b.lat},${b.lng}`);
+    for (const p of [a, b]) {
+      expect(Math.abs(p.lat - 1.37)).toBeLessThanOrEqual(0.001 + 1e-9);
+      expect(Math.abs(p.lng + 77.16)).toBeLessThanOrEqual(0.001 + 1e-9);
+    }
+    // Estable: el mismo resultado sin importar el orden de llegada.
+    const again = spreadColocated([pts[1], pts[0], pts[2]]);
+    expect(again.find((p) => p.id === "a")).toEqual(a);
   });
 });

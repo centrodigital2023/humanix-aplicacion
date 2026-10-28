@@ -403,6 +403,41 @@ export function withPosition<T extends Positioned>(
   return list.filter(hasPosition);
 }
 
+/** Separación de los pines que caen en la misma celda (~110 m): siguen dentro de su cuadrícula de ~1 km. */
+export const COLOCATED_SPREAD_DEG = 0.001;
+
+/**
+ * Varias cuentas en la misma celda llegan con la misma posición exacta y un pin tapa al otro (pasó con dos profesionales de
+ * Buesaco). Se reparten en un círculo pequeño alrededor de la celda, en orden estable por id, para que se vean todos. Una sola en
+ * su celda queda donde está.
+ */
+export function spreadColocated<T extends { id: string; lat: number; lng: number }>(
+  list: readonly T[],
+  radiusDeg = COLOCATED_SPREAD_DEG,
+): T[] {
+  const groups = new Map<string, T[]>();
+  for (const p of list) {
+    const key = `${p.lat},${p.lng}`;
+    const g = groups.get(key);
+    if (g) g.push(p);
+    else groups.set(key, [p]);
+  }
+  const moved = new Map<T, T>();
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    const sorted = [...g].sort((a, b) => a.id.localeCompare(b.id));
+    sorted.forEach((p, i) => {
+      const angle = (2 * Math.PI * i) / sorted.length;
+      moved.set(p, {
+        ...p,
+        lat: p.lat + radiusDeg * Math.sin(angle),
+        lng: p.lng + radiusDeg * Math.cos(angle),
+      });
+    });
+  }
+  return list.map((p) => moved.get(p) ?? p);
+}
+
 const STATUS_RANK: Record<PinStatus, number> = { available: 0, busy: 1, unavailable: 2 };
 
 /** Más cercano primero (si hay punto de partida); sin posición, al final. Disponible antes que ocupado a igual distancia. */
