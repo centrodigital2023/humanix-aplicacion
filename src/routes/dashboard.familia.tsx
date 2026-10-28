@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Loader2,
   Heart,
@@ -53,6 +53,7 @@ import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 import { friendlyError } from "@/lib/friendlyError";
 import { buildSeo } from "@/lib/seo";
 import { isLiveAlertType } from "@/lib/serviceFlow";
+import { readWelcomeSeen, safeLocalStorage, shouldShowFamilyWelcome } from "@/lib/familyWelcome";
 
 export const Route = createFileRoute("/dashboard/familia")({
   head: () =>
@@ -121,7 +122,25 @@ function FamilyDashboard() {
   });
   const [familyAddress, setFamilyAddress] = useState<string>("");
   const [savingLoc, setSavingLoc] = useState(false);
+  const navigate = useNavigate();
   const myOfferIds = useRef<Set<string>>(new Set());
+
+  // Recién registrada: primero la bienvenida corta (una sola vez por navegador).
+  useEffect(() => {
+    if (!user || !user.roles.includes("family")) return;
+    if (readWelcomeSeen(safeLocalStorage(), user.id)) return;
+    let active = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (
+        active &&
+        shouldShowFamilyWelcome({ createdAt: data.user?.created_at, now: Date.now(), seen: false })
+      )
+        void navigate({ to: "/dashboard/familia/bienvenida", replace: true });
+    });
+    return () => {
+      active = false;
+    };
+  }, [user, navigate]);
   useEffect(() => {
     myOfferIds.current = new Set(offers.map((o) => o.id));
   }, [offers]);
@@ -351,7 +370,7 @@ function FamilyDashboard() {
           : "Hola 👋"
       }
       subtitle="¿Qué necesitas hoy?"
-      crumbs={[{ label: "🏠 Inicio", to: "/" }, { label: "Familia" }]}
+      crumbs={[{ label: "Mi panel" }]}
       badge={{ label: "Familia", tone: "copper" }}
     >
       <FamilySmartCenter
