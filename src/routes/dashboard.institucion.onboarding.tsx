@@ -129,6 +129,14 @@ function InstitutionOnboarding() {
         .from("institution-docs")
         .upload(path, file, { upsert: false, contentType: file.type });
       if (error) throw error;
+      // Queda en «Documentos institucionales» para que el superadmin lo valide.
+      const { error: rowErr } = await supabase.from("institution_documents" as never).insert({
+        user_id: user.id,
+        doc_type: "camara_comercio",
+        file_url: path,
+        file_name: file.name,
+      } as never);
+      if (rowErr) throw rowErr;
       setDocUrl(path);
       toast.success("Documento adjuntado ✓");
     } catch (e) {
@@ -154,7 +162,6 @@ function InstitutionOnboarding() {
         legal_representative_phone: form.legal_representative_phone || null,
         city: form.city || null,
         address: form.address || null,
-        chamber_of_commerce_doc_url: docUrl,
         habeas_data_accepted: form.habeas_data,
         onboarding_complete: false,
       } as never,
@@ -179,7 +186,6 @@ function InstitutionOnboarding() {
           legal_representative_phone: form.legal_representative_phone || null,
           city: form.city || null,
           address: form.address || null,
-          chamber_of_commerce_doc_url: docUrl,
           habeas_data_accepted: true,
           onboarding_complete: true,
         } as never,

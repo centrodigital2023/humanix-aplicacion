@@ -46,6 +46,7 @@ import {
   ArrowDownRight,
   Minus,
   ChevronRight,
+  Building2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ const NAV: NavItem[] = [
   { label: "Marketing", to: "/superadmin/marketing", icon: Sparkles },
   { label: "CRM", to: "/superadmin/crm", icon: Mail },
   { label: "Validación de mercado", to: "/superadmin/validacion", icon: TrendingUp },
+  { label: "Documentos EPS/IPS", to: "/superadmin/instituciones", icon: Building2 },
   { label: "Talento Humano", to: "/talento-humano", icon: Users },
   { label: "Evaluador", to: "/evaluador", icon: FileCheck },
   { label: "Marketplace", to: "/buscar", icon: Briefcase },
@@ -906,6 +908,12 @@ function SuperadminPage() {
                       icon: TrendingUp,
                       title: "Validación de mercado",
                       to: "/superadmin/validacion",
+                      tone: "emerald",
+                    },
+                    {
+                      icon: Building2,
+                      title: "Documentos EPS/IPS",
+                      to: "/superadmin/instituciones",
                       tone: "emerald",
                     },
                     { icon: Star, title: "Reseñas", to: "/superadmin/resenas", tone: "amber" },
