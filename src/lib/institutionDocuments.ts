@@ -34,7 +34,6 @@ export const INSTITUTION_DOC_TYPES: {
     required: true,
   },
   { value: "rut", label: "RUT", hint: "Registro Único Tributario con el NIT.", required: true },
-
   {
     value: "habilitacion_reps",
     label: "Habilitación REPS",

@@ -27,7 +27,7 @@ import { Logo } from "@/components/humanix/Logo";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 
-export const Route = createFileRoute("/dashboard/institucion/onboarding")({
+export const Route = createFileRoute("/dashboard/institucion_/onboarding")({
   head: () => ({ meta: [{ title: "Configura tu institución · Humanix" }] }),
   component: InstitutionOnboarding,
 });
