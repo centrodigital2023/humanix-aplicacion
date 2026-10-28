@@ -66,6 +66,9 @@ import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { AnimatedCounter } from "@/components/humanix/AnimatedCounter";
 import { useSuperadmin } from "@/hooks/use-superadmin";
 import { friendlyError } from "@/lib/friendlyError";
+import { KIND_LABEL, countByKind, fetchAdminUsers, type AdminUser } from "@/lib/adminUsers";
+import { UserDirectory } from "@/components/humanix/superadmin/UserDirectory";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/superadmin/")({
   head: () => ({ meta: [{ title: "Control Center · Humanix" }] }),
@@ -116,15 +119,6 @@ type Emergency = {
   resolved: boolean;
   created_at: string;
 };
-type RegisteredUser = {
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  avatar_url: string | null;
-  city: string | null;
-  created_at: string;
-  role: AppRole;
-};
 
 function SuperadminPage() {
   const { user, loading, logout } = useSuperadmin();
@@ -152,7 +146,8 @@ function SuperadminPage() {
     }[]
   >([]);
   const [fraudCount, setFraudCount] = useState(0);
-  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<AdminUser[]>([]);
+  const [usersLoaded, setUsersLoaded] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AppRole>("hr_staff");
@@ -179,21 +174,17 @@ function SuperadminPage() {
     ),
   );
 
+  // Todas las cuentas (auth.users), aunque les falte perfil o rol. Ver src/lib/adminUsers.ts.
   const loadUsers = useCallback(async () => {
-    const [{ data: profiles }, { data: roles }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("user_id, full_name, email, avatar_url, city, created_at")
-        .order("created_at", { ascending: false }),
-      supabase.from("user_roles").select("user_id, role"),
-    ]);
-    const roleMap = new Map<string, AppRole>(
-      (roles ?? []).map((r) => [r.user_id, r.role as AppRole]),
-    );
-    setRegisteredUsers(
-      (profiles ?? []).map((p) => ({ ...p, role: roleMap.get(p.user_id) ?? "family" })),
-    );
+    try {
+      setRegisteredUsers(await fetchAdminUsers(supabase as unknown as SupabaseClient));
+    } catch (err) {
+      toast.error(friendlyError(err, "No se pudo cargar la lista de usuarios"));
+    } finally {
+      setUsersLoaded(true);
+    }
   }, []);
+  const userCounts = countByKind(registeredUsers);
 
   const loadData = useCallback(async () => {
     const [
@@ -969,22 +960,22 @@ function SuperadminPage() {
             <div className="grid sm:grid-cols-3 gap-3">
               <RoleDistCard
                 label="Familias"
-                count={stats.families}
-                total={stats.users}
+                count={userCounts.family}
+                total={userCounts.all}
                 color="rose"
                 icon={Heart}
               />
               <RoleDistCard
                 label="Profesionales"
-                count={stats.professionals}
-                total={stats.users}
+                count={userCounts.professional}
+                total={userCounts.all}
                 color="violet"
                 icon={Briefcase}
               />
               <RoleDistCard
                 label="IPS / EPS"
-                count={stats.institutions}
-                total={stats.users}
+                count={userCounts.institution}
+                total={userCounts.all}
                 color="blue"
                 icon={Globe}
               />
@@ -993,79 +984,16 @@ function SuperadminPage() {
             <PremiumCard
               title="Usuarios registrados"
               icon={UserCircle}
-              subtitle={`${registeredUsers.length} cuentas en la plataforma`}
+              subtitle={`${userCounts.all} cuentas en la plataforma${
+                userCounts.incomplete ? ` · ${userCounts.incomplete} con datos incompletos` : ""
+              }`}
             >
-              {registeredUsers.length === 0 ? (
-                <div className="flex items-center gap-2 text-white/30 text-sm py-4">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
-                </div>
-              ) : (
-                <div className="divide-y divide-white/[0.05] max-h-[520px] overflow-y-auto">
-                  {registeredUsers.map((u) => {
-                    const roleStyle: Record<string, string> = {
-                      superadmin: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30",
-                      evaluator: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-                      hr_staff: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-                      institution: "bg-violet-500/20 text-violet-300 border-violet-500/30",
-                      family: "bg-rose-500/20 text-rose-300 border-rose-500/30",
-                      professional: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-                    };
-                    return (
-                      <div
-                        key={u.user_id}
-                        className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
-                      >
-                        {u.avatar_url ? (
-                          <img
-                            src={u.avatar_url}
-                            alt={u.full_name ?? ""}
-                            className="h-9 w-9 rounded-full object-cover border border-white/10 shrink-0"
-                          />
-                        ) : (
-                          <div className="h-9 w-9 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-xs font-semibold text-white/50 shrink-0">
-                            {(u.full_name ?? u.email ?? "?").slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white/90 truncate">
-                            {u.full_name ?? "Sin nombre"}
-                          </p>
-                          <p className="text-[11px] text-white/40 truncate">
-                            {u.email ?? "—"}
-                            {u.city ? ` · ${u.city}` : ""}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] shrink-0 ${roleStyle[u.role] ?? "bg-white/10 text-white/40 border-white/20"}`}
-                        >
-                          {u.role}
-                        </Badge>
-                        <span className="text-[10px] text-white/30 whitespace-nowrap hidden sm:inline">
-                          {new Date(u.created_at).toLocaleDateString("es-CO", {
-                            day: "numeric",
-                            month: "short",
-                            year: "2-digit",
-                          })}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 shrink-0"
-                          disabled={deleting === u.user_id}
-                          onClick={() => deleteUser(u.user_id, u.full_name ?? u.email ?? u.user_id)}
-                        >
-                          {deleting === u.user_id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <UserDirectory
+                users={registeredUsers}
+                loaded={usersLoaded}
+                deleting={deleting}
+                onDelete={deleteUser}
+              />
             </PremiumCard>
           </div>
         )}
@@ -1314,10 +1242,11 @@ function SuperadminPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {registeredUsers
-                          .filter((u) => ["professional", "family", "institution"].includes(u.role))
+                          .filter((u) => u.kind !== "team")
                           .map((u) => (
                             <SelectItem key={u.user_id} value={u.user_id}>
-                              {u.full_name ?? u.email ?? u.user_id} · {u.role}
+                              {u.institution_name ?? u.full_name ?? u.email ?? u.user_id} ·{" "}
+                              {KIND_LABEL[u.kind]}
                             </SelectItem>
                           ))}
                       </SelectContent>
