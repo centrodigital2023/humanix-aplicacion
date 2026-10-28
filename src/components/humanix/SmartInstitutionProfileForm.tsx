@@ -18,10 +18,6 @@ import {
   ShieldCheck,
   AlertCircle,
   CheckCircle2,
-  Upload,
-  X,
-  Eye,
-  Download,
   Save,
 } from "lucide-react";
 import { supabase as _sb } from "@/integrations/supabase/client";
@@ -32,15 +28,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { friendlyError } from "@/lib/friendlyError";
+import { InstitutionDocumentsManager } from "@/components/humanix/InstitutionDocumentsManager";
+import { missingApprovedDocs, type InstitutionDocument } from "@/lib/institutionDocuments";
 
 type InstitutionProfile = {
   user_id: string;
@@ -61,25 +51,11 @@ type InstitutionProfile = {
   created_at: string;
 };
 
-type InstitutionDocument = {
-  id: string;
-  doc_type: string;
-  file_name: string;
-  file_url: string;
-  status: "pending" | "approved" | "rejected";
-  ai_score: number | null;
-  ai_verified: boolean | null;
-  expires_at: string | null;
-  reviewed_at: string | null;
-};
-
 export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<InstitutionProfile | null>(null);
   const [documents, setDocuments] = useState<InstitutionDocument[]>([]);
-  const [showDocDialog, setShowDocDialog] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -108,12 +84,6 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
           .eq("user_id", userId)
           .single();
 
-        const { data: docs } = await supabase
-          .from("institution_documents")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false });
-
         if (active) {
           if (profile) {
             setProfile(profile as InstitutionProfile);
@@ -132,7 +102,6 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
               compliance_notes: profile.compliance_notes || "",
             });
           }
-          setDocuments((docs ?? []) as InstitutionDocument[]);
         }
       } catch (e) {
         console.error("[institution profile] load failed", e);
@@ -202,40 +171,6 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
     }
   };
 
-  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingDoc(true);
-    try {
-      // Simular upload
-      const fileName = file.name;
-      const fileUrl = URL.createObjectURL(file);
-
-      // En producción: usar storage de Supabase
-      const { error } = await supabase.from("institution_documents").insert([
-        {
-          user_id: userId,
-          doc_type: "nit_certificate",
-          file_name: fileName,
-          file_url: fileUrl,
-          status: "pending",
-          ai_verified: false,
-        },
-      ]);
-
-      if (error) throw error;
-
-      toast.success("Documento cargado. Pendiente de revisión por IA.");
-      setShowDocDialog(false);
-    } catch (e: any) {
-      console.error(e);
-      toast.error("No pudimos subir el documento. Inténtalo de nuevo.");
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
   // Validar NIT (formato colombiano simple)
   const isValidNIT = (nit: string) => /^\d{6,12}(-\d)?$/.test(nit);
 
@@ -249,7 +184,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
       isValidChamberNumber(formData.chamber_of_commerce_number),
     has_legal_rep: !!formData.legal_representative_name && !!formData.legal_representative_email,
     has_address: !!formData.address && !!formData.city,
-    documents_uploaded: documents.filter((d) => d.status === "approved").length >= 1,
+    documents_approved: missingApprovedDocs(documents).length === 0,
   };
 
   const complianceScore = Object.values(complianceChecks).filter(Boolean).length;
@@ -455,46 +390,12 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
 
         {/* Documentos */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-sm">Documentos institucionales</h4>
-            <Button size="sm" variant="outline" onClick={() => setShowDocDialog(true)}>
-              <Upload className="h-3.5 w-3.5 mr-1" /> Agregar
-            </Button>
-          </div>
-
-          {documents.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Sin documentos</p>
-          ) : (
-            <div className="space-y-2">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-2 rounded-lg border border-border text-sm"
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <FileCheck className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{doc.file_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {doc.doc_type.replace(/_/g, " ")}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge
-                    className={
-                      doc.status === "approved"
-                        ? "bg-emerald-600/15 text-emerald-700 border-emerald-600/30 text-[10px]"
-                        : doc.status === "pending"
-                          ? "bg-amber-600/15 text-amber-700 border-amber-600/30 text-[10px]"
-                          : "bg-red-600/15 text-red-700 border-red-600/30 text-[10px]"
-                    }
-                  >
-                    {doc.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
+          <h4 className="font-semibold text-sm mb-2">Documentos institucionales</h4>
+          <InstitutionDocumentsManager
+            userId={userId}
+            verified={!!profile?.verified}
+            onDocsChange={setDocuments}
+          />
         </div>
 
         {/* Botones */}
@@ -507,7 +408,7 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
             )}
             Guardar perfil
           </Button>
-          {isCompliant && (
+          {profile?.verified && (
             <Button variant="outline" disabled className="flex-1">
               <ShieldCheck className="h-4 w-4 mr-1.5" />
               Verificado ✓
@@ -515,41 +416,6 @@ export function SmartInstitutionProfileForm({ userId }: { userId: string }) {
           )}
         </div>
       </Card>
-
-      {/* Dialog upload documento */}
-      <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cargar documento institucional</DialogTitle>
-            <DialogDescription>
-              Sube certificado NIT, cámara de comercio, o documentos de compliance
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-            <label className="cursor-pointer">
-              <div className="space-y-2">
-                <Upload className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="font-medium text-sm">Arrastra o haz clic para subir</p>
-                <p className="text-xs text-muted-foreground">PDF, JPG, PNG - máx 10MB</p>
-              </div>
-              <input
-                type="file"
-                hidden
-                onChange={handleDocUpload}
-                disabled={uploadingDoc}
-                accept=".pdf,.jpg,.jpeg,.png"
-              />
-            </label>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDocDialog(false)}>
-              Cancelar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
