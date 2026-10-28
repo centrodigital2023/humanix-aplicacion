@@ -25,7 +25,13 @@ import {
   useValidatedMapProfessionals,
 } from "@/hooks/use-live-map";
 import { BOGOTA, distanceKm, formatKm, getBrowserLocation, type LatLng } from "@/lib/geo";
-import { demandHeadline, STATUS_LABEL, withPosition, type MapDemand } from "@/lib/liveMap";
+import {
+  demandHeadline,
+  spreadColocated,
+  STATUS_LABEL,
+  withPosition,
+  type MapDemand,
+} from "@/lib/liveMap";
 import { trustBadgeText } from "@/lib/trustScore";
 import { currentMapSelection, presenceLine, proSubtitle } from "@/lib/mapDirectory";
 import { displayCity, idleInstitutions } from "@/lib/proMapDemand";
@@ -230,8 +236,11 @@ export function SimpleLiveMap({
 
   const merged = useMemo(
     () =>
-      (pins ?? []).filter(
-        (p) => mode !== "offers" || kindFilter === "all" || p.kind === kindFilter,
+      // Cuentas en la misma celda (~1 km) se reparten un poco para que ningún pin tape a otro.
+      spreadColocated(
+        (pins ?? []).filter(
+          (p) => mode !== "offers" || kindFilter === "all" || p.kind === kindFilter,
+        ),
       ),
     [pins, mode, kindFilter],
   );
