@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Loader2,
@@ -58,6 +58,7 @@ import { SosFamiliarButton } from "@/components/humanix/SosFamiliarButton";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
 import { friendlyError } from "@/lib/friendlyError";
 import { buildSeo } from "@/lib/seo";
+import { isLiveAlertType } from "@/lib/serviceFlow";
 
 export const Route = createFileRoute("/dashboard/familia")({
   head: () =>
@@ -72,7 +73,7 @@ export const Route = createFileRoute("/dashboard/familia")({
 
 const getNav = (): NavItem[] => [
   { label: "Mi panel", to: "/dashboard/familia", icon: LayoutDashboard },
-  { label: "Pedir cuidado", to: "/buscar", icon: Search },
+  { label: "Pedir", to: "/buscar", icon: Search },
   { label: "Mensajes", to: "/mensajes", icon: MessageSquare },
   { label: "Salud en vivo", to: "/dashboard/monitoreo", icon: Heart },
   { label: "Mi plan", to: "/planes", icon: Crown },
@@ -126,6 +127,10 @@ function FamilyDashboard() {
   });
   const [familyAddress, setFamilyAddress] = useState<string>("");
   const [savingLoc, setSavingLoc] = useState(false);
+  const myOfferIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    myOfferIds.current = new Set(offers.map((o) => o.id));
+  }, [offers]);
 
   // Profesionales cercanos: función segura de la base (nombre abreviado, zona aproximada, sin teléfono ni dirección) y en vivo.
   const origin =
@@ -237,23 +242,15 @@ function FamilyDashboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "applications" },
         (payload) => {
-          // Only react if the application is for one of my offers
+          // Solo las postulaciones a mis ofertas (la alerta flotante ya avisa de cada propuesta nueva).
           const row = (payload.new ?? payload.old) as ApplicationRow;
-          setOffers((prevOffers) => {
-            if (!prevOffers.some((o) => o.id === row.job_offer_id)) return prevOffers;
-            setApplications((prev) => {
-              if (payload.eventType === "DELETE") {
-                return prev.filter((a) => a.id !== row.id);
-              }
-              const exists = prev.some((a) => a.id === row.id);
-              if (!exists && payload.eventType === "INSERT") {
-                toast.success("📬 Nueva postulación recibida");
-              }
-              return exists
-                ? prev.map((a) => (a.id === row.id ? (payload.new as ApplicationRow) : a))
-                : [payload.new as ApplicationRow, ...prev];
-            });
-            return prevOffers;
+          if (!myOfferIds.current.has(row.job_offer_id)) return;
+          setApplications((prev) => {
+            if (payload.eventType === "DELETE") return prev.filter((a) => a.id !== row.id);
+            const next = payload.new as ApplicationRow;
+            return prev.some((a) => a.id === next.id)
+              ? prev.map((a) => (a.id === next.id ? next : a))
+              : [next, ...prev];
           });
         },
       )
@@ -266,8 +263,10 @@ function FamilyDashboard() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          const n = payload.new as { title?: string; body?: string };
-          if (n?.title) toast(n.title, { description: n.body ?? undefined });
+          // Los avisos del servicio y de propuestas ya salen como alerta flotante (con sonido): aquí solo el resto.
+          const n = payload.new as { type?: string; title?: string; body?: string };
+          if (n?.title && !isLiveAlertType(n.type ?? ""))
+            toast(n.title, { description: n.body ?? undefined });
         },
       )
       .subscribe();
@@ -343,6 +342,35 @@ function FamilyDashboard() {
         {/* Acciones rápidas */}
         <FamilyQuickActions />
 
+        {/* Lo que pasa AHORA, como en inDrive: mis pedidos en vivo (Pedido → Aceptado → En camino → Cuidando) */}
+        {user && <MyBookings userId={user.id} />}
+
+        {/* Parte del turno en vivo */}
+        {user?.id && <ActiveCareFeedSection clientId={user.id} />}
+
+        {/* Propuestas que llegaron a lo que publiqué: confianza, calificación, zona y valor; aceptar, rechazar o negociar */}
+        {user?.id && (
+          <div id="propuestas" className="scroll-mt-44 lg:scroll-mt-4">
+            <ApplicantCards userId={user.id} familyName={user.fullName} />
+          </div>
+        )}
+
+        {/* Valoraciones pendientes */}
+        {user?.id && (
+          <div id="calificar" className="scroll-mt-44 lg:scroll-mt-4 empty:hidden">
+            <PendingRatingsCard userId={user.id} role="family" />
+          </div>
+        )}
+
+        {/* Servicios de familiares que me invitaron a su círculo de cuidado (solo lectura) */}
+        {user && (
+          <ActiveServicesCard
+            userId={user.id}
+            title="Servicios de tu círculo de cuidado"
+            sides={["circle"]}
+          />
+        )}
+
         {/* Atajo anticipatorio: repetir la rutina de cuidado en un toque */}
         {user?.id && <CareRoutineCard userId={user.id} />}
 
@@ -360,7 +388,7 @@ function FamilyDashboard() {
           </section>
         )}
 
-        {/* Tu centro de cuidado: saludo, calma y resumen del día para todas las familias, y herramientas inteligentes (plan Esencial) */}
+        {/* Tu centro de cuidado: resumen del día para todas las familias, y herramientas inteligentes (plan Familiar) */}
         <FamilySmartCenter
           userId={user.id}
           name={user.fullName}
@@ -371,37 +399,8 @@ function FamilyDashboard() {
           coords={familyCoords}
         />
 
-        {/* Quién se postuló a lo que publiqué: tarjetas con confianza, calificación, zona y valor; aceptar, rechazar o negociar según el plan */}
-        {user?.id && (
-          <div id="propuestas" className="scroll-mt-4">
-            <ApplicantCards userId={user.id} familyName={user.fullName} />
-          </div>
-        )}
-
         {/* Profesionales que publican su servicio: Trust Score, RETHUS, calificación, estado en vivo y cercanía */}
         {user?.id && <ServiceOffersFeed viewerId={user.id} audience="family" />}
-
-        {/* Mis servicios activos */}
-        {user && <MyBookings userId={user.id} />}
-
-        {/* Servicios de familiares que me invitaron a su círculo de cuidado (solo lectura) */}
-        {user && (
-          <ActiveServicesCard
-            userId={user.id}
-            title="Servicios de tu círculo de cuidado"
-            sides={["circle"]}
-          />
-        )}
-
-        {/* Parte del turno en vivo */}
-        {user?.id && <ActiveCareFeedSection clientId={user.id} />}
-
-        {/* Valoraciones pendientes */}
-        {user?.id && (
-          <div id="calificar" className="scroll-mt-4 empty:hidden">
-            <PendingRatingsCard userId={user.id} role="family" />
-          </div>
-        )}
 
         {/* Mapa en vivo */}
         <section aria-labelledby="fam-map" className="space-y-3">
@@ -415,13 +414,13 @@ function FamilyDashboard() {
 
         {/* ── AGENDA ─────────────────────────────────────── */}
         {user?.id && (
-          <section id="agenda" className="scroll-mt-4 space-y-4">
+          <section id="agenda" className="scroll-mt-44 lg:scroll-mt-4 space-y-4">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-biosensor" />
               <h2 className="font-display text-xl font-bold">Mi agenda</h2>
             </div>
             <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
-            <div id="circulo" className="scroll-mt-4 empty:hidden">
+            <div id="circulo" className="scroll-mt-44 lg:scroll-mt-4 empty:hidden">
               <CareCirclePanel userId={user.id} userEmail={user.email} />
             </div>
           </section>
@@ -430,7 +429,7 @@ function FamilyDashboard() {
         {/* ── EQUIPO DE CONFIANZA + HISTORIA DE CUIDADO ───── */}
         {user?.id && (
           <section className="space-y-4" aria-label="Equipo de confianza e historia de cuidado">
-            <div id="equipo" className="scroll-mt-4 empty:hidden">
+            <div id="equipo" className="scroll-mt-44 lg:scroll-mt-4 empty:hidden">
               <TrustedTeamCard userId={user.id} role="family" />
             </div>
             <CareHistoryCard userId={user.id} kind="family" />
@@ -442,19 +441,19 @@ function FamilyDashboard() {
           <section
             id="confianza"
             aria-label="Confianza y soporte"
-            className="scroll-mt-4 grid items-start gap-4 lg:grid-cols-2"
+            className="scroll-mt-44 lg:scroll-mt-4 grid items-start gap-4 lg:grid-cols-2"
           >
             <OwnTrustCard
               userId={user.id}
               kind="family"
-              completeLabel="Completar en Mi perfil"
+              completeLabel="Completar mis datos"
               onCompleteIdentity={() => {
                 const el = document.getElementById("mis-datos");
                 if (el instanceof HTMLDetailsElement) el.open = true;
                 el?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
             />
-            <div id="pqrs" className="scroll-mt-4">
+            <div id="pqrs" className="scroll-mt-44 lg:scroll-mt-4">
               <MyPqrsCard userId={user.id} name={user.fullName} email={user.email} />
             </div>
           </section>
@@ -463,7 +462,7 @@ function FamilyDashboard() {
         {/* ── PAGO / PLAN ─────────────────────────────────── */}
         <section
           id="planes"
-          className="rounded-[2rem] bg-gradient-to-br from-card to-card/60 p-6 ring-1 ring-border shadow-sm"
+          className="scroll-mt-44 lg:scroll-mt-4 rounded-[2rem] bg-gradient-to-br from-card to-card/60 p-6 ring-1 ring-border shadow-sm"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl font-bold flex items-center gap-2">
@@ -488,11 +487,11 @@ function FamilyDashboard() {
         {/* ── PERFIL ──────────────────────────────────────── */}
         <details
           id="mis-datos"
-          className="group rounded-[2rem] bg-card p-5 shadow-sm ring-1 ring-border"
+          className="group scroll-mt-44 lg:scroll-mt-4 rounded-[2rem] bg-card p-5 shadow-sm ring-1 ring-border"
         >
           <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-lg font-bold">
             <span className="flex items-center gap-3">
-              <span aria-hidden="true">👤</span> Mi perfil
+              <span aria-hidden="true">👤</span> Mis datos
             </span>
             <ChevronRight
               aria-hidden="true"
@@ -667,10 +666,19 @@ function StatusPill({ status }: { status: string }) {
         map[status] ?? "bg-muted text-muted-foreground border-border"
       }`}
     >
-      {status}
+      {STATUS_TEXT[status] ?? status}
     </span>
   );
 }
+
+const STATUS_TEXT: Record<string, string> = {
+  open: "Abierta",
+  pending: "Pendiente",
+  accepted: "Aceptada",
+  rejected: "Rechazada",
+  filled: "Cubierta",
+  closed: "Cerrada",
+};
 
 function Kpi({
   icon: Icon,

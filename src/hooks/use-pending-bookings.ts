@@ -12,7 +12,7 @@ export function usePendingBookings(userId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_bookings")
-        .select("id, scheduled_at, duration_hours, total_amount, created_at")
+        .select("id, scheduled_at, duration_hours, total_amount, payment_mode, created_at")
         .eq("professional_id", userId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
@@ -29,4 +29,19 @@ export function usePendingBookings(userId: string) {
     Boolean(userId),
   );
   return query;
+}
+
+/**
+ * El profesional acepta una solicitud pendiente. Solo cambia si sigue «pendiente» (si otro la tomó o la cancelaron,
+ * no hay filas y se devuelve false). Las reglas de la transición las impone la base (`guard_booking_integrity`).
+ */
+export async function acceptPendingBooking(bookingId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("service_bookings")
+    .update({ status: "confirmed" })
+    .eq("id", bookingId)
+    .eq("status", "pending")
+    .select("id");
+  if (error) throw error;
+  return Boolean(data?.length);
 }

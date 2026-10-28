@@ -279,105 +279,109 @@ function ProDashboard() {
   );
   const pendingSteps = completionSteps.filter((s) => !s.done);
 
+  // Lo que cambia en vivo (ofertas, mis postulaciones, mis turnos). Se separa del perfil para que un cambio en vivo
+  // nunca borre lo que el profesional está escribiendo en el formulario.
+  const loadLive = async (uid: string) => {
+    const [off, ap, bks] = await Promise.all([
+      supabase
+        .from("job_offers")
+        .select(FAMILY_OFFER_COLUMNS)
+        .eq("poster_type", "family")
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("applications")
+        .select("id, job_offer_id, status, created_at")
+        .eq("professional_id", uid)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("service_bookings")
+        .select("id, scheduled_at, status, notes, client_id, job_offer_id")
+        .eq("professional_id", uid)
+        .eq("status", "confirmed")
+        .gte("scheduled_at", new Date().toISOString())
+        .order("scheduled_at", { ascending: true })
+        .limit(10),
+    ]);
+
+    if (off.data) setOffers(off.data as unknown as Offer[]);
+    if (ap.data) setApps(ap.data as AppRow[]);
+
+    // Enrich bookings with client names and offer titles
+    if (bks.data && bks.data.length > 0) {
+      const clientIds = [...new Set((bks.data as { client_id: string }[]).map((b) => b.client_id))];
+      const offerIds = [
+        ...new Set(
+          (bks.data as { job_offer_id: string | null }[])
+            .map((b) => b.job_offer_id)
+            .filter(Boolean),
+        ),
+      ] as string[];
+      const [clients, bkOffers] = await Promise.all([
+        supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", clientIds),
+        offerIds.length
+          ? supabase.from("job_offers").select("id, title, city").in("id", offerIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const clientMap = new Map(
+        (clients.data ?? []).map(
+          (c: { user_id: string; full_name: string | null; avatar_url: string | null }) => [
+            c.user_id,
+            c,
+          ],
+        ),
+      );
+      const offerMap2 = new Map(
+        (bkOffers.data ?? []).map((o: { id: string; title: string; city: string }) => [o.id, o]),
+      );
+      setBookings(
+        (
+          bks.data as {
+            id: string;
+            scheduled_at: string | null;
+            status: Booking["status"];
+            notes: string | null;
+            client_id: string;
+            job_offer_id: string | null;
+          }[]
+        ).map((b) => {
+          const c = clientMap.get(b.client_id) as
+            { full_name: string; avatar_url: string } | undefined;
+          const o = b.job_offer_id
+            ? (offerMap2.get(b.job_offer_id) as { title: string; city: string } | undefined)
+            : undefined;
+          return {
+            id: b.id,
+            scheduled_at: b.scheduled_at,
+            status: b.status,
+            notes: b.notes,
+            client_name: c?.full_name ?? null,
+            client_avatar: c?.avatar_url ?? null,
+            offer_title: o?.title ?? null,
+            city: o?.city ?? null,
+          };
+        }),
+      );
+    } else {
+      setBookings([]);
+    }
+  };
+
   const loadAll = async (uid: string) => {
     try {
-      const [p, pr, off, ap, docs, bks] = await Promise.all([
+      const [p, pr, docs] = await Promise.all([
         supabase.from("professional_profiles").select("*").eq("user_id", uid).maybeSingle(),
         supabase.from("profiles").select("full_name").eq("user_id", uid).maybeSingle(),
-        supabase
-          .from("job_offers")
-          .select(FAMILY_OFFER_COLUMNS)
-          .eq("poster_type", "family")
-          .eq("status", "open")
-          .order("created_at", { ascending: false })
-          .limit(20),
-        supabase
-          .from("applications")
-          .select("id, job_offer_id, status, created_at")
-          .eq("professional_id", uid)
-          .order("created_at", { ascending: false }),
         supabase
           .from("professional_documents")
           .select("doc_type, status")
           .eq("user_id", uid)
           .neq("status", "rejected"),
-        supabase
-          .from("service_bookings")
-          .select("id, scheduled_at, status, notes, client_id, job_offer_id")
-          .eq("professional_id", uid)
-          .in("status", ["scheduled", "confirmed"])
-          .gte("scheduled_at", new Date().toISOString())
-          .order("scheduled_at", { ascending: true })
-          .limit(10),
+        loadLive(uid),
       ]);
 
       if (pr.data?.full_name) setFullName(pr.data.full_name);
-      if (off.data) setOffers(off.data as unknown as Offer[]);
-      if (ap.data) setApps(ap.data as AppRow[]);
-
-      // Enrich bookings with client names and offer titles
-      if (bks.data && bks.data.length > 0) {
-        const clientIds = [
-          ...new Set((bks.data as { client_id: string }[]).map((b) => b.client_id)),
-        ];
-        const offerIds = [
-          ...new Set(
-            (bks.data as { job_offer_id: string | null }[])
-              .map((b) => b.job_offer_id)
-              .filter(Boolean),
-          ),
-        ] as string[];
-        const [clients, bkOffers] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("user_id, full_name, avatar_url")
-            .in("user_id", clientIds),
-          offerIds.length
-            ? supabase.from("job_offers").select("id, title, city").in("id", offerIds)
-            : Promise.resolve({ data: [] }),
-        ]);
-        const clientMap = new Map(
-          (clients.data ?? []).map(
-            (c: { user_id: string; full_name: string | null; avatar_url: string | null }) => [
-              c.user_id,
-              c,
-            ],
-          ),
-        );
-        const offerMap2 = new Map(
-          (bkOffers.data ?? []).map((o: { id: string; title: string; city: string }) => [o.id, o]),
-        );
-        setBookings(
-          (
-            bks.data as {
-              id: string;
-              scheduled_at: string | null;
-              status: "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled";
-              notes: string | null;
-              client_id: string;
-              job_offer_id: string | null;
-            }[]
-          ).map((b) => {
-            const c = clientMap.get(b.client_id) as
-              { full_name: string; avatar_url: string } | undefined;
-            const o = b.job_offer_id
-              ? (offerMap2.get(b.job_offer_id) as { title: string; city: string } | undefined)
-              : undefined;
-            return {
-              id: b.id,
-              scheduled_at: b.scheduled_at,
-              status: b.status,
-              notes: b.notes,
-              client_name: c?.full_name ?? null,
-              client_avatar: c?.avatar_url ?? null,
-              offer_title: o?.title ?? null,
-              city: o?.city ?? null,
-            };
-          }),
-        );
-      } else {
-        setBookings([]);
-      }
 
       const summary: Record<string, boolean> = {};
       (docs.data ?? []).forEach((d: { doc_type: string }) => {
@@ -444,20 +448,16 @@ function ProDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
+  // En vivo: ofertas nuevas de familias, mis postulaciones y mis turnos (sin tocar el formulario del perfil).
   useRealtimeRefresh(
-    `pro-dash-realtime-${userId ?? "anon"}`,
+    `pro-dash-live-${userId ?? "anon"}`,
     [
-      {
-        table: "professional_profiles",
-        event: "UPDATE",
-        filter: userId ? `user_id=eq.${userId}` : undefined,
-      },
       {
         table: "applications",
         event: "*",
         filter: userId ? `professional_id=eq.${userId}` : undefined,
       },
-      { table: "job_offers", event: "*" },
+      { table: "job_offers", event: "*", filter: "poster_type=eq.family" },
       {
         table: "service_bookings",
         event: "*",
@@ -465,7 +465,32 @@ function ProDashboard() {
       },
     ],
     () => {
-      if (userId) void loadAll(userId);
+      if (userId) void loadLive(userId).catch(() => undefined);
+    },
+    !!userId,
+  );
+
+  // Cambios del perfil hechos por el servidor (verificación, calificación, turnos): solo las cifras, nunca el formulario.
+  useRealtimeRefresh(
+    `pro-dash-profile-${userId ?? "anon"}`,
+    [
+      {
+        table: "professional_profiles",
+        event: "UPDATE",
+        filter: userId ? `user_id=eq.${userId}` : undefined,
+      },
+    ],
+    async () => {
+      if (!userId) return;
+      const { data } = await supabase
+        .from("professional_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!data) return;
+      const pp = data as unknown as ProProfile;
+      setProfile(pp);
+      setIsOnline(pp.available ?? false);
     },
     !!userId,
   );
@@ -708,21 +733,7 @@ function ProDashboard() {
       toast.error(classifyHubError(e as ServerError).message);
       return;
     }
-    const [{ data: appsData }, { data: offersData }] = await Promise.all([
-      supabase
-        .from("applications")
-        .select("id, job_offer_id, status, created_at")
-        .eq("professional_id", userId),
-      supabase
-        .from("job_offers")
-        .select(FAMILY_OFFER_COLUMNS)
-        .eq("poster_type", "family")
-        .eq("status", "open")
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
-    if (appsData) setApps(appsData as AppRow[]);
-    if (offersData) setOffers(offersData as unknown as Offer[]);
+    await loadLive(userId).catch(() => undefined);
   };
 
   // Los botones del resumen del día: cambian de pestaña y bajan a la sección (los servicios y los planes son enlaces).
@@ -861,6 +872,20 @@ function ProDashboard() {
         {/* ══ TAB: INICIO ══ */}
         {tab === "inicio" && (
           <div className="space-y-4">
+            {userId && <PendingBookingRequests userId={userId} />}
+
+            {/* Alertas SOS de las personas que atiendo (solo aparece si hay alguna) */}
+            {userId && <SosAlertsPanel userId={userId} />}
+
+            {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
+            {userId && (
+              <ActiveServicesCard
+                userId={userId}
+                title="Mis servicios de hoy"
+                sides={["professional"]}
+              />
+            )}
+
             {userId && (
               <ProHero
                 userId={userId}
@@ -875,20 +900,6 @@ function ProDashboard() {
               />
             )}
             {userId && <OpportunityPulse userId={userId} onOpen={() => setTab("ofertas")} />}
-
-            {userId && <PendingBookingRequests userId={userId} />}
-
-            {/* Alertas SOS de las personas que atiendo (solo aparece si hay alguna) */}
-            {userId && <SosAlertsPanel userId={userId} />}
-
-            {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
-            {userId && (
-              <ActiveServicesCard
-                userId={userId}
-                title="Mis servicios de hoy"
-                sides={["professional"]}
-              />
-            )}
 
             {/* Onboarding banner — only for new profiles (< 30%) */}
             {completionPct < 30 && (
@@ -915,118 +926,6 @@ function ProDashboard() {
                 </div>
               </div>
             )}
-
-            {/* Hero card */}
-            <div className="rounded-2xl bg-gradient-to-br from-biosensor/10 via-background to-fuchsia-neural/10 border border-border p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  {profile?.avatar_url ? (
-                    <img
-                      src={profile.avatar_url}
-                      alt={greetingName}
-                      className="h-14 w-14 rounded-full object-cover border-2 border-biosensor/30"
-                    />
-                  ) : (
-                    <div className="h-14 w-14 rounded-full bg-biosensor/10 border-2 border-biosensor/20 flex items-center justify-center">
-                      <User className="h-7 w-7 text-biosensor" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-bold text-lg leading-tight">{greetingName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {specialty || "Completa tu especialidad"}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      {profile?.verified && (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
-                          <BadgeCheck className="h-3 w-3" /> Verificado
-                        </span>
-                      )}
-                      {profile?.ai_preapproved && !profile?.verified && (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-fuchsia-neural/10 text-fuchsia-neural font-medium">
-                          <Sparkles className="h-3 w-3" /> Pre-aprobado IA
-                        </span>
-                      )}
-                      {isOnline && (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Disponible
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* Trust ring */}
-                <div className="shrink-0 text-center">
-                  <div className="relative h-16 w-16">
-                    <svg className="h-16 w-16 -rotate-90" viewBox="0 0 60 60">
-                      <circle
-                        cx="30"
-                        cy="30"
-                        r="26"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        className="text-muted/30"
-                      />
-                      <circle
-                        cx="30"
-                        cy="30"
-                        r="26"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        strokeDasharray={`${(2 * Math.PI * 26 * trust) / 100} ${2 * Math.PI * 26 * (1 - trust / 100)}`}
-                        strokeLinecap="round"
-                        className="text-biosensor transition-all duration-700"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-base font-bold leading-none">{trust}</span>
-                      <span className="text-[9px] text-muted-foreground">Trust</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats row */}
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <StatPill
-                  icon={<Briefcase className="h-3.5 w-3.5" />}
-                  label="Turnos"
-                  value={String(profile?.total_jobs ?? 0)}
-                />
-                <StatPill
-                  icon={<Star className="h-3.5 w-3.5" />}
-                  label="Rating"
-                  value={(profile?.avg_rating ?? 0).toFixed(1)}
-                />
-                <StatPill
-                  icon={<TrendingUp className="h-3.5 w-3.5" />}
-                  label="Ofertas"
-                  value={String(offers.length)}
-                />
-              </div>
-
-              {/* Public profile link */}
-              {userId && (
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <Link
-                    to="/profesional/$proId"
-                    params={{ proId: userId }}
-                    className="flex-1 text-center text-xs font-medium text-biosensor border border-biosensor/30 rounded-xl py-2 hover:bg-biosensor/5 transition-colors"
-                  >
-                    Ver mi perfil público →
-                  </Link>
-                  <button
-                    onClick={() => setTab("perfil")}
-                    className="flex-1 text-center text-xs font-medium text-muted-foreground border border-border rounded-xl py-2 hover:bg-muted/30 transition-colors"
-                  >
-                    Editar perfil
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Next booking preview */}
             {bookings.length > 0 &&
@@ -1068,6 +967,43 @@ function ProDashboard() {
                   </div>
                 );
               })()}
+
+            {/* Top matching offers preview */}
+            <div className="rounded-2xl border border-border bg-card/95 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-biosensor" />
+                  <p className="text-sm font-semibold">Ofertas para ti</p>
+                </div>
+                <button
+                  onClick={() => setTab("ofertas")}
+                  className="text-xs text-biosensor hover:underline flex items-center gap-1"
+                >
+                  Ver todas <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+              {offers.slice(0, 3).map((o) => (
+                <OfferCard key={o.id} offer={o} applied={appliedIds.has(o.id)} onApply={apply} />
+              ))}
+              {offers.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No hay ofertas activas en este momento.
+                </p>
+              )}
+            </div>
+
+            {/* ¿Me ven en el mapa? + contadores reales en vivo (familias buscando cuidado, instituciones con ofertas abiertas) */}
+            {userId && (
+              <section aria-label="Visibilidad y actividad en vivo" className="space-y-3">
+                <LivePulseBar role="professional" />
+                <ProMapVisibility
+                  userId={userId}
+                  profile={profile}
+                  busy={togglingOnline}
+                  onAction={onVisibilityAction}
+                />
+              </section>
+            )}
 
             {/* Profile completion */}
             <div className="rounded-2xl border border-border bg-card/95 p-4">
@@ -1115,168 +1051,258 @@ function ProDashboard() {
               )}
             </div>
 
-            {/* AI suggestions strip */}
-            {(profile?.ai_suggestions?.length ?? 0) > 0 && (
-              <div className="rounded-2xl border border-fuchsia-neural/20 bg-fuchsia-neural/5 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-4 w-4 text-fuchsia-neural" />
-                  <p className="text-sm font-semibold text-fuchsia-neural">
-                    Sugerencias IA para ti
-                  </p>
+            {/* Lo demás, plegado para que Inicio sea corto: perfil, confianza, salud, billetera y plan */}
+            <details className="group rounded-2xl border border-border bg-card/95 p-4">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-base font-bold">
+                <span className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-muted-foreground" /> Mi perfil, billetera y más
+                </span>
+                <ChevronRight
+                  aria-hidden="true"
+                  className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
+                />
+              </summary>
+              <div className="mt-4 space-y-4">
+                {/* Hero card */}
+                <div className="rounded-2xl bg-gradient-to-br from-biosensor/10 via-background to-fuchsia-neural/10 border border-border p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={greetingName}
+                          className="h-14 w-14 rounded-full object-cover border-2 border-biosensor/30"
+                        />
+                      ) : (
+                        <div className="h-14 w-14 rounded-full bg-biosensor/10 border-2 border-biosensor/20 flex items-center justify-center">
+                          <User className="h-7 w-7 text-biosensor" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-bold text-lg leading-tight">{greetingName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {specialty || "Completa tu especialidad"}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          {profile?.verified && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
+                              <BadgeCheck className="h-3 w-3" /> Verificado
+                            </span>
+                          )}
+                          {profile?.ai_preapproved && !profile?.verified && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-fuchsia-neural/10 text-fuchsia-neural font-medium">
+                              <Sparkles className="h-3 w-3" /> Pre-aprobado IA
+                            </span>
+                          )}
+                          {isOnline && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Disponible
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Trust ring */}
+                    <div className="shrink-0 text-center">
+                      <div className="relative h-16 w-16">
+                        <svg className="h-16 w-16 -rotate-90" viewBox="0 0 60 60">
+                          <circle
+                            cx="30"
+                            cy="30"
+                            r="26"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            className="text-muted/30"
+                          />
+                          <circle
+                            cx="30"
+                            cy="30"
+                            r="26"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            strokeDasharray={`${(2 * Math.PI * 26 * trust) / 100} ${2 * Math.PI * 26 * (1 - trust / 100)}`}
+                            strokeLinecap="round"
+                            className="text-biosensor transition-all duration-700"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-base font-bold leading-none">{trust}</span>
+                          <span className="text-[9px] text-muted-foreground">Trust</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    <StatPill
+                      icon={<Briefcase className="h-3.5 w-3.5" />}
+                      label="Turnos"
+                      value={String(profile?.total_jobs ?? 0)}
+                    />
+                    <StatPill
+                      icon={<Star className="h-3.5 w-3.5" />}
+                      label="Rating"
+                      value={(profile?.avg_rating ?? 0).toFixed(1)}
+                    />
+                    <StatPill
+                      icon={<TrendingUp className="h-3.5 w-3.5" />}
+                      label="Ofertas"
+                      value={String(offers.length)}
+                    />
+                  </div>
+
+                  {/* Public profile link */}
+                  {userId && (
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <Link
+                        to="/profesional/$proId"
+                        params={{ proId: userId }}
+                        className="flex-1 text-center text-xs font-medium text-biosensor border border-biosensor/30 rounded-xl py-2 hover:bg-biosensor/5 transition-colors"
+                      >
+                        Ver mi perfil público →
+                      </Link>
+                      <button
+                        onClick={() => setTab("perfil")}
+                        className="flex-1 text-center text-xs font-medium text-muted-foreground border border-border rounded-xl py-2 hover:bg-muted/30 transition-colors"
+                      >
+                        Editar perfil
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <ul className="space-y-1.5">
-                  {(profile?.ai_suggestions ?? []).slice(0, 3).map((s, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex gap-2">
-                      <ChevronRight className="h-3.5 w-3.5 text-fuchsia-neural mt-0.5 shrink-0" />{" "}
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
-            {/* ¿Me ven en el mapa? + contadores reales en vivo (familias buscando cuidado, instituciones con ofertas abiertas) */}
-            {userId && (
-              <section aria-label="Visibilidad y actividad en vivo" className="space-y-3">
-                <LivePulseBar role="professional" />
-                <ProMapVisibility
-                  userId={userId}
-                  profile={profile}
-                  busy={togglingOnline}
-                  onAction={onVisibilityAction}
-                />
-              </section>
-            )}
+                {/* AI suggestions strip */}
+                {(profile?.ai_suggestions?.length ?? 0) > 0 && (
+                  <div className="rounded-2xl border border-fuchsia-neural/20 bg-fuchsia-neural/5 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-fuchsia-neural" />
+                      <p className="text-sm font-semibold text-fuchsia-neural">
+                        Sugerencias IA para ti
+                      </p>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {(profile?.ai_suggestions ?? []).slice(0, 3).map((s, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                          <ChevronRight className="h-3.5 w-3.5 text-fuchsia-neural mt-0.5 shrink-0" />{" "}
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-            {/* Top matching offers preview */}
-            <div className="rounded-2xl border border-border bg-card/95 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-biosensor" />
-                  <p className="text-sm font-semibold">Ofertas para ti</p>
+                {/* Trayectoria: nivel, sellos, gracias recibidos y cómo compartirla */}
+                {userId && (
+                  <div id="trayectoria" className="scroll-mt-4 empty:hidden">
+                    <CareerCard
+                      userId={userId}
+                      fullName={fullName || greetingName}
+                      specialty={specialty || null}
+                      verified={!!profile?.verified}
+                    />
+                  </div>
+                )}
+
+                {/* Tu Trust Score: lo que ven familias e instituciones y qué falta para subirlo */}
+                {userId && (
+                  <div id="confianza" className="scroll-mt-4">
+                    <OwnTrustCard
+                      userId={userId}
+                      kind="professional"
+                      completeLabel="Ir a Documentos"
+                      onCompleteIdentity={() => setTab("documentos")}
+                    />
+                  </div>
+                )}
+
+                {/* Quick actions */}
+                <div className="grid grid-cols-2 gap-3">
+                  <QuickAction
+                    icon={<User className="h-5 w-5 text-biosensor" />}
+                    label="Completar perfil"
+                    sub="Datos + foto + bio"
+                    onClick={() => setTab("perfil")}
+                  />
+                  <QuickAction
+                    icon={<FileText className="h-5 w-5 text-fuchsia-neural" />}
+                    label="Subir documentos"
+                    sub={`${Object.keys(docSummary).length} subidos`}
+                    onClick={() => setTab("documentos")}
+                  />
+                  <QuickAction
+                    icon={<CalendarDays className="h-5 w-5 text-biosensor" />}
+                    label="Mi agenda"
+                    sub="Disponibilidad"
+                    onClick={() => setTab("agenda")}
+                  />
+                  <QuickAction
+                    icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />}
+                    label="Re-evaluar Trust"
+                    sub={`Validación IA: ${aiScore}/100`}
+                    onClick={validateWithAI}
+                    loading={validating}
+                  />
+                  <QuickAction
+                    icon={<HeartPulse className="h-5 w-5 text-rose-500" />}
+                    label="Monitoreo de pacientes"
+                    sub="Signos vitales y alertas en vivo"
+                    onClick={() => {
+                      setTab("inicio");
+                      setTimeout(() => {
+                        const el = document.getElementById("clinical-monitor-section");
+                        el?.scrollIntoView({ behavior: "smooth" });
+                      }, 100);
+                    }}
+                  />
                 </div>
-                <button
-                  onClick={() => setTab("ofertas")}
-                  className="text-xs text-biosensor hover:underline flex items-center gap-1"
-                >
-                  Ver todas <ChevronRight className="h-3 w-3" />
-                </button>
+
+                {/* Monitoreo Clínico propio del profesional */}
+                {userId && (
+                  <div id="clinical-monitor-section" className="space-y-2">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <HeartPulse className="h-4 w-4 text-rose-500 animate-pulse" />
+                      Mis signos vitales
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
+                        Live
+                      </span>
+                    </p>
+                    <ClinicalMonitor patientId={userId} showDeviceGuide compact />
+                  </div>
+                )}
+
+                {/* Billetera — saldo, movimientos y retiros Nequi/PSE/RappiPay */}
+                {userId && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <Wallet className="h-4 w-4 text-emerald-600" /> Mi billetera
+                    </p>
+                    <WalletPanel userId={userId} />
+                  </div>
+                )}
+
+                {/* Créditos IA — saldo y consumo del cupo mensual */}
+                {userId && <AiCreditsBalance userId={userId} />}
+
+                {/* Referidos — gana meses gratis */}
+                {userId && <ReferralCard userId={userId} />}
+
+                {/* Suscripción */}
+                {userId && (
+                  <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
+                    <MercadoPagoSubscription
+                      userId={userId}
+                      defaultPlan="pro_monthly"
+                      plans={["pro_monthly", "pro_premium_monthly"]}
+                    />
+                  </div>
+                )}
               </div>
-              {offers.slice(0, 3).map((o) => (
-                <OfferCard key={o.id} offer={o} applied={appliedIds.has(o.id)} onApply={apply} />
-              ))}
-              {offers.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No hay ofertas activas en este momento.
-                </p>
-              )}
-            </div>
-
-            {/* Trayectoria: nivel, sellos, gracias recibidos y cómo compartirla */}
-            {userId && (
-              <div id="trayectoria" className="scroll-mt-4 empty:hidden">
-                <CareerCard
-                  userId={userId}
-                  fullName={fullName || greetingName}
-                  specialty={specialty || null}
-                  verified={!!profile?.verified}
-                />
-              </div>
-            )}
-
-            {/* Tu Trust Score: lo que ven familias e instituciones y qué falta para subirlo */}
-            {userId && (
-              <div id="confianza" className="scroll-mt-4">
-                <OwnTrustCard
-                  userId={userId}
-                  kind="professional"
-                  completeLabel="Ir a Documentos"
-                  onCompleteIdentity={() => setTab("documentos")}
-                />
-              </div>
-            )}
-
-            {/* Quick actions */}
-            <div className="grid grid-cols-2 gap-3">
-              <QuickAction
-                icon={<User className="h-5 w-5 text-biosensor" />}
-                label="Completar perfil"
-                sub="Datos + foto + bio"
-                onClick={() => setTab("perfil")}
-              />
-              <QuickAction
-                icon={<FileText className="h-5 w-5 text-fuchsia-neural" />}
-                label="Subir documentos"
-                sub={`${Object.keys(docSummary).length} subidos`}
-                onClick={() => setTab("documentos")}
-              />
-              <QuickAction
-                icon={<CalendarDays className="h-5 w-5 text-biosensor" />}
-                label="Mi agenda"
-                sub="Disponibilidad"
-                onClick={() => setTab("agenda")}
-              />
-              <QuickAction
-                icon={<TrendingUp className="h-5 w-5 text-fuchsia-neural" />}
-                label="Re-evaluar Trust"
-                sub={`Validación IA: ${aiScore}/100`}
-                onClick={validateWithAI}
-                loading={validating}
-              />
-              <QuickAction
-                icon={<HeartPulse className="h-5 w-5 text-rose-500" />}
-                label="Monitoreo de pacientes"
-                sub="Signos vitales y alertas en vivo"
-                onClick={() => {
-                  setTab("inicio");
-                  setTimeout(() => {
-                    const el = document.getElementById("clinical-monitor-section");
-                    el?.scrollIntoView({ behavior: "smooth" });
-                  }, 100);
-                }}
-              />
-            </div>
-
-            {/* Monitoreo Clínico propio del profesional */}
-            {userId && (
-              <div id="clinical-monitor-section" className="space-y-2">
-                <p className="text-sm font-semibold flex items-center gap-1.5">
-                  <HeartPulse className="h-4 w-4 text-rose-500 animate-pulse" />
-                  Mis signos vitales
-                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
-                  </span>
-                </p>
-                <ClinicalMonitor patientId={userId} showDeviceGuide compact />
-              </div>
-            )}
-
-            {/* Billetera — saldo, movimientos y retiros Nequi/PSE/RappiPay */}
-            {userId && (
-              <div className="space-y-2">
-                <p className="text-sm font-semibold flex items-center gap-1.5">
-                  <Wallet className="h-4 w-4 text-emerald-600" /> Mi billetera
-                </p>
-                <WalletPanel userId={userId} />
-              </div>
-            )}
-
-            {/* Créditos IA — saldo y consumo del cupo mensual */}
-            {userId && <AiCreditsBalance userId={userId} />}
-
-            {/* Referidos — gana meses gratis */}
-            {userId && <ReferralCard userId={userId} />}
-
-            {/* Suscripción */}
-            {userId && (
-              <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
-                <MercadoPagoSubscription
-                  userId={userId}
-                  defaultPlan="pro_monthly"
-                  plans={["pro_monthly", "pro_premium_monthly"]}
-                />
-              </div>
-            )}
+            </details>
           </div>
         )}
 

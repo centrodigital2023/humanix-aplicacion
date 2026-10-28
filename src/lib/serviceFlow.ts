@@ -111,7 +111,16 @@ const ALERT_TYPES: Record<string, { tone: LiveAlertTone; sticky: boolean }> = {
   opportunity_alert: { tone: "info", sticky: false },
   application_accepted: { tone: "good", sticky: true },
   application_counter_offer: { tone: "info", sticky: false },
-  // Para familia y EPS/IPS (y su círculo)
+  slot_counter_offer: { tone: "info", sticky: false },
+  slot_proposal_accepted: { tone: "good", sticky: true },
+  slot_proposal_rejected: { tone: "info", sticky: false },
+  application_rejected: { tone: "info", sticky: false },
+  // Para familia y EPS/IPS (y su círculo): llegan propuestas, como en inDrive
+  application_received: { tone: "good", sticky: false },
+  slot_proposal_received: { tone: "good", sticky: false },
+  application_withdrawn: { tone: "info", sticky: false },
+  booking_confirmed: { tone: "good", sticky: false },
+  plan_b_started: { tone: "info", sticky: true },
   booking_accepted: { tone: "good", sticky: true },
   professional_on_the_way: { tone: "info", sticky: false },
   care_started: { tone: "info", sticky: false },
@@ -123,6 +132,19 @@ const ALERT_TYPES: Record<string, { tone: LiveAlertTone; sticky: boolean }> = {
 };
 
 const BOOKING_LINK = /^\/servicio\/([0-9a-f-]{36})$/i;
+/** Algunos avisos de la base apuntan al panel de un rol fijo (p. ej. «Nueva postulación» → /dashboard/institucion, también para familias). */
+const ROLE_PANEL_LINK = /^\/dashboard\/(institucion|familia|profesional)\/?$/;
+
+/** ¿Este tipo de aviso sale como alerta flotante? Los paneles lo usan para no repetirlo en un toast. */
+export function isLiveAlertType(type: string): boolean {
+  return type in ALERT_TYPES;
+}
+
+/** Enlace del aviso: el panel genérico decide por rol, así nadie cae en el panel de otro rol. */
+export function alertLink(link: string | null): string | null {
+  if (!link) return null;
+  return ROLE_PANEL_LINK.test(link) ? "/dashboard" : link;
+}
 
 function bookingIdOf(n: NotificationRow): string | undefined {
   const meta = n.meta as { booking_id?: unknown } | null | undefined;
@@ -141,7 +163,7 @@ export function liveAlertFromNotification(n: NotificationRow): LiveAlert | null 
     tone: kind.tone,
     title: n.title,
     body: n.body ?? "",
-    link: n.link,
+    link: alertLink(n.link),
     bookingId: n.type === "booking_requested" ? bookingId : undefined,
     sticky: kind.sticky,
     createdAt: n.created_at,
@@ -207,3 +229,38 @@ export function pushAlert(
   if (dismissed.has(alert.key) || stack.some((a) => a.key === alert.key)) return stack;
   return [alert, ...stack].slice(0, max);
 }
+
+// ── Espera de respuesta (pedido sin aceptar) ─────────────────────────────────
+
+/** Tras este tiempo sin respuesta se ofrece pedir a otro profesional, como en inDrive. */
+export const NO_ANSWER_AFTER_MS = 10 * 60 * 1000;
+
+/** «hace 3 min», «hace 1 h»: cuánto lleva esperando un pedido. */
+export function waitingLabel(createdAt: string, now: number): string {
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return "";
+  const min = Math.max(0, Math.floor((now - t) / 60_000));
+  if (min < 1) return "hace un momento";
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.floor(h / 24);
+  return `hace ${d} ${d === 1 ? "día" : "días"}`;
+}
+
+/** ¿El pedido lleva tanto sin respuesta que conviene ofrecer otra opción? */
+export function isWaitingTooLong(status: string, createdAt: string, now: number): boolean {
+  if (status !== "pending") return false;
+  const t = Date.parse(createdAt);
+  return Number.isFinite(t) && now - t >= NO_ANSWER_AFTER_MS;
+}
+
+/** Nombre corto de cada estado, igual al indicador de pasos (Pedido, Aceptado, En camino, Cuidando, Terminado). */
+export const STATUS_LABEL: Record<string, string> = {
+  pending: "Pedido",
+  confirmed: "Aceptado",
+  in_route: "En camino",
+  in_progress: "Cuidando",
+  completed: "Terminado",
+  cancelled: "Cancelado",
+};

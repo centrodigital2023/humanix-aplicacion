@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useRealtimeProfessionalFeed } from "@/hooks/use-realtime-professional-feed";
+import { acceptPendingBooking } from "@/hooks/use-pending-bookings";
 import {
   askSystemNotifications,
   canAskSystemNotifications,
@@ -128,19 +129,17 @@ function AlertCard({
   const accept = async () => {
     if (!alert.bookingId) return;
     setAccepting(true);
-    const { data, error } = await supabase
-      .from("service_bookings")
-      .update({ status: "confirmed" })
-      .eq("id", alert.bookingId)
-      .eq("status", "pending")
-      .select("id");
-    setAccepting(false);
-    if (error) {
+    let ok = false;
+    try {
+      ok = await acceptPendingBooking(alert.bookingId);
+    } catch (error) {
+      setAccepting(false);
       toast.error(friendlyError(error));
       return;
     }
+    setAccepting(false);
     onDismiss();
-    if (!data?.length) {
+    if (!ok) {
       toast.info("Esta solicitud ya no está disponible.");
       return;
     }
