@@ -287,20 +287,23 @@ export function AppShell({
             <HomeButton />
 
             <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-              {(crumbs ?? [{ label: title }]).map((c, i, arr) => (
-                <span key={`${c.label}-${i}`} className="flex items-center gap-1.5 truncate">
-                  {i > 0 && <ChevronRight className="h-3 w-3 opacity-50" />}
-                  {c.to ? (
-                    <Link to={c.to} className="hover:text-foreground truncate">
-                      {c.label}
-                    </Link>
-                  ) : (
-                    <span className={i === arr.length - 1 ? "text-foreground font-medium" : ""}>
-                      {c.label}
-                    </span>
-                  )}
-                </span>
-              ))}
+              {/* El botón 🏠 Inicio ya lleva a «/»: una miga a «/» lo repetiría. */}
+              {(crumbs ?? [{ label: title }])
+                .filter((c) => c.to !== "/")
+                .map((c, i, arr) => (
+                  <span key={`${c.label}-${i}`} className="flex items-center gap-1.5 truncate">
+                    {i > 0 && <ChevronRight className="h-3 w-3 opacity-50" />}
+                    {c.to ? (
+                      <Link to={c.to} className="hover:text-foreground truncate">
+                        {c.label}
+                      </Link>
+                    ) : (
+                      <span className={i === arr.length - 1 ? "text-foreground font-medium" : ""}>
+                        {c.label}
+                      </span>
+                    )}
+                  </span>
+                ))}
             </div>
 
             <div className="flex-1" />

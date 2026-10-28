@@ -40,7 +40,7 @@ import { z } from "zod";
 import { friendlyError } from "@/lib/friendlyError";
 import { buildSeo } from "@/lib/seo";
 
-export const Route = createFileRoute("/dashboard/familia/onboarding")({
+export const Route = createFileRoute("/dashboard/familia_/onboarding")({
   head: () => buildSeo({
     title: "Completa tu perfil familiar · Humanix",
     description: "Completa tus datos familiares, documentos de identidad y contacto de emergencia para coordinar cuidado en casa con Humanix.",

@@ -92,7 +92,8 @@ import { Route as SuperadminTestimoniosRouteImport } from './routes/superadmin.t
 import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.validacion'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
-import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
+import { Route as DashboardFamiliaBienvenidaRouteImport } from './routes/dashboard.familia_.bienvenida'
+import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia_.onboarding'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -514,11 +515,17 @@ const ApiMercadopagoWebhookRoute = ApiMercadopagoWebhookRouteImport.update({
   path: '/api/mercadopago/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardFamiliaBienvenidaRoute =
+  DashboardFamiliaBienvenidaRouteImport.update({
+    id: '/familia_/bienvenida',
+    path: '/familia/bienvenida',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardFamiliaOnboardingRoute =
   DashboardFamiliaOnboardingRouteImport.update({
-    id: '/onboarding',
-    path: '/onboarding',
-    getParentRoute: () => DashboardFamiliaRoute,
+    id: '/familia_/onboarding',
+    path: '/familia/onboarding',
+    getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardInstitucionOnboardingRoute =
   DashboardInstitucionOnboardingRouteImport.update({
@@ -600,7 +607,7 @@ export interface FileRoutesByFullPath {
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
-  '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
+  '/dashboard/familia': typeof DashboardFamiliaRoute
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
@@ -627,6 +634,7 @@ export interface FileRoutesByFullPath {
   '/superadmin/': typeof SuperadminIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/dashboard/familia/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -688,7 +696,7 @@ export interface FileRoutesByTo {
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
-  '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
+  '/dashboard/familia': typeof DashboardFamiliaRoute
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
@@ -715,6 +723,7 @@ export interface FileRoutesByTo {
   '/superadmin': typeof SuperadminIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/dashboard/familia/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -779,7 +788,7 @@ export interface FileRoutesById {
   '/b/$bannerId': typeof BBannerIdRoute
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
-  '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
+  '/dashboard/familia': typeof DashboardFamiliaRoute
   '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
@@ -806,7 +815,8 @@ export interface FileRoutesById {
   '/superadmin/': typeof SuperadminIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
-  '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
+  '/dashboard/familia_/bienvenida': typeof DashboardFamiliaBienvenidaRoute
+  '/dashboard/familia_/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -898,6 +908,7 @@ export interface FileRouteTypes {
     | '/superadmin/'
     | '/.lovable/oauth/consent'
     | '/api/mercadopago/webhook'
+    | '/dashboard/familia/bienvenida'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/api/public/mercadopago/webhook'
@@ -986,6 +997,7 @@ export interface FileRouteTypes {
     | '/superadmin'
     | '/.lovable/oauth/consent'
     | '/api/mercadopago/webhook'
+    | '/dashboard/familia/bienvenida'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/api/public/mercadopago/webhook'
@@ -1076,7 +1088,8 @@ export interface FileRouteTypes {
     | '/superadmin/'
     | '/.lovable/oauth/consent'
     | '/api/mercadopago/webhook'
-    | '/dashboard/familia/onboarding'
+    | '/dashboard/familia_/bienvenida'
+    | '/dashboard/familia_/onboarding'
     | '/dashboard/institucion/onboarding'
     | '/api/public/mercadopago/webhook'
     | '/lovable/email/auth/preview'
@@ -1735,12 +1748,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMercadopagoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard/familia/onboarding': {
-      id: '/dashboard/familia/onboarding'
-      path: '/onboarding'
+    '/dashboard/familia_/bienvenida': {
+      id: '/dashboard/familia_/bienvenida'
+      path: '/familia/bienvenida'
+      fullPath: '/dashboard/familia/bienvenida'
+      preLoaderRoute: typeof DashboardFamiliaBienvenidaRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/familia_/onboarding': {
+      id: '/dashboard/familia_/onboarding'
+      path: '/familia/onboarding'
       fullPath: '/dashboard/familia/onboarding'
       preLoaderRoute: typeof DashboardFamiliaOnboardingRouteImport
-      parentRoute: typeof DashboardFamiliaRoute
+      parentRoute: typeof DashboardRoute
     }
     '/dashboard/institucion/onboarding': {
       id: '/dashboard/institucion/onboarding'
@@ -1773,17 +1793,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface DashboardFamiliaRouteChildren {
-  DashboardFamiliaOnboardingRoute: typeof DashboardFamiliaOnboardingRoute
-}
-
-const DashboardFamiliaRouteChildren: DashboardFamiliaRouteChildren = {
-  DashboardFamiliaOnboardingRoute: DashboardFamiliaOnboardingRoute,
-}
-
-const DashboardFamiliaRouteWithChildren =
-  DashboardFamiliaRoute._addFileChildren(DashboardFamiliaRouteChildren)
-
 interface DashboardInstitucionRouteChildren {
   DashboardInstitucionOnboardingRoute: typeof DashboardInstitucionOnboardingRoute
 }
@@ -1798,23 +1807,27 @@ const DashboardInstitucionRouteWithChildren =
 interface DashboardRouteChildren {
   DashboardEpsRoute: typeof DashboardEpsRoute
   DashboardEquipoRoute: typeof DashboardEquipoRoute
-  DashboardFamiliaRoute: typeof DashboardFamiliaRouteWithChildren
+  DashboardFamiliaRoute: typeof DashboardFamiliaRoute
   DashboardInstitucionRoute: typeof DashboardInstitucionRouteWithChildren
   DashboardMonitoreoRoute: typeof DashboardMonitoreoRoute
   DashboardProfesionalRoute: typeof DashboardProfesionalRoute
   DashboardWhatsappRoute: typeof DashboardWhatsappRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardFamiliaBienvenidaRoute: typeof DashboardFamiliaBienvenidaRoute
+  DashboardFamiliaOnboardingRoute: typeof DashboardFamiliaOnboardingRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEpsRoute: DashboardEpsRoute,
   DashboardEquipoRoute: DashboardEquipoRoute,
-  DashboardFamiliaRoute: DashboardFamiliaRouteWithChildren,
+  DashboardFamiliaRoute: DashboardFamiliaRoute,
   DashboardInstitucionRoute: DashboardInstitucionRouteWithChildren,
   DashboardMonitoreoRoute: DashboardMonitoreoRoute,
   DashboardProfesionalRoute: DashboardProfesionalRoute,
   DashboardWhatsappRoute: DashboardWhatsappRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardFamiliaBienvenidaRoute: DashboardFamiliaBienvenidaRoute,
+  DashboardFamiliaOnboardingRoute: DashboardFamiliaOnboardingRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
