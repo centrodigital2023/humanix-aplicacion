@@ -195,9 +195,9 @@ export function parseActiveServices(rows: unknown): ActiveService[] {
 }
 
 export const SERVICE_STATUS_LABEL: Record<string, string> = {
-  confirmed: "Confirmado",
+  confirmed: "Aceptado",
   in_route: "En camino",
-  in_progress: "En curso",
+  in_progress: "Cuidando",
 };
 
 /** Qué sigue para cada rol en cada estado (texto del botón del tablero). */

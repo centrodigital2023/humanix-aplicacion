@@ -40,7 +40,15 @@ import { KudosCard } from "@/components/humanix/care/KudosCard";
 import { useCareReport } from "@/hooks/use-care-loop";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
-import { flowSentence, isContactUnlocked, nextProfessionalAction } from "@/lib/serviceFlow";
+import {
+  STATUS_LABEL as FLOW_STATUS_LABEL,
+  flowSentence,
+  isContactUnlocked,
+  isWaitingTooLong,
+  nextProfessionalAction,
+  waitingLabel,
+} from "@/lib/serviceFlow";
+import { useNow } from "@/hooks/use-now";
 
 export const Route = createFileRoute("/servicio/$bookingId")({
   head: () => ({
@@ -90,6 +98,7 @@ type Booking = {
   arrived_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+  created_at?: string | null;
   /** Presente cuando el servicio nació de una oferta/turno publicado (activa el plan B si el profesional cancela). */
   job_offer_id?: string | null;
 };
@@ -107,13 +116,14 @@ const COP = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  pending: { label: "Pendiente de confirmación", color: "bg-muted text-foreground" },
-  confirmed: { label: "Confirmado", color: "bg-biosensor/15 text-biosensor" },
-  in_route: { label: "En ruta", color: "bg-copper/15 text-copper" },
-  in_progress: { label: "En servicio", color: "bg-biosensor/15 text-biosensor" },
-  completed: { label: "Completado", color: "bg-foreground/10 text-foreground" },
-  cancelled: { label: "Cancelado", color: "bg-fuchsia-neural/15 text-fuchsia-neural" },
+// Mismos nombres que el indicador de pasos (Pedido, Aceptado, En camino, Cuidando, Terminado).
+const STATUS_COLOR: Record<string, string> = {
+  pending: "bg-muted text-foreground",
+  confirmed: "bg-biosensor/15 text-biosensor",
+  in_route: "bg-copper/15 text-copper",
+  in_progress: "bg-biosensor/15 text-biosensor",
+  completed: "bg-foreground/10 text-foreground",
+  cancelled: "bg-fuchsia-neural/15 text-fuchsia-neural",
 };
 
 function ServicePage() {
@@ -128,6 +138,8 @@ function ServicePage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [clientOrigin, setClientOrigin] = useState<"institution" | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const now = useNow(30_000);
 
   useEffect(() => {
     let cancelled = false;
@@ -267,7 +279,10 @@ function ServicePage() {
 
   /** Cambia el estado de la reserva. Devuelve true si se guardó (las reglas de transición las impone la base de datos). */
   const updateStatus = async (patch: StatusPatch): Promise<boolean> => {
+    if (busy) return false;
+    setBusy(true);
     const { error } = await supabase.from("service_bookings").update(patch).eq("id", bookingId);
+    setBusy(false);
     if (error) {
       toast.error(friendlyError(error));
       return false;
@@ -285,7 +300,12 @@ function ServicePage() {
     );
   }
 
-  const status = STATUS_LABEL[booking.status] ?? STATUS_LABEL.pending;
+  const status = {
+    label: FLOW_STATUS_LABEL[booking.status] ?? FLOW_STATUS_LABEL.pending,
+    color: STATUS_COLOR[booking.status] ?? STATUS_COLOR.pending,
+  };
+  const waitingTooLong =
+    isClient && isWaitingTooLong(booking.status, booking.created_at ?? booking.scheduled_at, now);
   const completed = booking.status === "completed";
   const cancelled = booking.status === "cancelled";
   const canAct = (isProfessional || isClient) && !completed && !cancelled;
@@ -295,7 +315,7 @@ function ServicePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="pt-24 pb-20">
+      <main className="pt-24 pb-28 sm:pb-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <Link
             to="/dashboard"
@@ -390,6 +410,60 @@ function ServicePage() {
                 clientOrigin,
               )}
             />
+            {booking.status === "pending" && isClient && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Enviado {waitingLabel(booking.created_at ?? booking.scheduled_at, now)}. Te avisamos
+                al instante, aunque estés en otra pantalla.
+              </p>
+            )}
+            {waitingTooLong && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-copper/30 bg-copper/5 p-3">
+                <p className="text-sm">
+                  ¿{firstName} no responde? Pídele a otro profesional cercano.
+                </p>
+                <Link
+                  to="/buscar"
+                  className="inline-flex min-h-11 items-center rounded-xl border border-copper/40 bg-card px-4 text-sm font-bold text-copper"
+                >
+                  Pedir a otro
+                </Link>
+              </div>
+            )}
+            {isProfessional && proAction && !completed && !cancelled && (
+              <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur sm:static sm:z-auto sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (proAction.needsDialog) return setFinishOpen(true);
+                    void (async () => {
+                      const ok = await updateStatus({
+                        status: proAction.next,
+                        ...(proAction.stamp ? { [proAction.stamp]: new Date().toISOString() } : {}),
+                      });
+                      if (ok && proAction.next === "confirmed")
+                        toast.success("¡Aceptaste! Ya puedes escribir y llamar.");
+                    })();
+                  }}
+                  className={`flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-lg font-bold shadow-lg transition active:scale-[0.98] disabled:opacity-60 ${
+                    proAction.next === "in_route"
+                      ? "bg-copper text-copper-foreground"
+                      : "bg-biosensor text-biosensor-foreground"
+                  }`}
+                >
+                  {busy ? (
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                  ) : proAction.next === "in_route" ? (
+                    <PlayCircle className="h-5 w-5" aria-hidden />
+                  ) : proAction.next === "in_progress" ? (
+                    <Flag className="h-5 w-5" aria-hidden />
+                  ) : (
+                    <CheckCircle2 className="h-5 w-5" aria-hidden />
+                  )}
+                  {proAction.label}
+                </button>
+              </div>
+            )}
           </div>
 
           {!cancelled && !completed && (
@@ -407,30 +481,7 @@ function ServicePage() {
                       Acciones del servicio
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {isProfessional && proAction && !proAction.needsDialog && (
-                        <ActionButton
-                          icon={
-                            proAction.next === "in_route" ? (
-                              <PlayCircle className="h-4 w-4" />
-                            ) : proAction.next === "in_progress" ? (
-                              <Flag className="h-4 w-4" />
-                            ) : (
-                              <CheckCircle2 className="h-4 w-4" />
-                            )
-                          }
-                          label={proAction.label}
-                          onClick={() =>
-                            void updateStatus({
-                              status: proAction.next,
-                              ...(proAction.stamp
-                                ? { [proAction.stamp]: new Date().toISOString() }
-                                : {}),
-                            })
-                          }
-                          tone={proAction.next === "in_route" ? "copper" : "bio"}
-                        />
-                      )}
-                      {booking.status === "in_progress" && (
+                      {booking.status === "in_progress" && isClient && (
                         <ActionButton
                           icon={<CheckCircle2 className="h-4 w-4" />}
                           label="Finalizar servicio"
@@ -440,7 +491,9 @@ function ServicePage() {
                       )}
                       <ActionButton
                         icon={<XCircle className="h-4 w-4" />}
-                        label="Cancelar"
+                        label={
+                          isProfessional && booking.status === "pending" ? "Rechazar" : "Cancelar"
+                        }
                         onClick={() => setCancelOpen(true)}
                         tone="fuchsia"
                       />

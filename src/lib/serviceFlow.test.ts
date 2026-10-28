@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  alertLink,
   flowSentence,
+  isLiveAlertType,
+  isWaitingTooLong,
+  waitingLabel,
   isContactUnlocked,
   isRecent,
   liveAlertFromBooking,
@@ -94,6 +98,42 @@ describe("liveAlertFromNotification", () => {
   it("ignora avisos que no deben interrumpir", () => {
     expect(liveAlertFromNotification(notif({ type: "kudos_received" }))).toBeNull();
     expect(liveAlertFromNotification(notif({ type: "payment_rejected" }))).toBeNull();
+  });
+});
+
+describe("propuestas en vivo para familia y EPS/IPS", () => {
+  it("una postulación nueva interrumpe con alerta, sin quedarse fija", () => {
+    const a = liveAlertFromNotification(
+      notif({ type: "application_received", id: "n3", link: "/dashboard/institucion", meta: null }),
+    );
+    expect(a).toMatchObject({ key: "n:n3", tone: "good", sticky: false, link: "/dashboard" });
+    expect(a?.bookingId).toBeUndefined();
+  });
+  it("las propuestas por horas y su aceptación también avisan", () => {
+    expect(isLiveAlertType("slot_proposal_received")).toBe(true);
+    expect(isLiveAlertType("slot_proposal_accepted")).toBe(true);
+    expect(isLiveAlertType("kudos_received")).toBe(false);
+  });
+  it("el enlace al panel de un rol pasa por el panel genérico; el del servicio se respeta", () => {
+    expect(alertLink("/dashboard/familia")).toBe("/dashboard");
+    expect(alertLink(`/servicio/${BOOKING}`)).toBe(`/servicio/${BOOKING}`);
+    expect(alertLink(null)).toBeNull();
+  });
+});
+
+describe("espera de respuesta", () => {
+  const now = Date.parse("2026-10-28T12:00:00Z");
+  it("cuenta el tiempo de espera en palabras", () => {
+    expect(waitingLabel("2026-10-28T11:59:40Z", now)).toBe("hace un momento");
+    expect(waitingLabel("2026-10-28T11:57:00Z", now)).toBe("hace 3 min");
+    expect(waitingLabel("2026-10-28T10:00:00Z", now)).toBe("hace 2 h");
+    expect(waitingLabel("2026-10-26T12:00:00Z", now)).toBe("hace 2 días");
+    expect(waitingLabel("no-es-fecha", now)).toBe("");
+  });
+  it("ofrece otra opción solo a pedidos pendientes con 10 min o más", () => {
+    expect(isWaitingTooLong("pending", "2026-10-28T11:55:00Z", now)).toBe(false);
+    expect(isWaitingTooLong("pending", "2026-10-28T11:50:00Z", now)).toBe(true);
+    expect(isWaitingTooLong("confirmed", "2026-10-28T10:00:00Z", now)).toBe(false);
   });
 });
 

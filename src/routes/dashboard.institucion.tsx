@@ -59,6 +59,7 @@ import { OffersMap, type MapPoint } from "@/components/humanix/OffersMap";
 
 import { useAppUser } from "@/hooks/use-app-user";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
+import { MyBookings } from "@/components/humanix/simple/MyBookings";
 import { CoverageCenter } from "@/components/humanix/hub/CoverageCenter";
 import { ApplicantsInbox } from "@/components/humanix/hub/ApplicantsInbox";
 import { PublishShiftsDialog } from "@/components/humanix/hub/PublishShiftsDialog";
@@ -430,7 +431,7 @@ function InstitutionDashboard() {
   // Applications and talent are unaffected by offer metadata changes.
   useRealtimeRefresh(
     `inst-offers-${user?.id ?? "anon"}`,
-    [{ table: "job_offers", event: "*" }],
+    [{ table: "job_offers", event: "*", filter: user?.id ? `posted_by=eq.${user.id}` : undefined }],
     async () => {
       if (!user?.id) return;
       const { data } = await supabase
@@ -720,14 +721,36 @@ function InstitutionDashboard() {
               />
             )}
 
-            {/* Tu Trust Score: lo que ven los profesionales junto a tus ofertas y qué falta para subirlo */}
-            <div id="confianza" className="scroll-mt-24">
-              <OwnTrustCard
-                userId={user.id}
-                kind="institution"
-                completeLabel="Completar perfil de la institución"
-                onCompleteIdentity={() => void navigate({ to: "/institution/profile" })}
+            {/* Pedidos directos en vivo, como en inDrive: Pedido → Aceptado → En camino → Cuidando */}
+            <MyBookings userId={user.id} title="Pedidos en vivo" />
+
+            {/* Turnos en vivo: estado, alertas, ánimo y últimos signos vitales de cada turno en curso */}
+            <div id="turnos-en-vivo" className="scroll-mt-24">
+              <ActiveServicesCard userId={user.id} title="Turnos en vivo" sides={["client"]} />
+            </div>
+
+            {/* Postulaciones: responder, negociar el valor y aceptar (reserva + contrato) */}
+            <div id="postulaciones" className="scroll-mt-24">
+              <ApplicantsInbox userId={user.id} compact onSeeAll={() => setTab("ofertas")} />
+            </div>
+
+            {/* SOS: alertas de mis servicios y botón para pedir ayuda en uno de ellos (solo aparece la lista si hay alguna) */}
+            <SosAlertsPanel userId={user.id} />
+            <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground sm:max-w-[60%]">
+                ¿Emergencia en uno de tus turnos? Avisa al equipo de Humanix y a tu profesional con
+                la ubicación, y llama al 123.
+              </p>
+              <SosFamiliarButton
+                patientId={user.id}
+                patientName={instProfile?.institution_name}
+                label="SOS Institución"
               />
+            </div>
+
+            {/* Contratos inteligentes pendientes de firma o vigentes */}
+            <div id="contratos" className="scroll-mt-24">
+              <ContractsPanel userId={user.id} title="Contratos inteligentes" />
             </div>
 
             <div id="cobertura" className="scroll-mt-24">
@@ -748,101 +771,6 @@ function InstitutionDashboard() {
                 onGoToTalent={() => setTab("talento")}
               />
             </div>
-
-            {/* Contadores reales en vivo: profesionales disponibles, en vivo y ocupados, e instituciones con ofertas abiertas */}
-            <LivePulseBar role="institution" />
-
-            {/* Profesionales disponibles: misma fuente validada que el mapa (pestaña Talento), en vivo */}
-            <NearbyProsList title="Profesionales disponibles" limit={6} />
-
-            {/* SOS: alertas de mis servicios y botón para pedir ayuda en uno de ellos (solo aparece la lista si hay alguna) */}
-            <SosAlertsPanel userId={user.id} />
-            <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground sm:max-w-[60%]">
-                ¿Emergencia en uno de tus turnos? Avisa al equipo de Humanix y a tu profesional con
-                la ubicación, y llama al 123.
-              </p>
-              <SosFamiliarButton
-                patientId={user.id}
-                patientName={instProfile?.institution_name}
-                label="SOS Institución"
-              />
-            </div>
-
-            {/* Turnos en vivo: estado, alertas, ánimo y últimos signos vitales de cada turno en curso */}
-            <div id="turnos-en-vivo" className="scroll-mt-24">
-              <ActiveServicesCard userId={user.id} title="Turnos en vivo" sides={["client"]} />
-            </div>
-
-            {/* KPI row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <KpiCard
-                icon={<Briefcase className="h-5 w-5" />}
-                label="Ofertas abiertas"
-                value={metrics.open}
-                tone="fuchsia"
-                sub={`${offers.length} totales`}
-              />
-              <KpiCard
-                icon={<Inbox className="h-5 w-5" />}
-                label="Nuevas postulaciones"
-                value={metrics.pending}
-                tone="amber"
-                sub="requieren respuesta"
-                urgent={metrics.pending > 0}
-              />
-              <KpiCard
-                icon={<CheckCircle2 className="h-5 w-5" />}
-                label="Turnos cubiertos"
-                value={metrics.filled}
-                tone="bio"
-                sub={`${metrics.accepted} aceptados`}
-              />
-              <KpiCard
-                icon={<Target className="h-5 w-5" />}
-                label="Tasa de conversión"
-                value={`${metrics.convRate}%`}
-                tone="cyber"
-                sub={`${applications.length} postulaciones`}
-              />
-            </div>
-
-            {/* Budget bar */}
-            {metrics.totalBudget > 0 && (
-              <div className="rounded-2xl border border-border bg-card/95 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-fuchsia-neural" />
-                    <p className="text-sm font-semibold">Presupuesto en ofertas activas</p>
-                  </div>
-                  <p className="text-sm font-bold text-fuchsia-neural">
-                    {COP(metrics.totalBudget)}
-                  </p>
-                </div>
-                <Progress
-                  value={Math.min(100, (metrics.filled / Math.max(offers.length, 1)) * 100)}
-                  className="h-1.5"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {metrics.filled} de {offers.length} ofertas cubiertas · conversión{" "}
-                  {metrics.convRate}%
-                </p>
-              </div>
-            )}
-
-            {/* Postulaciones: responder, negociar el valor y aceptar (reserva + contrato) */}
-            <div id="postulaciones" className="scroll-mt-24">
-              <ApplicantsInbox userId={user.id} compact onSeeAll={() => setTab("ofertas")} />
-            </div>
-
-            {/* Contratos inteligentes pendientes de firma o vigentes */}
-            <div id="contratos" className="scroll-mt-24">
-              <ContractsPanel userId={user.id} title="Contratos inteligentes" />
-            </div>
-
-            {/* Equipo de confianza (plan B automático) e historia de turnos exportable */}
-            <TrustedTeamCard userId={user.id} role="institution" />
-            <CareHistoryCard userId={user.id} kind="institution" />
 
             {/* Calificar a los profesionales de servicios ya cumplidos (estrellas y comentario) */}
             <div id="calificar" className="scroll-mt-24">
@@ -921,6 +849,81 @@ function InstitutionDashboard() {
                 onClick={() => openCenter("costos")}
               />
             </div>
+            {/* Contadores reales en vivo: profesionales disponibles, en vivo y ocupados, e instituciones con ofertas abiertas */}
+            <LivePulseBar role="institution" />
+
+            {/* Profesionales disponibles: misma fuente validada que el mapa (pestaña Talento), en vivo */}
+            <NearbyProsList title="Profesionales disponibles" limit={6} />
+
+            {/* KPI row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <KpiCard
+                icon={<Briefcase className="h-5 w-5" />}
+                label="Ofertas abiertas"
+                value={metrics.open}
+                tone="fuchsia"
+                sub={`${offers.length} totales`}
+              />
+              <KpiCard
+                icon={<Inbox className="h-5 w-5" />}
+                label="Nuevas postulaciones"
+                value={metrics.pending}
+                tone="amber"
+                sub="requieren respuesta"
+                urgent={metrics.pending > 0}
+              />
+              <KpiCard
+                icon={<CheckCircle2 className="h-5 w-5" />}
+                label="Turnos cubiertos"
+                value={metrics.filled}
+                tone="bio"
+                sub={`${metrics.accepted} aceptados`}
+              />
+              <KpiCard
+                icon={<Target className="h-5 w-5" />}
+                label="Tasa de conversión"
+                value={`${metrics.convRate}%`}
+                tone="cyber"
+                sub={`${applications.length} postulaciones`}
+              />
+            </div>
+
+            {/* Budget bar */}
+            {metrics.totalBudget > 0 && (
+              <div className="rounded-2xl border border-border bg-card/95 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-fuchsia-neural" />
+                    <p className="text-sm font-semibold">Presupuesto en ofertas activas</p>
+                  </div>
+                  <p className="text-sm font-bold text-fuchsia-neural">
+                    {COP(metrics.totalBudget)}
+                  </p>
+                </div>
+                <Progress
+                  value={Math.min(100, (metrics.filled / Math.max(offers.length, 1)) * 100)}
+                  className="h-1.5"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {metrics.filled} de {offers.length} ofertas cubiertas · conversión{" "}
+                  {metrics.convRate}%
+                </p>
+              </div>
+            )}
+
+            {/* Tu Trust Score: lo que ven los profesionales junto a tus ofertas y qué falta para subirlo */}
+            <div id="confianza" className="scroll-mt-24">
+              <OwnTrustCard
+                userId={user.id}
+                kind="institution"
+                completeLabel="Completar perfil de la institución"
+                onCompleteIdentity={() => void navigate({ to: "/institution/profile" })}
+              />
+            </div>
+
+            {/* Equipo de confianza (plan B automático) e historia de turnos exportable */}
+            <TrustedTeamCard userId={user.id} role="institution" />
+            <CareHistoryCard userId={user.id} kind="institution" />
           </div>
         )}
 

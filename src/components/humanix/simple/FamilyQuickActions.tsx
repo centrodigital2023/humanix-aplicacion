@@ -12,7 +12,7 @@ type Action = {
 };
 
 const ACTIONS: Action[] = [
-  { emoji: "🙋", label: "Pedir cuidado", tint: "rose", to: "/", search: { para: "familias" } },
+  { emoji: "🙋", label: "Pedir cuidado", tint: "rose", to: "/buscar" },
   { emoji: "💬", label: "Mensajes", tint: "emerald", to: "/mensajes" },
   { emoji: "❤️", label: "Salud en vivo", tint: "sky", to: "/dashboard/monitoreo" },
   { emoji: "👤", label: "Mis datos", tint: "amber", href: "#mis-datos" },

@@ -336,24 +336,28 @@ export const ALERT_REASON_MAX = 200;
 
 /** Campo numérico opcional de un input de texto: '' → undefined; con coma decimal → punto. */
 const optionalNumber = (min: number, max: number, label: string, integer: boolean) =>
-  z.union([z.string(), z.number(), z.undefined(), z.null()]).transform((raw, ctx) => {
-    if (raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === ""))
-      return undefined;
-    const n = typeof raw === "number" ? raw : Number(raw.trim().replace(",", "."));
-    if (!Number.isFinite(n)) {
-      ctx.addIssue({ code: "custom", message: `${label}: escribe un número.` });
-      return z.NEVER;
-    }
-    if (integer && !Number.isInteger(n)) {
-      ctx.addIssue({ code: "custom", message: `${label}: usa un número entero.` });
-      return z.NEVER;
-    }
-    if (n < min || n > max) {
-      ctx.addIssue({ code: "custom", message: `${label}: debe estar entre ${min} y ${max}.` });
-      return z.NEVER;
-    }
-    return n;
-  });
+  z
+    .union([z.string(), z.number(), z.undefined(), z.null()])
+    .transform((raw, ctx) => {
+      if (raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === ""))
+        return undefined;
+      const n = typeof raw === "number" ? raw : Number(raw.trim().replace(",", "."));
+      if (!Number.isFinite(n)) {
+        ctx.addIssue({ code: "custom", message: `${label}: escribe un número.` });
+        return z.NEVER;
+      }
+      if (integer && !Number.isInteger(n)) {
+        ctx.addIssue({ code: "custom", message: `${label}: usa un número entero.` });
+        return z.NEVER;
+      }
+      if (n < min || n > max) {
+        ctx.addIssue({ code: "custom", message: `${label}: debe estar entre ${min} y ${max}.` });
+        return z.NEVER;
+      }
+      return n;
+    })
+    // La clave puede faltar del todo (zod 4.4+ exige `.optional()` explícito para eso).
+    .optional();
 
 export const careLogFormSchema = z
   .object({
