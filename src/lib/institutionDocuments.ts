@@ -1,11 +1,11 @@
 // Documentos institucionales de la EPS/IPS. La institución los sube al bucket privado «institution-docs» y solo el
-// superadmin los aprueba o rechaza. Con los tres obligatorios aprobados, la base marca institution_profiles.verified
-// (ver supabase/migrations/20261028150000_institution_documents_review.sql, hx_inst_docs_complete).
+// superadmin los aprueba o rechaza. Con cámara de comercio y RUT aprobados, la base marca institution_profiles.verified
+// (hx_inst_docs_complete en supabase/migrations/20261028160000_institution_docs_two_required.sql).
 
 export const INSTITUTION_DOCS_BUCKET = "institution-docs";
 
 export type InstitutionDocType =
-  "camara_comercio" | "rut" | "cedula_representante" | "habilitacion_reps" | "poliza" | "otro";
+  "camara_comercio" | "rut" | "habilitacion_reps" | "poliza" | "otro";
 
 export type InstitutionDocStatus = "pending" | "approved" | "rejected";
 
@@ -35,12 +35,6 @@ export const INSTITUTION_DOC_TYPES: {
   },
   { value: "rut", label: "RUT", hint: "Registro Único Tributario con el NIT.", required: true },
   {
-    value: "cedula_representante",
-    label: "Cédula del representante legal",
-    hint: "Por ambas caras.",
-    required: true,
-  },
-  {
     value: "habilitacion_reps",
     label: "Habilitación REPS",
     hint: "Si eres IPS: constancia de habilitación ante la Secretaría de Salud.",
@@ -59,8 +53,11 @@ export const REQUIRED_INSTITUTION_DOCS = INSTITUTION_DOC_TYPES.filter((t) => t.r
   (t) => t.value,
 );
 
-// Filas viejas guardaban «nit_certificate».
-const LEGACY_LABELS: Record<string, string> = { nit_certificate: "Certificado NIT" };
+// Tipos que ya no se piden pero pueden existir en filas viejas.
+const LEGACY_LABELS: Record<string, string> = {
+  nit_certificate: "Certificado NIT",
+  cedula_representante: "Cédula del representante legal",
+};
 
 export function institutionDocLabel(type: string): string {
   return (

@@ -6,13 +6,13 @@ import {
 } from "./institutionDocuments";
 
 describe("institutionDocuments", () => {
-  it("pide los tres obligatorios aprobados", () => {
-    expect(missingApprovedDocs([])).toEqual(["camara_comercio", "rut", "cedula_representante"]);
+  it("pide los dos obligatorios aprobados", () => {
+    expect(missingApprovedDocs([])).toEqual(["camara_comercio", "rut"]);
     expect(
       missingApprovedDocs([
         { doc_type: "camara_comercio", status: "approved" },
         { doc_type: "rut", status: "pending" },
-        { doc_type: "cedula_representante", status: "approved" },
+        { doc_type: "cedula_representante", status: "pending" },
       ]),
     ).toEqual(["rut"]);
   });

@@ -93,7 +93,7 @@ import { Route as SuperadminValidacionRouteImport } from './routes/superadmin.va
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia.onboarding'
-import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
+import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion_.onboarding'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -522,9 +522,9 @@ const DashboardFamiliaOnboardingRoute =
   } as any)
 const DashboardInstitucionOnboardingRoute =
   DashboardInstitucionOnboardingRouteImport.update({
-    id: '/onboarding',
-    path: '/onboarding',
-    getParentRoute: () => DashboardInstitucionRoute,
+    id: '/institucion_/onboarding',
+    path: '/institucion/onboarding',
+    getParentRoute: () => DashboardRoute,
   } as any)
 const ApiPublicMercadopagoWebhookRoute =
   ApiPublicMercadopagoWebhookRouteImport.update({
@@ -601,7 +601,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
-  '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
+  '/dashboard/institucion': typeof DashboardInstitucionRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
@@ -689,7 +689,7 @@ export interface FileRoutesByTo {
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
-  '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
+  '/dashboard/institucion': typeof DashboardInstitucionRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
@@ -780,7 +780,7 @@ export interface FileRoutesById {
   '/dashboard/eps': typeof DashboardEpsRoute
   '/dashboard/equipo': typeof DashboardEquipoRoute
   '/dashboard/familia': typeof DashboardFamiliaRouteWithChildren
-  '/dashboard/institucion': typeof DashboardInstitucionRouteWithChildren
+  '/dashboard/institucion': typeof DashboardInstitucionRoute
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
@@ -807,7 +807,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
-  '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
+  '/dashboard/institucion_/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1077,7 +1077,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/api/mercadopago/webhook'
     | '/dashboard/familia/onboarding'
-    | '/dashboard/institucion/onboarding'
+    | '/dashboard/institucion_/onboarding'
     | '/api/public/mercadopago/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1742,12 +1742,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardFamiliaOnboardingRouteImport
       parentRoute: typeof DashboardFamiliaRoute
     }
-    '/dashboard/institucion/onboarding': {
-      id: '/dashboard/institucion/onboarding'
-      path: '/onboarding'
+    '/dashboard/institucion_/onboarding': {
+      id: '/dashboard/institucion_/onboarding'
+      path: '/institucion/onboarding'
       fullPath: '/dashboard/institucion/onboarding'
       preLoaderRoute: typeof DashboardInstitucionOnboardingRouteImport
-      parentRoute: typeof DashboardInstitucionRoute
+      parentRoute: typeof DashboardRoute
     }
     '/api/public/mercadopago/webhook': {
       id: '/api/public/mercadopago/webhook'
@@ -1784,37 +1784,28 @@ const DashboardFamiliaRouteChildren: DashboardFamiliaRouteChildren = {
 const DashboardFamiliaRouteWithChildren =
   DashboardFamiliaRoute._addFileChildren(DashboardFamiliaRouteChildren)
 
-interface DashboardInstitucionRouteChildren {
-  DashboardInstitucionOnboardingRoute: typeof DashboardInstitucionOnboardingRoute
-}
-
-const DashboardInstitucionRouteChildren: DashboardInstitucionRouteChildren = {
-  DashboardInstitucionOnboardingRoute: DashboardInstitucionOnboardingRoute,
-}
-
-const DashboardInstitucionRouteWithChildren =
-  DashboardInstitucionRoute._addFileChildren(DashboardInstitucionRouteChildren)
-
 interface DashboardRouteChildren {
   DashboardEpsRoute: typeof DashboardEpsRoute
   DashboardEquipoRoute: typeof DashboardEquipoRoute
   DashboardFamiliaRoute: typeof DashboardFamiliaRouteWithChildren
-  DashboardInstitucionRoute: typeof DashboardInstitucionRouteWithChildren
+  DashboardInstitucionRoute: typeof DashboardInstitucionRoute
   DashboardMonitoreoRoute: typeof DashboardMonitoreoRoute
   DashboardProfesionalRoute: typeof DashboardProfesionalRoute
   DashboardWhatsappRoute: typeof DashboardWhatsappRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardInstitucionOnboardingRoute: typeof DashboardInstitucionOnboardingRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEpsRoute: DashboardEpsRoute,
   DashboardEquipoRoute: DashboardEquipoRoute,
   DashboardFamiliaRoute: DashboardFamiliaRouteWithChildren,
-  DashboardInstitucionRoute: DashboardInstitucionRouteWithChildren,
+  DashboardInstitucionRoute: DashboardInstitucionRoute,
   DashboardMonitoreoRoute: DashboardMonitoreoRoute,
   DashboardProfesionalRoute: DashboardProfesionalRoute,
   DashboardWhatsappRoute: DashboardWhatsappRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardInstitucionOnboardingRoute: DashboardInstitucionOnboardingRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
