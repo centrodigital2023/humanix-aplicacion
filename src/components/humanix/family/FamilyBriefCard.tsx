@@ -52,6 +52,9 @@ export function FamilyBriefCard({
   name,
   stats,
   aside,
+  footer,
+  showGreeting,
+  maxVisible,
   className,
 }: {
   items: BriefItem[];
@@ -60,6 +63,9 @@ export function FamilyBriefCard({
   name?: string | null;
   stats?: HeroStat[];
   aside?: ReactNode;
+  footer?: ReactNode;
+  showGreeting?: boolean;
+  maxVisible?: number;
   className?: string;
 }) {
   const priorities = items.map((i) => i.priority);
@@ -86,6 +92,9 @@ export function FamilyBriefCard({
       actions={actions}
       emptyMessage="No hay nada pendiente: tus servicios, propuestas y agenda están al día."
       aside={aside}
+      footer={footer}
+      showGreeting={showGreeting}
+      maxVisible={maxVisible}
       className={className}
     />
   );

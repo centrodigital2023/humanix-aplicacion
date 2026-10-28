@@ -156,6 +156,8 @@ export interface DayHeroProps {
   /** Algo a la derecha de la etiqueta (por ejemplo la insignia del plan). */
   aside?: ReactNode;
   footer?: ReactNode;
+  /** Con `false`, no repite el saludo (cuando la cabecera de la página ya saluda) y el titular pasa a ser el título. */
+  showGreeting?: boolean;
   id?: string;
   className?: string;
 }
@@ -174,6 +176,7 @@ export function DayHero({
   maxVisible = 4,
   aside,
   footer,
+  showGreeting = true,
   id,
   className,
 }: DayHeroProps) {
@@ -220,10 +223,21 @@ export function DayHero({
             </span>
             {aside}
           </div>
-          <h2 id={titleId} className="mt-1 font-display text-2xl font-bold leading-tight">
-            {warmGreeting(now, name, role === "institution")}
-          </h2>
-          <p className={cn("mt-1 text-base font-medium", t.headline)}>{headline}</p>
+          {showGreeting ? (
+            <>
+              <h2 id={titleId} className="mt-1 font-display text-2xl font-bold leading-tight">
+                {warmGreeting(now, name, role === "institution")}
+              </h2>
+              <p className={cn("mt-1 text-base font-medium", t.headline)}>{headline}</p>
+            </>
+          ) : (
+            <h2
+              id={titleId}
+              className={cn("mt-1 font-display text-xl font-bold leading-tight", t.headline)}
+            >
+              {headline}
+            </h2>
+          )}
           <p className="mt-0.5 text-sm text-muted-foreground">{warmLine(role, tone, now)}</p>
 
           {shownStats.length > 0 && (

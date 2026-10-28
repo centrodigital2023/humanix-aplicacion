@@ -5,17 +5,10 @@ import {
   Heart,
   Search,
   LayoutDashboard,
-  FileText,
-  Sparkles,
-  Calendar,
-  ShieldCheck,
   MessageSquare,
   Crown,
-  Phone,
   MapPin,
-  Inbox,
   ChevronRight,
-  Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -50,9 +43,10 @@ import { useAppUser } from "@/hooks/use-app-user";
 import { MyBookings } from "@/components/humanix/simple/MyBookings";
 import { LiveNearby } from "@/components/humanix/simple/LiveNearby";
 import { NearbyProsList } from "@/components/humanix/NearbyProsList";
-import { FamilyQuickActions } from "@/components/humanix/simple/FamilyQuickActions";
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { FamilySmartCenter } from "@/components/humanix/family/FamilySmartCenter";
+import { FamilyFold } from "@/components/humanix/family/FamilyFold";
+import { scrollToId } from "@/components/humanix/premium/scroll";
 import { CareRoutineCard } from "@/components/humanix/family/CareRoutineCard";
 import { SosFamiliarButton } from "@/components/humanix/SosFamiliarButton";
 import { SosAlertsPanel } from "@/components/humanix/SosAlertsPanel";
@@ -73,7 +67,7 @@ export const Route = createFileRoute("/dashboard/familia")({
 
 const getNav = (): NavItem[] => [
   { label: "Mi panel", to: "/dashboard/familia", icon: LayoutDashboard },
-  { label: "Pedir", to: "/buscar", icon: Search },
+  { label: "Buscar", to: "/buscar", icon: Search },
   { label: "Mensajes", to: "/mensajes", icon: MessageSquare },
   { label: "Salud en vivo", to: "/dashboard/monitoreo", icon: Heart },
   { label: "Mi plan", to: "/planes", icon: Crown },
@@ -291,10 +285,6 @@ function FamilyDashboard() {
     );
   }
 
-  const open = offers.filter((o) => o.status === "open").length;
-  const filled = offers.filter((o) => o.status === "filled").length;
-  const pendingApps = applications.filter((a) => a.status === "pending").length;
-
   const saveLocation = async (lat: number, lng: number, address?: string) => {
     if (!user) return;
     setSavingLoc(true);
@@ -317,6 +307,39 @@ function FamilyDashboard() {
     }
   };
 
+  // Los dos botones grandes del inicio: pedir cuidado (los profesionales cercanos se postulan, como en inDrive) o
+  // buscar y elegir uno; y el SOS siempre a mano.
+  const heroFooter = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <HiringCopilot
+          defaultCity={familyCity}
+          label="Pedir cuidado"
+          icon={
+            <span aria-hidden="true" className="mr-1.5 text-xl">
+              🙋
+            </span>
+          }
+          triggerClassName="h-14 w-full rounded-2xl text-base font-bold"
+        />
+        <Button asChild variant="outline" className="h-14 w-full rounded-2xl text-base font-bold">
+          <Link to="/buscar">
+            <span aria-hidden="true" className="mr-1.5 text-xl">
+              🔎
+            </span>
+            Buscar
+          </Link>
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          ¿Una urgencia? Avisa a tu círculo y a tu profesional con tu ubicación.
+        </p>
+        <SosFamiliarButton patientId={user.id} patientName={user.fullName} />
+      </div>
+    </div>
+  );
+
   return (
     <AppShell
       user={user}
@@ -330,324 +353,333 @@ function FamilyDashboard() {
       subtitle="¿Qué necesitas hoy?"
       crumbs={[{ label: "🏠 Inicio", to: "/" }, { label: "Familia" }]}
       badge={{ label: "Familia", tone: "copper" }}
-      actions={
-        <div className="flex items-center gap-1">
-          <InstallAppButton />
-          <ShareAppButton />
-          <HiringCopilot />
-        </div>
-      }
     >
-      <div className="space-y-6">
-        {/* Acciones rápidas */}
-        <FamilyQuickActions />
+      <FamilySmartCenter
+        userId={user.id}
+        name={user.fullName}
+        city={familyCity}
+        profile={smartProfile}
+        applications={applications}
+        offers={offers}
+        coords={familyCoords}
+        heroFooter={heroFooter}
+      >
+        {({ hero, journey, tools }) => (
+          <div className="mx-auto max-w-3xl space-y-5">
+            {/* 1. Tu día en una tarjeta: cómo va todo, lo que conviene hacer ahora y los botones grandes */}
+            {hero}
 
-        {/* Lo que pasa AHORA, como en inDrive: mis pedidos en vivo (Pedido → Aceptado → En camino → Cuidando) */}
-        {user && <MyBookings userId={user.id} />}
-
-        {/* Parte del turno en vivo */}
-        {user?.id && <ActiveCareFeedSection clientId={user.id} />}
-
-        {/* Propuestas que llegaron a lo que publiqué: confianza, calificación, zona y valor; aceptar, rechazar o negociar */}
-        {user?.id && (
-          <div id="propuestas" className="scroll-mt-44 lg:scroll-mt-4">
-            <ApplicantCards userId={user.id} familyName={user.fullName} />
-          </div>
-        )}
-
-        {/* Valoraciones pendientes */}
-        {user?.id && (
-          <div id="calificar" className="scroll-mt-44 lg:scroll-mt-4 empty:hidden">
-            <PendingRatingsCard userId={user.id} role="family" />
-          </div>
-        )}
-
-        {/* Servicios de familiares que me invitaron a su círculo de cuidado (solo lectura) */}
-        {user && (
-          <ActiveServicesCard
-            userId={user.id}
-            title="Servicios de tu círculo de cuidado"
-            sides={["circle"]}
-          />
-        )}
-
-        {/* Atajo anticipatorio: repetir la rutina de cuidado en un toque */}
-        {user?.id && <CareRoutineCard userId={user.id} />}
-
-        {/* SOS: pedir ayuda con la ubicación y ver las alertas de mi círculo de cuidado */}
-        {user?.id && (
-          <section aria-label="Emergencias" className="space-y-3">
-            <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground sm:max-w-[60%]">
-                ¿Necesitas ayuda urgente? Avisa a tu círculo de cuidado y a tu profesional con tu
-                ubicación.
-              </p>
-              <SosFamiliarButton patientId={user.id} patientName={user.fullName} />
+            {/* 2. Lo que pasa AHORA, como en inDrive. Cada bloque solo aparece si tiene algo. */}
+            <SosAlertsPanel userId={user.id} activeOnly />
+            <MyBookings userId={user.id} />
+            <ActiveCareFeedSection clientId={user.id} />
+            <div id="propuestas" className="empty:hidden">
+              <ApplicantCards userId={user.id} familyName={user.fullName} hideWhenEmpty />
             </div>
-            <SosAlertsPanel userId={user.id} />
-          </section>
-        )}
-
-        {/* Tu centro de cuidado: resumen del día para todas las familias, y herramientas inteligentes (plan Familiar) */}
-        <FamilySmartCenter
-          userId={user.id}
-          name={user.fullName}
-          city={familyCity}
-          profile={smartProfile}
-          applications={applications}
-          offers={offers}
-          coords={familyCoords}
-        />
-
-        {/* Profesionales que publican su servicio: Trust Score, RETHUS, calificación, estado en vivo y cercanía */}
-        {user?.id && <ServiceOffersFeed viewerId={user.id} audience="family" />}
-
-        {/* Mapa en vivo */}
-        <section aria-labelledby="fam-map" className="space-y-3">
-          <h2 id="fam-map" className="font-display text-xl font-bold flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-copper" /> Cerca de ti
-          </h2>
-          <LivePulseBar role="family" />
-          <LiveNearby audience="familias" user={user} />
-          <FamilyMapVisibility userId={user.id} />
-        </section>
-
-        {/* ── AGENDA ─────────────────────────────────────── */}
-        {user?.id && (
-          <section id="agenda" className="scroll-mt-44 lg:scroll-mt-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-biosensor" />
-              <h2 className="font-display text-xl font-bold">Mi agenda</h2>
+            <div id="calificar" className="empty:hidden">
+              <PendingRatingsCard userId={user.id} role="family" />
             </div>
-            <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
-            <div id="circulo" className="scroll-mt-44 lg:scroll-mt-4 empty:hidden">
-              <CareCirclePanel userId={user.id} userEmail={user.email} />
-            </div>
-          </section>
-        )}
-
-        {/* ── EQUIPO DE CONFIANZA + HISTORIA DE CUIDADO ───── */}
-        {user?.id && (
-          <section className="space-y-4" aria-label="Equipo de confianza e historia de cuidado">
-            <div id="equipo" className="scroll-mt-44 lg:scroll-mt-4 empty:hidden">
-              <TrustedTeamCard userId={user.id} role="family" />
-            </div>
-            <CareHistoryCard userId={user.id} kind="family" />
-          </section>
-        )}
-
-        {/* ── CONFIANZA Y SOPORTE: mi Trust Score y mis PQRS (llegan al equipo de Humanix) ───────── */}
-        {user?.id && (
-          <section
-            id="confianza"
-            aria-label="Confianza y soporte"
-            className="scroll-mt-44 lg:scroll-mt-4 grid items-start gap-4 lg:grid-cols-2"
-          >
-            <OwnTrustCard
+            <ActiveServicesCard
               userId={user.id}
-              kind="family"
-              completeLabel="Completar mis datos"
-              onCompleteIdentity={() => {
-                const el = document.getElementById("mis-datos");
-                if (el instanceof HTMLDetailsElement) el.open = true;
-                el?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
+              title="Servicios de tu círculo de cuidado"
+              sides={["circle"]}
             />
-            <div id="pqrs" className="scroll-mt-44 lg:scroll-mt-4">
-              <MyPqrsCard userId={user.id} name={user.fullName} email={user.email} />
-            </div>
-          </section>
-        )}
+            <CareRoutineCard userId={user.id} />
 
-        {/* ── PAGO / PLAN ─────────────────────────────────── */}
-        <section
-          id="planes"
-          className="scroll-mt-44 lg:scroll-mt-4 rounded-[2rem] bg-gradient-to-br from-card to-card/60 p-6 ring-1 ring-border shadow-sm"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl font-bold flex items-center gap-2">
-              <Crown className="h-5 w-5 text-copper" /> Tu plan
-            </h2>
-            <Link
-              to="/planes"
-              className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
-            >
-              Ver planes <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          {user?.id && (
-            <MercadoPagoSubscription
-              userId={user.id}
-              defaultPlan="essential_monthly"
-              plans={["essential_monthly", "family_premium_monthly"]}
-            />
-          )}
-        </section>
-
-        {/* ── PERFIL ──────────────────────────────────────── */}
-        <details
-          id="mis-datos"
-          className="group scroll-mt-44 lg:scroll-mt-4 rounded-[2rem] bg-card p-5 shadow-sm ring-1 ring-border"
-        >
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-lg font-bold">
-            <span className="flex items-center gap-3">
-              <span aria-hidden="true">👤</span> Mis datos
-            </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
-            />
-          </summary>
-          <div className="mt-4">{user && <SmartFamilyProfileForm userId={user.id} />}</div>
-        </details>
-
-        {/* ── HERRAMIENTAS AVANZADAS ──────────────────────── */}
-        <details className="group rounded-[2rem] bg-card p-5 shadow-sm ring-1 ring-border">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-lg font-bold">
-            <span className="flex items-center gap-3">
-              <Activity className="h-5 w-5 text-muted-foreground" /> Más herramientas
-            </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90"
-            />
-          </summary>
-          <div className="mt-6 space-y-8">
-            {/* Mapa completo con ubicación */}
-            {user && (
-              <div>
-                <LiveMapSection
-                  role="family"
-                  userId={user.id}
-                  height={520}
-                  pickLocation={{
-                    lat: familyCoords.lat,
-                    lng: familyCoords.lng,
-                    defaultCity: familyCity,
-                    onChange: (lat, lng, address) => void saveLocation(lat, lng, address),
-                  }}
-                />
-                {savingLoc && (
-                  <p className="text-[11px] text-muted-foreground mt-2">
-                    <Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Guardando…
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* KPIs */}
-            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Kpi icon={FileText} label="Solicitudes" value={offers.length} tone="bio" />
-              <Kpi icon={Calendar} label="Abiertas" value={open} tone="copper" />
-              <Kpi icon={Inbox} label="Postulaciones" value={pendingApps} tone="fuchsia" />
-              <Kpi icon={ShieldCheck} label="Cubiertas" value={filled} tone="bio" />
+            {/* 3. Quién está cerca, en vivo */}
+            <section aria-labelledby="fam-map" className="space-y-3">
+              <h2 id="fam-map" className="font-display text-xl font-bold flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-copper" /> Cerca de ti
+              </h2>
+              <LivePulseBar role="family" />
+              <LiveNearby audience="familias" user={user} />
+              <FamilyMapVisibility userId={user.id} />
             </section>
 
-            {/* Salud en vivo */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-base font-semibold flex items-center gap-2">
-                  <Heart className="h-4 w-4 text-rose-500 animate-pulse" />
-                  Salud en vivo
-                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
-                  </span>
-                </h2>
-                <Link
-                  to="/dashboard/monitoreo"
-                  className="text-xs text-biosensor hover:underline flex items-center gap-1"
-                >
-                  Ver completo <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-              <WearableConnections patientId={user.id} />
-              <ClinicalMonitor patientId={user.id} showDeviceGuide={false} compact />
-            </section>
+            {/* 4. Todo lo demás, en filas que se abren al tocarlas */}
+            <section aria-labelledby="fam-more" className="space-y-3">
+              <h2 id="fam-more" className="font-display text-xl font-bold">
+                Tu espacio
+              </h2>
 
-            {/* Profesionales cercanos: la misma fuente validada del mapa (nombre, ciudad y turnos), en vivo */}
-            <section>
-              <NearbyProsList origin={origin} />
-              {nearby.length > 0 && (
-                <p className="text-[11px] text-muted-foreground mt-3">
-                  {nearby.length} solicitud{nearby.length !== 1 ? "es" : ""} activa
-                  {nearby.length !== 1 ? "s" : ""} en {familyCity} —{" "}
-                  <Link to="/buscar" className="underline hover:text-foreground">
-                    ver mercado
-                  </Link>
-                </p>
-              )}
-            </section>
-
-            {/* Mis solicitudes */}
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display text-base font-semibold">Mis solicitudes</h2>
-                <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">
-                  Ver todas →
-                </Link>
-              </div>
-              {offers.length === 0 ? (
-                <Card className="p-10 text-center">
-                  <Heart className="h-8 w-8 text-copper mx-auto mb-3" />
-                  <p className="font-semibold">Sin solicitudes aún</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Publicar es <span className="font-semibold text-emerald-600">gratis</span>.
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                    <HiringCopilot />
-                    <Button variant="outline" asChild>
-                      <Link to="/buscar">Buscar ahora</Link>
-                    </Button>
-                  </div>
-                </Card>
-              ) : (
-                <div className="grid gap-3">
-                  {Array.from(new Map(offers.map((o) => [o.id, o])).values()).map((o) => (
-                    <Card
-                      key={`my-offer-${o.id}`}
-                      className="p-4 flex items-center justify-between gap-3 flex-wrap"
-                    >
-                      <div>
-                        <p className="font-medium">{o.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {o.city} · {o.modality} · ${o.amount.toLocaleString("es-CO")} COP
-                        </p>
-                      </div>
-                      <StatusPill status={o.status} />
-                    </Card>
-                  ))}
+              <FamilyFold
+                id="fold-agenda"
+                emoji="📅"
+                title="Mi agenda"
+                hint="Marca las horas en que necesitas ayuda"
+                anchors={["agenda"]}
+              >
+                <div id="agenda">
+                  <FamilyNeedsCalendar userId={user.id} serviceAddress={familyAddress ?? null} />
                 </div>
-              )}
-            </section>
+              </FamilyFold>
 
-            {/* Mapa de solicitudes */}
-            {offers.some((o) => o.lat != null && o.lng != null) && (
-              <section>
-                <h2 className="font-display text-base font-semibold mb-3">
-                  Solicitudes en el mapa
-                </h2>
-                <OffersMap
-                  points={offers
-                    .filter((o) => o.lat != null && o.lng != null)
-                    .map<MapPoint>((o) => ({
-                      id: o.id,
-                      lat: o.lat as number,
-                      lng: o.lng as number,
-                      title: o.title,
-                      subtitle: `${o.city} · ${o.status === "open" ? "Disponible" : o.status === "filled" ? "Tomado" : "Cerrada"}`,
-                      status: o.status === "filled" ? "reserved" : "available",
-                    }))}
-                  height={360}
+              <FamilyFold
+                id="fold-ofertas"
+                emoji="🩺"
+                title="Profesionales que se ofrecen"
+                hint="Compara Trust Score, RETHUS, calificación y valor"
+              >
+                <ServiceOffersFeed viewerId={user.id} audience="family" />
+              </FamilyFold>
+
+              <FamilyFold
+                id="fold-familia"
+                emoji="👨‍👩‍👧"
+                title="Mi círculo y mi equipo"
+                hint="Familiares que siguen el turno y tus profesionales favoritos"
+                anchors={["circulo", "equipo"]}
+              >
+                <div id="circulo">
+                  <CareCirclePanel userId={user.id} userEmail={user.email} />
+                </div>
+                <div id="equipo">
+                  <TrustedTeamCard userId={user.id} role="family" />
+                </div>
+                <CareHistoryCard userId={user.id} kind="family" />
+              </FamilyFold>
+
+              <FamilyFold
+                id="fold-ruta"
+                emoji="🌱"
+                title="Ruta de cuidado"
+                hint="Rutina, momentos, rituales y ayuda del círculo"
+                anchors={["ruta-de-cuidado", "ayuda-circulo", "rituales"]}
+              >
+                {journey}
+              </FamilyFold>
+
+              <FamilyFold
+                id="fold-herramientas"
+                emoji="✨"
+                title="Herramientas inteligentes"
+                hint="Bienestar, comparador, gasto y cobertura"
+                anchors={["centro-herramientas"]}
+              >
+                {tools}
+              </FamilyFold>
+
+              <FamilyFold
+                id="fold-plan"
+                emoji="👑"
+                title="Mi plan"
+                hint="Free, Familiar o Premium Familiar"
+                anchors={["planes"]}
+              >
+                <div id="planes" className="space-y-3">
+                  <Link
+                    to="/planes"
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                  >
+                    Comparar planes <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                  <MercadoPagoSubscription
+                    userId={user.id}
+                    defaultPlan="essential_monthly"
+                    plans={["essential_monthly", "family_premium_monthly"]}
+                  />
+                </div>
+              </FamilyFold>
+
+              <FamilyFold
+                id="fold-confianza"
+                emoji="⭐"
+                title="Mi confianza y ayuda"
+                hint="Tu Trust Score y tus peticiones al equipo de Humanix"
+                anchors={["confianza", "pqrs"]}
+              >
+                <div id="confianza">
+                  <OwnTrustCard
+                    userId={user.id}
+                    kind="family"
+                    completeLabel="Completar mis datos"
+                    onCompleteIdentity={() => scrollToId("mis-datos")}
+                  />
+                </div>
+                <div id="pqrs">
+                  <MyPqrsCard userId={user.id} name={user.fullName} email={user.email} />
+                </div>
+              </FamilyFold>
+
+              <FamilyFold
+                id="fold-datos"
+                emoji="👤"
+                title="Mis datos"
+                hint="Paciente, dirección y contacto de emergencia"
+                anchors={["mis-datos"]}
+              >
+                <div id="mis-datos">
+                  <SmartFamilyProfileForm userId={user.id} />
+                </div>
+              </FamilyFold>
+
+              <FamilyFold
+                id="fold-mas"
+                emoji="⚙️"
+                title="Más herramientas"
+                hint="Salud en vivo, mapa completo, mis solicitudes y la app"
+              >
+                <MoreTools
+                  user={user}
+                  offers={offers}
+                  nearbyCount={nearby.length}
+                  familyCity={familyCity}
+                  familyCoords={familyCoords}
+                  origin={origin}
+                  savingLoc={savingLoc}
+                  onSaveLocation={saveLocation}
                 />
-              </section>
-            )}
-
-            {/* Zona de peligro */}
-            {user?.id && <DangerZoneCard userId={user.id} role="family" />}
+              </FamilyFold>
+            </section>
           </div>
-        </details>
-      </div>
+        )}
+      </FamilySmartCenter>
     </AppShell>
+  );
+}
+
+// «Más herramientas»: lo que se usa poco. Solo se monta al abrir la fila.
+function MoreTools({
+  user,
+  offers,
+  nearbyCount,
+  familyCity,
+  familyCoords,
+  origin,
+  savingLoc,
+  onSaveLocation,
+}: {
+  user: { id: string };
+  offers: Offer[];
+  nearbyCount: number;
+  familyCity: string;
+  familyCoords: { lat: number | null; lng: number | null };
+  origin: { lat: number; lng: number } | null;
+  savingLoc: boolean;
+  onSaveLocation: (lat: number, lng: number, address?: string) => Promise<void>;
+}) {
+  return (
+    <div className="space-y-8">
+      {/* La app */}
+      <section className="flex flex-wrap items-center gap-2">
+        <InstallAppButton />
+        <ShareAppButton />
+      </section>
+
+      {/* Salud en vivo */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-base font-semibold flex items-center gap-2">
+            <Heart className="h-4 w-4 text-rose-500" />
+            Salud en vivo
+          </h3>
+          <Link
+            to="/dashboard/monitoreo"
+            className="text-xs text-biosensor hover:underline flex items-center gap-1"
+          >
+            Ver completo <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+        <WearableConnections patientId={user.id} />
+        <ClinicalMonitor patientId={user.id} showDeviceGuide={false} compact />
+      </section>
+
+      {/* Mapa completo: aquí se fija la ubicación de la casa */}
+      <section>
+        <LiveMapSection
+          role="family"
+          userId={user.id}
+          height={420}
+          pickLocation={{
+            lat: familyCoords.lat,
+            lng: familyCoords.lng,
+            defaultCity: familyCity,
+            onChange: (lat, lng, address) => void onSaveLocation(lat, lng, address),
+          }}
+        />
+        {savingLoc && (
+          <p className="text-[11px] text-muted-foreground mt-2">
+            <Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Guardando…
+          </p>
+        )}
+      </section>
+
+      {/* Profesionales cercanos: la misma fuente validada del mapa (nombre, ciudad y turnos), en vivo */}
+      <section>
+        <NearbyProsList origin={origin} />
+        {nearbyCount > 0 && (
+          <p className="text-[11px] text-muted-foreground mt-3">
+            {nearbyCount} solicitud{nearbyCount !== 1 ? "es" : ""} activa
+            {nearbyCount !== 1 ? "s" : ""} en {familyCity} —{" "}
+            <Link to="/buscar" className="underline hover:text-foreground">
+              ver mercado
+            </Link>
+          </p>
+        )}
+      </section>
+
+      {/* Mis solicitudes */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-display text-base font-semibold">Mis solicitudes</h3>
+          <Link to="/buscar" className="text-xs text-muted-foreground hover:text-foreground">
+            Ver todas →
+          </Link>
+        </div>
+        {offers.length === 0 ? (
+          <Card className="p-6 text-center">
+            <p className="font-semibold">Sin solicitudes aún</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Toca «Pedir cuidado» arriba: publicar es{" "}
+              <span className="font-semibold text-emerald-600">gratis</span>.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid gap-3">
+            {Array.from(new Map(offers.map((o) => [o.id, o])).values()).map((o) => (
+              <Card
+                key={`my-offer-${o.id}`}
+                className="p-4 flex items-center justify-between gap-3 flex-wrap"
+              >
+                <div>
+                  <p className="font-medium">{o.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {o.city} · {o.modality} · ${o.amount.toLocaleString("es-CO")} COP
+                  </p>
+                </div>
+                <StatusPill status={o.status} />
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Mapa de solicitudes */}
+      {offers.some((o) => o.lat != null && o.lng != null) && (
+        <section>
+          <h3 className="font-display text-base font-semibold mb-3">Solicitudes en el mapa</h3>
+          <OffersMap
+            points={offers
+              .filter((o) => o.lat != null && o.lng != null)
+              .map<MapPoint>((o) => ({
+                id: o.id,
+                lat: o.lat as number,
+                lng: o.lng as number,
+                title: o.title,
+                subtitle: `${o.city} · ${o.status === "open" ? "Disponible" : o.status === "filled" ? "Tomado" : "Cerrada"}`,
+                status: o.status === "filled" ? "reserved" : "available",
+              }))}
+            height={320}
+          />
+        </section>
+      )}
+
+      {/* Historial de alertas SOS (las activas salen arriba, en el inicio) */}
+      <SosAlertsPanel userId={user.id} />
+
+      {/* Zona de peligro */}
+      <DangerZoneCard userId={user.id} role="family" />
+    </div>
   );
 }
 
@@ -679,33 +711,6 @@ const STATUS_TEXT: Record<string, string> = {
   filled: "Cubierta",
   closed: "Cerrada",
 };
-
-function Kpi({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: typeof FileText;
-  label: string;
-  value: number | string;
-  tone: "bio" | "copper" | "fuchsia";
-}) {
-  const colors = {
-    bio: "text-biosensor bg-biosensor/10",
-    copper: "text-copper bg-copper/10",
-    fuchsia: "text-fuchsia-neural bg-fuchsia-neural/10",
-  }[tone];
-  return (
-    <Card className="p-4">
-      <div className={`inline-flex h-9 w-9 items-center justify-center rounded-lg ${colors}`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <p className="mt-3 text-2xl font-bold font-display">{value}</p>
-      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
-    </Card>
-  );
-}
 
 // Parte del turno en vivo del servicio que está ocurriendo ahora (propio o de un familiar del círculo de cuidado).
 function ActiveCareFeedSection({ clientId }: { clientId: string }) {

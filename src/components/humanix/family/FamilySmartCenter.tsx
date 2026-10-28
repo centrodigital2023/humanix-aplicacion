@@ -1,11 +1,13 @@
 // Centro de cuidado inteligente del panel de familia: «Tu día, resuelto» para todas las familias y, con el plan
-// Esencial, informe de bienestar, comparador de postulaciones, presupuesto y radar de cobertura. La ruta de cuidado
+// Familiar, informe de bienestar, comparador de postulaciones, presupuesto y radar de cobertura. La ruta de cuidado
 // suma «Rituales que unen» (ritual del día, plan «cuando… entonces…», pasaporte de valentía y el clima de quien cuida).
 //
 // Aquí solo se piden los datos (hooks de `use-family-intel`), se pasan a las funciones puras de `src/lib` y se
 // reparte el resultado en tarjetas. El plan se lee de `mp_subscriptions` (solo escribe el webhook de pagos); la puerta
 // es de interfaz: son cuentas sobre datos que la familia ya puede leer. Sin el plan, cada herramienta muestra qué es
 // y un dato real de la cuenta, y el botón lleva a /planes (los pagos solo se hacen en la página web).
+// El componente no pinta nada por sí mismo: entrega el resumen del día, la ruta y las herramientas al panel, que
+// pone el resumen en el inicio y lo demás en sus plegables.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { HeartPulse, Lock, Radar, Scale, Sparkles, Wallet } from "lucide-react";
 import { PlanBadge } from "@/components/humanix/PlanGate";
@@ -70,6 +72,19 @@ export interface FamilySmartCenterProps {
   applications: ApplicationSource[];
   offers: OfferSource[];
   coords: { lat: number | null; lng: number | null };
+  /** Lo que va al pie del resumen del día (los botones grandes de pedir cuidado y SOS). */
+  heroFooter?: ReactNode;
+  /**
+   * El panel decide dónde va cada parte: el resumen del día arriba y la ruta de cuidado y las herramientas en sus
+   * plegables. Todas comparten los mismos datos, por eso se calculan aquí una sola vez.
+   */
+  children: (parts: FamilySmartParts) => ReactNode;
+}
+
+export interface FamilySmartParts {
+  hero: ReactNode;
+  journey: ReactNode;
+  tools: ReactNode;
 }
 
 export function FamilySmartCenter({
@@ -80,6 +95,8 @@ export function FamilySmartCenter({
   applications,
   offers,
   coords,
+  heroFooter,
+  children,
 }: FamilySmartCenterProps) {
   const now = useNow();
   const plan = usePlan(userId);
@@ -349,25 +366,31 @@ export function FamilySmartCenter({
     !needsQ.isLoading &&
     !activeQ.isLoading;
 
-  return (
-    <section id="centro-inteligente" aria-label="Tu centro de cuidado" className="space-y-4">
-      {ready ? (
-        <FamilyBriefCard
-          items={brief}
-          onAction={onBriefAction}
-          now={now}
-          name={name}
-          stats={stats}
-        />
-      ) : (
-        <Skeleton
-          className="h-64 w-full rounded-3xl"
-          aria-busy="true"
-          aria-label="Revisando tu día"
-        />
-      )}
+  const hero = ready ? (
+    <FamilyBriefCard
+      items={brief}
+      onAction={onBriefAction}
+      now={now}
+      name={name}
+      stats={stats}
+      footer={heroFooter}
+      showGreeting={false}
+      maxVisible={2}
+    />
+  ) : (
+    <div className="space-y-4">
+      <Skeleton
+        className="h-48 w-full rounded-3xl"
+        aria-busy="true"
+        aria-label="Revisando tu día"
+      />
+      {heroFooter}
+    </div>
+  );
 
-      <div id="ruta-de-cuidado" className="scroll-mt-4">
+  const journey = (
+    <>
+      <div id="ruta-de-cuidado">
         <CareJourneyCard
           route={route}
           inferred={inferredRoutes}
@@ -389,13 +412,13 @@ export function FamilySmartCenter({
       {ready && route && <CareChapterCard route={route} bookings={wbBookings} now={now} />}
 
       {ready && route && (
-        <div id="ayuda-circulo" className="scroll-mt-4">
+        <div id="ayuda-circulo">
           <CareHelpHomeCard route={route} userId={userId} bookings={wbBookings} now={now} />
         </div>
       )}
 
       {ready && route && (
-        <div id="rituales" className="scroll-mt-4">
+        <div id="rituales">
           <CareRitualsCard
             route={route}
             userId={userId}
@@ -407,137 +430,140 @@ export function FamilySmartCenter({
           />
         </div>
       )}
-
-      <div id="centro-herramientas" className="scroll-mt-4 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="flex items-center gap-2 font-display text-lg font-bold">
-            <Sparkles className="h-5 w-5 text-copper" aria-hidden="true" /> Herramientas
-            inteligentes
-          </h3>
-          {!plan.loading && <PlanBadge plan={plan.plan} />}
-        </div>
-        <Tabs value={activeTab} onValueChange={(v) => setTab(v as TabKey)}>
-          <TabsList
-            aria-label="Herramientas del plan Familiar"
-            className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4"
-          >
-            {(
-              [
-                ["bienestar", "Bienestar", HeartPulse],
-                ["comparador", "Comparador", Scale],
-                ["gasto", "Gasto", Wallet],
-                ["cobertura", "Cobertura", Radar],
-              ] as const
-            ).map(([key, label, Icon]) => (
-              <TabsTrigger key={key} value={key} className="gap-1.5 py-2">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-                {label}
-                {!premium && !plan.loading && (
-                  <Lock className="h-3 w-3 text-copper" aria-label="Con el plan Familiar" />
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="bienestar">
-            {gate(
-              <WellbeingReportCard
-                report={wellbeing}
-                windowDays={windowDays}
-                onWindowChange={setWindowDays}
-                loading={bookingsQ.isLoading || logsQ.isLoading}
-                error={bookingsQ.isError || logsQ.isError}
-              />,
-              <PremiumPreview
-                icon={<HeartPulse className="h-4 w-4 text-sos" aria-hidden="true" />}
-                title="Informe de bienestar"
-                description="Cómo ha estado el ánimo, los signos vitales y las alertas de cada turno, con un resumen listo para el médico."
-                bullets={[
-                  "Tendencia del ánimo, la presión arterial, el pulso, la temperatura y el oxígeno",
-                  "Alertas, incidentes y medicamentos registrados por el profesional",
-                  "Resumen para llevar a la consulta (copiar o descargar)",
-                ]}
-                teaser={
-                  services30 > 0
-                    ? `Tus ${plural(services30, "servicio", "servicios")} de los últimos 30 días ya ${services30 === 1 ? "tiene" : "tienen"} parte: con el plan Esencial los convertimos en un informe.`
-                    : null
-                }
-              />,
-            )}
-          </TabsContent>
-
-          <TabsContent value="comparador">
-            {gate(
-              <ApplicantsRankingCard
-                ranked={ranked}
-                loading={proposalsQ.isLoading || factsQ.isLoading}
-                onOpenInbox={onOpenInbox}
-              />,
-              <PremiumPreview
-                icon={<Scale className="h-4 w-4 text-trust" aria-hidden="true" />}
-                title="Comparador inteligente"
-                description="Ordena las propuestas y postulaciones con un puntaje de 0 a 100 que se puede desarmar."
-                bullets={[
-                  "Verificación, confianza, calificaciones y experiencia de cada profesional",
-                  "Precio frente al rango de tu ciudad y contraoferta sugerida",
-                  "Cercanía y si ya te atendió o está en tu equipo de confianza",
-                ]}
-                teaser={
-                  applicants.length > 0
-                    ? `Tienes ${plural(applicants.length, "opción", "opciones")} por comparar ahora mismo.`
-                    : null
-                }
-              />,
-            )}
-          </TabsContent>
-
-          <TabsContent value="gasto">
-            {gate(
-              <CareBudgetCard
-                report={budget}
-                loading={bookingsQ.isLoading}
-                error={bookingsQ.isError}
-              />,
-              <PremiumPreview
-                icon={<Wallet className="h-4 w-4 text-trust" aria-hidden="true" />}
-                title="Presupuesto de cuidado"
-                description="Cuánto llevas, cuánto tienes programado y cuánto proyectamos para el mes."
-                bullets={[
-                  "Gasto de los últimos 6 meses y proyección del mes en curso",
-                  "Cómo va tu gasto frente al mes pasado a la misma fecha",
-                  "Tu costo por hora frente al rango de tu ciudad y cuánto podrías ahorrar",
-                ]}
-                teaser={
-                  budget.current.spentToDate > 0
-                    ? `Este mes llevas ${formatCOP(budget.current.spentToDate)} en servicios terminados.`
-                    : null
-                }
-              />,
-            )}
-          </TabsContent>
-
-          <TabsContent value="cobertura">
-            {gate(
-              <CoverageRadarCard radar={radar} loading={needsQ.isLoading} onGoTo={onRadarAnchor} />,
-              <PremiumPreview
-                icon={<Radar className="h-4 w-4 text-trust" aria-hidden="true" />}
-                title="Radar de cobertura"
-                description="Qué horas de tu agenda siguen sin profesional y a quién avisar primero."
-                bullets={[
-                  "Horas sin cubrir de los próximos 14 días, con su urgencia",
-                  "Si tu tarifa ayuda o estorba frente al rango de tu ciudad",
-                  "A quién de tu equipo de confianza conviene avisar primero",
-                ]}
-                teaser={
-                  openHours > 0
-                    ? `Tienes ${plural(openHours, "hora", "horas")} sin cubrir en los próximos 14 días.`
-                    : null
-                }
-              />,
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </section>
+    </>
   );
+
+  const tools = (
+    <div id="centro-herramientas" className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Sparkles className="h-4 w-4 text-copper" aria-hidden="true" /> Tu plan actual
+        </p>
+        {!plan.loading && <PlanBadge plan={plan.plan} />}
+      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setTab(v as TabKey)}>
+        <TabsList
+          aria-label="Herramientas del plan Familiar"
+          className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4"
+        >
+          {(
+            [
+              ["bienestar", "Bienestar", HeartPulse],
+              ["comparador", "Comparador", Scale],
+              ["gasto", "Gasto", Wallet],
+              ["cobertura", "Cobertura", Radar],
+            ] as const
+          ).map(([key, label, Icon]) => (
+            <TabsTrigger key={key} value={key} className="gap-1.5 py-2">
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              {label}
+              {!premium && !plan.loading && (
+                <Lock className="h-3 w-3 text-copper" aria-label="Con el plan Familiar" />
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="bienestar">
+          {gate(
+            <WellbeingReportCard
+              report={wellbeing}
+              windowDays={windowDays}
+              onWindowChange={setWindowDays}
+              loading={bookingsQ.isLoading || logsQ.isLoading}
+              error={bookingsQ.isError || logsQ.isError}
+            />,
+            <PremiumPreview
+              icon={<HeartPulse className="h-4 w-4 text-sos" aria-hidden="true" />}
+              title="Informe de bienestar"
+              description="Cómo ha estado el ánimo, los signos vitales y las alertas de cada turno, con un resumen listo para el médico."
+              bullets={[
+                "Tendencia del ánimo, la presión arterial, el pulso, la temperatura y el oxígeno",
+                "Alertas, incidentes y medicamentos registrados por el profesional",
+                "Resumen para llevar a la consulta (copiar o descargar)",
+              ]}
+              teaser={
+                services30 > 0
+                  ? `Tus ${plural(services30, "servicio", "servicios")} de los últimos 30 días ya ${services30 === 1 ? "tiene" : "tienen"} parte: con el plan Familiar los convertimos en un informe.`
+                  : null
+              }
+            />,
+          )}
+        </TabsContent>
+
+        <TabsContent value="comparador">
+          {gate(
+            <ApplicantsRankingCard
+              ranked={ranked}
+              loading={proposalsQ.isLoading || factsQ.isLoading}
+              onOpenInbox={onOpenInbox}
+            />,
+            <PremiumPreview
+              icon={<Scale className="h-4 w-4 text-trust" aria-hidden="true" />}
+              title="Comparador inteligente"
+              description="Ordena las propuestas y postulaciones con un puntaje de 0 a 100 que se puede desarmar."
+              bullets={[
+                "Verificación, confianza, calificaciones y experiencia de cada profesional",
+                "Precio frente al rango de tu ciudad y contraoferta sugerida",
+                "Cercanía y si ya te atendió o está en tu equipo de confianza",
+              ]}
+              teaser={
+                applicants.length > 0
+                  ? `Tienes ${plural(applicants.length, "opción", "opciones")} por comparar ahora mismo.`
+                  : null
+              }
+            />,
+          )}
+        </TabsContent>
+
+        <TabsContent value="gasto">
+          {gate(
+            <CareBudgetCard
+              report={budget}
+              loading={bookingsQ.isLoading}
+              error={bookingsQ.isError}
+            />,
+            <PremiumPreview
+              icon={<Wallet className="h-4 w-4 text-trust" aria-hidden="true" />}
+              title="Presupuesto de cuidado"
+              description="Cuánto llevas, cuánto tienes programado y cuánto proyectamos para el mes."
+              bullets={[
+                "Gasto de los últimos 6 meses y proyección del mes en curso",
+                "Cómo va tu gasto frente al mes pasado a la misma fecha",
+                "Tu costo por hora frente al rango de tu ciudad y cuánto podrías ahorrar",
+              ]}
+              teaser={
+                budget.current.spentToDate > 0
+                  ? `Este mes llevas ${formatCOP(budget.current.spentToDate)} en servicios terminados.`
+                  : null
+              }
+            />,
+          )}
+        </TabsContent>
+
+        <TabsContent value="cobertura">
+          {gate(
+            <CoverageRadarCard radar={radar} loading={needsQ.isLoading} onGoTo={onRadarAnchor} />,
+            <PremiumPreview
+              icon={<Radar className="h-4 w-4 text-trust" aria-hidden="true" />}
+              title="Radar de cobertura"
+              description="Qué horas de tu agenda siguen sin profesional y a quién avisar primero."
+              bullets={[
+                "Horas sin cubrir de los próximos 14 días, con su urgencia",
+                "Si tu tarifa ayuda o estorba frente al rango de tu ciudad",
+                "A quién de tu equipo de confianza conviene avisar primero",
+              ]}
+              teaser={
+                openHours > 0
+                  ? `Tienes ${plural(openHours, "hora", "horas")} sin cubrir en los próximos 14 días.`
+                  : null
+              }
+            />,
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  return <>{children({ hero, journey, tools })}</>;
 }

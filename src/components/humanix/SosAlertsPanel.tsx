@@ -104,16 +104,20 @@ function AlertRow({
 export function SosAlertsPanel({
   userId,
   hideWhenEmpty = true,
+  activeOnly = false,
   className = "",
 }: {
   userId: string | null | undefined;
+  /** Solo las alertas que siguen activas (el inicio de la familia); el historial va aparte. */
+  activeOnly?: boolean;
   /** Con la lista vacía, no ocupa lugar (profesionales e instituciones); la familia puede dejarla visible. */
   hideWhenEmpty?: boolean;
   className?: string;
 }) {
   const alerts = useSosAlerts(userId);
   const act = useSosAction(userId);
-  const rows = alerts.data ?? [];
+  const all = alerts.data ?? [];
+  const rows = activeOnly ? all.filter((r) => r.status === "active") : all;
   const active = activeSosCount(rows);
 
   if (alerts.isLoading) return null;
@@ -136,8 +140,7 @@ export function SosAlertsPanel({
           toast.success(
             action === "acknowledge" ? "Marcaste que vas en camino" : "Alerta actualizada",
           ),
-        onError: (e) =>
-          toast.error(friendlyError(e, "No se pudo actualizar la alerta")),
+        onError: (e) => toast.error(friendlyError(e, "No se pudo actualizar la alerta")),
       },
     );
   };
