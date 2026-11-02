@@ -18,7 +18,8 @@ import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
-import { buildSeo, jsonLdString, faqLd, breadcrumbLd, SITE_URL } from "@/lib/seo";
+import { buildSeo, jsonLdString, faqLd, breadcrumbLd } from "@/lib/seo";
+import { pricingProductLd } from "@/lib/planSeo";
 import { toast } from "sonner";
 import {
   COP,
@@ -76,63 +77,6 @@ const PLAN_FAQS = [
     a: "Puedes subir de plan cuando quieras: los días que te quedaban se convierten al plan nuevo y la suscripción anterior se cancela sola. Para bajar de plan, cancela la renovación automática y elige el nuevo cuando termine tu plan actual.",
   },
 ];
-
-const productLd = (position: number, key: PlanKey, description: string) => ({
-  "@type": "ListItem",
-  position,
-  item: {
-    "@type": "Product",
-    name: `Humanix ${PLAN_CATALOG[key].label}`,
-    description,
-    url: `${SITE_URL}/planes`,
-    offers: {
-      "@type": "Offer",
-      price: String(PLAN_CATALOG[key].amountCOP),
-      priceCurrency: "COP",
-      availability: "https://schema.org/InStock",
-      priceValidUntil: "2026-12-31",
-    },
-  },
-});
-
-const pricingProductLd = {
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  name: "Planes Humanix",
-  url: `${SITE_URL}/planes`,
-  itemListElement: [
-    productLd(
-      1,
-      "free",
-      "Plan gratuito: busca, solicita y contrata. Comisión del 10 % al profesional.",
-    ),
-    productLd(
-      2,
-      "essential_monthly",
-      "Para familias: sin comisión, acuerdos digitales, bitácora y alertas.",
-    ),
-    productLd(
-      3,
-      "family_premium_monthly",
-      "Para familias: seguimiento avanzado, círculo familiar y SOS.",
-    ),
-    productLd(
-      4,
-      "pro_monthly",
-      "Para profesionales: 0 % de comisión, mejor visibilidad y ofertas.",
-    ),
-    productLd(
-      5,
-      "pro_premium_monthly",
-      "Para profesionales: prioridad alta, badge destacado y más IA.",
-    ),
-    productLd(
-      6,
-      "institution_monthly",
-      "Para IPS y clínicas: multiusuario, vacantes, agenda y sedes.",
-    ),
-  ],
-};
 
 export const Route = createFileRoute("/planes")({
   head: () =>
@@ -379,7 +323,7 @@ function PlansPage() {
       {/* JSON-LD estructurado para rich results de precios */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdString(pricingProductLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(pricingProductLd()) }}
       />
       <script
         type="application/ld+json"

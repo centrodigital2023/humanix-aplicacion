@@ -82,15 +82,7 @@ export const Route = createFileRoute("/profesional/$proId")({
         image: s?.avatar ?? undefined,
         url: `${SITE_URL}/profesional/${params.proId}`,
         address: { "@type": "PostalAddress", addressLocality: city, addressCountry: "CO" },
-        ...(s && s.rating > 0
-          ? {
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: s.rating.toFixed(1),
-                reviewCount: Math.max(s.jobs, 1),
-              },
-            }
-          : {}),
+        // Sin «aggregateRating»: Google no lo usa en una persona y el conteo era de servicios, no de reseñas.
       },
     };
     return {

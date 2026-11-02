@@ -249,11 +249,8 @@ export function webApplicationLd() {
       price: "0",
       priceCurrency: "COP",
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      reviewCount: "128",
-    },
+    // Sin «aggregateRating»: antes decía 4,9 de 128 reseñas inventadas. Google sanciona las reseñas que no son reales; solo se
+    // publican calificaciones que salgan de la base.
   } as const;
 }
 
