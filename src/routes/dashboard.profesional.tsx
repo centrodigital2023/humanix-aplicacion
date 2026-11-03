@@ -54,7 +54,8 @@ import { ProfileImporter } from "@/components/humanix/ProfileImporter";
 import { InstallAppButton } from "@/components/humanix/InstallAppButton";
 import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { newReferences, normalizeExtraction, type ExtractedProfile } from "@/lib/profileExtraction";
-import { WalletPanel } from "@/components/humanix/WalletPanel";
+import { BrebKeyCard } from "@/components/humanix/payments/BrebKeyCard";
+import { WalletCard } from "@/components/humanix/payments/WalletCard";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
 import { PublishGate } from "@/components/humanix/PublishGate";
@@ -960,6 +961,14 @@ function ProDashboard() {
             {/* Alertas SOS de las personas que atiendo (solo aparece si hay alguna) */}
             {userId && <SosAlertsPanel userId={userId} />}
 
+            {/* Cómo recibe su plata: llave Bre-B (pagos digitales) y billetera (comisión de turnos en efectivo) */}
+            {userId && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <BrebKeyCard userId={userId} />
+                <WalletCard userId={userId} />
+              </div>
+            )}
+
             {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
             {userId && (
               <ActiveServicesCard
@@ -1349,16 +1358,6 @@ function ProDashboard() {
                       </span>
                     </p>
                     <ClinicalMonitor patientId={userId} showDeviceGuide compact />
-                  </div>
-                )}
-
-                {/* Billetera — saldo, movimientos y retiros Nequi/PSE/RappiPay */}
-                {userId && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold flex items-center gap-1.5">
-                      <Wallet className="h-4 w-4 text-emerald-600" /> Mi billetera
-                    </p>
-                    <WalletPanel userId={userId} />
                   </div>
                 )}
 

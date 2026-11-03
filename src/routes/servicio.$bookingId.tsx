@@ -25,6 +25,7 @@ import { VoiceRating } from "@/components/humanix/VoiceRating";
 import { ServiceContractCard } from "@/components/humanix/ServiceContractCard";
 import { SmartContractCard } from "@/components/humanix/contracts/SmartContractCard";
 import { RehireCard } from "@/components/humanix/RehireCard";
+import { BookingPaymentCard } from "@/components/humanix/payments/BookingPaymentCard";
 import { PriceBreakdownCard } from "@/components/humanix/PriceBreakdownCard";
 import { ReplacementPanel } from "@/components/humanix/ReplacementPanel";
 import { DimensionRatingForm } from "@/components/humanix/DimensionRatingForm";
@@ -89,6 +90,11 @@ type Booking = {
   duration_hours: number;
   hourly_rate: number;
   total_amount: number;
+  payment_method?: string | null;
+  paid_at?: string | null;
+  platform_fee_amount?: number | null;
+  professional_payout?: number | null;
+  commission_exempt_cop?: number | null;
   service_address: string | null;
   service_lat: number | null;
   service_lng: number | null;
@@ -367,7 +373,11 @@ function ServicePage() {
                 </p>
                 {isClient ? (
                   <p className="text-sm font-semibold text-foreground">
-                    💵 Pagas directo a {firstName} al terminar
+                    {booking.payment_method === "CASH"
+                      ? `💵 En efectivo a ${firstName}`
+                      : booking.paid_at
+                        ? "✅ Pagado con Bre-B"
+                        : "⚡ Con Bre-B"}
                   </p>
                 ) : (
                   <p className="text-[10px] text-muted-foreground">
@@ -377,6 +387,16 @@ function ServicePage() {
               </div>
             )}
           </header>
+
+          {(isClient || isProfessional) && (
+            <div className="mt-4 max-w-md">
+              <BookingPaymentCard
+                booking={booking}
+                side={isClient ? "client" : "professional"}
+                peerFirstName={firstName}
+              />
+            </div>
+          )}
 
           {(isClient || isProfessional) && (
             <div className="mt-4 max-w-sm">

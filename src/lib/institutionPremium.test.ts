@@ -64,13 +64,11 @@ describe("funciones premium del panel de instituciones", () => {
     expect(label).toMatch(/utilización/);
   });
 
-  it("precios de la tabla de oct 2026", () => {
+  it("precios de la tabla de nov 2026", () => {
     expect(PLAN_CATALOG.free.amountCOP).toBe(0);
-    expect(PLAN_CATALOG.essential_monthly.amountCOP).toBe(9900);
-    expect(PLAN_CATALOG.family_premium_monthly.amountCOP).toBe(24900);
-    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(19900);
-    expect(PLAN_CATALOG.pro_premium_monthly.amountCOP).toBe(39900);
-    expect(PLAN_CATALOG.institution_monthly.amountCOP).toBe(299_000);
+    expect(PLAN_CATALOG.family_premium_monthly.amountCOP).toBe(0);
+    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(0);
+    expect(PLAN_CATALOG.institution_monthly.amountCOP).toBe(290_000);
   });
 
   it("cada función la abre el plan más barato que la incluye, y los planes caros incluyen a los baratos de su perfil", () => {

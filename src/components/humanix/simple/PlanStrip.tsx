@@ -1,53 +1,49 @@
-// Planes por perfil: pagar lleva a /pagar (Mercado Pago dentro de Humanix). Reutiliza computeCta (lógica probada de
-// /planes).
-// Precio visible antes de pagar, sin casillas preseleccionadas.
-import { useState } from "react";
+// Plan por perfil en la portada: familias y profesionales, gratis; instituciones, plan anual por Bre-B (se paga en
+// /planes, dentro de Humanix). Reutiliza computeCta (lógica probada).
 import { useNavigate } from "@tanstack/react-router";
-import { Check, Loader2 } from "lucide-react";
-import { pathForRole, type AppUser } from "@/hooks/use-app-user";
+import { Check } from "lucide-react";
+import type { AppUser } from "@/hooks/use-app-user";
 import { usePlan } from "@/hooks/use-plan";
 import { computeCta } from "@/lib/planCta";
-import { LATER_MESSAGE, payPageHref } from "@/lib/checkout";
-import { PLAN_CATALOG, planValidity, type PlanKey } from "@/lib/plans";
+import { PLAN_CATALOG, planValidity, segmentOfRoles, type PlanKey } from "@/lib/plans";
+import { COP, INSTITUTION_PLANS, PRO_TIERS } from "@/lib/commissionMatrix";
 import { AUDIENCE_COPY, type Audience } from "@/lib/audience";
-import { CONTACT } from "@/lib/social";
-import { whatsappLink } from "@/lib/audience";
 import { useVoice } from "./voice";
 
 type Card = { key: PlanKey; emoji: string; perks: string[] };
 
 const BY_AUDIENCE: Record<Audience, Card[]> = {
   familias: [
-    { key: "free", emoji: "🌱", perks: ["Buscar y pedir", "Mapa en vivo", "Crear cuenta gratis"] },
-    {
-      key: "essential_monthly",
-      emoji: "💎",
-      perks: ["Sin comisión", "Acuerdos digitales y bitácora", "Alertas y soporte prioritario"],
-    },
     {
       key: "family_premium_monthly",
-      emoji: "🌟",
-      perks: ["Círculo familiar", "Reportes para el médico", "Botón SOS y soporte dedicado"],
-    },
-  ],
-  instituciones: [
-    { key: "free", emoji: "🌱", perks: ["Publicar turnos", "Ver candidatos"] },
-    {
-      key: "institution_monthly",
-      emoji: "🏥",
-      perks: ["Multiusuario", "Vacantes, agenda y seguimiento", "COP 50.000 por sede adicional"],
+      emoji: "💚",
+      perks: [
+        "Gratis y sin comisión",
+        "Paga con Bre-B desde tu banco, o en efectivo",
+        "Círculo familiar, alertas y botón SOS",
+      ],
     },
   ],
   profesionales: [
     {
       key: "pro_monthly",
-      emoji: "💎",
-      perks: ["0 % de comisión", "Mejor visibilidad", "Acceso ilimitado a ofertas"],
+      emoji: "🩺",
+      perks: [
+        `Sin mensualidad · comisión de ${PRO_TIERS[2].pct} % que baja hasta ${PRO_TIERS[0].pct} %`,
+        "Tu primer turno con cada familia nueva: sin comisión",
+        "Tu pago en segundos a tu llave Bre-B",
+      ],
     },
+  ],
+  instituciones: [
     {
-      key: "pro_premium_monthly",
-      emoji: "🚀",
-      perks: ["Prioridad alta", "Badge verificado destacado", "Más IA y reputación"],
+      key: "institution_monthly",
+      emoji: "🏥",
+      perks: [
+        `${COP(INSTITUTION_PLANS.small.monthlyCOP)}/mes (1 a 9 profesionales) o ${COP(INSTITUTION_PLANS.large.monthlyCOP)}/mes (10 o más)`,
+        "Un solo pago al año por Bre-B",
+        "Multiusuario, agenda inteligente y monitoreo a escala",
+      ],
     },
   ],
 };
@@ -56,144 +52,87 @@ export function PlanStrip({ audience, user }: { audience: Audience; user: AppUse
   const navigate = useNavigate();
   const { say } = useVoice();
   const plan = usePlan(user?.id);
-  const [busy, setBusy] = useState<PlanKey | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const renewSoon = planValidity(plan, Date.now()).renewSoon;
+  const segment = segmentOfRoles(user?.roles);
 
-  const act = async (key: PlanKey) => {
-    const cta = computeCta(key, {
+  const act = (key: PlanKey) => {
+    const { action } = computeCta(key, {
       userId: user?.id,
       currentPlan: plan.plan,
-      cancelAtPeriodEnd: plan.cancelAtPeriodEnd,
+      segment,
       renewSoon,
     });
-    const { action } = cta;
-    setError(null);
-    if (action.kind === "current") return;
-    if (action.kind === "later") {
-      setError(LATER_MESSAGE);
-      return;
-    }
-    if (action.kind === "sales") {
-      window.open(
-        whatsappLink(CONTACT.whatsappNumber, "Hola Humanix, quiero el plan para IPS."),
-        "_blank",
-        "noopener,noreferrer",
-      );
-      return;
-    }
+    if (action.kind === "current" || action.kind === "other_profile") return;
     if (action.kind === "free") {
-      if (user) navigate({ to: "/dashboard" });
+      if (user) void navigate({ to: "/dashboard" });
       else
-        navigate({
+        void navigate({
           to: "/auth",
-          search: {
-            role: AUDIENCE_COPY[audience].authRole,
-            mode: "signup",
-          } as never,
+          search: { role: AUDIENCE_COPY[audience].authRole, mode: "signup" } as never,
         });
       return;
     }
     if (action.kind === "login") {
-      navigate({
+      void navigate({
         to: "/auth",
         search: {
           role: AUDIENCE_COPY[audience].authRole,
           mode: "signup",
-          redirect: `/?para=${audience}`,
+          redirect: action.redirectTo,
         } as never,
       });
       return;
     }
-    // checkout / reactivate → /pagar (Mercado Pago dentro de Humanix, solo en la web)
-    if (plan.error) {
-      // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
-      setError("No pudimos confirmar tu plan ahora. Revisa tu conexión e inténtalo de nuevo.");
-      void plan.refresh();
-      return;
-    }
-    setBusy(key);
-    say("Te llevamos a pagar de forma segura.");
-    void navigate({
-      href: payPageHref(key, { returnTo: user ? pathForRole(user.primaryRole) : null }),
-    });
+    say("Te llevamos a activar el plan con Bre-B.");
+    void navigate({ href: `/planes?plan=${key}` });
   };
 
   return (
-    <div>
-      <ul
-        className={`grid gap-4 sm:grid-cols-2 ${BY_AUDIENCE[audience].length === 3 ? "lg:grid-cols-3" : ""}`}
-      >
-        {BY_AUDIENCE[audience].map((c) => {
-          const def = PLAN_CATALOG[c.key];
-          const cta = computeCta(c.key, {
-            userId: user?.id,
-            currentPlan: plan.plan,
-            cancelAtPeriodEnd: plan.cancelAtPeriodEnd,
-            renewSoon,
-          });
-          const paid = def.amountCOP > 0;
-          return (
-            <li
-              key={c.key}
-              className={`flex flex-col rounded-[2rem] p-6 shadow-sm ${
-                paid ? "bg-trust text-trust-foreground shadow-xl shadow-trust/20" : "bg-card"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span aria-hidden="true" className="text-4xl">
-                  {c.emoji}
-                </span>
-                <div>
-                  <p className="text-xl font-bold">{def.label}</p>
-                  <p className="font-display text-3xl font-bold">
-                    {def.priceLabel}
-                    <span className="text-base font-semibold opacity-80"> {def.priceNote}</span>
-                  </p>
-                </div>
-              </div>
-              <ul className="mt-4 space-y-2 text-base">
-                {c.perks.map((p) => (
-                  <li key={p} className="flex items-center gap-2">
-                    <Check className="h-5 w-5 shrink-0" aria-hidden="true" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                onClick={() => act(c.key)}
-                disabled={cta.disabled || busy !== null}
-                className={`mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl px-4 text-lg font-bold transition active:scale-[0.98] disabled:opacity-60 ${
-                  paid ? "bg-white text-trust-deep" : "bg-trust text-trust-foreground"
-                }`}
-              >
-                {busy === c.key && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
-                {cta.label}
-              </button>
-              {paid && c.key !== "institution_monthly" && (
-                <p className="mt-2 text-center text-sm opacity-85">
-                  🔒 Pago seguro con Mercado Pago · PSE, Nequi o tarjeta
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {error && (
-        <div
-          role="status"
-          className="mt-4 rounded-2xl border border-border bg-card p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
-        >
-          <p className="flex-1 text-sm">{error}</p>
-          <a
-            href="/planes"
-            className="inline-flex items-center gap-2 rounded-xl bg-biosensor hover:bg-biosensor/90 text-biosensor-foreground font-semibold px-4 py-2.5 text-sm transition shrink-0"
+    <ul className="grid gap-4">
+      {BY_AUDIENCE[audience].map((c) => {
+        const def = PLAN_CATALOG[c.key];
+        const cta = computeCta(c.key, {
+          userId: user?.id,
+          currentPlan: plan.plan,
+          segment,
+          renewSoon,
+        });
+        return (
+          <li
+            key={c.key}
+            className="flex flex-col rounded-[2rem] bg-trust p-6 text-trust-foreground shadow-xl shadow-trust/20"
           >
-            Ver planes
-          </a>
-        </div>
-      )}
-    </div>
+            <div className="flex items-center gap-3">
+              <span aria-hidden="true" className="text-4xl">
+                {c.emoji}
+              </span>
+              <div>
+                <p className="text-xl font-bold">{def.label}</p>
+                <p className="font-display text-3xl font-bold">
+                  {def.priceLabel}
+                  <span className="text-base font-semibold opacity-80"> {def.priceNote}</span>
+                </p>
+              </div>
+            </div>
+            <ul className="mt-4 space-y-2 text-base">
+              {c.perks.map((p) => (
+                <li key={p} className="flex items-center gap-2">
+                  <Check className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  {p}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => act(c.key)}
+              disabled={cta.disabled}
+              className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-background px-4 text-lg font-bold text-trust transition active:scale-[0.98] disabled:opacity-70"
+            >
+              {cta.label}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

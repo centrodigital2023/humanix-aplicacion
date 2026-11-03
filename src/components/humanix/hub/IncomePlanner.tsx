@@ -3,11 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "@tanstack/react-router";
-import { Calculator, ChevronDown, Info, PiggyBank, Target } from "lucide-react";
+import { Calculator, ChevronDown, Info, Target, TrendingDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { PRO_TIERS } from "@/lib/commissionMatrix";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,13 +19,12 @@ import {
 } from "@/components/ui/select";
 import { usePlan } from "@/hooks/use-plan";
 import { MAX_HOURLY_RATE, MIN_HOURLY_RATE } from "@/lib/negotiation";
-import { PLAN_CATALOG, type PlanKey } from "@/lib/plans";
+import type { PlanKey } from "@/lib/plans";
 import { formatCOP } from "@/lib/pricing";
 import {
   CO_RULES,
   FREE_COMMISSION_PCT,
   INCOME_DISCLAIMER,
-  comparePaidPlan,
   projectIncome,
   requiredHourlyRate,
   type ArlClass,
@@ -39,7 +39,7 @@ const schema = z.object({
     .number()
     .min(MIN_HOURLY_RATE, `Mínimo ${formatCOP(MIN_HOURLY_RATE)}`)
     .max(MAX_HOURLY_RATE, `Máximo ${formatCOP(MAX_HOURLY_RATE)}`),
-  paidPlan: z.boolean(),
+  commissionPct: z.number().int().min(0).max(100),
   paysContributions: z.boolean(),
   arlClass: z.number().int().min(1).max(5),
   targetNet: z.number().min(0).max(100_000_000).optional(),
@@ -102,7 +102,7 @@ interface Props {
 
 /**
  * Planificador de ingresos: cuánto te queda de verdad por hora después de la comisión y de los
- * aportes de un independiente, y si te conviene un plan de pago. Es una estimación, no asesoría.
+ * aportes de un independiente, según tu escalón de comisión (15/12/10 %). Es una estimación, no asesoría.
  */
 export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props) {
   const [open, setOpen] = useState(defaultOpen);
@@ -117,7 +117,7 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
     defaultValues: {
       hoursPerWeek: 30,
       hourlyRate: defaultRate && defaultRate >= MIN_HOURLY_RATE ? defaultRate : 22000,
-      paidPlan: plan !== "free",
+      commissionPct: FREE_COMMISSION_PCT,
       paysContributions: true,
       arlClass: 1,
       targetNet: undefined,
@@ -126,7 +126,7 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
 
   const values = watch();
   const parsed = schema.safeParse(values);
-  const commissionPct = values.paidPlan ? 0 : FREE_COMMISSION_PCT;
+  const commissionPct = values.commissionPct ?? FREE_COMMISSION_PCT;
 
   const calc = useMemo(() => {
     if (!parsed.success) return null;
@@ -138,11 +138,6 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
       arlClass: v.arlClass as ArlClass,
     };
     const projection = projectIncome({ ...base, commissionPct });
-    const free = projectIncome({ ...base, commissionPct: FREE_COMMISSION_PCT });
-    const comparison = comparePaidPlan({
-      grossMonthly: free.grossMonthly,
-      planPrice: PLAN_CATALOG.pro_monthly.amountCOP,
-    });
     const needed =
       v.targetNet && v.targetNet > 0
         ? requiredHourlyRate({
@@ -153,7 +148,7 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
             arlClass: v.arlClass as ArlClass,
           })
         : null;
-    return { projection, comparison, needed };
+    return { projection, needed };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(values), commissionPct]);
 
@@ -168,7 +163,7 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
         <span className="flex items-center gap-2 text-sm font-semibold">
           <Calculator className="h-4 w-4 text-biosensor" aria-hidden /> Planificador de ingresos
           <span className="hidden text-xs font-normal text-muted-foreground sm:inline">
-            · cuánto te queda por hora y qué plan te conviene
+            · cuánto te queda por hora después de la comisión
           </span>
         </span>
         <ChevronDown
@@ -244,14 +239,32 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
                 </SelectContent>
               </Select>
             </div>
-            <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-xs">
-              <span>Con plan de pago (sin comisión)</span>
-              <Switch
-                checked={values.paidPlan}
-                onCheckedChange={(v) => setValue("paidPlan", v, { shouldValidate: true })}
-                aria-label="Simular con plan de pago"
-              />
-            </label>
+            <div className="rounded-lg border border-border px-3 py-2 text-xs">
+              <span className="block">Tu comisión (según turnos en 30 días)</span>
+              <div
+                role="radiogroup"
+                aria-label="Comisión"
+                className="mt-1.5 grid grid-cols-3 gap-1"
+              >
+                {[...PRO_TIERS].reverse().map((t) => (
+                  <button
+                    key={t.pct}
+                    type="button"
+                    role="radio"
+                    aria-checked={commissionPct === t.pct}
+                    onClick={() => setValue("commissionPct", t.pct, { shouldValidate: true })}
+                    className={cn(
+                      "rounded-md border px-2 py-1 font-semibold transition",
+                      commissionPct === t.pct
+                        ? "border-biosensor bg-biosensor text-biosensor-foreground"
+                        : "border-border hover:bg-muted",
+                    )}
+                  >
+                    {t.pct} %
+                  </button>
+                ))}
+              </div>
+            </div>
             <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-xs">
               <span>Cotizo como independiente</span>
               <Switch
@@ -320,37 +333,14 @@ export function IncomePlanner({ plan, defaultRate, defaultOpen = false }: Props)
                 </p>
               ))}
 
-              <div
-                className={cn(
-                  "flex flex-col gap-2 rounded-xl border p-3 text-sm sm:flex-row sm:items-center sm:justify-between",
-                  calc.comparison.worthIt ? "border-ok/40 bg-ok/5" : "border-border bg-muted/20",
-                )}
-              >
-                <div className="flex items-start gap-2">
-                  <PiggyBank className="mt-0.5 h-4 w-4 shrink-0 text-ok" aria-hidden />
-                  <p className="text-xs">
-                    {calc.comparison.worthIt ? (
-                      <>
-                        Con este ritmo, el plan <strong>Pro</strong> te ahorra{" "}
-                        <strong>{formatCOP(calc.comparison.monthlySavings)}</strong> al mes: dejas
-                        de pagar {formatCOP(calc.comparison.commissionAvoided)} de comisión y el
-                        plan cuesta {formatCOP(calc.comparison.planPrice)}.
-                      </>
-                    ) : (
-                      <>
-                        Con este ritmo el plan Pro aún no compensa. Empieza a ahorrar desde{" "}
-                        <strong>{formatCOP(calc.comparison.breakEvenMonthly ?? 0)}</strong>{" "}
-                        facturados al mes.
-                      </>
-                    )}
-                  </p>
-                </div>
-                {plan === "free" && (
-                  <Button asChild size="sm" variant={calc.comparison.worthIt ? "hero" : "outline"}>
-                    <Link to="/planes">Ver planes</Link>
-                  </Button>
-                )}
-              </div>
+              <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                <TrendingDown className="mt-0.5 h-4 w-4 shrink-0 text-biosensor" aria-hidden />
+                <span>
+                  Sin mensualidad. Tu comisión baja a <strong>12 %</strong> desde 20 turnos en 30
+                  días y a <strong>10 %</strong> desde 60. Tu primer turno con cada familia nueva no
+                  paga comisión (hasta $30.000).
+                </span>
+              </p>
 
               {calc.needed && (
                 <p className="flex items-start gap-2 text-xs">

@@ -153,7 +153,7 @@ export function buildEarningsReport(args: {
     gross90,
     effectivePct: gross90 > 0 && paid90 > 0 ? Math.round((paid90 / gross90) * 1000) / 10 : null,
     essentialCost90,
-    savingWithEssential90: paid90 > essentialCost90 ? paid90 - essentialCost90 : null,
+    savingWithEssential90: null, // ya no hay plan sin comisión
   };
 
   // ── Días de la semana (según cuándo empezó el servicio) ────────────────────
@@ -304,22 +304,14 @@ export function earningsInsights(r: EarningsReport): EarningsInsight[] {
 
   const k = r.commission;
   if (k.paid90 > 0) {
-    if (k.savingWithEssential90 !== null) {
-      out.push({
-        id: "commission_saving",
-        severity: "warn",
-        title: `En 90 días pagaste ${money(k.paid90)} de comisión`,
-        detail: `El plan Pro (${PLAN_CATALOG.pro_monthly.priceLabel}${PLAN_CATALOG.pro_monthly.priceNote}) no cobra comisión: con tu volumen habrías conservado unos ${money(k.savingWithEssential90)} después de pagar el plan.`,
-        action: "Compara los planes; la suscripción se hace en la página web.",
-      });
-    } else {
-      out.push({
-        id: "commission_info",
-        severity: "info",
-        title: `En 90 días pagaste ${money(k.paid90)} de comisión`,
-        detail: `Con tu volumen actual el plan Pro todavía no se paga solo (costaría ${money(k.essentialCost90)} en 3 meses). Si tus horas suben, vuelve a mirarlo.`,
-      });
-    }
+    // Ningún plan quita la comisión: lo que la baja es trabajar más (15 → 12 → 10 %).
+    out.push({
+      id: "commission_info",
+      severity: "info",
+      title: `En 90 días pagaste ${money(k.paid90)} de comisión`,
+      detail:
+        "Tu comisión baja a 12 % desde 20 turnos en 30 días y a 10 % desde 60. Tu primer turno con cada familia nueva no paga comisión (hasta $30.000).",
+    });
   }
 
   const { rate } = r;

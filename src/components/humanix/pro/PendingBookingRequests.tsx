@@ -42,7 +42,25 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
       toast.success("¡Aceptaste el servicio! Ya puedes escribir y llamar.");
       void navigate({ to: "/servicio/$bookingId", params: { bookingId } });
     } catch (e) {
-      toast.error(friendlyError(e));
+      const hint = String((e as { hint?: unknown })?.hint ?? "");
+      if (hint.startsWith("wallet_")) {
+        // La base no deja aceptar sin cupo (`hx_booking_wallet_gate`): se explica y se ofrece recargar a un toque.
+        toast.error(
+          (e as { message?: string }).message ?? "Recarga tu billetera para aceptar este turno.",
+          {
+            duration: 10_000,
+            action: {
+              label: "Recargar",
+              onClick: () =>
+                document
+                  .getElementById("billetera")
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+            },
+          },
+        );
+      } else {
+        toast.error(friendlyError(e));
+      }
     } finally {
       setAccepting(null);
     }
@@ -69,7 +87,7 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
       </h2>
       <ul className="space-y-3">
         {query.data.map((booking) => {
-          const direct = !booking.payment_mode || booking.payment_mode === "direct_to_professional";
+          const cash = booking.payment_method === "CASH";
           return (
             <li
               key={booking.id}
@@ -84,8 +102,10 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
                     {booking.duration_hours} h · {when.format(new Date(booking.scheduled_at))}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {direct ? "Pago directo al terminar" : "Pago por la plataforma"} · llegó{" "}
-                    {waitingLabel(booking.created_at, now)}
+                    {cash
+                      ? `💵 En efectivo · comisión ${money.format(booking.platform_fee_amount ?? 0)} de tu billetera`
+                      : "⚡ Paga la familia por Bre-B · te llega a tu llave"}{" "}
+                    · llegó {waitingLabel(booking.created_at, now)}
                   </p>
                 </div>
               </div>

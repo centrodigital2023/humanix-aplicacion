@@ -2,12 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   PLAN_CATALOG,
+  type InstitutionSize,
   type PlanKey,
   type PlanFeature,
   type SubscriptionSnapshot,
   canUseFeature,
+  effectivePlan,
   hasAtLeast,
-  normalizeSubscription,
   tierOf,
 } from "@/lib/plans";
 
@@ -18,18 +19,17 @@ export type UserPlanState = {
   amount: number | null;
   currency: string | null;
   currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  /** El plan se cobra solo cada mes (suscripción de Mercado Pago). */
-  autoRenew: boolean;
+  /** Tamaño del plan institucional vigente (nulo si no hay). */
+  institutionSize: InstitutionSize | null;
   loading: boolean;
   /**
-   * No se pudo leer el plan (red o servidor). Se conserva el último plan conocido en vez de mostrar «Free» a
-   * quien sí paga; la interfaz no debe ofrecer pagar de nuevo mientras esto sea `true`.
+   * No se pudo leer el plan (red o servidor). Se conserva el último plan conocido en vez de bajar de nivel a quien
+   * ya lo tiene; la interfaz no debe ofrecer pagar de nuevo mientras esto sea `true`.
    */
   error: boolean;
   /** Minimum-tier check: `has("pro_monthly")` returns true if plan >= pro. */
   has: (min: PlanKey) => boolean;
-  /** Feature-based check using FEATURE_MIN_PLAN. */
+  /** Feature-based check. */
   can: (feature: PlanFeature) => boolean;
   /** Current plan definition (label, price, features). */
   def: (typeof PLAN_CATALOG)[PlanKey];
@@ -37,23 +37,24 @@ export type UserPlanState = {
   refresh: () => Promise<void>;
 };
 
+/**
+ * Nivel efectivo de la cuenta, con la misma regla que `plan_key_for()` en SQL: familias y profesionales tienen todas
+ * sus funciones gratis; la institución abre las suyas con el plan anual (que escribe solo el aviso de pago de Firux).
+ */
 export function usePlan(userId: string | null | undefined): UserPlanState {
-  const [state, setState] = useState<
-    Omit<UserPlanState, "has" | "can" | "def" | "refresh" | "tier"> & {
-      tier: number;
-    }
-  >(() => ({
-    plan: "free",
-    tier: 0,
-    status: null,
-    amount: null,
-    currency: null,
-    currentPeriodEnd: null,
-    cancelAtPeriodEnd: false,
-    autoRenew: false,
-    loading: true,
-    error: false,
-  }));
+  const [state, setState] = useState<Omit<UserPlanState, "has" | "can" | "def" | "refresh">>(
+    () => ({
+      plan: "free",
+      tier: 0,
+      status: null,
+      amount: null,
+      currency: null,
+      currentPeriodEnd: null,
+      institutionSize: null,
+      loading: true,
+      error: false,
+    }),
+  );
 
   const load = useCallback(async () => {
     if (!userId) {
@@ -62,15 +63,16 @@ export function usePlan(userId: string | null | undefined): UserPlanState {
     }
     // Un reintento corto antes de rendirse: un fallo de red no debe parecer «no tienes plan».
     for (let attempt = 0; attempt < 2; attempt++) {
-      const { data, error } = await supabase
-        .from("mp_subscriptions")
-        // «*»: la tabla de producción no tiene todas las columnas del repositorio (p. ej. cancel_at_period_end);
-        // pedir una columna que no existe hace fallar la consulta para todos.
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (!error) {
-        const norm = normalizeSubscription((data ?? null) as SubscriptionSnapshot | null);
+      const [roles, sub] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        // «*»: la tabla de producción no tiene todas las columnas del repositorio.
+        supabase.from("mp_subscriptions").select("*").eq("user_id", userId).maybeSingle(),
+      ]);
+      if (!roles.error && !sub.error) {
+        const norm = effectivePlan(
+          (roles.data ?? []).map((r) => String(r.role)),
+          (sub.data ?? null) as SubscriptionSnapshot | null,
+        );
         setState({ ...norm, tier: tierOf(norm.plan), loading: false, error: false });
         return;
       }
@@ -83,24 +85,16 @@ export function usePlan(userId: string | null | undefined): UserPlanState {
     void load();
   }, [load]);
 
-  // Realtime: when MP webhook flips status or webhook inserts a new sub,
-  // we pick it up without a page reload.
+  // Realtime: cuando el aviso de pago activa el plan institucional, se ve sin recargar.
   useEffect(() => {
     if (!userId) return;
-    // Unique channel name per mount to avoid "add callbacks after subscribe()"
-    // errors when StrictMode/HMR re-runs the effect before the previous
-    // removeChannel resolves.
+    // Nombre único por montaje: evita «add callbacks after subscribe()» con StrictMode/HMR.
     const channelName = `mp_subscriptions:${userId}:${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
       .channel(channelName)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "mp_subscriptions",
-          filter: `user_id=eq.${userId}`,
-        },
+        { event: "*", schema: "public", table: "mp_subscriptions", filter: `user_id=eq.${userId}` },
         () => {
           void load();
         },
@@ -117,11 +111,5 @@ export function usePlan(userId: string | null | undefined): UserPlanState {
     [state.plan],
   );
 
-  return {
-    ...state,
-    has,
-    can,
-    def: PLAN_CATALOG[state.plan],
-    refresh: load,
-  };
+  return { ...state, has, can, def: PLAN_CATALOG[state.plan], refresh: load };
 }

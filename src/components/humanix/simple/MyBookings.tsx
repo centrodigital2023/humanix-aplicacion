@@ -19,6 +19,8 @@ type Row = {
   created_at: string;
   total_amount: number;
   professional_id: string;
+  payment_method: string;
+  paid_at: string | null;
 };
 
 const COP = (n: number) =>
@@ -39,7 +41,9 @@ export function MyBookings({ userId, title = "Mis pedidos" }: { userId: string; 
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("service_bookings")
-      .select("id, status, scheduled_at, created_at, total_amount, professional_id")
+      .select(
+        "id, status, scheduled_at, created_at, total_amount, professional_id, payment_method, paid_at",
+      )
       .eq("client_id", userId)
       .in("status", [...ACTIVE_STATUSES])
       .order("scheduled_at", { ascending: true })
@@ -130,8 +134,16 @@ export function MyBookings({ userId, title = "Mis pedidos" }: { userId: string; 
                   params={{ bookingId: r.id }}
                   className="inline-flex min-h-14 items-center gap-2 rounded-2xl bg-trust px-5 text-base font-bold text-trust-foreground shadow-md active:scale-95"
                 >
-                  <MapPin className="h-5 w-5" aria-hidden="true" />
-                  {pending ? "Ver pedido" : "Seguir en vivo"}
+                  {!pending && r.payment_method === "DIGITAL_BREB" && !r.paid_at ? (
+                    <>
+                      <span aria-hidden="true">⚡</span> Pagar con Bre-B
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="h-5 w-5" aria-hidden="true" />
+                      {pending ? "Ver pedido" : "Seguir en vivo"}
+                    </>
+                  )}
                 </Link>
               </div>
             </li>

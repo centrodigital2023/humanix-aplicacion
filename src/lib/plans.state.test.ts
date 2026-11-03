@@ -1,90 +1,107 @@
 import { describe, expect, it } from "vitest";
-import { RENEW_REMINDER_DAYS, longDateEs, normalizeSubscription, planValidity } from "./plans";
+import {
+  bookingCommissionPct,
+  canUseFeature,
+  effectivePlan,
+  FREE_COMMISSION_PCT,
+  longDateEs,
+  planValidity,
+  PLAN_CATALOG,
+  PLANS_FOR_SEGMENT,
+} from "./plans";
 
-const NOW = Date.parse("2026-10-15T15:00:00Z");
+const NOW = Date.parse("2026-11-03T15:00:00Z");
 const DAY = 86_400_000;
-const sub = (over: object = {}) => ({
-  plan: "pro_monthly",
+const inst = (over: object = {}) => ({
+  plan: "institution_small_annual",
   status: "active",
-  amount: 29000,
+  amount: 3_480_000,
   currency: "COP",
-  current_period_end: new Date(NOW + 10 * DAY).toISOString(),
-  cancel_at_period_end: false,
+  current_period_end: new Date(NOW + 200 * DAY).toISOString(),
   ...over,
 });
 
-describe("estado del plan (misma regla que get_user_plan en SQL)", () => {
-  it("sin fila es Free", () => {
-    expect(normalizeSubscription(null, NOW)).toMatchObject({
-      plan: "free",
-      status: null,
-      currentPeriodEnd: null,
+describe("nivel efectivo (misma regla que plan_key_for en SQL)", () => {
+  it("familia y profesional tienen todo gratis; sin perfil, Free", () => {
+    expect(effectivePlan(["family"], null, NOW).plan).toBe("family_premium_monthly");
+    expect(effectivePlan(["professional"], null, NOW).plan).toBe("pro_monthly");
+    expect(effectivePlan(["professional", "family"], null, NOW).plan).toBe("pro_monthly");
+    expect(effectivePlan([], null, NOW).plan).toBe("free");
+    expect(effectivePlan(["institution"], null, NOW).plan).toBe("free");
+  });
+  it("institución con plan anual vigente: Institucional y su tamaño", () => {
+    expect(effectivePlan(["institution"], inst(), NOW)).toMatchObject({
+      plan: "institution_monthly",
+      institutionSize: "small",
     });
+    expect(
+      effectivePlan(["institution"], inst({ plan: "institution_large_annual" }), NOW)
+        .institutionSize,
+    ).toBe("large");
   });
-
-  it("activo o aprobado y vigente da el plan", () => {
-    expect(normalizeSubscription(sub(), NOW).plan).toBe("pro_monthly");
-    expect(normalizeSubscription(sub({ status: "approved" }), NOW).plan).toBe("pro_monthly");
-    expect(normalizeSubscription(sub({ current_period_end: null }), NOW).plan).toBe("pro_monthly");
-  });
-
-  it("vencido, pendiente o rechazado es Free, pero conserva el estado y la fecha para mostrarlos", () => {
-    const expired = normalizeSubscription(
-      sub({ current_period_end: new Date(NOW - DAY).toISOString() }),
-      NOW,
+  it("vencido, pendiente o con una clave vieja de Mercado Pago no abre nada", () => {
+    expect(
+      effectivePlan(
+        ["institution"],
+        inst({ current_period_end: new Date(NOW - DAY).toISOString() }),
+        NOW,
+      ).plan,
+    ).toBe("free");
+    expect(effectivePlan(["institution"], inst({ status: "pending" }), NOW).plan).toBe("free");
+    expect(effectivePlan(["family"], inst({ plan: "essential_monthly" }), NOW).plan).toBe(
+      "family_premium_monthly",
     );
-    expect(expired).toMatchObject({ plan: "free", status: "active", amount: null });
-    expect(expired.currentPeriodEnd).not.toBeNull();
-    expect(normalizeSubscription(sub({ status: "pending" }), NOW)).toMatchObject({
-      plan: "free",
-      status: "pending",
-    });
-    expect(normalizeSubscription(sub({ status: "rejected" }), NOW).plan).toBe("free");
-  });
-
-  it("un plan desconocido o «free» activo es Free (nada se abre por un texto raro)", () => {
-    expect(normalizeSubscription(sub({ plan: "gold" }), NOW).plan).toBe("free");
-    expect(normalizeSubscription(sub({ plan: "free" }), NOW).plan).toBe("free");
-    expect(normalizeSubscription(sub({ plan: null }), NOW).plan).toBe("free");
   });
 });
 
-describe("vigencia del plan", () => {
-  it("sin plan o sin fecha no hay vigencia que mostrar", () => {
-    expect(planValidity({ plan: "free", currentPeriodEnd: null }, NOW)).toEqual({
-      daysLeft: null,
-      renewSoon: false,
-      line: null,
+describe("funciones y comisión", () => {
+  it("la comisión ya no depende del plan: ningún plan abre «sin comisión»", () => {
+    for (const k of Object.keys(PLAN_CATALOG))
+      expect(canUseFeature(k, "no_commission")).toBe(false);
+  });
+  it("matriz: 15/12/10 % por turnos del profesional; 12/10 % con institución", () => {
+    expect(FREE_COMMISSION_PCT).toBe(15);
+    expect(bookingCommissionPct(0)).toBe(15);
+    expect(bookingCommissionPct(20)).toBe(12);
+    expect(bookingCommissionPct(60)).toBe(10);
+    expect(bookingCommissionPct(70, "small")).toBe(12);
+    expect(bookingCommissionPct(0, "large")).toBe(10);
+  });
+  it("familia y profesional son gratis; cada perfil ve su único plan", () => {
+    expect(PLAN_CATALOG.family_premium_monthly.amountCOP).toBe(0);
+    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(0);
+    expect(PLANS_FOR_SEGMENT).toEqual({
+      family: ["family_premium_monthly"],
+      professional: ["pro_monthly"],
+      institution: ["institution_monthly"],
     });
+    expect(canUseFeature("pro_monthly", "career_passport")).toBe(true);
+    expect(canUseFeature("family_premium_monthly", "family_circle")).toBe(true);
+  });
+});
+
+describe("vigencia del plan institucional", () => {
+  it("sin plan institucional no hay vigencia", () => {
     expect(planValidity({ plan: "pro_monthly", currentPeriodEnd: null }, NOW).line).toBeNull();
   });
-
-  it("cuenta los días que quedan (el último cuenta como uno) y dice hasta cuándo", () => {
-    const v = planValidity(
-      { plan: "pro_monthly", currentPeriodEnd: "2026-11-15T15:00:00.000Z" },
-      NOW,
-    );
-    expect(v).toEqual({ daysLeft: 31, renewSoon: false, line: "Vigente hasta el 15 de noviembre" });
+  it("dice hasta cuándo y recuerda renovar en el último mes", () => {
+    const end = Date.parse("2027-11-03T15:00:00Z");
     expect(
       planValidity(
-        { plan: "pro_monthly", currentPeriodEnd: new Date(NOW + 2 * 3_600_000).toISOString() },
+        { plan: "institution_monthly", currentPeriodEnd: new Date(end).toISOString() },
         NOW,
-      ).daysLeft,
-    ).toBe(1);
-  });
-
-  it("recuerda renovar solo en los últimos días", () => {
-    const at = (d: number) =>
+      ),
+    ).toEqual({
+      daysLeft: 365,
+      renewSoon: false,
+      line: "Vigente hasta el 3 de noviembre de 2027",
+    });
+    expect(
       planValidity(
-        { plan: "essential_monthly", currentPeriodEnd: new Date(NOW + d * DAY).toISOString() },
+        { plan: "institution_monthly", currentPeriodEnd: new Date(NOW + 20 * DAY).toISOString() },
         NOW,
-      );
-    expect(at(RENEW_REMINDER_DAYS).renewSoon).toBe(true);
-    expect(at(RENEW_REMINDER_DAYS + 1).renewSoon).toBe(false);
-  });
-
-  it("la fecha es la de Colombia (medianoche UTC aún es el día anterior en Bogotá)", () => {
-    expect(longDateEs(Date.parse("2026-11-16T03:00:00Z"))).toBe("15 de noviembre");
-    expect(longDateEs(Date.parse("2026-11-16T06:00:00Z"))).toBe("16 de noviembre");
+      ).renewSoon,
+    ).toBe(true);
+    expect(longDateEs(NOW)).toBe("3 de noviembre");
   });
 });

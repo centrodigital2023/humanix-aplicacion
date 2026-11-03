@@ -321,20 +321,6 @@ export function OpportunityHub({ userId }: { userId: string }) {
         defaultCity={bundle.pro.cities[0] ?? null}
       />
 
-      {plan === "free" && (
-        <Card className="flex flex-col gap-2 border-biosensor/30 bg-biosensor/5 p-4 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            <strong>Plan Free:</strong> pagas {FREE_COMMISSION_PCT}% de comisión y ves a las
-            familias con nombre abreviado. Con <strong>Pro</strong> (COP 19.900/mes) no pagas
-            comisión, negocias el valor y ves dirección y WhatsApp de las familias a las que te
-            postulas.
-          </p>
-          <Button asChild size="sm" variant="hero">
-            <Link to="/planes">Ver planes</Link>
-          </Button>
-        </Card>
-      )}
-
       {applying && (
         <ApplyDialog
           key={applying.key}

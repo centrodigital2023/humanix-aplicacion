@@ -206,20 +206,6 @@ export function FamilyOffersList({ userId }: { userId: string }) {
         </div>
       )}
 
-      {plan === "free" && (
-        <Card className="flex flex-col gap-2 border-biosensor/30 bg-biosensor/5 p-4 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            <strong>Plan Free:</strong> pagas {FREE_COMMISSION_PCT}% de comisión, te postulas al
-            valor publicado y ves la dirección cuando te aceptan. Con <strong>Pro</strong> (COP
-            9.000/mes) no pagas comisión, propones tu valor por hora y desbloqueas el WhatsApp de la
-            familia.
-          </p>
-          <Button asChild size="sm" variant="hero">
-            <Link to="/planes">Ver planes</Link>
-          </Button>
-        </Card>
-      )}
-
       {applying && (
         <ApplyOfferDialog
           key={applying.offer.id}

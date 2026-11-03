@@ -1,26 +1,19 @@
-// Plan catalog — canonical source of truth for plan keys, prices, features and
-// permissions. Keep this file in sync with:
-//   - supabase/functions/_shared/planBilling.ts (precios que cobra el servidor; hay una prueba que lo exige)
-//   - src/routes/planes.tsx (UI)
-//   - supabase/migrations/20261023100000_plans_v2_pricing.sql (plan_key_for, comisión, cupos y créditos en SQL)
+// Catálogo de planes: claves, precios, funciones y permisos. Fuente única para la interfaz. Va de la mano de:
+//   - supabase/migrations/20261103160000_breb_wallet_commission.sql (`plan_key_for`, comisión y billetera en SQL)
+//   - src/lib/commissionMatrix.ts (matriz de comisiones, probada)
+//   - src/routes/planes.tsx (página de precios)
 //
-// Tabla de precios (oct 2026):
-//   Familia      Free COP 0 · Familiar COP 9.900/mes · Premium Familiar COP 24.900/mes
-//   Profesional  Free COP 0 · Pro COP 19.900/mes · Premium COP 39.900/mes
-//   Institución  Institucional desde COP 299.000/mes (1 sede) · sede adicional COP 50.000/mes · anual: 12 meses por 10
-// Comisión: en Free, Humanix cobra 10 % al profesional por cada servicio. No hay comisión si el profesional o quien
-// contrata (familia o institución) tiene un plan de pago.
+// Modelo (aprobado el 3 nov 2026, pagos por Bre-B con Firux, sin Mercado Pago):
+//   Familia       Gratis, con todas sus funciones (nivel `family_premium_monthly`). La familia nunca paga comisión.
+//   Profesional   Gratis, con todas sus funciones (nivel `pro_monthly`). Comisión por turno: 15 % (0–19 turnos en
+//                 30 días), 12 % (20–59) o 10 % (60 o más). Primer turno de cada pareja: exonerado hasta $30.000.
+//   Institución   Plan anual por tamaño de sede: $290.000/mes (1 a 9 profesionales, 12 % de comisión) o $490.000/mes
+//                 (10 o más, 10 %), cobrado en un solo pago al año.
 //
-// La clave `essential_monthly` es el plan Familiar: se conserva para no tocar las filas de `mp_subscriptions` ni las
-// funciones SQL que ya la usan.
+// Las claves `essential_monthly` y `pro_premium_monthly` ya no se venden; se conservan para no romper filas antiguas
+// ni las funciones SQL que las nombran.
 
-import {
-  INSTITUTION_PRICING,
-  PLAN_PRICE_COP,
-  PLAN_TIER,
-  planQuote,
-  type BillingCycle,
-} from "./planBilling";
+import { INSTITUTION_PLANS, PRO_TIERS, type InstitutionSize } from "./commissionMatrix";
 
 export type PlanKey =
   | "free"
@@ -119,7 +112,8 @@ export type PlanDef = {
 
 const FREE_FEATURES: PlanFeature[] = ["profile", "apply_offers", "ai_basic", "inbox_accepted"];
 
-/** Lo que tiene cualquier plan de pago: contacto directo, verificación y sin comisión. */
+/** Lo que tiene cualquier cuenta con perfil (familia, profesional o institución): contacto directo y verificación.
+ * `no_commission` ya no lo abre ningún plan: la comisión la decide la matriz (`commissionMatrix.ts`). */
 const PAID_BASE: PlanFeature[] = [
   ...FREE_FEATURES,
   "view_full_names",
@@ -128,7 +122,6 @@ const PAID_BASE: PlanFeature[] = [
   "view_address",
   "live_geo_eta",
   "rethus_antifraud",
-  "no_commission",
 ];
 
 const FAMILIAR_FEATURES: PlanFeature[] = [
@@ -164,6 +157,12 @@ const PRO_FEATURES: PlanFeature[] = [
   "visibility_boost",
   "offers_access",
   "pro_week_planner",
+  // Herramientas que antes eran de Premium y ahora tiene todo profesional (no dependen del servidor).
+  "pro_reputation_lab",
+  "career_coach",
+  "career_passport",
+  "ai_message_suggestions",
+  "priority_antifraud",
 ];
 
 const PRO_PREMIUM_FEATURES: PlanFeature[] = [
@@ -208,108 +207,74 @@ const uniq = (xs: PlanFeature[]) => [...new Set(xs)];
  */
 export const LEGACY_ESSENTIAL_FEATURES: PlanFeature[] = ["pro_income_pulse", "pro_rest_guard"];
 
-const COPf = (n: number) => `COP ${n.toLocaleString("es-CO")}`;
+const COPf = (n: number) => `$${n.toLocaleString("es-CO")}`;
+
+/** Orden de los planes (decide qué es «más» en `hasAtLeast`). Igual que `plan_tier_rank` en SQL. */
+const PLAN_TIER: Record<PlanKey, number> = {
+  free: 0,
+  essential_monthly: 1,
+  pro_monthly: 2,
+  family_premium_monthly: 3,
+  pro_premium_monthly: 4,
+  institution_monthly: 5,
+};
 
 export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
   free: {
     key: "free",
-    label: "Free",
+    label: "Gratis",
     tier: 0,
     segment: null,
     amountCOP: 0,
-    priceLabel: "COP 0",
+    priceLabel: "$0",
     priceNote: "siempre",
     audience: "Para conocer Humanix sin compromiso.",
-    revenue: "Humanix cobra una comisión del 10 % al profesional por cada servicio.",
+    revenue: "Sin costo.",
     features: FREE_FEATURES,
-    featuresLabel: [
-      "Crear perfil profesional o familiar",
-      "Buscar, solicitar y contratar; recibir servicios",
-      "Asistente IA básico (preguntas generales)",
-      "Mensajería 1:1 cuando se acepta una aplicación",
-      "Comisión del 10 % al profesional por cada servicio",
-    ],
+    featuresLabel: ["Crear tu perfil", "Buscar y conocer profesionales", "Asistente IA básico"],
   },
-  essential_monthly: {
-    key: "essential_monthly",
-    label: "Familiar",
-    tier: PLAN_TIER.essential_monthly,
+  family_premium_monthly: {
+    key: "family_premium_monthly",
+    label: "Familia",
+    tier: PLAN_TIER.family_premium_monthly,
     segment: "family",
-    amountCOP: PLAN_PRICE_COP.essential_monthly,
-    priceLabel: COPf(PLAN_PRICE_COP.essential_monthly),
-    priceNote: "/mes",
-    audience: "Para familias que quieren cuidar sin comisiones.",
-    revenue: "Suscripción mensual: los servicios que contratas no pagan comisión.",
+    amountCOP: 0,
+    priceLabel: "$0",
+    priceNote: "siempre",
+    audience: "Para familias que cuidan a alguien que quieren.",
+    revenue: "Gratis y sin comisión: pagas solo el valor del turno.",
     highlight: true,
-    features: FAMILIAR_FEATURES,
+    features: FAMILY_PREMIUM_FEATURES,
     featuresLabel: [
-      "Sin comisión en los servicios que contratas",
-      "Acuerdos digitales con cada profesional",
-      "Bitácora del cuidado y historia exportable (Excel/CSV)",
-      "Alertas del cuidado en tu celular",
-      "Contacto directo por WhatsApp, dirección y ubicación en vivo",
+      "Sin comisión: pagas solo el valor del turno",
+      "Paga con Bre-B desde la app de tu banco, o en efectivo al profesional",
+      "Acuerdos digitales, bitácora del cuidado, historia exportable (Excel/CSV) y alertas en tu celular",
+      "Círculo familiar: hasta 10 personas siguen los servicios",
+      "Ubicación en vivo, botón SOS y reportes para el médico",
       "Panel de familia inteligente: informe de bienestar, comparador de postulaciones, presupuesto y radar de cobertura",
-      "Soporte prioritario",
     ],
   },
   pro_monthly: {
     key: "pro_monthly",
-    label: "Pro",
+    label: "Profesional",
     tier: PLAN_TIER.pro_monthly,
     segment: "professional",
-    amountCOP: PLAN_PRICE_COP.pro_monthly,
-    priceLabel: COPf(PLAN_PRICE_COP.pro_monthly),
-    priceNote: "/mes",
-    audience: "Profesionales que quieren cobrar todo lo que trabajan.",
-    revenue: "Suscripción mensual: 0 % de comisión en tus servicios.",
+    amountCOP: 0,
+    priceLabel: "$0",
+    priceNote: "sin mensualidad",
+    audience: "Para profesionales del cuidado que quieren más turnos.",
+    revenue: "Sin mensualidad: una comisión por turno que baja mientras más trabajas.",
     highlight: true,
     features: PRO_FEATURES,
     featuresLabel: [
-      "0 % de comisión: cobras el 100 % de cada servicio",
-      "Mejor visibilidad en las búsquedas de familias e instituciones",
-      "Acceso a ofertas: «Mi semana» con turnos compatibles, contacto directo y negociar el valor",
-      "Postulaciones ilimitadas",
+      `Comisión que baja contigo: ${PRO_TIERS.map((t) => `${t.pct} %`)
+        .reverse()
+        .join(" → ")}`,
+      "Tu primer turno con cada familia nueva: sin comisión (hasta $30.000)",
+      "Recibe tu pago en segundos a tu llave Bre-B",
+      "Acceso a ofertas: «Mi semana» con turnos compatibles, postulaciones ilimitadas y contacto directo",
       "Panel inteligente: tus ingresos reales, tu tarifa frente al mercado y descanso sugerido",
-    ],
-  },
-  family_premium_monthly: {
-    key: "family_premium_monthly",
-    label: "Premium Familiar",
-    tier: PLAN_TIER.family_premium_monthly,
-    segment: "family",
-    amountCOP: PLAN_PRICE_COP.family_premium_monthly,
-    priceLabel: COPf(PLAN_PRICE_COP.family_premium_monthly),
-    priceNote: "/mes",
-    audience: "Para familias que acompañan un cuidado exigente.",
-    revenue: "Suscripción mensual con seguimiento avanzado y soporte dedicado.",
-    features: FAMILY_PREMIUM_FEATURES,
-    featuresLabel: [
-      "Todo lo del plan Familiar",
-      "Seguimiento avanzado del cuidado",
-      "Círculo familiar: hasta 10 personas siguen los servicios",
-      "Reportes para el médico (informe de bienestar)",
-      "Alertas prioritarias y botón SOS con aviso a tu círculo",
-      "Soporte dedicado",
-    ],
-  },
-  pro_premium_monthly: {
-    key: "pro_premium_monthly",
-    label: "Premium Profesional",
-    tier: PLAN_TIER.pro_premium_monthly,
-    segment: "professional",
-    amountCOP: PLAN_PRICE_COP.pro_premium_monthly,
-    priceLabel: COPf(PLAN_PRICE_COP.pro_premium_monthly),
-    priceNote: "/mes",
-    audience: "Profesionales que quieren ser los primeros en aparecer.",
-    revenue: "Suscripción mensual con prioridad alta y herramientas de reputación.",
-    features: PRO_PREMIUM_FEATURES,
-    featuresLabel: [
-      "Todo lo del plan Pro",
-      "Prioridad alta: apareces antes en las búsquedas",
-      "Badge verificado destacado en tu perfil",
-      "Más créditos de IA cada mes (1.000)",
-      "Herramientas de reputación: tu reputación en detalle y pasaporte profesional con QR",
-      "Coach de carrera y sugerencias IA en cada mensaje",
+      "Pasaporte profesional con QR y coach de carrera",
     ],
   },
   institution_monthly: {
@@ -317,24 +282,49 @@ export const PLAN_CATALOG: Record<PlanKey, PlanDef> = {
     label: "Institucional",
     tier: PLAN_TIER.institution_monthly,
     segment: "institution",
-    amountCOP: PLAN_PRICE_COP.institution_monthly,
-    priceLabel: `Desde ${COPf(PLAN_PRICE_COP.institution_monthly)}`,
-    priceNote: "/mes · 1 sede incluida",
+    amountCOP: INSTITUTION_PLANS.small.monthlyCOP,
+    priceLabel: `Desde ${COPf(INSTITUTION_PLANS.small.monthlyCOP)}`,
+    priceNote: "/mes · pago anual",
     audience: "IPS, clínicas, hospitales y agencias de cuidado.",
-    revenue: `Suscripción por sedes: ${COPf(INSTITUTION_PRICING.extraBranchCOP)}/mes por sede adicional; anual, 12 meses por el precio de 10.`,
+    revenue: `Plan anual por sede: ${INSTITUTION_PLANS.small.pct} % o ${INSTITUTION_PLANS.large.pct} % de comisión al profesional.`,
     // La institución tiene todo lo de los demás planes, más lo suyo.
     features: uniq([...FAMILY_PREMIUM_FEATURES, ...PRO_PREMIUM_FEATURES, ...INSTITUTION_OWN]),
     featuresLabel: [
-      "Multiusuario con roles (HR, evaluador, admin)",
+      "Multiusuario con roles (RR. HH., evaluador, admin)",
       "Vacantes y pipeline de candidatos con scoring IA; detección de inconsistencias en CVs y RETHUS",
       "Bolsa de créditos IA mensual",
       "Soporte prioritario y onboarding asistido",
-      `Cobro por sedes: ${COPf(INSTITUTION_PRICING.baseCOP)} con la sede principal + ${COPf(INSTITUTION_PRICING.extraBranchCOP)} por sede adicional`,
-      `Contrato anual: ${INSTITUTION_PRICING.annualMonths} meses por el precio de ${INSTITUTION_PRICING.annualPaidMonths}`,
       "Centro de gestión inteligente: costos y proyección, calidad y cumplimiento (puntualidad, parte del turno, contratos y RETHUS), equipo confiable, pronóstico de cobertura a 14 días e informe para la gerencia",
       "Agenda inteligente de 7 días: riesgo de inasistencia por profesional, reporte de utilización de 30 días y exportación a CSV e iCal",
       "Pacientes y monitoreo clínico a escala: hasta 1.000 pacientes y 300 en monitoreo con NEWS2 (Free: 5 y 3), relojes y sensores conectados, escalamiento automático de alertas sin atender, seguimientos automáticos de cada caso, relevo de turno I-PASS guardado en la historia y exportación de la historia en FHIR y CSV",
     ],
+  },
+  // ── Claves antiguas (ya no se venden) ──
+  essential_monthly: {
+    key: "essential_monthly",
+    label: "Familiar (anterior)",
+    tier: PLAN_TIER.essential_monthly,
+    segment: "family",
+    amountCOP: 0,
+    priceLabel: "$0",
+    priceNote: "",
+    audience: "Plan anterior.",
+    revenue: "Ya no se vende.",
+    features: FAMILIAR_FEATURES,
+    featuresLabel: [],
+  },
+  pro_premium_monthly: {
+    key: "pro_premium_monthly",
+    label: "Premium Profesional (anterior)",
+    tier: PLAN_TIER.pro_premium_monthly,
+    segment: "professional",
+    amountCOP: 0,
+    priceLabel: "$0",
+    priceNote: "",
+    audience: "Plan anterior.",
+    revenue: "Ya no se vende.",
+    features: PRO_PREMIUM_FEATURES,
+    featuresLabel: [],
   },
 };
 
@@ -348,11 +338,11 @@ export const PLAN_ORDER: PlanKey[] = [
   "institution_monthly",
 ];
 
-/** Los planes que ve cada perfil en /planes, en orden. */
+/** El plan que ve cada perfil en /planes. */
 export const PLANS_FOR_SEGMENT: Record<PlanSegment, PlanKey[]> = {
-  family: ["free", "essential_monthly", "family_premium_monthly"],
-  professional: ["free", "pro_monthly", "pro_premium_monthly"],
-  institution: ["free", "institution_monthly"],
+  family: ["family_premium_monthly"],
+  professional: ["pro_monthly"],
+  institution: ["institution_monthly"],
 };
 
 function planFeatures(plan: PlanKey): PlanFeature[] {
@@ -421,18 +411,20 @@ export function isPaidPlanKey(plan: PlanKey | string | null | undefined): boolea
 
 // ── Comisión, créditos IA y círculo familiar (espejo de las funciones SQL) ────
 
-/** Comisión de Humanix al profesional por servicio cuando nadie tiene plan de pago (`platform_commission_pct`). */
-export const FREE_COMMISSION_PCT = 10;
+/** Comisión más alta de la matriz (profesional con menos de 20 turnos en 30 días). La real: `commissionQuote`. */
+export const FREE_COMMISSION_PCT = PRO_TIERS[PRO_TIERS.length - 1].pct;
 
 /**
- * Comisión de un servicio (`booking_commission_pct` en SQL): 0 % si el profesional o quien contrata tiene un plan de
- * pago; si no, 10 %.
+ * Comisión de un servicio (`booking_commission_pct` en SQL): si contrata una institución con plan, 12 % o 10 % según el
+ * tamaño de su sede; si no, el escalón del profesional por turnos completados en los últimos 30 días (15/12/10 %).
  */
 export function bookingCommissionPct(
-  professionalPlan: PlanKey | string | null | undefined,
-  clientPlan: PlanKey | string | null | undefined,
+  proCompletedLast30d: number,
+  institutionPlan: InstitutionSize | null = null,
 ): number {
-  return isPaidPlanKey(professionalPlan) || isPaidPlanKey(clientPlan) ? 0 : FREE_COMMISSION_PCT;
+  if (institutionPlan) return INSTITUTION_PLANS[institutionPlan].pct;
+  const n = Math.max(0, Math.floor(proCompletedLast30d || 0));
+  return PRO_TIERS.find((t) => n >= t.minShifts)!.pct;
 }
 
 /** Créditos IA del mes por plan (`ai_credits_monthly_allowance`). */
@@ -462,114 +454,15 @@ export const COP = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-// ── Lógica de cobro institucional ─────────────────────────────────────────────
-// Un solo cálculo para la interfaz y el servidor: `planQuote` (planBilling).
+// ── Plan institucional ────────────────────────────────────────────────────────
 
-export type { BillingCycle };
-
-export type InstitutionBillingConfig = {
-  /** Precio base mensual del plan institución (COP), con la sede principal */
-  basePriceCOP: number;
-  /** Precio por cada sede adicional más allá de la primera (COP/mes) */
-  extraBranchCOP: number;
-  /** Número de sedes incluidas en el plan base */
-  includedBranches: number;
-  /** Meses de servicio del contrato anual */
-  annualMonths: number;
-  /** Meses que se pagan en el contrato anual (12 por 10) */
-  annualPaidMonths: number;
-  /** Descuento equivalente del contrato anual, en fracción (2/12 ≈ 0,167) */
-  annualDiscount: number;
-  /** Días de período de prueba gratuito */
-  trialDays: number;
-  /** Días de gracia antes de suspender por falta de pago */
-  graceDays: number;
-};
-
-/** Plan Institucional — cobro por sedes y contrato anual (12 meses por el precio de 10). */
-export const INSTITUTION_BILLING: InstitutionBillingConfig = {
-  basePriceCOP: INSTITUTION_PRICING.baseCOP,
-  extraBranchCOP: INSTITUTION_PRICING.extraBranchCOP,
-  includedBranches: INSTITUTION_PRICING.includedBranches,
-  annualMonths: INSTITUTION_PRICING.annualMonths,
-  annualPaidMonths: INSTITUTION_PRICING.annualPaidMonths,
-  annualDiscount:
-    (INSTITUTION_PRICING.annualMonths - INSTITUTION_PRICING.annualPaidMonths) /
-    INSTITUTION_PRICING.annualMonths,
-  trialDays: 14,
-  graceDays: 7,
-};
-
-export type InstitutionBillingBreakdown = {
-  baseCOP: number;
-  extraBranchesCOP: number;
-  subtotalMonthlyCOP: number;
-  annualDiscountCOP: number;
-  totalCOP: number;
-  /** Meses de servicio que cubre `totalCOP`. */
-  months: number;
-  cycle: BillingCycle;
-  /** Resumen legible para mostrar al usuario */
-  lines: Array<{ label: string; amountCOP: number }>;
-};
-
-/** Calcula el total a cobrar a una institución según sus sedes activas y el ciclo. */
-export function calculateInstitutionBilling(opts: {
-  branches: number;
-  cycle: BillingCycle;
-}): InstitutionBillingBreakdown {
-  const cfg = INSTITUTION_BILLING;
-  const q = planQuote("institution_monthly", { branches: opts.branches, cycle: opts.cycle });
-  const extraBranches = Math.max(0, q.branches - cfg.includedBranches);
-  const baseCOP = cfg.basePriceCOP;
-  const extraBranchesCOP = extraBranches * cfg.extraBranchCOP;
-  const subtotalMonthlyCOP = q.monthlyCOP;
-  const annual = q.cycle === "annual";
-  const annualDiscountCOP = annual ? subtotalMonthlyCOP * q.months - q.amount : 0;
-
-  const lines: InstitutionBillingBreakdown["lines"] = [
-    { label: `Plan Institucional (${cfg.includedBranches} sede incluida)`, amountCOP: baseCOP },
-  ];
-  if (extraBranches > 0) {
-    lines.push({
-      label: `${extraBranches} sede${extraBranches > 1 ? "s" : ""} adicional${extraBranches > 1 ? "es" : ""}`,
-      amountCOP: extraBranchesCOP,
-    });
-  }
-  if (annual) {
-    lines.push({
-      label: `× ${cfg.annualMonths} meses`,
-      amountCOP: subtotalMonthlyCOP * (cfg.annualMonths - 1),
-    });
-    lines.push({
-      label: `Contrato anual: ${cfg.annualMonths - cfg.annualPaidMonths} meses gratis`,
-      amountCOP: -annualDiscountCOP,
-    });
-  }
-
-  return {
-    baseCOP,
-    extraBranchesCOP,
-    subtotalMonthlyCOP,
-    annualDiscountCOP,
-    totalCOP: q.amount,
-    months: q.months,
-    cycle: q.cycle,
-    lines,
-  };
-}
-
-/** Estados posibles de una suscripción */
-export type SubscriptionStatus = "trial" | "active" | "past_due" | "suspended" | "cancelled";
-
-/** Determina si la suscripción está en buen estado para acceder a la plataforma */
-export function isSubscriptionAccessible(status: SubscriptionStatus): boolean {
-  return status === "trial" || status === "active" || status === "past_due";
-}
+export type { InstitutionSize };
+export const INSTITUTION_PLAN_SIZES: InstitutionSize[] = ["small", "large"];
+export { INSTITUTION_PLANS };
 
 // ── Estado del plan del usuario (lo que lee `usePlan`) ────────────────────────
-// Misma regla que `get_user_plan()` en SQL y que `activePaidPlan` en `planBilling`: plan de pago con estado
-// `active`/`approved` y sin vencer. Cualquier otra cosa es Free (sin perder el estado y la fecha para mostrarlos).
+// Misma regla que `plan_key_for()` en SQL: institución con plan anual vigente → Institucional; si no, el nivel del
+// perfil (profesional → `pro_monthly`, familia → `family_premium_monthly`); sin perfil → Free.
 
 export type SubscriptionSnapshot = {
   plan: string | null;
@@ -577,10 +470,14 @@ export type SubscriptionSnapshot = {
   amount: number | null;
   currency: string | null;
   current_period_end: string | null;
-  cancel_at_period_end?: boolean | null;
-  /** Suscripción de Mercado Pago que renueva el plan cada mes. */
-  mp_preapproval_id?: string | null;
 };
+
+/** Claves del plan pagado que guarda la base (`hx_paid_plans()`). */
+export const PAID_PLAN_KEYS = [
+  "institution_small_annual",
+  "institution_large_annual",
+  "institution_monthly",
+] as const;
 
 export type NormalizedPlan = {
   plan: PlanKey;
@@ -588,52 +485,59 @@ export type NormalizedPlan = {
   amount: number | null;
   currency: string | null;
   currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  /** El plan se cobra solo cada mes (suscripción de Mercado Pago activa). */
-  autoRenew: boolean;
+  /** Tamaño del plan institucional vigente (nulo si no hay). */
+  institutionSize: InstitutionSize | null;
 };
 
-export function normalizeSubscription(
+function activeInstitutionPlan(row: SubscriptionSnapshot | null | undefined, now: number): boolean {
+  if (!row) return false;
+  const active = row.status === "active" || row.status === "approved";
+  const end = row.current_period_end ? Date.parse(row.current_period_end) : NaN;
+  const stillInPeriod = !row.current_period_end || !Number.isFinite(end) || end > now;
+  return (
+    active && stillInPeriod && (PAID_PLAN_KEYS as readonly string[]).includes(String(row.plan))
+  );
+}
+
+export function effectivePlan(
+  roles: readonly string[] | null | undefined,
   row: SubscriptionSnapshot | null | undefined,
   now: number = Date.now(),
 ): NormalizedPlan {
-  const free: NormalizedPlan = {
-    plan: "free",
+  const base = {
     status: row?.status ?? null,
     amount: null,
     currency: null,
     currentPeriodEnd: row?.current_period_end ?? null,
-    cancelAtPeriodEnd: false,
-    autoRenew: false,
+    institutionSize: null,
   };
-  if (!row) return { ...free, status: null, currentPeriodEnd: null };
-  const active = row.status === "active" || row.status === "approved";
-  const end = row.current_period_end ? Date.parse(row.current_period_end) : NaN;
-  const stillInPeriod = !row.current_period_end || !Number.isFinite(end) || end > now;
-  const known = typeof row.plan === "string" && row.plan in PLAN_CATALOG && row.plan !== "free";
-  if (!active || !stillInPeriod || !known) return free;
-  return {
-    plan: row.plan as PlanKey,
-    status: row.status,
-    amount: row.amount ?? null,
-    currency: row.currency ?? null,
-    currentPeriodEnd: row.current_period_end ?? null,
-    cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
-    autoRenew: Boolean(row.mp_preapproval_id),
-  };
+  if (activeInstitutionPlan(row, now)) {
+    return {
+      plan: "institution_monthly",
+      status: row!.status,
+      amount: row!.amount ?? null,
+      currency: row!.currency ?? null,
+      currentPeriodEnd: row!.current_period_end ?? null,
+      institutionSize: row!.plan === "institution_large_annual" ? "large" : "small",
+    };
+  }
+  const r = roles ?? [];
+  if (r.includes("professional")) return { ...base, plan: "pro_monthly" };
+  if (r.includes("family")) return { ...base, plan: "family_premium_monthly" };
+  return { ...base, plan: "free" };
 }
 
-/** Días desde los que se recuerda renovar un plan sin renovación automática (si nadie renueva, pasa a Free). */
-export const RENEW_REMINDER_DAYS = 5;
-
 export type PlanValidity = {
-  /** Días que quedan (redondeo hacia arriba: el último día cuenta como 1); `null` si no hay plan o fecha. */
+  /** Días que quedan (el último día cuenta como 1); `null` si no hay plan pagado o fecha. */
   daysLeft: number | null;
-  /** Quedan `RENEW_REMINDER_DAYS` días o menos: momento de recordar con calma. */
+  /** Quedan 30 días o menos: momento de recordar con calma la renovación del año. */
   renewSoon: boolean;
-  /** «Vigente hasta el 15 de noviembre», «Se renueva el 15 de noviembre» o `null`. */
+  /** «Vigente hasta el 15 de noviembre» o `null`. */
   line: string | null;
 };
+
+/** El plan institucional es anual: se recuerda renovar en el último mes. */
+export const RENEW_REMINDER_DAYS = 30;
 
 const MONTHS_LONG = [
   "enero",
@@ -650,28 +554,24 @@ const MONTHS_LONG = [
   "diciembre",
 ];
 
-/** «15 de noviembre», en hora de Colombia y sin depender del ICU del navegador. */
-export function longDateEs(t: number): string {
+/** «15 de noviembre de 2027», en hora de Colombia y sin depender del ICU del navegador. */
+export function longDateEs(t: number, withYear = false): string {
   const d = new Date(t - 5 * 3_600_000);
-  return `${d.getUTCDate()} de ${MONTHS_LONG[d.getUTCMonth()]}`;
+  return `${d.getUTCDate()} de ${MONTHS_LONG[d.getUTCMonth()]}${withYear ? ` de ${d.getUTCFullYear()}` : ""}`;
 }
 
 export function planValidity(
-  p: Pick<NormalizedPlan, "plan" | "currentPeriodEnd"> & { autoRenew?: boolean },
+  p: Pick<NormalizedPlan, "plan" | "currentPeriodEnd">,
   now: number,
 ): PlanValidity {
   const end = p.currentPeriodEnd ? Date.parse(p.currentPeriodEnd) : NaN;
-  if (p.plan === "free" || !Number.isFinite(end) || end <= now) {
+  if (p.plan !== "institution_monthly" || !Number.isFinite(end) || end <= now) {
     return { daysLeft: null, renewSoon: false, line: null };
   }
   const daysLeft = Math.ceil((end - now) / 86_400_000);
-  // Con renovación automática no hay nada que recordar: Mercado Pago cobra el mes siguiente.
-  if (p.autoRenew) {
-    return { daysLeft, renewSoon: false, line: `Se renueva el ${longDateEs(end)}` };
-  }
   return {
     daysLeft,
     renewSoon: daysLeft <= RENEW_REMINDER_DAYS,
-    line: `Vigente hasta el ${longDateEs(end)}`,
+    line: `Vigente hasta el ${longDateEs(end, true)}`,
   };
 }

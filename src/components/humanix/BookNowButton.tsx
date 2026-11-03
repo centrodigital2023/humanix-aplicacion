@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 import { PriceBreakdownCard } from "@/components/humanix/PriceBreakdownCard";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
+import {
+  PaymentMethodPicker,
+  minBookingMessage,
+  type PaymentMethod,
+} from "@/components/humanix/payments/PaymentMethodPicker";
 
 const COP = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -52,6 +57,7 @@ export function BookNowButton({
   const [address, setAddress] = useState(defaultAddress ?? "");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("DIGITAL_BREB");
 
   const total = Math.max(0, Math.round(hours * hourlyRate));
 
@@ -91,6 +97,7 @@ export function BookNowButton({
           service_lng: defaultLng ?? null,
           emergency_phone: phone || null,
           notes: notes || null,
+          payment_method: method,
           status: "pending",
         })
         .select("id")
@@ -140,7 +147,7 @@ export function BookNowButton({
               </p>
               <h3 className="font-display text-xl font-bold">Confirma tu pedido</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                Pagas directo al profesional al terminar. Sin cobros ocultos.
+                Sin comisión para ti: pagas solo el valor del turno.
               </p>
             </header>
 
@@ -212,8 +219,8 @@ export function BookNowButton({
                     {hours} h × {COP(hourlyRate)}/h
                   </div>
                 </div>
-                {/* Misma regla que el servidor (booking_commission_pct): la comisión se descuenta al profesional
-                    — 10 % si nadie tiene plan de pago, 0 % si él o quien contrata lo tiene —; quien contrata paga el total. */}
+                {/* Misma regla que el servidor (booking_commission_pct): la comisión la paga el profesional; quien
+                    contrata paga solo el total. */}
                 <div className="border-t border-biosensor/20 pt-2">
                   <PriceBreakdownCard
                     hourlyRate={hourlyRate}
@@ -223,6 +230,13 @@ export function BookNowButton({
                   />
                 </div>
               </div>
+
+              <PaymentMethodPicker value={method} onChange={setMethod} />
+              {minBookingMessage(total) && (
+                <p role="alert" className="text-sm font-medium text-copper">
+                  {minBookingMessage(total)}
+                </p>
+              )}
             </div>
 
             <footer className="px-5 py-4 border-t border-border flex gap-2">
@@ -239,7 +253,7 @@ export function BookNowButton({
               <button
                 type="button"
                 onClick={submit}
-                disabled={busy}
+                disabled={busy || Boolean(minBookingMessage(total))}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-copper text-copper-foreground font-semibold py-2.5 text-sm shadow-[var(--shadow-glow-copper)] disabled:opacity-60"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : `Confirmar · ${COP(total)}`}

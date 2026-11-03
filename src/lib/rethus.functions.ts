@@ -1,6 +1,6 @@
 // Verificación ReTHUS vía Verifik (acciones de servidor).
 // - Profesional: UNA sola verificación automática cuando hay consentimiento Ley 1581,
-//   plan vigente (solo mp_subscriptions) y documento registrado. Un error del proveedor
+//   rol de profesional (el plan profesional es gratis desde nov 2026) y documento registrado. Un error del proveedor
 //   no consume el intento. Unicidad aplicada aquí y con índice único parcial en BD.
 // - Admin (is_staff o superadmin): re-verifica a un profesional saltándose la regla,
 //   sin exigir plan, con límite de 20 por hora; queda registrado requested_by + reverified.
@@ -12,7 +12,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   adminRemaining,
   hasConsumedSingleAttempt,
-  isActiveSubscription,
   isValidDocumentNumber,
   missingPrerequisite,
   namesMatch,
@@ -293,20 +292,23 @@ export const verifyRethus = createServerFn({ method: "POST" })
       await storeDocument(admin, env.hashKey, userId, data.documentType, data.documentNumber);
 
     const doc = await loadDocument(admin, env.hashKey, userId);
-    const { data: sub } = await admin
-      .from("mp_subscriptions")
-      .select("status, current_period_end")
+    // Desde nov 2026 el plan profesional es gratis: la verificación (una sola vez por profesional) corre para
+    // cualquier cuenta con rol de profesional, que es quien genera comisión.
+    const { data: roleRows } = await admin
+      .from("user_roles")
+      .select("role")
       .eq("user_id", userId)
-      .maybeSingle();
+      .eq("role", "professional")
+      .limit(1);
     const missing = missingPrerequisite({
       hasConsent,
-      hasActivePlan: isActiveSubscription(sub),
+      hasActivePlan: (roleRows ?? []).length > 0,
       hasDocument: !!doc,
     });
     if (missing) {
       const msg = {
         consent_required: "Debes aceptar el tratamiento de datos (Ley 1581).",
-        plan_required: "La verificación se hará automáticamente cuando tengas un plan activo.",
+        plan_required: "La verificación RETHUS es para cuentas de profesional.",
         document_required: "Registra tu número de documento para verificarte.",
       }[missing];
       return { ok: false, code: missing, message: msg };

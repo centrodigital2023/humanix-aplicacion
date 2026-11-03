@@ -28,8 +28,8 @@ describe("funciones premium del panel de familia", () => {
     }
   });
 
-  it("el catálogo del plan Familiar las lista y las explica en la tarjeta de precios", () => {
-    const essential = PLAN_CATALOG.essential_monthly;
+  it("el catálogo del plan Familia las lista y las explica en la tarjeta de precios", () => {
+    const essential = PLAN_CATALOG.family_premium_monthly;
     for (const f of FAMILY_PREMIUM) expect(essential.features).toContain(f);
     const label = essential.featuresLabel.find((l) => /Panel de familia inteligente/.test(l));
     expect(label).toBeDefined();

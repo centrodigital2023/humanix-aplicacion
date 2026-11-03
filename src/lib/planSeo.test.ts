@@ -13,7 +13,8 @@ describe("datos estructurados de /planes — válidos para Google", () => {
       expect(p["@type"]).toBe("Product");
       expect(p.name).toMatch(/^Humanix \S/);
       expect(p.image.length).toBeGreaterThan(0);
-      for (const img of p.image) expect(img).toMatch(/^https:\/\/humanix\.lat\/.+\.(png|jpg|webp)$/);
+      for (const img of p.image)
+        expect(img).toMatch(/^https:\/\/humanix\.lat\/.+\.(png|jpg|webp)$/);
       expect(p.brand).toEqual({ "@type": "Brand", name: "Humanix" });
       expect(p.offers.priceCurrency).toBe("COP");
       expect(Number.isFinite(Number(p.offers.price))).toBe(true);
@@ -21,7 +22,7 @@ describe("datos estructurados de /planes — válidos para Google", () => {
   });
 
   it("los planes que reportó Search Console tienen image", () => {
-    for (const name of ["Humanix Familiar", "Humanix Free", "Humanix Institucional"]) {
+    for (const name of ["Humanix Familia", "Humanix Profesional", "Humanix Institucional"]) {
       const p = items.find((i) => i.name === name);
       expect(p, name).toBeDefined();
       expect(p!.image.length).toBeGreaterThan(0);
@@ -39,7 +40,7 @@ describe("datos estructurados de /planes — válidos para Google", () => {
       const p = items.find((i) => i.name === `Humanix ${PLAN_CATALOG[e.key].label}`)!;
       expect(p.offers.price).toBe(String(PLAN_CATALOG[e.key].amountCOP));
     }
-    expect(items[0].description).toContain(`${FREE_COMMISSION_PCT} %`);
+    expect(items[1].description).toContain(`${FREE_COMMISSION_PCT} %`);
   });
 
   it("la vigencia del precio nunca queda en el pasado", () => {

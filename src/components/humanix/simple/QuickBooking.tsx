@@ -1,7 +1,7 @@
 // Reserva en un toque (familias): cuándo, cuántas horas, dónde → total claro.
 // Crea un service_booking real (igual que BookNowButton) y lleva al
-// seguimiento en vivo /servicio/$id. El pago es directo al profesional
-// (payment_mode por defecto: direct_to_professional), sin cobros ocultos.
+// seguimiento en vivo /servicio/$id. La familia elige cómo pagar: Bre-B (desde su banco, cuando el profesional
+// acepta) o efectivo al profesional. Nunca paga comisión.
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
@@ -16,6 +16,11 @@ import {
   whenToDate,
   type WhenKey,
 } from "@/lib/family-journey";
+import {
+  PaymentMethodPicker,
+  minBookingMessage,
+  type PaymentMethod,
+} from "@/components/humanix/payments/PaymentMethodPicker";
 import { PictoCard, okBtn, primaryBtn, type Tint } from "./ui";
 import { useVoice } from "./voice";
 
@@ -65,6 +70,7 @@ export function QuickBooking({
   const [locating, setLocating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [method, setMethod] = useState<PaymentMethod>("DIGITAL_BREB");
 
   useEffect(() => {
     if (!pro) return;
@@ -137,6 +143,7 @@ export function QuickBooking({
         service_address: address.trim(),
         service_lat: coords?.lat ?? null,
         service_lng: coords?.lng ?? null,
+        payment_method: method,
         status: "pending",
       })
       .select("id")
@@ -288,9 +295,23 @@ export function QuickBooking({
                 <span className="font-display text-3xl font-bold text-trust">{COP(total)}</span>
               </div>
               <p className="mt-3 text-base">
-                💵 Pagas directo a {pro.name.split(" ")[0]} al terminar. Sin cobros ocultos.
+                💚 Sin comisión para ti: pagas solo el valor del turno.
               </p>
             </div>
+
+            <div className="mt-5">
+              <PaymentMethodPicker
+                value={method}
+                onChange={setMethod}
+                proFirstName={pro.name.split(" ")[0]}
+                size="lg"
+              />
+            </div>
+            {minBookingMessage(total) && (
+              <p role="alert" className="mt-3 text-base font-semibold text-copper">
+                {minBookingMessage(total)}
+              </p>
+            )}
 
             {error && (
               <p role="alert" className="mt-3 text-base font-semibold text-warn">
@@ -301,7 +322,7 @@ export function QuickBooking({
             <button
               type="button"
               onClick={confirm}
-              disabled={busy}
+              disabled={busy || Boolean(minBookingMessage(total))}
               className={`${primaryBtn} mt-5`}
             >
               {busy ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" /> : null}

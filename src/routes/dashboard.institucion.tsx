@@ -47,10 +47,9 @@ import { ServiceOffersFeed } from "@/components/humanix/service/ServiceOffersFee
 import { LivePulseBar } from "@/components/humanix/LivePulseBar";
 import { NearbyProsList } from "@/components/humanix/NearbyProsList";
 import { EnhancedInstitutionOperations } from "@/components/humanix/EnhancedInstitutionOperations";
-import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
-import { IpsBranchBilling } from "@/components/humanix/IpsBranchBilling";
 import { SmartInstitutionProfileForm } from "@/components/humanix/SmartInstitutionProfileForm";
+import { InstitutionPlanCard } from "@/components/humanix/payments/InstitutionPlanCard";
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { HumanixAssistant } from "@/components/humanix/HumanixAssistant";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
@@ -1164,12 +1163,6 @@ function InstitutionDashboard() {
             </div>
             <div className="space-y-2">
               <p className="text-sm font-semibold flex items-center gap-1.5">
-                <Wallet className="h-4 w-4 text-emerald-600" /> Billetera institucional
-              </p>
-              <WalletPanel userId={user.id} />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-semibold flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-fuchsia-neural" /> Bolsa de créditos IA
               </p>
               <AiCreditsBalance userId={user.id} />
@@ -1272,12 +1265,7 @@ function InstitutionDashboard() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-semibold flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 text-fuchsia-neural" /> Plan Institucional y sedes
-              </p>
-              <IpsBranchBilling institutionId={user.id} />
-            </div>
+            <InstitutionPlanCard userId={user.id} />
 
             <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
               <div className="p-4 border-b border-border">

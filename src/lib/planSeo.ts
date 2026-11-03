@@ -15,26 +15,27 @@ export function priceValidUntil(now: Date = new Date()): string {
 
 export const PLAN_LD_ITEMS: ReadonlyArray<{ key: PlanKey; description: string }> = [
   {
-    key: "free",
-    description: `Plan gratuito: busca, solicita y contrata. Comisión del ${FREE_COMMISSION_PCT} % al profesional.`,
-  },
-  {
-    key: "essential_monthly",
-    description: "Para familias: sin comisión, acuerdos digitales, bitácora y alertas.",
-  },
-  {
     key: "family_premium_monthly",
-    description: "Para familias: seguimiento avanzado, círculo familiar y SOS.",
+    description:
+      "Para familias: gratis y sin comisión. Paga tus turnos con Bre-B o en efectivo; círculo familiar, alertas y SOS.",
   },
-  { key: "pro_monthly", description: "Para profesionales: 0 % de comisión, mejor visibilidad y ofertas." },
   {
-    key: "pro_premium_monthly",
-    description: "Para profesionales: prioridad alta, badge destacado y más IA.",
+    key: "pro_monthly",
+    description: `Para profesionales: sin mensualidad, comisión desde ${FREE_COMMISSION_PCT} % que baja con tus turnos y pago a tu llave Bre-B.`,
   },
-  { key: "institution_monthly", description: "Para IPS y clínicas: multiusuario, vacantes, agenda y sedes." },
+  {
+    key: "institution_monthly",
+    description:
+      "Para IPS y clínicas: plan anual por tamaño de sede, multiusuario, agenda inteligente y monitoreo a escala.",
+  },
 ];
 
-export function planProductLd(position: number, key: PlanKey, description: string, now: Date = new Date()) {
+export function planProductLd(
+  position: number,
+  key: PlanKey,
+  description: string,
+  now: Date = new Date(),
+) {
   const plan = PLAN_CATALOG[key];
   return {
     "@type": "ListItem",

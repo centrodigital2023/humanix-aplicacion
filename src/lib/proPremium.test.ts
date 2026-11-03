@@ -7,9 +7,8 @@ const PREMIUM: PlanFeature[] = ["pro_reputation_lab", "career_coach", "career_pa
 const ALL = [...PRO, ...PREMIUM];
 
 describe("funciones premium del panel del profesional", () => {
-  it("ingresos, descanso y «Mi semana» salen del plan Pro; reputación, de Premium Profesional", () => {
-    for (const f of PRO) expect(FEATURE_MIN_PLAN[f]).toBe("pro_monthly");
-    for (const f of PREMIUM) expect(FEATURE_MIN_PLAN[f]).toBe("pro_premium_monthly");
+  it("desde nov 2026 todo profesional tiene ingresos, descanso, «Mi semana» y reputación", () => {
+    for (const f of ALL) expect(FEATURE_MIN_PLAN[f]).toBe("pro_monthly");
   });
 
   it("sin plan (o con uno desconocido) están bloqueadas", () => {
@@ -21,14 +20,9 @@ describe("funciones premium del panel del profesional", () => {
     }
   });
 
-  it("cada plan de profesional abre lo suyo y lo del plan de abajo, nunca lo de arriba", () => {
-    for (const f of PRO) {
+  it("el nivel del profesional y el institucional las abren todas", () => {
+    for (const f of ALL) {
       expect(canUseFeature("pro_monthly", f)).toBe(true);
-      expect(canUseFeature("pro_premium_monthly", f)).toBe(true);
-      expect(canUseFeature("institution_monthly", f)).toBe(true);
-    }
-    for (const f of PREMIUM) {
-      expect(canUseFeature("pro_monthly", f)).toBe(false);
       expect(canUseFeature("pro_premium_monthly", f)).toBe(true);
       expect(canUseFeature("institution_monthly", f)).toBe(true);
     }
@@ -48,21 +42,17 @@ describe("funciones premium del panel del profesional", () => {
 
   it("el catálogo de cada plan las lista y las explica en su tarjeta de precios", () => {
     const pro = PLAN_CATALOG.pro_monthly;
-    const premium = PLAN_CATALOG.pro_premium_monthly;
-    for (const f of PRO) expect(pro.features).toContain(f);
-    for (const f of [...PRO, ...PREMIUM]) expect(premium.features).toContain(f);
-    for (const f of PREMIUM) expect(pro.features).not.toContain(f);
+    for (const f of ALL) expect(pro.features).toContain(f);
 
     const proLabel = pro.featuresLabel.join(" ");
     for (const word of ["ingresos", "tarifa", "descanso", "Mi semana"]) {
       expect(proLabel).toMatch(new RegExp(word, "i"));
     }
-    expect(premium.featuresLabel.join(" ")).toMatch(/reputación/i);
+    expect(proLabel).toMatch(/pasaporte profesional/i);
   });
 
   it("precios de la tabla", () => {
     expect(PLAN_CATALOG.free.amountCOP).toBe(0);
-    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(19_900);
-    expect(PLAN_CATALOG.pro_premium_monthly.amountCOP).toBe(39_900);
+    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(0);
   });
 });

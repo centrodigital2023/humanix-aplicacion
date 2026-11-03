@@ -480,16 +480,36 @@ function FamilyDashboard() {
               <FamilyFold
                 id="fold-plan"
                 emoji="👑"
-                title="Mi plan"
-                hint="Free, Familiar o Premium Familiar"
+                title="Cómo pagas"
+                hint="Gratis, sin comisión: pagas solo tus turnos"
                 anchors={["planes"]}
               >
-                <div id="planes" className="space-y-3">
+                <div id="planes" className="space-y-3 rounded-3xl bg-biosensor/5 p-5">
+                  <p className="font-display text-xl font-bold">
+                    Tu cuenta es gratis, con todo incluido 💚
+                  </p>
+                  <ol className="space-y-2 text-base">
+                    <li>
+                      <span aria-hidden="true">1️⃣</span> Pides el turno y eliges{" "}
+                      <strong>Bre-B</strong> o <strong>efectivo</strong>.
+                    </li>
+                    <li>
+                      <span aria-hidden="true">2️⃣</span> Cuando el profesional acepta, te aparece el
+                      botón <strong>«Pagar con Bre-B»</strong>.
+                    </li>
+                    <li>
+                      <span aria-hidden="true">3️⃣</span> Tocas <strong>«Abrir mi banco»</strong>,
+                      confirmas y listo.
+                    </li>
+                  </ol>
+                  <p className="text-sm text-muted-foreground">
+                    Funciona con cualquier banco, Nequi o Daviplata. Nunca te cobramos comisión.
+                  </p>
                   <Link
                     to="/planes"
                     className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
                   >
-                    Comparar planes <ChevronRight className="h-3.5 w-3.5" />
+                    Ver cómo funciona Humanix <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               </FamilyFold>

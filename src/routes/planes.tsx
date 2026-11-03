@@ -1,80 +1,84 @@
+// Planes y precios (nov 2026): familias y profesionales gratis; instituciones, plan anual por tamaño de sede. Todos los
+// pagos por Bre-B (Firux), dentro de Humanix. Las cifras salen de `commissionMatrix.ts` y `plans.ts`, nunca a mano.
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Check,
-  X,
-  Stethoscope,
   Building2,
-  Crown,
-  Loader2,
+  Check,
   Heart,
-  Sparkles,
+  Landmark,
   ShieldCheck,
+  Smartphone,
+  Stethoscope,
+  TrendingDown,
   Zap,
-  Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
+import { BrebPaySheet } from "@/components/humanix/payments/BrebPaySheet";
 import { buildSeo, jsonLdString, faqLd, breadcrumbLd } from "@/lib/seo";
 import { pricingProductLd } from "@/lib/planSeo";
-import { toast } from "sonner";
 import {
-  COP,
-  FREE_COMMISSION_PCT,
-  INSTITUTION_BILLING,
   PLAN_CATALOG,
-  PLANS_FOR_SEGMENT,
-  calculateInstitutionBilling,
-  canUseFeature,
   planValidity,
-  type BillingCycle,
-  type PlanFeature,
+  segmentOfRoles,
   type PlanKey,
   type PlanSegment,
 } from "@/lib/plans";
+import {
+  COP,
+  FIRST_SHIFT_EXEMPT_CAP_COP,
+  INSTITUTION_PLANS,
+  MIN_BOOKING_COP,
+  PRO_TIERS,
+  WALLET_CREDIT_LIMIT_COP,
+  type InstitutionSize,
+} from "@/lib/commissionMatrix";
+import { payInstitutionPlanWithBreb } from "@/lib/firux.functions";
 import { usePlan } from "@/hooks/use-plan";
-import { PromoCodeRedeemCard } from "@/components/humanix/PromoCodeRedeemCard";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
 import type { Audience } from "@/lib/audience";
 import { computeCta } from "@/lib/planCta";
-import { LATER_MESSAGE, payPageHref } from "@/lib/checkout";
+import { cn } from "@/lib/utils";
+
+const TIERS_ASC = [...PRO_TIERS].reverse(); // 15 → 12 → 10
 
 const PLAN_FAQS = [
   {
-    q: "¿Puedo cancelar en cualquier momento?",
-    a: "Sí. No hay permanencia mínima. Cancelas la renovación automática desde tu panel y el plan sigue activo hasta el final del periodo pagado.",
+    q: "¿Cuánto cuesta Humanix para una familia?",
+    a: "Nada. La cuenta de familia es gratis, con todas sus funciones, y nunca te cobramos comisión: pagas solo el valor del turno que acuerdas con el profesional.",
   },
   {
-    q: "¿Cómo funciona la comisión del plan Free?",
-    a: `Con el plan Free buscas, solicitas y contratas sin pagar nada. Humanix cobra una comisión del ${FREE_COMMISSION_PCT} % al profesional por cada servicio. Si la familia tiene el plan Familiar o Premium Familiar, o el profesional tiene Pro o Premium, ese servicio no paga comisión.`,
+    q: "¿Cómo pago un turno?",
+    a: "Al pedir el turno eliges Bre-B o efectivo. Con Bre-B, cuando el profesional acepta te aparece el botón «Pagar con Bre-B»: tocas «Abrir mi banco», confirmas y listo. Funciona con cualquier banco, Nequi o Daviplata. Si prefieres efectivo, le pagas en mano al terminar.",
   },
   {
-    q: "¿Cuál es la diferencia entre Familiar y Premium Familiar?",
-    a: "Familiar quita la comisión e incluye acuerdos digitales, bitácora, alertas y soporte prioritario. Premium Familiar suma seguimiento avanzado, círculo familiar de hasta 10 personas, reportes para el médico, alertas prioritarias, botón SOS con aviso a tu círculo y soporte dedicado.",
+    q: "¿Cuánto cobra Humanix al profesional?",
+    a: `No hay mensualidad. Humanix cobra una comisión por turno que baja mientras más trabajas: ${TIERS_ASC.map((t) => `${t.pct} %`).join(", ")} según los turnos que completaste en los últimos 30 días (0 a 19, 20 a 59, 60 o más). Tu primer turno con cada familia o institución nueva no paga comisión, hasta ${COP(FIRST_SHIFT_EXEMPT_CAP_COP)}.`,
   },
   {
-    q: "¿Cuál es la diferencia entre Pro y Premium?",
-    a: "Pro te deja cobrar el 100 % de cada servicio (0 % de comisión), con mejor visibilidad y acceso a ofertas. Premium suma prioridad alta en las búsquedas, badge verificado destacado, más créditos de IA y herramientas de reputación.",
+    q: "¿Cómo recibo mi pago como profesional?",
+    a: "Guarda tu llave Bre-B (tu celular, cédula, correo o código @) en tu panel. Cuando una familia paga por Bre-B, al terminar el turno te enviamos tu parte a esa llave. Si te pagan en efectivo, la comisión se descuenta de tu billetera Humanix.",
+  },
+  {
+    q: "¿Para qué es la billetera del profesional?",
+    a: `Solo para los turnos en efectivo: al terminarlos, la comisión se descuenta de tu billetera. Tienes un cupo de ${COP(-WALLET_CREDIT_LIMIT_COP)}: puedes quedar en negativo hasta ahí, y recargas en segundos con Bre-B.`,
   },
   {
     q: "¿Cómo funciona el plan Institucional?",
-    a: `Desde ${COP(INSTITUTION_BILLING.basePriceCOP)} al mes con la sede principal incluida, y ${COP(INSTITUTION_BILLING.extraBranchCOP)} al mes por cada sede adicional. Incluye multiusuario con roles, vacantes, agenda, seguimiento y soporte. Con el contrato anual pagas ${INSTITUTION_BILLING.annualPaidMonths} meses y recibes ${INSTITUTION_BILLING.annualMonths}.`,
+    a: `Es un plan anual por tamaño de sede: ${COP(INSTITUTION_PLANS.small.monthlyCOP)} al mes para sedes de 1 a 9 profesionales (${COP(INSTITUTION_PLANS.small.annualCOP)} al año, comisión ${INSTITUTION_PLANS.small.pct} %) o ${COP(INSTITUTION_PLANS.large.monthlyCOP)} al mes para 10 o más (${COP(INSTITUTION_PLANS.large.annualCOP)} al año, comisión ${INSTITUTION_PLANS.large.pct} %). Se paga en un solo pago al año por Bre-B, sin cobros automáticos.`,
+  },
+  {
+    q: "¿Hay un valor mínimo por turno?",
+    a: `Sí, el turno mínimo es de ${COP(MIN_BOOKING_COP)}.`,
   },
   {
     q: "¿Los pagos son seguros?",
-    a: "Sí. Pagas aquí mismo, en Humanix, con los formularios seguros de Mercado Pago (estándar PCI DSS nivel 1), en pesos colombianos: un mes con tarjeta, PSE (Bancolombia, Nequi y demás bancos) o Efecty, o cobro automático con tarjeta. Los datos de tu tarjeta los guarda Mercado Pago, nunca Humanix.",
-  },
-  {
-    q: "¿Qué es la verificación RETHUS?",
-    a: "RETHUS es el Registro Único Nacional del Talento Humano en Salud de Colombia. Verificamos que el número de tarjeta del profesional esté activo y sin sanciones antes de que pueda contactarte.",
-  },
-  {
-    q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Puedes subir de plan cuando quieras: los días que te quedaban se convierten al plan nuevo y la suscripción anterior se cancela sola. Para bajar de plan, cancela la renovación automática y elige el nuevo cuando termine tu plan actual.",
+    a: "Sí. Bre-B es el sistema de pagos inmediatos del Banco de la República: pagas desde la app de tu propio banco, sin compartir tarjetas ni claves con Humanix. El pago se confirma con un aviso firmado del proveedor y nunca por WhatsApp.",
   },
 ];
 
@@ -83,115 +87,10 @@ export const Route = createFileRoute("/planes")({
     buildSeo({
       title: "Planes y precios · Humanix",
       path: "/planes",
-      description:
-        "Planes Humanix desde COP 0. Familias: Familiar $9.900 y Premium $24.900. Profesionales: Pro $19.900 y Premium $39.900. Instituciones desde $299.000/mes. Sin permanencia.",
+      description: `Familias: gratis y sin comisión. Profesionales: sin mensualidad, comisión de ${TIERS_ASC[0].pct} % que baja hasta ${TIERS_ASC[2].pct} %. Instituciones desde ${COP(INSTITUTION_PLANS.small.monthlyCOP)}/mes, pago anual. Pagos con Bre-B.`,
     }),
   component: PlansPage,
 });
-
-type DisplayPlan = {
-  key: PlanKey;
-  icon: typeof Stethoscope;
-  tone: "bio" | "fuchsia" | "copper" | "muted";
-};
-
-const DISPLAY: DisplayPlan[] = [
-  { key: "free", icon: Heart, tone: "muted" },
-  { key: "essential_monthly", icon: Heart, tone: "copper" },
-  { key: "family_premium_monthly", icon: Sparkles, tone: "copper" },
-  { key: "pro_monthly", icon: Stethoscope, tone: "bio" },
-  { key: "pro_premium_monthly", icon: Crown, tone: "bio" },
-  { key: "institution_monthly", icon: Building2, tone: "fuchsia" },
-];
-
-const TONE: Record<string, string> = {
-  bio: "border-biosensor/30 bg-biosensor/5 text-biosensor",
-  fuchsia: "border-fuchsia-neural/40 bg-fuchsia-neural/5 text-fuchsia-neural",
-  copper: "border-copper/30 bg-copper/5 text-copper",
-  muted: "border-border bg-muted/40 text-muted-foreground",
-};
-
-/** Una fila por función: cada columna se marca según `canUseFeature` (la misma regla que abre la función en la app). */
-type CompareRow = {
-  label: string;
-  feature: PlanFeature;
-  /** Perfiles para los que la fila tiene sentido (sin valor: todos). */
-  only?: PlanSegment[];
-};
-
-const COMPARE_ROWS: CompareRow[] = [
-  { label: "Perfil, búsqueda y solicitudes", feature: "apply_offers" },
-  { label: "Asistente IA básico", feature: "ai_basic" },
-  { label: "Mensajería 1:1 (aplicaciones aceptadas)", feature: "inbox_accepted" },
-  { label: "Sin comisión en los servicios", feature: "no_commission" },
-  { label: "Contacto directo por WhatsApp y dirección", feature: "whatsapp_contact" },
-  { label: "Geolocalización en vivo + ETA", feature: "live_geo_eta" },
-  { label: "Verificación RETHUS + anti-fraude IA", feature: "rethus_antifraud" },
-  { label: "Acuerdos digitales", feature: "digital_agreements", only: ["family", "institution"] },
-  {
-    label: "Bitácora del cuidado e historia exportable",
-    feature: "care_log",
-    only: ["family", "institution"],
-  },
-  { label: "Alertas del cuidado", feature: "care_alerts", only: ["family", "institution"] },
-  {
-    label: "Panel de familia inteligente (comparador, presupuesto, cobertura)",
-    feature: "smart_applicant_ranking",
-    only: ["family"],
-  },
-  { label: "Soporte prioritario", feature: "priority_support" },
-  { label: "Seguimiento avanzado", feature: "advanced_tracking", only: ["family"] },
-  { label: "Círculo familiar (hasta 10 personas)", feature: "family_circle", only: ["family"] },
-  { label: "Reportes para el médico", feature: "doctor_reports", only: ["family"] },
-  {
-    label: "Alertas prioritarias y botón SOS al círculo",
-    feature: "priority_alerts",
-    only: ["family"],
-  },
-  { label: "Soporte dedicado", feature: "dedicated_support", only: ["family"] },
-  { label: "Mejor visibilidad en búsquedas", feature: "visibility_boost", only: ["professional"] },
-  { label: "Acceso a ofertas y «Mi semana»", feature: "offers_access", only: ["professional"] },
-  { label: "Negociar el valor", feature: "negotiate_rate", only: ["professional"] },
-  {
-    label: "Panel inteligente (ingresos reales, tarifa y descanso)",
-    feature: "pro_income_pulse",
-    only: ["professional"],
-  },
-  { label: "Prioridad alta en búsquedas", feature: "priority_listing", only: ["professional"] },
-  {
-    label: "Badge verificado destacado",
-    feature: "verified_badge_featured",
-    only: ["professional"],
-  },
-  { label: "Más créditos de IA", feature: "ai_credits_plus", only: ["professional"] },
-  {
-    label: "Herramientas de reputación y pasaporte con QR",
-    feature: "pro_reputation_lab",
-    only: ["professional"],
-  },
-  { label: "Coach de carrera y sugerencias IA", feature: "career_coach", only: ["professional"] },
-  { label: "Multiusuario con roles", feature: "multi_user_roles", only: ["institution"] },
-  {
-    label: "Vacantes y pipeline con scoring IA",
-    feature: "pipeline_scoring",
-    only: ["institution"],
-  },
-  { label: "Agenda inteligente", feature: "inst_agenda_insights", only: ["institution"] },
-  {
-    label: "Seguimiento de pacientes y monitoreo clínico",
-    feature: "inst_care_scale",
-    only: ["institution"],
-  },
-  { label: "Cobro por sedes y contrato anual", feature: "branch_billing", only: ["institution"] },
-];
-
-function CellIcon({ value }: { value: boolean | string }) {
-  if (value === false)
-    return <X className="mx-auto h-4 w-4 text-muted-foreground/40" aria-label="No incluido" />;
-  if (value === true)
-    return <Check className="mx-auto h-4 w-4 text-biosensor" aria-label="Incluido" />;
-  return <span className="text-xs text-muted-foreground">{value}</span>;
-}
 
 const SEGMENT_OF: Record<Audience, PlanSegment> = {
   familias: "family",
@@ -199,128 +98,65 @@ const SEGMENT_OF: Record<Audience, PlanSegment> = {
   instituciones: "institution",
 };
 
-const SEGMENT_TITLE: Record<PlanSegment, string> = {
-  family: "Para familias",
-  professional: "Para profesionales",
-  institution: "Para instituciones",
-};
-
-// Cómo se ve el plan Free para cada perfil (la columna «cómo genera ingreso» de la tabla de precios).
-const FREE_LINE: Record<PlanSegment, { audience: string; features: string[] }> = {
-  family: {
-    audience: "Busca, solicita y contrata sin pagar nada.",
-    features: [
-      "Buscar profesionales verificados",
-      "Solicitar y contratar servicios",
-      "Asistente IA básico",
-      `Humanix cobra ${FREE_COMMISSION_PCT} % al profesional por cada servicio`,
-    ],
-  },
-  professional: {
-    audience: "Recibe servicios sin pagar mensualidad.",
-    features: [
-      "Perfil profesional verificado",
-      "Postularte a solicitudes y ofertas abiertas",
-      "Asistente IA básico",
-      `Humanix cobra ${FREE_COMMISSION_PCT} % por cada servicio`,
-    ],
-  },
-  institution: {
-    audience: "Para conocer Humanix antes de contratar.",
-    features: [
-      "Perfil de la institución",
-      "Publicar ofertas y recibir postulaciones",
-      "Asistente IA básico",
-    ],
-  },
-};
-
-// Preguntas que solo tienen sentido para ciertos perfiles.
 const FAQ_ONLY: Record<string, Audience[]> = {
-  "¿Cuál es la diferencia entre Familiar y Premium Familiar?": ["familias"],
-  "¿Cuál es la diferencia entre Pro y Premium?": ["profesionales"],
+  "¿Cuánto cobra Humanix al profesional?": ["profesionales", "instituciones"],
+  "¿Cómo recibo mi pago como profesional?": ["profesionales"],
+  "¿Para qué es la billetera del profesional?": ["profesionales"],
   "¿Cómo funciona el plan Institucional?": ["instituciones"],
+  "¿Cuánto cuesta Humanix para una familia?": ["familias"],
 };
 
 function PlansPage() {
   const { user, loading: userLoading } = useAppUser({ requireAuth: false });
-  const {
-    plan: currentPlan,
-    cancelAtPeriodEnd,
-    autoRenew,
-    currentPeriodEnd,
-    loading: planLoading,
-    error: planError,
-    refresh: refreshPlan,
-  } = usePlan(user?.id ?? null);
-  const navigate = useNavigate();
-  const loading = userLoading || planLoading;
-  // Cada perfil ve solo sus planes.
+  const plan = usePlan(user?.id ?? null);
+  const loading = userLoading || plan.loading;
   const { audience } = useAudience();
   const segments: PlanSegment[] = audience
     ? [SEGMENT_OF[audience]]
     : ["family", "professional", "institution"];
-  const [instCycle, setInstCycle] = useState<BillingCycle>("monthly");
-  const [acting, setActing] = useState<PlanKey | null>(null);
+  const segment = segmentOfRoles(user?.roles);
+  const renewSoon = planValidity(plan, Date.now()).renewSoon;
+  const ctx = { userId: user?.id ?? null, currentPlan: plan.plan, segment, renewSoon };
+  const [paySize, setPaySize] = useState<InstitutionSize | null>(null);
   const autoTriggered = useRef(false);
 
-  const renewSoon = planValidity(
-    { plan: currentPlan, currentPeriodEnd, autoRenew },
-    Date.now(),
-  ).renewSoon;
-  const ctx = { userId: user?.id ?? null, currentPlan, cancelAtPeriodEnd, renewSoon };
-
-  const choose = async (key: PlanKey) => {
-    const cta = computeCta(key, ctx);
-    if (cta.action.kind === "free") {
+  const choose = (key: PlanKey, size: InstitutionSize = "small") => {
+    const { action } = computeCta(key, ctx);
+    if (action.kind === "free") {
       window.location.href = user ? "/dashboard" : "/auth";
       return;
     }
-    if (cta.action.kind === "login") {
-      toast("Inicia sesión para activar tu plan", { description: "Te llevamos al login." });
-      window.location.href = `/auth?redirect=${encodeURIComponent(cta.action.redirectTo)}`;
+    if (action.kind === "login") {
+      window.location.href = `/auth?redirect=${encodeURIComponent(action.redirectTo)}`;
       return;
     }
-    if (cta.action.kind === "current") {
-      toast.info("Ya tienes este plan activo.");
-      return;
-    }
-    if (cta.action.kind === "later") {
-      toast.info(LATER_MESSAGE);
-      return;
-    }
-    if (planError) {
+    if (action.kind === "current" || action.kind === "other_profile") return;
+    if (plan.error) {
       // Sin saber el plan real no se abre un pago: podría ser un cobro repetido.
       toast("No pudimos confirmar tu plan ahora.", {
         description: "Revisa tu conexión e inténtalo de nuevo.",
       });
-      void refreshPlan();
+      void plan.refresh();
       return;
     }
-    setActing(key);
-    void navigate({
-      href: payPageHref(key, key === "institution_monthly" ? { cycle: instCycle } : {}),
-    });
+    setPaySize(size);
   };
 
+  // Vuelta del login con ?plan=institution_monthly: se abre el pago directamente.
   useEffect(() => {
-    if (autoTriggered.current || loading || !user) return;
-    if (typeof window === "undefined") return;
+    if (autoTriggered.current || loading || !user || typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    const requested = url.searchParams.get("plan") as PlanKey | null;
-    if (!requested || !(requested in PLAN_CATALOG)) return;
-    if (requested === "free") return;
-    if (currentPlan === requested && !cancelAtPeriodEnd) return;
+    const requested = url.searchParams.get("plan");
+    if (requested !== "institution_monthly") return;
     autoTriggered.current = true;
     url.searchParams.delete("plan");
     window.history.replaceState({}, "", url.toString());
-    void choose(requested);
+    choose("institution_monthly");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, user, currentPlan, cancelAtPeriodEnd]);
+  }, [loading, user]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* JSON-LD estructurado para rich results de precios */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(pricingProductLd()) }}
@@ -348,206 +184,71 @@ function PlansPage() {
       />
 
       <Navbar />
-      <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 pb-12 sm:pt-28 sm:pb-20">
-        {/* HERO --------------------------------------------------------- */}
-        <header className="text-center max-w-2xl mx-auto">
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-fuchsia-neural/10 text-fuchsia-neural border border-fuchsia-neural/30 font-medium">
-            <Crown className="h-3 w-3" /> Planes Humanix
+      <main className="mx-auto max-w-6xl px-4 pb-12 pt-24 sm:px-6 sm:pb-20 sm:pt-28">
+        <header className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-biosensor/30 bg-biosensor/10 px-3 py-1.5 text-xs font-medium text-biosensor">
+            <Zap className="h-3 w-3" aria-hidden="true" /> Pagos con Bre-B
           </span>
           <h1 className="mt-4 font-display text-[clamp(1.875rem,5vw,3rem)] font-bold leading-tight">
-            Un plan para cada <span className="text-gradient-bio">historia humana</span>.
+            Gratis para cuidar. <span className="text-gradient-bio">Simple para pagar.</span>
           </h1>
-          <p className="mt-3 text-muted-foreground text-base sm:text-lg">
-            Pagos en pesos colombianos.{" "}
-            <span className="font-semibold text-foreground">Sin permanencia.</span> Cancela cuando
-            quieras.
+          <p className="mt-3 text-base text-muted-foreground sm:text-lg">
+            Familias y profesionales usan Humanix{" "}
+            <span className="font-semibold text-foreground">sin mensualidad</span>. Pagas desde la
+            app de tu banco, en segundos.
           </p>
-          {/* Trust badges */}
           <div className="mt-5 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-biosensor" /> RETHUS verificado
+              <ShieldCheck className="h-3.5 w-3.5 text-biosensor" aria-hidden="true" /> RETHUS
+              verificado
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-copper" /> Activación inmediata
+              <Landmark className="h-3.5 w-3.5 text-trust" aria-hidden="true" /> Bre-B del Banco de
+              la República
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-fuchsia-neural" /> +100 profesionales activos
+              <Smartphone className="h-3.5 w-3.5 text-copper" aria-hidden="true" /> Cualquier banco,
+              Nequi o Daviplata
             </span>
           </div>
         </header>
 
-        {/* CANJE DEL BENEFICIO (formulario /validacion) ----------------- */}
-        <div className="mx-auto mt-8 max-w-2xl">
-          <PromoCodeRedeemCard signedIn={Boolean(user)} onRedeemed={() => void refreshPlan()} />
+        <div className={cn("mt-12 grid gap-6", segments.length > 1 && "lg:grid-cols-3")}>
+          {segments.includes("family") && (
+            <FreeCard
+              planKey="family_premium_monthly"
+              icon={<Heart className="h-5 w-5" aria-hidden="true" />}
+              tone="copper"
+              cta={computeCta("family_premium_monthly", ctx)}
+              onChoose={() => choose("family_premium_monthly")}
+              loading={loading}
+              footer={<p className="text-sm font-semibold text-copper">💚 Nunca pagas comisión</p>}
+            />
+          )}
+          {segments.includes("professional") && (
+            <FreeCard
+              planKey="pro_monthly"
+              icon={<Stethoscope className="h-5 w-5" aria-hidden="true" />}
+              tone="bio"
+              cta={computeCta("pro_monthly", ctx)}
+              onChoose={() => choose("pro_monthly")}
+              loading={loading}
+              footer={<CommissionLadder />}
+            />
+          )}
+          {segments.includes("institution") && (
+            <InstitutionOffer
+              ctaLabel={computeCta("institution_monthly", ctx).label}
+              disabled={loading || computeCta("institution_monthly", ctx).disabled}
+              onChoose={(size) => choose("institution_monthly", size)}
+            />
+          )}
         </div>
 
-        {segments.map((segment) => {
-          const plans = DISPLAY.filter((d) => PLANS_FOR_SEGMENT[segment].includes(d.key));
-          const rows = COMPARE_ROWS.filter((r) => !r.only || r.only.includes(segment));
-          return (
-            <div key={segment}>
-              {segments.length > 1 && (
-                <h2 className="mt-16 text-center font-display text-2xl font-bold">
-                  {SEGMENT_TITLE[segment]}
-                </h2>
-              )}
-              {/* PRICING CARDS ------------------------------------------- */}
-              <section
-                aria-label={`Planes de suscripción · ${SEGMENT_TITLE[segment]}`}
-                className={`mt-8 grid gap-6 md:grid-cols-2 ${
-                  plans.length === 3 ? "lg:grid-cols-3" : "lg:mx-auto lg:max-w-4xl"
-                }`}
-              >
-                {plans.map((d) => {
-                  const def = PLAN_CATALOG[d.key];
-                  const Icon = d.icon;
-                  const cta = computeCta(d.key, ctx);
-                  const free = d.key === "free" ? FREE_LINE[segment] : null;
-                  return (
-                    <Card
-                      key={d.key}
-                      className={`p-6 flex flex-col relative transition-shadow hover:shadow-lg ${
-                        def.highlight
-                          ? "border-copper/50 shadow-[var(--shadow-elegant)] ring-1 ring-copper/20"
-                          : ""
-                      }`}
-                    >
-                      {def.highlight && (
-                        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1 rounded-full bg-copper text-white border border-copper/30 font-bold whitespace-nowrap shadow-sm">
-                          ✦ Más elegido
-                        </span>
-                      )}
-                      <div
-                        className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${TONE[d.tone]}`}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <h3 className="mt-3 font-display text-xl font-semibold">{def.label}</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                        {free?.audience ?? def.audience}
-                      </p>
-                      <div className="mt-4 pb-4 border-b border-border">
-                        <span className="text-3xl sm:text-4xl font-bold font-display">
-                          {def.priceLabel}
-                        </span>
-                        {def.priceNote && (
-                          <span className="text-sm text-muted-foreground ml-1">
-                            {def.priceNote}
-                          </span>
-                        )}
-                      </div>
-                      <ul className="mt-5 space-y-2.5 text-sm flex-1">
-                        {(free?.features ?? def.featuresLabel).map((f) => (
-                          <li key={f} className="flex gap-2.5">
-                            <Check className="h-4 w-4 text-biosensor mt-0.5 shrink-0" />
-                            <span className="leading-snug">{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {d.key === "institution_monthly" && (
-                        <InstitutionCalculator cycle={instCycle} onCycle={setInstCycle} />
-                      )}
-                      <Button
-                        className="mt-6 w-full"
-                        variant={
-                          def.highlight
-                            ? "copper"
-                            : d.tone === "fuchsia"
-                              ? "hero"
-                              : d.tone === "bio"
-                                ? "default"
-                                : "outline"
-                        }
-                        disabled={loading || acting === d.key || cta.disabled}
-                        onClick={() => choose(d.key)}
-                      >
-                        {acting === d.key && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        {cta.label}
-                      </Button>
-                    </Card>
-                  );
-                })}
-              </section>
+        <HowToPay />
 
-              {/* FEATURE COMPARISON TABLE -------------------------------- */}
-              <section
-                aria-label={`Tabla de comparación · ${SEGMENT_TITLE[segment]}`}
-                className="mt-12"
-              >
-                {segments.length === 1 && (
-                  <>
-                    <h2 className="font-display text-2xl sm:text-3xl font-bold text-center mb-2">
-                      ¿Qué incluye cada plan?
-                    </h2>
-                    <p className="text-center text-muted-foreground text-sm mb-8">
-                      Compara todas las funciones y elige el plan que se adapta a ti.
-                    </p>
-                  </>
-                )}
-                <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
-                  <table className="w-full min-w-[560px] text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="py-4 pl-6 pr-4 text-left font-semibold text-foreground w-2/5">
-                          Funcionalidad
-                        </th>
-                        {plans.map((d) => {
-                          const def = PLAN_CATALOG[d.key];
-                          return (
-                            <th
-                              key={d.key}
-                              className={`py-4 px-3 text-center font-semibold ${
-                                def.highlight ? "text-copper" : "text-foreground"
-                              }`}
-                            >
-                              <div className="flex flex-col items-center gap-1">
-                                <span>{def.label}</span>
-                                <span
-                                  className={`text-xs font-normal ${
-                                    def.highlight ? "text-copper" : "text-muted-foreground"
-                                  }`}
-                                >
-                                  {def.priceLabel}
-                                  {def.priceNote ? def.priceNote : ""}
-                                </span>
-                              </div>
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row, i) => (
-                        <tr
-                          key={row.label}
-                          className={`border-b border-border/50 transition-colors hover:bg-muted/30 ${
-                            i % 2 === 0 ? "" : "bg-muted/10"
-                          }`}
-                        >
-                          <td className="py-3 pl-6 pr-4 text-foreground/90 leading-snug">
-                            {row.label}
-                          </td>
-                          {plans.map((d) => (
-                            <td
-                              key={d.key}
-                              className={`py-3 px-3 text-center ${PLAN_CATALOG[d.key].highlight ? "bg-copper/5" : ""}`}
-                            >
-                              <CellIcon value={canUseFeature(d.key, row.feature)} />
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          );
-        })}
-
-        {/* FAQ --------------------------------------------------------- */}
-        <section aria-label="Preguntas frecuentes sobre planes" className="mt-20 max-w-3xl mx-auto">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-center mb-8">
+        <section aria-label="Preguntas frecuentes sobre planes" className="mx-auto mt-20 max-w-3xl">
+          <h2 className="mb-8 text-center font-display text-2xl font-bold sm:text-3xl">
             Preguntas frecuentes
           </h2>
           <div className="space-y-3">
@@ -560,128 +261,271 @@ function PlansPage() {
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-foreground">
                   {f.q}
-                  <span className="text-muted-foreground transition-transform group-open:rotate-180 shrink-0">
+                  <span className="shrink-0 text-muted-foreground transition-transform group-open:rotate-180">
                     ⌄
                   </span>
                 </summary>
-                <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{f.a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
               </details>
             ))}
           </div>
         </section>
 
-        {/* CTA FINAL --------------------------------------------------- */}
         <section className="mt-16 rounded-2xl border border-border bg-gradient-to-br from-biosensor/5 via-card to-fuchsia-neural/5 p-8 text-center">
-          <h2 className="font-display text-xl sm:text-2xl font-bold">
-            ¿Necesitas un plan a medida para tu IPS o clínica?
+          <h2 className="font-display text-xl font-bold sm:text-2xl">
+            ¿Dudas sobre el plan para tu IPS o clínica?
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground max-w-lg mx-auto">
-            Armamos un plan personalizado con integraciones, usuarios ilimitados y acuerdos
-            especiales para instituciones de salud.
+          <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
+            Te contamos cómo funciona y te ayudamos a activarlo.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <a
-              href="mailto:hola@humanix.lat?subject=Plan IPS Humanix"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-biosensor px-5 text-sm font-semibold text-biosensor-foreground hover:bg-biosensor/90 transition-colors"
+              href="mailto:hola@humanix.lat?subject=Plan Institucional Humanix"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-biosensor px-5 text-sm font-semibold text-biosensor-foreground transition-colors hover:bg-biosensor/90"
             >
               hola@humanix.lat
             </a>
             <a
-              href="https://wa.me/573147444715?text=Hola%20Humanix%2C%20quiero%20informaci%C3%B3n%20del%20Plan%20Instituci%C3%B3n."
+              href="https://wa.me/573147444715?text=Hola%20Humanix%2C%20quiero%20informaci%C3%B3n%20del%20Plan%20Institucional."
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-card px-5 text-sm font-medium hover:bg-muted/40 transition-colors"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-card px-5 text-sm font-medium transition-colors hover:bg-muted/40"
             >
               WhatsApp +57 314 744 4715
             </a>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            El WhatsApp es solo para resolver dudas. Los pagos se realizan únicamente en esta
-            página.
+            El WhatsApp es solo para resolver dudas. Los pagos se hacen únicamente aquí, en Humanix.
           </p>
           <Link
             to="/"
-            className="mt-4 text-xs text-muted-foreground hover:text-foreground inline-block transition-colors"
+            className="mt-4 inline-block text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             ← Volver al inicio
           </Link>
         </section>
       </main>
       <Footer />
+
+      <BrebPaySheet
+        open={paySize !== null}
+        onOpenChange={(o) => !o && setPaySize(null)}
+        title="Plan Institucional"
+        subtitle={paySize ? `${INSTITUTION_PLANS[paySize].label} · 12 meses` : undefined}
+        start={() => payInstitutionPlanWithBreb({ data: { size: paySize ?? "small" } })}
+        paidMessage="Tu plan queda activo por un año. ¡Bienvenidos!"
+        onPaid={() => void plan.refresh()}
+      />
     </div>
   );
 }
 
-/** Calculadora del plan Institucional: sedes activas y ciclo (mensual o anual, 12 meses por 10). */
-function InstitutionCalculator({
-  cycle,
-  onCycle,
+const TONE = {
+  bio: "border-biosensor/30 bg-biosensor/5 text-biosensor",
+  copper: "border-copper/30 bg-copper/5 text-copper",
+} as const;
+
+function FreeCard({
+  planKey,
+  icon,
+  tone,
+  cta,
+  onChoose,
+  loading,
+  footer,
 }: {
-  cycle: BillingCycle;
-  onCycle: (c: BillingCycle) => void;
+  planKey: PlanKey;
+  icon: React.ReactNode;
+  tone: keyof typeof TONE;
+  cta: { label: string; disabled: boolean };
+  onChoose: () => void;
+  loading: boolean;
+  footer: React.ReactNode;
 }) {
-  const [branches, setBranches] = useState(1);
-  const b = calculateInstitutionBilling({ branches, cycle });
-  const max = 50;
+  const def = PLAN_CATALOG[planKey];
   return (
-    <div className="mt-5 space-y-3 rounded-xl border border-fuchsia-neural/30 bg-fuchsia-neural/5 p-3 text-xs">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">Sedes</span>
-        <div className="inline-flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Quitar una sede"
-            className="h-7 w-7 rounded-full border border-border bg-card disabled:opacity-40"
-            disabled={branches <= 1}
-            onClick={() => setBranches((n) => Math.max(1, n - 1))}
-          >
-            −
-          </button>
-          <span className="w-6 text-center font-semibold tabular-nums" aria-live="polite">
-            {branches}
-          </span>
-          <button
-            type="button"
-            aria-label="Agregar una sede"
-            className="h-7 w-7 rounded-full border border-border bg-card disabled:opacity-40"
-            disabled={branches >= max}
-            onClick={() => setBranches((n) => Math.min(max, n + 1))}
-          >
-            +
-          </button>
-        </div>
+    <article className="flex flex-col rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)]">
+      <div
+        className={cn(
+          "inline-flex h-10 w-10 items-center justify-center rounded-xl border",
+          TONE[tone],
+        )}
+      >
+        {icon}
       </div>
-      <div className="grid grid-cols-2 gap-1 rounded-full border border-border bg-card p-0.5">
-        {(["monthly", "annual"] as const).map((c) => (
-          <button
-            key={c}
-            type="button"
-            aria-pressed={cycle === c}
-            onClick={() => onCycle(c)}
-            className={`rounded-full px-2 py-1 transition ${
-              cycle === c ? "bg-fuchsia-neural text-white" : "text-muted-foreground"
-            }`}
-          >
-            {c === "monthly"
-              ? "Mensual"
-              : `Anual (${INSTITUTION_BILLING.annualMonths} por ${INSTITUTION_BILLING.annualPaidMonths})`}
-          </button>
-        ))}
-      </div>
-      <p className="flex items-baseline justify-between gap-2">
-        <span className="text-muted-foreground">
-          {cycle === "annual" ? `Total ${b.months} meses` : "Total al mes"}
-        </span>
-        <span className="text-base font-bold tabular-nums text-fuchsia-neural">
-          {COP(b.totalCOP)}
-        </span>
+      <h2 className="mt-3 font-display text-2xl font-bold">{def.label}</h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">{def.audience}</p>
+      <p className="mt-4 border-b border-border pb-4">
+        <span className="font-display text-4xl font-bold">{def.priceLabel}</span>
+        <span className="ml-1 text-sm text-muted-foreground">{def.priceNote}</span>
       </p>
-      {cycle === "annual" && (
-        <p className="text-emerald-700 dark:text-emerald-400">
-          Ahorras {COP(b.annualDiscountCOP)}: {COP(Math.round(b.totalCOP / b.months))} al mes.
-        </p>
-      )}
-      <p className="text-muted-foreground">Al pagar se cobran las sedes activas de tu cuenta.</p>
+      <ul className="mt-5 flex-1 space-y-2.5 text-sm">
+        {def.featuresLabel.map((f) => (
+          <li key={f} className="flex gap-2.5">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-biosensor" aria-hidden="true" />
+            <span className="leading-snug">{f}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-5">{footer}</div>
+      <Button
+        className="mt-5 w-full"
+        size="lg"
+        variant={tone === "copper" ? "copper" : "default"}
+        disabled={loading || cta.disabled}
+        onClick={onChoose}
+      >
+        {cta.label}
+      </Button>
+    </article>
+  );
+}
+
+/** La comisión del profesional, como una escalera que baja. */
+function CommissionLadder() {
+  const ranges = ["0–19 turnos", "20–59 turnos", "60 o más"];
+  return (
+    <div className="rounded-2xl bg-biosensor/5 p-4">
+      <p className="flex items-center gap-1.5 text-sm font-semibold">
+        <TrendingDown className="h-4 w-4 text-biosensor" aria-hidden="true" /> Tu comisión baja
+        contigo
+      </p>
+      <ol
+        className="mt-3 flex items-end gap-2"
+        aria-label="Comisión según turnos en los últimos 30 días"
+      >
+        {TIERS_ASC.map((t, i) => (
+          <li key={t.pct} className="flex flex-1 flex-col items-center gap-1">
+            <span className="text-sm font-bold">{t.pct} %</span>
+            <span
+              className="w-full rounded-t-lg bg-biosensor/70"
+              style={{ height: `${t.pct * 3}px` }}
+              aria-hidden="true"
+            />
+            <span className="text-center text-[11px] leading-tight text-muted-foreground">
+              {ranges[i]}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-3 text-xs text-muted-foreground">
+        En los últimos 30 días. Primer turno con cada familia nueva: sin comisión (hasta{" "}
+        {COP(FIRST_SHIFT_EXEMPT_CAP_COP)}).
+      </p>
     </div>
+  );
+}
+
+function InstitutionOffer({
+  ctaLabel,
+  disabled,
+  onChoose,
+}: {
+  ctaLabel: string;
+  disabled: boolean;
+  onChoose: (size: InstitutionSize) => void;
+}) {
+  const [size, setSize] = useState<InstitutionSize>("small");
+  const def = PLAN_CATALOG.institution_monthly;
+  const chosen = INSTITUTION_PLANS[size];
+  return (
+    <article className="flex flex-col rounded-3xl border border-fuchsia-neural/30 bg-card p-6 shadow-[var(--shadow-card)]">
+      <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-fuchsia-neural/40 bg-fuchsia-neural/5 text-fuchsia-neural">
+        <Building2 className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <h2 className="mt-3 font-display text-2xl font-bold">{def.label}</h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">{def.audience}</p>
+      <div role="radiogroup" aria-label="Tamaño de la sede" className="mt-4 grid gap-2">
+        {(["small", "large"] as const).map((s) => {
+          const p = INSTITUTION_PLANS[s];
+          const on = s === size;
+          return (
+            <button
+              key={s}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setSize(s)}
+              className={cn(
+                "rounded-2xl border-2 p-3 text-left transition",
+                on
+                  ? "border-fuchsia-neural bg-fuchsia-neural/5"
+                  : "border-border hover:border-fuchsia-neural/40",
+              )}
+            >
+              <span className="block text-sm font-semibold">{p.label}</span>
+              <span className="font-display text-2xl font-bold">{COP(p.monthlyCOP)}</span>
+              <span className="text-sm text-muted-foreground">/mes</span>
+              <span className="block text-xs text-muted-foreground">
+                {COP(p.annualCOP)} al año · comisión {p.pct} % al profesional
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <ul className="mt-5 flex-1 space-y-2.5 text-sm">
+        {def.featuresLabel.map((f) => (
+          <li key={f} className="flex gap-2.5">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-biosensor" aria-hidden="true" />
+            <span className="leading-snug">{f}</span>
+          </li>
+        ))}
+      </ul>
+      <Button
+        className="mt-6 w-full"
+        size="lg"
+        variant="hero"
+        disabled={disabled}
+        onClick={() => onChoose(size)}
+      >
+        {ctaLabel === "Activar con Bre-B" ? `Activar · ${COP(chosen.annualCOP)} al año` : ctaLabel}
+      </Button>
+      <p className="mt-2 text-center text-xs text-muted-foreground">
+        Un solo pago al año por Bre-B. Sin cobros automáticos.
+      </p>
+    </article>
+  );
+}
+
+function HowToPay() {
+  const steps = [
+    {
+      emoji: "📝",
+      title: "Pides el turno",
+      text: "Eliges Bre-B o efectivo. El turno mínimo es de " + COP(MIN_BOOKING_COP) + ".",
+    },
+    {
+      emoji: "✅",
+      title: "El profesional acepta",
+      text: "Te avisamos al instante y aparece el botón «Pagar con Bre-B».",
+    },
+    {
+      emoji: "🏦",
+      title: "Abres tu banco",
+      text: "Confirmas el pago en la app de tu banco, Nequi o Daviplata. ¡Listo!",
+    },
+  ];
+  return (
+    <section aria-label="Cómo se paga" className="mt-16 rounded-3xl bg-trust/5 p-6 sm:p-10">
+      <h2 className="text-center font-display text-2xl font-bold sm:text-3xl">
+        Pagar un turno toma 3 toques
+      </h2>
+      <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+        {steps.map((s, i) => (
+          <li key={s.title} className="rounded-3xl bg-card p-5 text-center shadow-sm">
+            <p aria-hidden="true" className="text-4xl">
+              {s.emoji}
+            </p>
+            <p className="mt-2 font-display text-lg font-bold">
+              {i + 1}. {s.title}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Y si eres profesional, tu parte llega a tu llave Bre-B apenas terminas el turno. 💸
+      </p>
+    </section>
   );
 }

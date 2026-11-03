@@ -12,7 +12,9 @@ export function usePendingBookings(userId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_bookings")
-        .select("id, scheduled_at, duration_hours, total_amount, payment_mode, created_at")
+        .select(
+          "id, scheduled_at, duration_hours, total_amount, payment_method, platform_fee_amount, created_at",
+        )
         .eq("professional_id", userId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });

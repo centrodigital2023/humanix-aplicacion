@@ -45,7 +45,6 @@ import { Route as HabeasDataRouteImport } from './routes/habeas-data'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MensajesRouteImport } from './routes/mensajes'
-import { Route as PagarRouteImport } from './routes/pagar'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PlanesRouteImport } from './routes/planes'
 import { Route as PrensaRouteImport } from './routes/prensa'
@@ -74,6 +73,8 @@ import { Route as DashboardWhatsappRouteImport } from './routes/dashboard.whatsa
 import { Route as InstitutionFormsRouteImport } from './routes/institution.forms'
 import { Route as InstitutionProfileRouteImport } from './routes/institution.profile'
 import { Route as OfertaOfferIdRouteImport } from './routes/oferta.$offerId'
+import { Route as PagoExitoRouteImport } from './routes/pago.exito'
+import { Route as PagoFalloRouteImport } from './routes/pago.fallo'
 import { Route as ProfesionalProIdRouteImport } from './routes/profesional.$proId'
 import { Route as RecursosSlugRouteImport } from './routes/recursos.$slug'
 import { Route as ServicioBookingIdRouteImport } from './routes/servicio.$bookingId'
@@ -92,6 +93,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as DashboardFamiliaBienvenidaRouteImport } from './routes/dashboard.familia_.bienvenida'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia_.onboarding'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
+import { Route as ApiPublicFiruxWebhookRouteImport } from './routes/api/public/firux/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 
@@ -275,11 +277,6 @@ const MensajesRoute = MensajesRouteImport.update({
   path: '/mensajes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PagarRoute = PagarRouteImport.update({
-  id: '/pagar',
-  path: '/pagar',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PairRoute = PairRouteImport.update({
   id: '/pair',
   path: '/pair',
@@ -421,6 +418,16 @@ const OfertaOfferIdRoute = OfertaOfferIdRouteImport.update({
   path: '/oferta/$offerId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PagoExitoRoute = PagoExitoRouteImport.update({
+  id: '/pago/exito',
+  path: '/pago/exito',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagoFalloRoute = PagoFalloRouteImport.update({
+  id: '/pago/fallo',
+  path: '/pago/fallo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfesionalProIdRoute = ProfesionalProIdRouteImport.update({
   id: '/profesional/$proId',
   path: '/profesional/$proId',
@@ -514,6 +521,11 @@ const DashboardInstitucionOnboardingRoute =
     path: '/onboarding',
     getParentRoute: () => DashboardInstitucionRoute,
   } as any)
+const ApiPublicFiruxWebhookRoute = ApiPublicFiruxWebhookRouteImport.update({
+  id: '/api/public/firux/webhook',
+  path: '/api/public/firux/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -562,7 +574,6 @@ export interface FileRoutesByFullPath {
   '/instalar': typeof InstalarRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
-  '/pagar': typeof PagarRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
   '/prensa': typeof PrensaRoute
@@ -590,6 +601,8 @@ export interface FileRoutesByFullPath {
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
+  '/pago/exito': typeof PagoExitoRoute
+  '/pago/fallo': typeof PagoFalloRoute
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
@@ -609,6 +622,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/familia/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
+  '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -648,7 +662,6 @@ export interface FileRoutesByTo {
   '/instalar': typeof InstalarRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
-  '/pagar': typeof PagarRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
   '/prensa': typeof PrensaRoute
@@ -675,6 +688,8 @@ export interface FileRoutesByTo {
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
+  '/pago/exito': typeof PagoExitoRoute
+  '/pago/fallo': typeof PagoFalloRoute
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
@@ -694,6 +709,7 @@ export interface FileRoutesByTo {
   '/dashboard/familia/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
+  '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -735,7 +751,6 @@ export interface FileRoutesById {
   '/instalar': typeof InstalarRoute
   '/mcp': typeof McpRoute
   '/mensajes': typeof MensajesRoute
-  '/pagar': typeof PagarRoute
   '/pair': typeof PairRoute
   '/planes': typeof PlanesRoute
   '/prensa': typeof PrensaRoute
@@ -763,6 +778,8 @@ export interface FileRoutesById {
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
+  '/pago/exito': typeof PagoExitoRoute
+  '/pago/fallo': typeof PagoFalloRoute
   '/profesional/$proId': typeof ProfesionalProIdRoute
   '/recursos/$slug': typeof RecursosSlugRoute
   '/servicio/$bookingId': typeof ServicioBookingIdRoute
@@ -782,6 +799,7 @@ export interface FileRoutesById {
   '/dashboard/familia_/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia_/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
+  '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -824,7 +842,6 @@ export interface FileRouteTypes {
     | '/instalar'
     | '/mcp'
     | '/mensajes'
-    | '/pagar'
     | '/pair'
     | '/planes'
     | '/prensa'
@@ -852,6 +869,8 @@ export interface FileRouteTypes {
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
+    | '/pago/exito'
+    | '/pago/fallo'
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
@@ -871,6 +890,7 @@ export interface FileRouteTypes {
     | '/dashboard/familia/bienvenida'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
+    | '/api/public/firux/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -910,7 +930,6 @@ export interface FileRouteTypes {
     | '/instalar'
     | '/mcp'
     | '/mensajes'
-    | '/pagar'
     | '/pair'
     | '/planes'
     | '/prensa'
@@ -937,6 +956,8 @@ export interface FileRouteTypes {
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
+    | '/pago/exito'
+    | '/pago/fallo'
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
@@ -956,6 +977,7 @@ export interface FileRouteTypes {
     | '/dashboard/familia/bienvenida'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
+    | '/api/public/firux/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   id:
@@ -996,7 +1018,6 @@ export interface FileRouteTypes {
     | '/instalar'
     | '/mcp'
     | '/mensajes'
-    | '/pagar'
     | '/pair'
     | '/planes'
     | '/prensa'
@@ -1024,6 +1045,8 @@ export interface FileRouteTypes {
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
+    | '/pago/exito'
+    | '/pago/fallo'
     | '/profesional/$proId'
     | '/recursos/$slug'
     | '/servicio/$bookingId'
@@ -1043,6 +1066,7 @@ export interface FileRouteTypes {
     | '/dashboard/familia_/bienvenida'
     | '/dashboard/familia_/onboarding'
     | '/dashboard/institucion/onboarding'
+    | '/api/public/firux/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   fileRoutesById: FileRoutesById
@@ -1084,7 +1108,6 @@ export interface RootRouteChildren {
   InstalarRoute: typeof InstalarRoute
   McpRoute: typeof McpRoute
   MensajesRoute: typeof MensajesRoute
-  PagarRoute: typeof PagarRoute
   PairRoute: typeof PairRoute
   PlanesRoute: typeof PlanesRoute
   PrensaRoute: typeof PrensaRoute
@@ -1105,9 +1128,12 @@ export interface RootRouteChildren {
   InstitutionFormsRoute: typeof InstitutionFormsRoute
   InstitutionProfileRoute: typeof InstitutionProfileRoute
   OfertaOfferIdRoute: typeof OfertaOfferIdRoute
+  PagoExitoRoute: typeof PagoExitoRoute
+  PagoFalloRoute: typeof PagoFalloRoute
   ProfesionalProIdRoute: typeof ProfesionalProIdRoute
   ServicioBookingIdRoute: typeof ServicioBookingIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiPublicFiruxWebhookRoute: typeof ApiPublicFiruxWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
 }
@@ -1366,13 +1392,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MensajesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pagar': {
-      id: '/pagar'
-      path: '/pagar'
-      fullPath: '/pagar'
-      preLoaderRoute: typeof PagarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/pair': {
       id: '/pair'
       path: '/pair'
@@ -1569,6 +1588,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OfertaOfferIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pago/exito': {
+      id: '/pago/exito'
+      path: '/pago/exito'
+      fullPath: '/pago/exito'
+      preLoaderRoute: typeof PagoExitoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pago/fallo': {
+      id: '/pago/fallo'
+      path: '/pago/fallo'
+      fullPath: '/pago/fallo'
+      preLoaderRoute: typeof PagoFalloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profesional/$proId': {
       id: '/profesional/$proId'
       path: '/profesional/$proId'
@@ -1694,6 +1727,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/institucion/onboarding'
       preLoaderRoute: typeof DashboardInstitucionOnboardingRouteImport
       parentRoute: typeof DashboardInstitucionRoute
+    }
+    '/api/public/firux/webhook': {
+      id: '/api/public/firux/webhook'
+      path: '/api/public/firux/webhook'
+      fullPath: '/api/public/firux/webhook'
+      preLoaderRoute: typeof ApiPublicFiruxWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
@@ -1834,7 +1874,6 @@ const rootRouteChildren: RootRouteChildren = {
   InstalarRoute: InstalarRoute,
   McpRoute: McpRoute,
   MensajesRoute: MensajesRoute,
-  PagarRoute: PagarRoute,
   PairRoute: PairRoute,
   PlanesRoute: PlanesRoute,
   PrensaRoute: PrensaRoute,
@@ -1856,9 +1895,12 @@ const rootRouteChildren: RootRouteChildren = {
   InstitutionFormsRoute: InstitutionFormsRoute,
   InstitutionProfileRoute: InstitutionProfileRoute,
   OfertaOfferIdRoute: OfertaOfferIdRoute,
+  PagoExitoRoute: PagoExitoRoute,
+  PagoFalloRoute: PagoFalloRoute,
   ProfesionalProIdRoute: ProfesionalProIdRoute,
   ServicioBookingIdRoute: ServicioBookingIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiPublicFiruxWebhookRoute: ApiPublicFiruxWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
 }

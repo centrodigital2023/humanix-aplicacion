@@ -168,8 +168,8 @@ export function QuickCareWizard() {
       <div className="mt-3 flex items-start gap-2 rounded-lg bg-biosensor/5 border border-biosensor/20 p-2.5">
         <ShieldCheck className="h-4 w-4 text-biosensor shrink-0 mt-0.5" />
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Plan Familiar <span className="font-semibold text-biosensor">$9.900 COP/mes</span> ·
-          Verificación RETHUS · El profesional cobra directo · Habeas Data Ley 1581
+          <span className="font-semibold text-biosensor">Gratis y sin comisión</span> · Pagas con
+          Bre-B o en efectivo · Verificación RETHUS · Habeas Data Ley 1581
         </p>
       </div>
 

@@ -31,7 +31,6 @@ import {
   isDeleteConfirmation,
   type DeletionBlockers,
 } from "@/lib/accountDeletion";
-import { readErrorPayload } from "@/lib/checkout";
 
 type Props = {
   userId: string;
@@ -204,4 +203,16 @@ export function DangerZoneCard({ userId, role, onDeleted }: Props) {
       </AlertDialog>
     </>
   );
+}
+
+/** Cuerpo JSON de un error de `supabase.functions.invoke` (si lo trae). */
+async function readErrorPayload(err: unknown): Promise<Record<string, unknown> | null> {
+  const ctx = (err as { context?: unknown } | null)?.context;
+  if (!ctx || typeof (ctx as Response).json !== "function") return null;
+  try {
+    const body = await (ctx as Response).clone().json();
+    return body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
 }

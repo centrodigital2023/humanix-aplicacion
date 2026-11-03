@@ -185,25 +185,25 @@ describe("funciones premium del lazo de cuidado", () => {
     expect(canUseFeature("family_premium_monthly", "care_history_export")).toBe(true);
     expect(canUseFeature("institution_monthly", "care_history_export")).toBe(true);
   });
-  it("pasaporte profesional: herramienta de reputación de Premium Profesional", () => {
-    expect(FEATURE_MIN_PLAN.career_passport).toBe("pro_premium_monthly");
+  it("pasaporte profesional: lo tiene todo profesional (gratis desde nov 2026)", () => {
+    expect(FEATURE_MIN_PLAN.career_passport).toBe("pro_monthly");
     expect(canUseFeature("essential_monthly", "career_passport")).toBe(false);
-    expect(canUseFeature("pro_monthly", "career_passport")).toBe(false);
+    expect(canUseFeature("pro_monthly", "career_passport")).toBe(true);
     expect(canUseFeature("pro_premium_monthly", "career_passport")).toBe(true);
     expect(canUseFeature("institution_monthly", "career_passport")).toBe(true);
   });
   it("el catálogo lista cada función en el plan que la desbloquea, con su texto", () => {
-    expect(PLAN_CATALOG.essential_monthly.features).toContain("care_history_export");
-    expect(PLAN_CATALOG.pro_premium_monthly.features).toContain("career_passport");
-    expect(PLAN_CATALOG.essential_monthly.featuresLabel.join(" ")).toMatch(/historia exportable/);
-    expect(PLAN_CATALOG.pro_premium_monthly.featuresLabel.join(" ")).toMatch(
-      /pasaporte profesional/,
+    expect(PLAN_CATALOG.family_premium_monthly.features).toContain("care_history_export");
+    expect(PLAN_CATALOG.pro_monthly.features).toContain("career_passport");
+    expect(PLAN_CATALOG.family_premium_monthly.featuresLabel.join(" ")).toMatch(
+      /historia exportable/,
     );
+    expect(PLAN_CATALOG.pro_monthly.featuresLabel.join(" ")).toMatch(/pasaporte profesional/i);
   });
-  it("el precio es el del servidor de pagos", () => {
-    expect(PLAN_CATALOG.essential_monthly.amountCOP).toBe(9900);
-    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(19900);
-    expect(PLAN_CATALOG.institution_monthly.amountCOP).toBe(299_000);
+  it("familia y profesional son gratis; la institución, desde $290.000/mes", () => {
+    expect(PLAN_CATALOG.family_premium_monthly.amountCOP).toBe(0);
+    expect(PLAN_CATALOG.pro_monthly.amountCOP).toBe(0);
+    expect(PLAN_CATALOG.institution_monthly.amountCOP).toBe(290_000);
   });
 });
 

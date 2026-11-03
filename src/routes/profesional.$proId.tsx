@@ -515,11 +515,10 @@ function ProfessionalPublicPage() {
                   <ShieldCheck className="h-4 w-4 text-copper" /> Comisión transparente
                 </h2>
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                  Pagas el valor acordado directamente al profesional. Si nadie tiene plan de pago,
-                  Humanix le descuenta el{" "}
-                  <strong className="text-copper">{FREE_COMMISSION_PCT}%</strong> al profesional; si
-                  él tiene Pro o Premium, o tú tienes el plan Familiar o Premium Familiar, recibe el{" "}
-                  <strong>100%</strong>. Sin tarifas ocultas ni permanencia.
+                  Pagas solo el valor acordado, con Bre-B o en efectivo: tú nunca pagas comisión.
+                  Humanix le cobra al profesional hasta el{" "}
+                  <strong className="text-copper">{FREE_COMMISSION_PCT}%</strong>, que baja a 12 % y
+                  10 % mientras más trabaja. Sin tarifas ocultas ni mensualidad.
                 </p>
               </Card>
             </aside>

@@ -77,7 +77,9 @@ function ConfianzaPage() {
             <li>Supabase — base de datos, autenticación y almacenamiento.</li>
             <li>Cloudflare — entrega de contenido y red perimetral.</li>
             <li>Resend — envío de correos transaccionales.</li>
-            <li>MercadoPago — procesamiento de pagos.</li>
+            <li>
+              Firux — cobros por Bre-B (sistema de pagos inmediatos del Banco de la República).
+            </li>
             <li>WhatsApp Business — comunicación opcional con usuarios.</li>
           </ul>
         </LegalSection>

@@ -109,26 +109,14 @@ describe("comisión", () => {
     expect(r.commission.effectivePct).toBe(12);
   });
 
-  it("con poco volumen el plan todavía no se paga solo y se dice con honestidad", () => {
-    const r = report([free(2)]);
-    expect(r.commission.savingWithEssential90).toBeNull();
-    const i = find(r.insights, "commission_info")!;
-    expect(i.severity).toBe("info");
-    expect(i.detail).toMatch(/todavía no se paga solo/);
-  });
-
-  it("con volumen alto calcula el ahorro después de descontar el plan, y no hay empate falso", () => {
-    // 3 meses de Pro = 59.700; con 2 servicios de 30.000 de comisión (60.000) se ahorrarían 300
+  it("ningún plan quita la comisión: el consejo es cómo bajarla trabajando más", () => {
     const r = report([free(2), free(4)].map((b) => ({ ...b, platform_fee_amount: 30_000 })));
     expect(r.commission.paid90).toBe(60_000);
-    expect(r.commission.savingWithEssential90).toBe(60_000 - 59_700);
-    const i = find(r.insights, "commission_saving")!;
-    expect(i.severity).toBe("warn");
-    expect(i.detail).toMatch(/habrías conservado/);
-
-    // exactamente igual al costo del plan: no ahorra nada
-    const equal = report([free(2, { platform_fee_amount: 59_700 })]);
-    expect(equal.commission.savingWithEssential90).toBeNull();
+    expect(r.commission.savingWithEssential90).toBeNull();
+    expect(find(r.insights, "commission_saving")).toBeUndefined();
+    const i = find(r.insights, "commission_info")!;
+    expect(i.severity).toBe("info");
+    expect(i.detail).toMatch(/12 % desde 20 turnos/);
   });
 
   it("nunca habla de pagos por WhatsApp ni da instrucciones de pago", () => {
@@ -138,7 +126,6 @@ describe("comisión", () => {
     ]);
     const text = JSON.stringify(r.insights);
     expect(text).not.toMatch(/whatsapp/i);
-    expect(text).toMatch(/página web/);
   });
 });
 

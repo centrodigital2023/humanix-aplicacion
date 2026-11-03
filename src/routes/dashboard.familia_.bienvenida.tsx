@@ -212,10 +212,10 @@ function FamilyWelcome() {
           <AccordionItem value="costo" className="border-b-0">
             <AccordionTrigger className="text-base font-bold">¿Cuánto cuesta?</AccordionTrigger>
             <AccordionContent className="space-y-2">
-              <p>Crear tu cuenta y pedir cuidado es gratis.</p>
+              <p>Nada: tu cuenta es gratis, con todo incluido, y nunca pagas comisión.</p>
               <p>
-                Si quieres más, el plan Familiar cuesta COP 9.900 al mes y lo cancelas cuando
-                quieras.
+                Pagas solo el valor de cada turno: con Bre-B desde la app de tu banco, o en efectivo
+                al profesional.
               </p>
               <Link to="/planes" className="inline-flex font-semibold text-primary hover:underline">
                 Ver planes
