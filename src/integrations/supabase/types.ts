@@ -1444,6 +1444,65 @@ export type Database = {
         }
         Relationships: []
       }
+      firux_charges: {
+        Row: {
+          amount_cop: number
+          amount_paid_cop: number | null
+          booking_id: string | null
+          created_at: string
+          expires_at: string | null
+          firux_id: string | null
+          id: string
+          kind: string
+          paid_at: string | null
+          payment_url: string | null
+          plan_key: string | null
+          qr_emv: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_cop: number
+          amount_paid_cop?: number | null
+          booking_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          firux_id?: string | null
+          id?: string
+          kind: string
+          paid_at?: string | null
+          payment_url?: string | null
+          plan_key?: string | null
+          qr_emv?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_cop?: number
+          amount_paid_cop?: number | null
+          booking_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          firux_id?: string | null
+          id?: string
+          kind?: string
+          paid_at?: string | null
+          payment_url?: string | null
+          plan_key?: string | null
+          qr_emv?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "firux_charges_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_responses: {
         Row: {
           answers: Json
@@ -3144,6 +3203,56 @@ export type Database = {
         }
         Relationships: []
       }
+      payouts: {
+        Row: {
+          amount_cop: number
+          booking_id: string | null
+          created_at: string
+          error_code: string | null
+          id: string
+          key_type: string | null
+          key_value: string | null
+          professional_id: string
+          provider_ref: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cop: number
+          booking_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          key_type?: string | null
+          key_value?: string | null
+          professional_id: string
+          provider_ref?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cop?: number
+          booking_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          key_type?: string | null
+          key_value?: string | null
+          professional_id?: string
+          provider_ref?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pqrs_intake_attempts: {
         Row: {
           action: string
@@ -3425,6 +3534,33 @@ export type Database = {
           document_enc?: string
           document_hash?: string
           document_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      professional_payout_keys: {
+        Row: {
+          created_at: string
+          holder_name: string | null
+          key_type: string
+          key_value: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          holder_name?: string | null
+          key_type: string
+          key_value: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          holder_name?: string | null
+          key_type?: string
+          key_value?: string
           updated_at?: string
           user_id?: string
         }
@@ -3858,15 +3994,19 @@ export type Database = {
           cancel_reason: string | null
           cancelled_at: string | null
           client_id: string
+          commission_exempt_cop: number
           completed_at: string | null
           created_at: string
           duration_hours: number
           emergency_phone: string | null
+          firux_charge_id: string | null
           hourly_rate: number
           id: string
           job_offer_id: string | null
           job_offer_shift_id: string | null
           notes: string | null
+          paid_at: string | null
+          payment_method: string
           payment_mode: string
           platform_fee_amount: number
           platform_fee_pct: number
@@ -3887,15 +4027,19 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           client_id: string
+          commission_exempt_cop?: number
           completed_at?: string | null
           created_at?: string
           duration_hours?: number
           emergency_phone?: string | null
+          firux_charge_id?: string | null
           hourly_rate: number
           id?: string
           job_offer_id?: string | null
           job_offer_shift_id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string
           payment_mode?: string
           platform_fee_amount?: number
           platform_fee_pct?: number
@@ -3916,15 +4060,19 @@ export type Database = {
           cancel_reason?: string | null
           cancelled_at?: string | null
           client_id?: string
+          commission_exempt_cop?: number
           completed_at?: string | null
           created_at?: string
           duration_hours?: number
           emergency_phone?: string | null
+          firux_charge_id?: string | null
           hourly_rate?: number
           id?: string
           job_offer_id?: string | null
           job_offer_shift_id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string
           payment_mode?: string
           platform_fee_amount?: number
           platform_fee_pct?: number
@@ -4797,6 +4945,63 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_movements: {
+        Row: {
+          amount_cop: number
+          balance_after: number
+          booking_id: string | null
+          charge_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          note: string | null
+          professional_id: string
+        }
+        Insert: {
+          amount_cop: number
+          balance_after: number
+          booking_id?: string | null
+          charge_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          note?: string | null
+          professional_id: string
+        }
+        Update: {
+          amount_cop?: number
+          balance_after?: number
+          booking_id?: string | null
+          charge_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          professional_id?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          balance_cop: number
+          credit_limit_cop: number
+          professional_id: string
+          updated_at: string
+        }
+        Insert: {
+          balance_cop?: number
+          credit_limit_cop?: number
+          professional_id: string
+          updated_at?: string
+        }
+        Update: {
+          balance_cop?: number
+          credit_limit_cop?: number
+          professional_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       wearable_connections: {
         Row: {
           connected_at: string
@@ -5431,6 +5636,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_my_wallet: {
+        Args: never
+        Returns: {
+          available_cop: number
+          balance_cop: number
+          blocked: boolean
+          commission_pct: number
+          completed_30d: number
+          credit_limit_cop: number
+        }[]
+      }
       get_or_create_booking_conversation: {
         Args: { _booking_id: string }
         Returns: string
@@ -5679,6 +5895,14 @@ export type Database = {
         Returns: number
       }
       hx_duration_label: { Args: { p_minutes: number }; Returns: string }
+      hx_first_shift_exempt: {
+        Args: { p_client: string; p_fee: number; p_professional: string }
+        Returns: number
+      }
+      hx_firux_charge_paid: {
+        Args: { p_amount_paid: number; p_firux_id: string }
+        Returns: string
+      }
       hx_free_commission_pct: { Args: never; Returns: number }
       hx_ingest_ip_hash: { Args: never; Returns: string }
       hx_inst_alert_autoresolve: {
@@ -5716,6 +5940,7 @@ export type Database = {
       hx_inst_purge_all: { Args: never; Returns: number }
       hx_inst_purge_device_obs: { Args: { p_inst: string }; Returns: number }
       hx_inst_purge_failures: { Args: never; Returns: number }
+      hx_institution_size: { Args: { p_user: string }; Returns: string }
       hx_json_num: { Args: { p: Json; p_key: string }; Returns: number }
       hx_json_texts: { Args: { p: Json }; Returns: string[] }
       hx_member_can: {
@@ -5790,11 +6015,16 @@ export type Database = {
       hx_ping_service_offers: { Args: never; Returns: undefined }
       hx_plan_visibility_boost: { Args: { p_user: string }; Returns: number }
       hx_presence_ttl: { Args: never; Returns: string }
+      hx_pro_completed_30d: {
+        Args: { p_professional: string }
+        Returns: number
+      }
       hx_pro_docs_complete: { Args: { p_uid: string }; Returns: boolean }
       hx_pro_label: {
         Args: { p_full_name: string; p_short: boolean }
         Returns: string
       }
+      hx_queue_payout: { Args: { p_booking: string }; Returns: string }
       hx_reveal_pro_contact: {
         Args: {
           p_application: string
@@ -5841,6 +6071,17 @@ export type Database = {
         }[]
       }
       hx_trust_level: { Args: { p_score: number }; Returns: string }
+      hx_wallet_apply: {
+        Args: {
+          p_amount: number
+          p_booking: string
+          p_charge: string
+          p_kind: string
+          p_note: string
+          p_professional: string
+        }
+        Returns: number
+      }
       inst_accepted_applications: {
         Args: never
         Returns: {
