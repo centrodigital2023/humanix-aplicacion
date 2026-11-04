@@ -546,6 +546,161 @@ export type Database = {
           },
         ]
       }
+      booking_issue_reports: {
+        Row: {
+          booking_id: string
+          created_at: string
+          detail: string
+          id: string
+          kind: string
+          reporter_id: string
+          side: string
+          ticket_id: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          detail: string
+          id?: string
+          kind: string
+          reporter_id: string
+          side: string
+          ticket_id?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          detail?: string
+          id?: string
+          kind?: string
+          reporter_id?: string
+          side?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_issue_reports_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_issue_reports_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "pqrs_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_refunds: {
+        Row: {
+          amount_cop: number
+          booking_id: string | null
+          charge_id: string | null
+          client_id: string
+          created_at: string
+          error_code: string | null
+          id: string
+          key_type: string | null
+          key_value: string | null
+          provider_ref: string | null
+          reason: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cop: number
+          booking_id?: string | null
+          charge_id?: string | null
+          client_id: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          key_type?: string | null
+          key_value?: string | null
+          provider_ref?: string | null
+          reason: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cop?: number
+          booking_id?: string | null
+          charge_id?: string | null
+          client_id?: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          key_type?: string | null
+          key_value?: string | null
+          provider_ref?: string | null
+          reason?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_refunds_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_refunds_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: true
+            referencedRelation: "firux_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_reschedule_requests: {
+        Row: {
+          booking_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          note: string | null
+          previous_at: string
+          proposed_at: string
+          requested_by: string
+          status: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          note?: string | null
+          previous_at: string
+          proposed_at: string
+          requested_by: string
+          status?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          note?: string | null
+          previous_at?: string
+          proposed_at?: string
+          requested_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_reschedule_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       care_circle_members: {
         Row: {
           accepted_at: string | null
@@ -714,6 +869,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      client_refund_keys: {
+        Row: {
+          created_at: string
+          holder_name: string | null
+          key_type: string
+          key_value: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          holder_name?: string | null
+          key_type: string
+          key_value: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          holder_name?: string | null
+          key_type?: string
+          key_value?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       clinical_alerts: {
         Row: {
@@ -3993,12 +4175,16 @@ export type Database = {
           arrived_at: string | null
           cancel_reason: string | null
           cancelled_at: string | null
+          client_confirmed_at: string | null
           client_id: string
           commission_exempt_cop: number
           completed_at: string | null
           created_at: string
+          dispute_reason: string | null
+          disputed_at: string | null
           duration_hours: number
           emergency_phone: string | null
+          escrow_status: string | null
           firux_charge_id: string | null
           hourly_rate: number
           id: string
@@ -4012,6 +4198,10 @@ export type Database = {
           platform_fee_pct: number
           professional_id: string
           professional_payout: number
+          release_due_at: string | null
+          release_reason: string | null
+          release_reminded_at: string | null
+          released_at: string | null
           scheduled_at: string
           service_address: string | null
           service_lat: number | null
@@ -4026,12 +4216,16 @@ export type Database = {
           arrived_at?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
+          client_confirmed_at?: string | null
           client_id: string
           commission_exempt_cop?: number
           completed_at?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
           duration_hours?: number
           emergency_phone?: string | null
+          escrow_status?: string | null
           firux_charge_id?: string | null
           hourly_rate: number
           id?: string
@@ -4045,6 +4239,10 @@ export type Database = {
           platform_fee_pct?: number
           professional_id: string
           professional_payout?: number
+          release_due_at?: string | null
+          release_reason?: string | null
+          release_reminded_at?: string | null
+          released_at?: string | null
           scheduled_at: string
           service_address?: string | null
           service_lat?: number | null
@@ -4059,12 +4257,16 @@ export type Database = {
           arrived_at?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
+          client_confirmed_at?: string | null
           client_id?: string
           commission_exempt_cop?: number
           completed_at?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
           duration_hours?: number
           emergency_phone?: string | null
+          escrow_status?: string | null
           firux_charge_id?: string | null
           hourly_rate?: number
           id?: string
@@ -4078,6 +4280,10 @@ export type Database = {
           platform_fee_pct?: number
           professional_id?: string
           professional_payout?: number
+          release_due_at?: string | null
+          release_reason?: string | null
+          release_reminded_at?: string | null
+          released_at?: string | null
           scheduled_at?: string
           service_address?: string | null
           service_lat?: number | null
@@ -5746,6 +5952,10 @@ export type Database = {
       hx_ai_month_start: { Args: never; Returns: string }
       hx_ai_monthly_used: { Args: { p_user_id: string }; Returns: number }
       hx_alert_rank: { Args: { p_reason: string }; Returns: number }
+      hx_answer_reschedule: {
+        Args: { p_action: string; p_request: string }
+        Returns: string
+      }
       hx_can_access_alert: {
         Args: { p_booking: string; p_patient: string; p_type: string }
         Returns: boolean
@@ -5890,6 +6100,7 @@ export type Database = {
       hx_care_plan: { Args: { p_inst: string }; Returns: Json }
       hx_cell: { Args: { p: number; p_size?: number }; Returns: number }
       hx_circle_limit: { Args: { p_plan: string }; Returns: number }
+      hx_confirm_booking_done: { Args: { p_booking: string }; Returns: string }
       hx_cop: { Args: { p_amount: number }; Returns: string }
       hx_dashboard_link: { Args: { p_user: string }; Returns: string }
       hx_distance_band: { Args: { p_km: number }; Returns: number }
@@ -5898,6 +6109,17 @@ export type Database = {
         Returns: number
       }
       hx_duration_label: { Args: { p_minutes: number }; Returns: string }
+      hx_escrow_release: {
+        Args: { p_booking: string; p_reason: string }
+        Returns: string
+      }
+      hx_escrow_reminder_lead: { Args: never; Returns: string }
+      hx_escrow_resolve: {
+        Args: { p_action: string; p_booking: string }
+        Returns: string
+      }
+      hx_escrow_tick: { Args: never; Returns: number }
+      hx_escrow_window: { Args: never; Returns: string }
       hx_first_shift_exempt: {
         Args: { p_client: string; p_fee: number; p_professional: string }
         Returns: number
@@ -5946,10 +6168,15 @@ export type Database = {
       hx_institution_size: { Args: { p_user: string }; Returns: string }
       hx_json_num: { Args: { p: Json; p_key: string }; Returns: number }
       hx_json_texts: { Args: { p: Json }; Returns: string[] }
+      hx_mark_refund: {
+        Args: { p_ref: string; p_refund: string; p_status: string }
+        Returns: string
+      }
       hx_member_can: {
         Args: { p_institution: string; p_module: string }
         Returns: boolean
       }
+      hx_min_booking_cop: { Args: never; Returns: number }
       hx_name_ok: {
         Args: { p: string; p_max: number; p_min: number }
         Returns: boolean
@@ -6018,20 +6245,36 @@ export type Database = {
       hx_ping_service_offers: { Args: never; Returns: undefined }
       hx_plan_visibility_boost: { Args: { p_user: string }; Returns: number }
       hx_presence_ttl: { Args: never; Returns: string }
+      hx_pro_cash_status: {
+        Args: { p_professional: string; p_total: number }
+        Returns: string
+      }
       hx_pro_completed_30d: {
         Args: { p_professional: string }
         Returns: number
       }
       hx_pro_docs_complete: { Args: { p_uid: string }; Returns: boolean }
-      hx_pro_cash_status: {
-        Args: { p_professional: string; p_total: number }
-        Returns: string
-      }
       hx_pro_label: {
         Args: { p_full_name: string; p_short: boolean }
         Returns: string
       }
       hx_queue_payout: { Args: { p_booking: string }; Returns: string }
+      hx_queue_refund: {
+        Args: { p_booking: string; p_charge: string; p_reason: string }
+        Returns: string
+      }
+      hx_report_booking_problem: {
+        Args: { p_booking: string; p_reason: string }
+        Returns: string
+      }
+      hx_report_service_issue: {
+        Args: { p_booking: string; p_detail: string; p_kind: string }
+        Returns: Json
+      }
+      hx_request_reschedule: {
+        Args: { p_booking: string; p_new_at: string; p_note?: string }
+        Returns: string
+      }
       hx_reveal_pro_contact: {
         Args: {
           p_application: string
@@ -6087,6 +6330,11 @@ export type Database = {
           p_note: string
           p_professional: string
         }
+        Returns: number
+      }
+      hx_wallet_low_cop: { Args: never; Returns: number }
+      hx_wallet_reserved: {
+        Args: { p_exclude?: string; p_professional: string }
         Returns: number
       }
       inst_accepted_applications: {
