@@ -125,7 +125,7 @@ export function PaidContactCard({ bookingId, peerName, isPaid, amountCOP }: Prop
           </p>
           <p className="font-display text-base font-bold mt-0.5">Comunícate con {peerName}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            El pago está confirmado. Usa el chat interno para quedar registro auditable o WhatsApp
+            El servicio fue aceptado. Usa el chat interno para quedar registro auditable o WhatsApp
             para coordinación inmediata.
           </p>
         </div>
