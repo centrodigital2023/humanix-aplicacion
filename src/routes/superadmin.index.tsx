@@ -47,6 +47,7 @@ import {
   Minus,
   ChevronRight,
   Building2,
+  Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ type AppRole = "professional" | "family" | "institution" | "superadmin" | "hr_st
 
 const NAV: NavItem[] = [
   { label: "Control Center", to: "/superadmin", icon: LayoutDashboard },
+  { label: "Pagos Bre-B", to: "/superadmin/pagos", icon: Wallet },
   { label: "Anti-fraude", to: "/superadmin/fraude", icon: ShieldAlert },
   { label: "Auditoría", to: "/superadmin/auditoria", icon: ScrollText },
   { label: "Publicidad", to: "/superadmin/publicidad", icon: Megaphone },

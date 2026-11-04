@@ -44,6 +44,11 @@ Regla espejo: `src/lib/commissionMatrix.ts` (probada) = `booking_commission_pct`
 **Hoy (con la llave de Humanix):** el dinero de los turnos llega a la cuenta Firux de Humanix. La cola `payouts` + la
 llave Bre-B del profesional (`professional_payout_keys`, tarjeta «Tu llave Bre-B») dicen cuánto y a quién pagar; el
 equipo dispersa desde el panel de Firux (la API de Firux no mueve dinero ni hace dispersiones).
+El equipo trabaja la cola en **/superadmin/pagos** (solo staff): ve cuánto pagar, a qué llave y a quién, copia la
+llave, paga en Firux y marca «Enviado» con la referencia de Firux, o «Falló» con el motivo (`hx_mark_payout`, avisa
+al profesional). Cuando el profesional guarda o corrige su llave, sus pagos `needs_key`/`failed` pasan solos a
+`queued` con la llave nueva (`trg_payout_key_sync`). Ambos en la migración `20261104160000_breb_payouts_ops.sql`
+(**aún no aplicada en producción**; sin ella la página carga la cola pero no puede marcar pagos).
 
 **Próximo — «Conectar con Firux Pay»** (en pruebas en Firux): cada profesional tiene su propia cuenta Firux y acepta la
 comisión de Humanix una vez; Humanix crea el cobro del turno *a nombre del profesional* con la comisión incluida, la

@@ -86,6 +86,7 @@ import { Route as SuperadminFraudeRouteImport } from './routes/superadmin.fraude
 import { Route as SuperadminInstitucionesRouteImport } from './routes/superadmin.instituciones'
 import { Route as SuperadminMarketingRouteImport } from './routes/superadmin.marketing'
 import { Route as SuperadminMarketplaceRouteImport } from './routes/superadmin.marketplace'
+import { Route as SuperadminPagosRouteImport } from './routes/superadmin.pagos'
 import { Route as SuperadminPublicidadRouteImport } from './routes/superadmin.publicidad'
 import { Route as SuperadminResenasRouteImport } from './routes/superadmin.resenas'
 import { Route as SuperadminTestimoniosRouteImport } from './routes/superadmin.testimonios'
@@ -484,6 +485,11 @@ const SuperadminMarketplaceRoute = SuperadminMarketplaceRouteImport.update({
   path: '/marketplace',
   getParentRoute: () => SuperadminRoute,
 } as any)
+const SuperadminPagosRoute = SuperadminPagosRouteImport.update({
+  id: '/pagos',
+  path: '/pagos',
+  getParentRoute: () => SuperadminRoute,
+} as any)
 const SuperadminPublicidadRoute = SuperadminPublicidadRouteImport.update({
   id: '/publicidad',
   path: '/publicidad',
@@ -619,6 +625,7 @@ export interface FileRoutesByFullPath {
   '/superadmin/instituciones': typeof SuperadminInstitucionesRoute
   '/superadmin/marketing': typeof SuperadminMarketingRoute
   '/superadmin/marketplace': typeof SuperadminMarketplaceRoute
+  '/superadmin/pagos': typeof SuperadminPagosRoute
   '/superadmin/publicidad': typeof SuperadminPublicidadRoute
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
@@ -707,6 +714,7 @@ export interface FileRoutesByTo {
   '/superadmin/instituciones': typeof SuperadminInstitucionesRoute
   '/superadmin/marketing': typeof SuperadminMarketingRoute
   '/superadmin/marketplace': typeof SuperadminMarketplaceRoute
+  '/superadmin/pagos': typeof SuperadminPagosRoute
   '/superadmin/publicidad': typeof SuperadminPublicidadRoute
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
@@ -798,6 +806,7 @@ export interface FileRoutesById {
   '/superadmin/instituciones': typeof SuperadminInstitucionesRoute
   '/superadmin/marketing': typeof SuperadminMarketingRoute
   '/superadmin/marketplace': typeof SuperadminMarketplaceRoute
+  '/superadmin/pagos': typeof SuperadminPagosRoute
   '/superadmin/publicidad': typeof SuperadminPublicidadRoute
   '/superadmin/resenas': typeof SuperadminResenasRoute
   '/superadmin/testimonios': typeof SuperadminTestimoniosRoute
@@ -890,6 +899,7 @@ export interface FileRouteTypes {
     | '/superadmin/instituciones'
     | '/superadmin/marketing'
     | '/superadmin/marketplace'
+    | '/superadmin/pagos'
     | '/superadmin/publicidad'
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
@@ -978,6 +988,7 @@ export interface FileRouteTypes {
     | '/superadmin/instituciones'
     | '/superadmin/marketing'
     | '/superadmin/marketplace'
+    | '/superadmin/pagos'
     | '/superadmin/publicidad'
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
@@ -1068,6 +1079,7 @@ export interface FileRouteTypes {
     | '/superadmin/instituciones'
     | '/superadmin/marketing'
     | '/superadmin/marketplace'
+    | '/superadmin/pagos'
     | '/superadmin/publicidad'
     | '/superadmin/resenas'
     | '/superadmin/testimonios'
@@ -1692,6 +1704,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperadminMarketplaceRouteImport
       parentRoute: typeof SuperadminRoute
     }
+    '/superadmin/pagos': {
+      id: '/superadmin/pagos'
+      path: '/pagos'
+      fullPath: '/superadmin/pagos'
+      preLoaderRoute: typeof SuperadminPagosRouteImport
+      parentRoute: typeof SuperadminRoute
+    }
     '/superadmin/publicidad': {
       id: '/superadmin/publicidad'
       path: '/publicidad'
@@ -1832,6 +1851,7 @@ interface SuperadminRouteChildren {
   SuperadminInstitucionesRoute: typeof SuperadminInstitucionesRoute
   SuperadminMarketingRoute: typeof SuperadminMarketingRoute
   SuperadminMarketplaceRoute: typeof SuperadminMarketplaceRoute
+  SuperadminPagosRoute: typeof SuperadminPagosRoute
   SuperadminPublicidadRoute: typeof SuperadminPublicidadRoute
   SuperadminResenasRoute: typeof SuperadminResenasRoute
   SuperadminTestimoniosRoute: typeof SuperadminTestimoniosRoute
@@ -1846,6 +1866,7 @@ const SuperadminRouteChildren: SuperadminRouteChildren = {
   SuperadminInstitucionesRoute: SuperadminInstitucionesRoute,
   SuperadminMarketingRoute: SuperadminMarketingRoute,
   SuperadminMarketplaceRoute: SuperadminMarketplaceRoute,
+  SuperadminPagosRoute: SuperadminPagosRoute,
   SuperadminPublicidadRoute: SuperadminPublicidadRoute,
   SuperadminResenasRoute: SuperadminResenasRoute,
   SuperadminTestimoniosRoute: SuperadminTestimoniosRoute,
