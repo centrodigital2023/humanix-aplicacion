@@ -36,8 +36,8 @@ aplicada en producción**).
 
 ## Flujo
 
-1. **Cobro** (`src/lib/firux.functions.ts` → `firuxCharges.server.ts`): `payBookingWithBreb` (familia, turno aceptado,
-   sin pagar), `topupWalletWithBreb` (profesional) y `payInstitutionPlanWithBreb` (institución). El monto sale de la base.
+1. **Cobro** (`src/lib/firux.functions.ts` → `firuxCharges.server.ts`): `payBookingWithBreb` (familia, desde que pide el
+   turno hasta que termina, sin pagar), `topupWalletWithBreb` (profesional) y `payInstitutionPlanWithBreb` (institución). El monto sale de la base.
    Se guarda la fila `firux_charges` y su id va como `Idempotency-Key`; `external_reference` = id del turno (o del cobro
    para recargas y planes). Pedimos `expires_at` = 24 h porque Firux no avisa cuando un QR vence. Si Firux devuelve el
    mismo cobro pendiente de esa referencia, se reutiliza; un 409 en un turno = ya pagado.
@@ -46,10 +46,46 @@ aplicada en producción**).
 3. **Aviso** `POST /api/public/firux/webhook` (`firuxWebhook.ts`): verifica `Firux-Signature` (HMAC-SHA256 de
    `{Firux-Timestamp}.{cuerpo}`, ventana 300 s; probado con el vector oficial), anota el evento en
    `payment_webhook_events` (`provider = 'firux'`, `Firux-Event-Id`) y llama `hx_firux_charge_paid` (solo service_role,
-   idempotente): turno → `paid_at`; recarga → billetera; plan → `mp_subscriptions` por un año. `webhook.test` y
+   idempotente): turno → `paid_at` y pago **retenido** (ver abajo); recarga → billetera; plan → `mp_subscriptions` por un año. `webhook.test` y
    `payment.notified` reciben 200 sin mover nada.
-4. **Al terminar el turno** (`trg_sb_settle`): efectivo → débito de comisión en la billetera; Bre-B pagado → fila en
-   `payouts` (`needs_key` si el profesional aún no guarda su llave, `queued` si ya).
+4. **Al terminar el turno** (`trg_sb_settle`): efectivo → débito de comisión en la billetera; Bre-B → el pago sigue
+   retenido hasta que se libera (abajo) y solo entonces se crea la fila en `payouts` (`needs_key` si el profesional aún
+   no guarda su llave, `queued` si ya).
+
+## Pago retenido tipo InDrive (Bre-B)
+
+Migración `20261104180000_breb_escrow.sql`; lógica espejo en `src/lib/escrow.ts` (probada).
+
+1. La familia paga por Bre-B **al pedir el turno** (también puede pagar después, hasta que termine). El dinero queda en la
+   cuenta Firux de Humanix: `service_bookings.escrow_status = 'held'`. El profesional ve «🔒 Pago asegurado».
+2. El profesional marca «Terminar turno» (`status = 'completed'`). El pago sigue retenido y se fija `release_due_at` =
+   ahora + 24 h. Se avisa a la familia («¿Todo bien con el turno?») y al profesional («pago por liberar»).
+3. La familia confirma con **«Sí, liberar el pago»** (`hx_confirm_booking_done`) → `released` → fila en `payouts`. Si la
+   familia misma marca el turno como terminado, eso ya cuenta como confirmación.
+4. Si no dice nada: recordatorio 3 h antes y **liberación automática a las 24 h** (`hx_escrow_tick`, pg_cron cada 10 min,
+   trabajo `hx-escrow-tick`).
+5. **«Hubo un problema»** dentro de las 24 h (`hx_report_booking_problem`, 5–500 caracteres) → `disputed`: no se libera
+   solo; avisa al profesional y a los superadmin. El equipo decide en **/superadmin/pagos** (`hx_escrow_resolve`):
+   liberar al profesional o devolver todo. La familia puede retirar su reclamo con «Ya se resolvió: liberar el pago».
+6. **Cancelado con el pago adentro** (por cualquiera de las partes, o si el pago llega después de cancelar) →
+   `refunding` + fila en `booking_refunds` por el total pagado. Un segundo QR pagado para el mismo turno también se
+   devuelve (`reason = 'duplicate'`). La familia escribe su llave Bre-B en la página del servicio (`client_refund_keys`);
+   el equipo envía la devolución desde Firux y la marca en /superadmin/pagos (`hx_mark_refund`) → `refunded`.
+
+Solo el servidor escribe la retención: `guard_service_bookings_financials` protege las columnas nuevas y las funciones
+de la familia (SECURITY DEFINER) encienden `hx.escrow` solo dentro de su transacción.
+
+**Decisiones tomadas (cambiar si hace falta):**
+
+- Ventana de revisión 24 h, recordatorio 3 h antes (`hx_escrow_window`, `hx_escrow_reminder_lead`).
+- Cancelar con el pago adentro devuelve el **100 %**, cancele quien cancele (sin penalidad por cancelación tardía).
+- Un reclamo se decide entero: liberar todo o devolver todo (sin repartos parciales).
+- Con el pago retenido, **los turnos no se cobran por «Conectar con Firux Pay»** aunque el flag esté encendido (el dinero
+  le llegaría al profesional antes de terminar). `ChargeDeps.holdBookings = false` vuelve al cobro conectado.
+- No se bloquea «Voy en camino» si la familia no ha pagado: el profesional ve «La familia aún no ha pagado: espera el
+  🔒 antes de salir».
+- Turnos pagados antes de la migración: los terminados quedan `released` (`release_reason = 'legacy'`), los abiertos
+  `held`.
 
 ## Pago al profesional
 

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
+import { EscrowOpsPanel } from "@/components/humanix/payments/EscrowOpsPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -124,9 +125,13 @@ function PagosPage() {
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Paga cada turno desde el panel de Firux a la llave Bre-B del profesional y márcalo aquí.
-          El profesional recibe un aviso. Los turnos cobrados con «Conectar con Firux Pay» no
-          aparecen: ya le llegaron directo.
+          El profesional recibe un aviso. Un turno entra aquí solo cuando su pago se libera: la
+          familia confirmó que terminó, pasaron 24 h sin reportes o el equipo decidió un reclamo.
         </p>
+
+        <EscrowOpsPanel />
+
+        <h2 className="pt-2 font-display text-lg font-bold">Pagos a profesionales</h2>
 
         {q.isLoading && (
           <div className="flex items-center text-muted-foreground">

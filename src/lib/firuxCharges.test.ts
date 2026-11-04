@@ -148,7 +148,12 @@ describe("cobro del turno (familia)", () => {
       code: "already_paid",
     });
   });
-  it("reglas: solo quien reservó, confirmado, digital y sin pagar", async () => {
+  it("la familia paga desde que pide el turno (pending), tipo InDrive", async () => {
+    const p = world({ status: "pending" });
+    expect(await chargeBooking(p.deps, FAM, p.booking.id)).toMatchObject({ ok: true });
+    expect(p.calls).toHaveLength(1);
+  });
+  it("reglas: solo quien reservó, digital, sin pagar y no cancelado", async () => {
     expect(await chargeBooking(world().deps, PRO, world().booking.id)).toEqual({
       ok: false,
       code: "forbidden",
@@ -157,7 +162,7 @@ describe("cobro del turno (familia)", () => {
       ok: false,
       code: "not_found",
     });
-    const p = world({ status: "pending" });
+    const p = world({ status: "cancelled" });
     expect(await chargeBooking(p.deps, FAM, p.booking.id)).toEqual({
       ok: false,
       code: "not_payable",
@@ -345,8 +350,19 @@ describe("Conectar con Firux Pay en el cobro del turno", () => {
               return { id: `fxc_${key}`, status: "PENDING", amount: body.amount, qr_emv: "qr-c" };
             },
     };
+    w.deps.holdBookings = false;
     return { ...w, lookups, connectedCalls };
   }
+
+  it("pago retenido (por defecto): aunque haya conexión activa, el turno se cobra con la llave de Humanix", async () => {
+    const w = connected();
+    delete w.deps.holdBookings;
+    const r = await chargeBooking(w.deps, FAM, w.booking.id);
+    expect(r).toMatchObject({ ok: true });
+    expect(w.calls).toHaveLength(1);
+    expect(w.connectedCalls).toHaveLength(0);
+    expect(w.lookups).toEqual([]);
+  });
 
   it("con conexión activa, el turno se cobra a nombre del profesional con la comisión de la base", async () => {
     const w = connected();

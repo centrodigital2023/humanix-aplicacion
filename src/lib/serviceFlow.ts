@@ -129,6 +129,15 @@ const ALERT_TYPES: Record<string, { tone: LiveAlertTone; sticky: boolean }> = {
   shift_cancelled_by_professional: { tone: "alert", sticky: true },
   shift_cancelled_by_institution: { tone: "alert", sticky: true },
   booking_cancelled: { tone: "alert", sticky: true },
+  // Pago retenido tipo InDrive (migración 20261104180000)
+  booking_paid: { tone: "good", sticky: false },
+  escrow_awaiting_client: { tone: "info", sticky: false },
+  escrow_confirm_needed: { tone: "request", sticky: true },
+  escrow_released: { tone: "good", sticky: false },
+  escrow_disputed: { tone: "alert", sticky: true },
+  escrow_refunded: { tone: "alert", sticky: false },
+  refund_queued: { tone: "info", sticky: true },
+  refund_paid: { tone: "good", sticky: false },
 };
 
 const BOOKING_LINK = /^\/servicio\/([0-9a-f-]{36})$/i;

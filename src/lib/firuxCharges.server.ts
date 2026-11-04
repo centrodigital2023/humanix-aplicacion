@@ -15,6 +15,7 @@
 // (migración 20261104140000). En cualquier otro caso se cobra con la llave de Humanix, como hoy.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { INSTITUTION_PLANS, type InstitutionSize } from "./commissionMatrix";
+import { PAYABLE_BOOKING_STATUSES } from "./escrow";
 import { chooseChargeRoute, type ChargeRoute, type FiruxConnectionRow } from "./firuxConnect";
 import {
   buildChargeBody,
@@ -111,10 +112,15 @@ export interface ChargeDeps {
   firux: FiruxCreate | null;
   now: () => number;
   connect?: ConnectChargeDeps;
+  /** Pago retenido (por defecto encendido): el turno se cobra con la llave de Humanix para poder guardar el dinero.
+   * Solo `false` deja que «Conectar» cobre el turno a nombre del profesional. */
+  holdBookings?: boolean;
 }
 
-/** Estados del turno en los que la familia ya puede pagar (el profesional aceptó). */
-const PAYABLE_STATUSES = new Set(["confirmed", "accepted", "in_progress", "completed"]);
+/** Pago retenido tipo InDrive (migración 20261104180000): la familia paga desde que pide el turno y Humanix guarda el
+ * dinero hasta que confirma que terminó. Por eso un turno nunca se cobra por la cuenta conectada del profesional
+ * (el dinero le llegaría antes de terminar): `connectedRoute` queda solo para cuando Firux permita retener. */
+const PAYABLE_STATUSES = PAYABLE_BOOKING_STATUSES;
 /** Vigencia del QR que pedimos a Firux (su valor por defecto también es 24 h). Firux no avisa cuando vence: por eso
  * la fijamos nosotros y la guardamos. */
 const CHARGE_TTL_MS = 24 * 3_600_000;
@@ -230,7 +236,7 @@ async function issue(
   }
 }
 
-/** La familia paga su turno por Bre-B. Solo quien reservó, solo turnos digitales confirmados y sin pagar. */
+/** La familia paga su turno por Bre-B. Solo quien reservó, solo turnos digitales sin pagar, desde que lo pide. */
 export async function chargeBooking(
   deps: ChargeDeps,
   userId: string,
@@ -249,7 +255,7 @@ export async function chargeBooking(
     planKey: null,
     amountCop: Number(b.total_amount),
     description: "Turno de cuidado Humanix",
-    connected: await connectedRoute(deps, b),
+    connected: deps.holdBookings === false ? await connectedRoute(deps, b) : undefined,
   });
 }
 

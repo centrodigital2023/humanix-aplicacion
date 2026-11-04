@@ -204,10 +204,20 @@ type ConfirmProps = {
   onFinish: () => Promise<boolean>;
   /** Turno en efectivo: recordatorio de cuánto entregar en mano. */
   cashNote?: string;
+  /** Pagó con Bre-B: terminar también libera el pago retenido al profesional. */
+  releasesPayment?: boolean;
+  peerFirstName?: string;
 };
 
 /** La parte que contrata también puede dar por terminado el servicio. */
-export function ConfirmFinishDialog({ open, onOpenChange, onFinish, cashNote }: ConfirmProps) {
+export function ConfirmFinishDialog({
+  open,
+  onOpenChange,
+  onFinish,
+  cashNote,
+  releasesPayment,
+  peerFirstName,
+}: ConfirmProps) {
   const [busy, setBusy] = useState(false);
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -216,7 +226,10 @@ export function ConfirmFinishDialog({ open, onOpenChange, onFinish, cashNote }: 
           <AlertDialogTitle>¿El servicio ya terminó?</AlertDialogTitle>
           <AlertDialogDescription>
             Al finalizar se cierra el parte del turno y podrás darle las gracias a tu profesional y
-            calificar el servicio. No se puede deshacer.
+            calificar el servicio.
+            {releasesPayment &&
+              ` También liberas tu pago a ${peerFirstName || "tu profesional"}: Humanix se lo entrega.`}{" "}
+            No se puede deshacer.
           </AlertDialogDescription>
           {cashNote && (
             <p className="rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-foreground">
@@ -237,7 +250,7 @@ export function ConfirmFinishDialog({ open, onOpenChange, onFinish, cashNote }: 
             }}
           >
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-            Sí, finalizar
+            {releasesPayment ? "Sí, finalizar y liberar pago" : "Sí, finalizar"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

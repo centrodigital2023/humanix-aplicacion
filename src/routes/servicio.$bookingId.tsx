@@ -95,6 +95,11 @@ type Booking = {
   platform_fee_amount?: number | null;
   professional_payout?: number | null;
   commission_exempt_cop?: number | null;
+  /** Pago retenido (migración 20261104180000). */
+  escrow_status?: string | null;
+  release_due_at?: string | null;
+  release_reason?: string | null;
+  client_confirmed_at?: string | null;
   service_address: string | null;
   service_lat: number | null;
   service_lng: number | null;
@@ -375,9 +380,14 @@ function ServicePage() {
                   <p className="text-sm font-semibold text-foreground">
                     {booking.payment_method === "CASH"
                       ? `💵 En efectivo a ${firstName}`
-                      : booking.paid_at
-                        ? "✅ Pagado con Bre-B"
-                        : "⚡ Con Bre-B"}
+                      : booking.escrow_status === "released"
+                        ? "✅ Pago liberado"
+                        : booking.escrow_status === "refunding" ||
+                            booking.escrow_status === "refunded"
+                          ? "↩️ Devuelto a ti"
+                          : booking.paid_at
+                            ? "🔒 Pagado y protegido"
+                            : "⚡ Con Bre-B"}
                   </p>
                 ) : (
                   <p className="text-[10px] text-muted-foreground">
@@ -394,6 +404,7 @@ function ServicePage() {
                 booking={booking}
                 side={isClient ? "client" : "professional"}
                 peerFirstName={firstName}
+                onPaid={() => void refetchBooking()}
               />
             </div>
           )}
@@ -711,6 +722,8 @@ function ServicePage() {
               ? `💵 Recuerda entregarle ${COP(booking.total_amount)} en efectivo a ${firstName}.`
               : undefined
           }
+          releasesPayment={booking.payment_method !== "CASH" && !!booking.paid_at}
+          peerFirstName={firstName}
           onFinish={() =>
             updateStatus({ status: "completed", completed_at: new Date().toISOString() })
           }
