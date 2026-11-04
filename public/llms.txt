@@ -1,8 +1,8 @@
 # Humanix
 
-> Plataforma colombiana premium de salud que conecta familias, clínicas e instituciones con enfermeras, auxiliares, cuidadores y profesionales verificados con RETHUS. Match con IA en tiempo real (<150 ms), GPS en vivo, Trust Score y pago seguro en Nequi/PSE/MercadoPago.
+> Plataforma colombiana premium de salud que conecta familias, clínicas e instituciones con enfermeras, auxiliares, cuidadores y profesionales verificados con RETHUS. Match con IA en tiempo real (<150 ms), GPS en vivo, Trust Score y pago seguro por Bre-B (desde la app de cualquier banco) o en efectivo.
 
-Humanix opera en Colombia (Bogotá, Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira y municipios cercanos). Todos los profesionales pasan verificación RETHUS, evaluación documental y Trust Score social. Sin comisión oculta: el profesional cobra directo al cliente.
+Humanix opera en Colombia (Bogotá, Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira y municipios cercanos). Todos los profesionales pasan verificación RETHUS, evaluación documental y Trust Score social. Sin comisión oculta: la familia paga solo el valor del turno y el profesional ve antes de aceptar la comisión de Humanix (15 %, 12 % o 10 % según sus turnos del mes).
 
 ## Páginas principales
 

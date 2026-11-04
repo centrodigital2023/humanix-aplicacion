@@ -1,4 +1,4 @@
-// Firux Partner API v1 (cobros por Bre-B). Lógica pura y probada (`firux.test.ts`): armar el cobro, verificar la firma del aviso
+// Firux Partner API v1 (cobros por Bre-B). Lógica pura y probada (`firuxCharges.test.ts`): armar el cobro, verificar la firma del aviso
 // (HMAC-SHA256 de `${timestamp}.${cuerpo}`, ventana de 5 minutos) y leer el evento. El dinero se mueve en la base, en una sola
 // transacción (`hx_firux_charge_paid`, migración 20261103160000): un aviso repetido o simultáneo no aplica dos veces.
 import { FIRUX_MAX_COP, FIRUX_MIN_COP } from "./commissionMatrix";

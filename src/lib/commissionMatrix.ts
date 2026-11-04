@@ -1,5 +1,7 @@
-// Matriz de comisiones y reglas de billetera de Humanix. Lógica pura y probada (`commissionMatrix.test.ts`).
-// La MISMA regla vive en SQL (`hx_commission_quote`, migración 20261103160000): estas funciones explican y anticipan, la base decide.
+// Matriz de comisiones y reglas de billetera de Humanix. Lógica pura y probada (`paymentsBreb.test.ts`).
+// La MISMA regla vive en SQL (migración 20261103160000): `booking_commission_pct` (escalón e institución),
+// `hx_first_shift_exempt` (primer turno), `compute_platform_fee` (comisión y neto) y `hx_booking_wallet_gate` (efectivo y cupo).
+// Estas funciones explican y anticipan; la base decide.
 //
 // Todo en pesos colombianos enteros (sin centavos).
 //
