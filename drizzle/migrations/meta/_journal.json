@@ -148,6 +148,13 @@
       "when": 1792856239499,
       "tag": "0020_notify_direct_booking_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793813280020,
+      "tag": "0021_fix_institution_inbox_and_onboarding",
+      "breakpoints": true
     }
   ]
 }
