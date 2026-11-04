@@ -8,8 +8,14 @@
 //   3. Se guarda la fila `firux_charges` y su id es la `Idempotency-Key`: si Firux recibe el mismo pedido dos veces, crea un
 //      solo cobro.
 //   4. El dinero solo se aplica cuando llega el aviso firmado `charge.paid` (`firuxWebhook.ts` → `hx_firux_charge_paid`).
+//
+// «Conectar con Firux Pay» (`ChargeDeps.connect`, apagado salvo FIRUX_CONNECT_ENABLED): si el profesional del turno tiene
+// su cuenta Firux conectada y aceptó la comisión vigente, el cobro del turno se crea a nombre de esa cuenta con la comisión
+// de Humanix incluida (`application_fee`). El dinero le llega directo y el turno no entra a la cola `payouts`
+// (migración 20261104140000). En cualquier otro caso se cobra con la llave de Humanix, como hoy.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { INSTITUTION_PLANS, type InstitutionSize } from "./commissionMatrix";
+import { chooseChargeRoute, type ChargeRoute, type FiruxConnectionRow } from "./firuxConnect";
 import {
   buildChargeBody,
   FIRUX_API,
@@ -35,6 +41,10 @@ export interface ChargeRow {
   qr_emv: string | null;
   payment_url: string | null;
   expires_at: string | null;
+  /** Columnas de la migración 20261104140000 (solo se leen/escriben con Conectar encendido). */
+  route?: "platform" | "connected" | null;
+  firux_account_id?: string | null;
+  application_fee_cop?: number | null;
 }
 
 export interface BookingForCharge {
@@ -44,6 +54,9 @@ export interface BookingForCharge {
   payment_method: string;
   total_amount: number;
   paid_at: string | null;
+  professional_id?: string;
+  /** Comisión de Humanix ya calculada en la base (con la exención del primer turno descontada). */
+  platform_fee_amount?: number | null;
 }
 
 /** Lo que el servidor necesita de la base (adaptador real: `supabaseChargeStore`). */
@@ -56,6 +69,8 @@ export interface ChargeStore {
     userId: string;
     bookingId: string | null;
     amountCop: number;
+    /** Solo con Conectar encendido: que el cobro abierto sea de la misma ruta. */
+    route?: "platform" | "connected";
   }): Promise<ChargeRow | null>;
   insertCharge(row: {
     kind: ChargeKind;
@@ -63,19 +78,39 @@ export interface ChargeStore {
     booking_id: string | null;
     plan_key: string | null;
     amount_cop: number;
+    route?: "connected";
+    firux_account_id?: string;
+    application_fee_cop?: number;
   }): Promise<ChargeRow>;
   updateCharge(id: string, patch: Partial<ChargeRow>): Promise<void>;
 }
 
 export type FiruxCreate = (
-  body: { amount: number; external_reference: string; description: string; expires_at?: string },
+  body: {
+    amount: number;
+    external_reference: string;
+    description: string;
+    expires_at?: string;
+    /** Solo en cobros conectados: la parte de Humanix en COP (ASUNCIÓN sobre el nombre del campo). */
+    application_fee?: number;
+  },
   idempotencyKey: string,
 ) => Promise<FiruxCharge>;
 
+/** «Conectar con Firux Pay». Sin esto (o con `enabled: false`) todo se cobra con la llave de Humanix. */
+export interface ConnectChargeDeps {
+  enabled: boolean;
+  connection(professionalId: string): Promise<FiruxConnectionRow | null>;
+  /** Cobrador a nombre de la cuenta conectada; `null` = no se puede y el turno cae a la llave de Humanix. */
+  firuxFor(accountId: string): FiruxCreate | null;
+}
+
 export interface ChargeDeps {
   store: ChargeStore;
+  /** Cobrador con la llave de Humanix. */
   firux: FiruxCreate | null;
   now: () => number;
+  connect?: ConnectChargeDeps;
 }
 
 /** Estados del turno en los que la familia ya puede pagar (el profesional aceptó). */
@@ -109,9 +144,13 @@ async function issue(
     planKey: string | null;
     amountCop: number;
     description: string;
+    /** Cobro conectado (turnos con Conectar encendido); si falta, llave de Humanix. */
+    connected?: { create: FiruxCreate; accountId: string; applicationFeeCop: number };
   },
 ): Promise<ChargeResult> {
-  if (!deps.firux) return { ok: false, code: "not_configured" };
+  const create = input.connected?.create ?? deps.firux;
+  if (!create) return { ok: false, code: "not_configured" };
+  const connectOn = !!deps.connect?.enabled;
   const draft = buildChargeBody({
     amountCop: input.amountCop,
     reference: "pending",
@@ -124,6 +163,9 @@ async function issue(
     userId: input.userId,
     bookingId: input.bookingId,
     amountCop: draft.body.amount,
+    ...(connectOn
+      ? { route: input.connected ? ("connected" as const) : ("platform" as const) }
+      : {}),
   });
   if (open && open.firux_id && (open.qr_emv || open.payment_url)) {
     const left = open.expires_at ? Date.parse(open.expires_at) - deps.now() : Infinity;
@@ -138,13 +180,25 @@ async function issue(
     booking_id: input.bookingId,
     plan_key: input.planKey,
     amount_cop: draft.body.amount,
+    ...(input.connected
+      ? {
+          route: "connected" as const,
+          firux_account_id: input.connected.accountId,
+          application_fee_cop: input.connected.applicationFeeCop,
+        }
+      : {}),
   });
   // La referencia que vuelve en el aviso: el turno (como pide Firux) o, para recargas y planes, nuestro propio cobro.
   const reference = input.bookingId ?? row.id;
   const expiresAt = new Date(deps.now() + CHARGE_TTL_MS).toISOString().replace(/\.\d{3}Z$/, "Z");
   try {
-    const fx = await deps.firux(
-      { ...draft.body, external_reference: reference, expires_at: expiresAt },
+    const fx = await create(
+      {
+        ...draft.body,
+        external_reference: reference,
+        expires_at: expiresAt,
+        ...(input.connected ? { application_fee: input.connected.applicationFeeCop } : {}),
+      },
       row.id,
     );
     if (!fx?.id) throw new Error("firux_missing_id");
@@ -195,7 +249,36 @@ export async function chargeBooking(
     planKey: null,
     amountCop: Number(b.total_amount),
     description: "Turno de cuidado Humanix",
+    connected: await connectedRoute(deps, b),
   });
+}
+
+/** Ruta de cobro del turno con «Conectar con Firux Pay». `undefined` = llave de Humanix (respaldo: cola `payouts`). */
+export async function connectedRoute(
+  deps: ChargeDeps,
+  b: BookingForCharge,
+): Promise<{ create: FiruxCreate; accountId: string; applicationFeeCop: number } | undefined> {
+  const c = deps.connect;
+  if (!c?.enabled || !b.professional_id) return undefined;
+  let connection: FiruxConnectionRow | null = null;
+  try {
+    connection = await c.connection(b.professional_id);
+  } catch {
+    return undefined; // Si no se puede leer la conexión, se cobra como hoy: nunca se bloquea el pago.
+  }
+  const route: ChargeRoute = chooseChargeRoute(
+    {
+      total_amount: Number(b.total_amount),
+      platform_fee_amount: Number(b.platform_fee_amount ?? 0),
+      payment_method: b.payment_method,
+    },
+    connection,
+    true,
+  );
+  if (route.route !== "connected") return undefined;
+  const create = c.firuxFor(route.accountId);
+  if (!create) return undefined;
+  return { create, accountId: route.accountId, applicationFeeCop: route.applicationFeeCop };
 }
 
 /** El profesional recarga su billetera (para aceptar turnos en efectivo o salir del cupo). */
@@ -241,7 +324,9 @@ export function supabaseChargeStore(admin: SupabaseClient): ChargeStore {
     async booking(id) {
       const { data } = await admin
         .from("service_bookings")
-        .select("id, client_id, status, payment_method, total_amount, paid_at")
+        .select(
+          "id, client_id, professional_id, status, payment_method, total_amount, platform_fee_amount, paid_at",
+        )
         .eq("id", id)
         .maybeSingle();
       return (data as BookingForCharge | null) ?? null;
@@ -255,7 +340,7 @@ export function supabaseChargeStore(admin: SupabaseClient): ChargeStore {
         .limit(1);
       return (data ?? []).length > 0;
     },
-    async openCharge({ kind, userId, bookingId, amountCop }) {
+    async openCharge({ kind, userId, bookingId, amountCop, route }) {
       let q = admin
         .from("firux_charges")
         .select("*")
@@ -267,6 +352,8 @@ export function supabaseChargeStore(admin: SupabaseClient): ChargeStore {
         .order("created_at", { ascending: false })
         .limit(1);
       q = bookingId ? q.eq("booking_id", bookingId) : q.is("booking_id", null);
+      // La columna `route` existe desde 20261104140000; solo se filtra con Conectar encendido.
+      if (route) q = q.eq("route", route);
       const { data } = await q;
       return ((data ?? [])[0] as ChargeRow | undefined) ?? null;
     },
@@ -290,19 +377,45 @@ export function supabaseChargeStore(admin: SupabaseClient): ChargeStore {
   };
 }
 
-/** `POST /v1/charges` con la llave secreta y la `Idempotency-Key`. */
-export function firuxCreateCharge(apiKey: string, fetchImpl: typeof fetch = fetch): FiruxCreate {
+/**
+ * `POST /v1/charges` con la llave secreta y la `Idempotency-Key`.
+ * Con `accountId` el cobro va a nombre de una cuenta conectada. ASUNCIÓN (Firux no ha publicado «Conectar con Firux
+ * Pay»): se firma con la llave de Humanix más el encabezado `Firux-Account`. Si Firux usa un token por profesional, se
+ * cambia solo aquí y en `firux.functions.ts`.
+ */
+export function firuxCreateCharge(
+  apiKey: string,
+  fetchImpl: typeof fetch = fetch,
+  opts: { accountId?: string } = {},
+): FiruxCreate {
   return async (body, idempotencyKey) => {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    };
+    if (opts.accountId) headers["Firux-Account"] = opts.accountId;
     const r = await fetchImpl(`${FIRUX_API}/charges`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey,
-      },
+      headers,
       body: JSON.stringify(body),
     });
     if (!r.ok) throw new Error(`firux_${r.status}`);
     return (await r.json()) as FiruxCharge;
+  };
+}
+
+/** Conexión Firux del profesional (tabla de 20261104140000). */
+export function supabaseConnectionLookup(admin: SupabaseClient) {
+  return async (professionalId: string): Promise<FiruxConnectionRow | null> => {
+    const { data, error } = await admin
+      .from("professional_firux_connections")
+      .select(
+        "professional_id, firux_account_id, status, commission_terms_version, commission_accepted_at",
+      )
+      .eq("professional_id", professionalId)
+      .maybeSingle();
+    if (error) throw new Error(`firux_connection_read: ${error.message}`);
+    return (data as FiruxConnectionRow | null) ?? null;
   };
 }

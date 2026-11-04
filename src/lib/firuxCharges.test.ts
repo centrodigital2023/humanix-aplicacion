@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { firuxSignatureFor } from "./firux";
+import { FIRUX_CONNECT_TERMS_VERSION } from "./firuxConnect";
 import {
   chargeBooking,
   chargeInstitutionPlan,
@@ -312,5 +313,103 @@ describe("aviso de Firux", () => {
       (await handleFiruxWebhook(req, { secret: undefined, store: null, nowSeconds: () => TS }))
         .status,
     ).toBe(503);
+  });
+});
+
+describe("Conectar con Firux Pay en el cobro del turno", () => {
+  const ACTIVE = {
+    professional_id: PRO,
+    firux_account_id: "acct_pro",
+    status: "active",
+    commission_terms_version: FIRUX_CONNECT_TERMS_VERSION,
+    commission_accepted_at: "2026-11-01T10:00:00Z",
+  };
+
+  function connected(
+    opts: { enabled?: boolean; conn?: typeof ACTIVE | null; canCreate?: boolean } = {},
+  ) {
+    const w = world({ professional_id: PRO, platform_fee_amount: 18_000 });
+    const lookups: string[] = [];
+    const connectedCalls: Array<{ accountId: string; body: unknown; key: string }> = [];
+    w.deps.connect = {
+      enabled: opts.enabled ?? true,
+      connection: async (id) => {
+        lookups.push(id);
+        return opts.conn === undefined ? ACTIVE : opts.conn;
+      },
+      firuxFor: (accountId) =>
+        opts.canCreate === false
+          ? null
+          : async (body, key) => {
+              connectedCalls.push({ accountId, body, key });
+              return { id: `fxc_${key}`, status: "PENDING", amount: body.amount, qr_emv: "qr-c" };
+            },
+    };
+    return { ...w, lookups, connectedCalls };
+  }
+
+  it("con conexión activa, el turno se cobra a nombre del profesional con la comisión de la base", async () => {
+    const w = connected();
+    const r = await chargeBooking(w.deps, FAM, w.booking.id);
+    expect(r).toMatchObject({ ok: true, charge: { amountCop: 120_000, qrEmv: "qr-c" } });
+    expect(w.calls).toHaveLength(0); // no se usó la llave de Humanix
+    expect(w.connectedCalls[0]).toMatchObject({
+      accountId: "acct_pro",
+      key: "c1",
+      body: { amount: 120_000, external_reference: w.booking.id, application_fee: 18_000 },
+    });
+    expect(w.charges[0]).toMatchObject({
+      route: "connected",
+      firux_account_id: "acct_pro",
+      application_fee_cop: 18_000,
+      firux_id: "fxc_c1",
+    });
+  });
+
+  it("flag apagado: ni se consulta la conexión ni se escriben columnas nuevas (respaldo payouts)", async () => {
+    const w = connected({ enabled: false });
+    await chargeBooking(w.deps, FAM, w.booking.id);
+    expect(w.lookups).toEqual([]);
+    expect(w.calls).toHaveLength(1);
+    expect(w.charges[0]).not.toHaveProperty("route");
+    expect(w.calls[0].body).not.toHaveProperty("application_fee");
+  });
+
+  it("sin conexión usable, o si no se puede leer o crear, cae a la llave de Humanix", async () => {
+    for (const w of [
+      connected({ conn: null }),
+      connected({ conn: { ...ACTIVE, status: "revoked" } }),
+      connected({ canCreate: false }),
+    ]) {
+      const r = await chargeBooking(w.deps, FAM, w.booking.id);
+      expect(r).toMatchObject({ ok: true });
+      expect(w.calls).toHaveLength(1);
+      expect(w.connectedCalls).toHaveLength(0);
+    }
+    const broken = connected();
+    broken.deps.connect!.connection = async () => {
+      throw new Error("db down");
+    };
+    expect(await chargeBooking(broken.deps, FAM, broken.booking.id)).toMatchObject({ ok: true });
+    expect(broken.calls).toHaveLength(1);
+  });
+
+  it("recargas y planes nunca van por la cuenta conectada", async () => {
+    const w = connected();
+    await chargeTopup(w.deps, PRO, 20_000);
+    expect(w.connectedCalls).toHaveLength(0);
+    expect(w.lookups).toEqual([]);
+  });
+
+  it("con Conectar encendido, el cobro abierto se busca por ruta", async () => {
+    const w = connected();
+    const seen: unknown[] = [];
+    const orig = w.deps.store.openCharge;
+    w.deps.store.openCharge = async (q) => {
+      seen.push(q.route);
+      return orig(q);
+    };
+    await chargeBooking(w.deps, FAM, w.booking.id);
+    expect(seen).toEqual(["connected"]);
   });
 });

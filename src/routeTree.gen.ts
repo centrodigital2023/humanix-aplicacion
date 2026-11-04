@@ -70,6 +70,7 @@ import { Route as DashboardInstitucionRouteImport } from './routes/dashboard.ins
 import { Route as DashboardMonitoreoRouteImport } from './routes/dashboard.monitoreo'
 import { Route as DashboardProfesionalRouteImport } from './routes/dashboard.profesional'
 import { Route as DashboardWhatsappRouteImport } from './routes/dashboard.whatsapp'
+import { Route as FiruxConectadoRouteImport } from './routes/firux.conectado'
 import { Route as InstitutionFormsRouteImport } from './routes/institution.forms'
 import { Route as InstitutionProfileRouteImport } from './routes/institution.profile'
 import { Route as OfertaOfferIdRouteImport } from './routes/oferta.$offerId'
@@ -403,6 +404,11 @@ const DashboardWhatsappRoute = DashboardWhatsappRouteImport.update({
   path: '/whatsapp',
   getParentRoute: () => DashboardRoute,
 } as any)
+const FiruxConectadoRoute = FiruxConectadoRouteImport.update({
+  id: '/firux/conectado',
+  path: '/firux/conectado',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstitutionFormsRoute = InstitutionFormsRouteImport.update({
   id: '/institution/forms',
   path: '/institution/forms',
@@ -598,6 +604,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
+  '/firux/conectado': typeof FiruxConectadoRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
@@ -685,6 +692,7 @@ export interface FileRoutesByTo {
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
+  '/firux/conectado': typeof FiruxConectadoRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
@@ -775,6 +783,7 @@ export interface FileRoutesById {
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
+  '/firux/conectado': typeof FiruxConectadoRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
@@ -866,6 +875,7 @@ export interface FileRouteTypes {
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
+    | '/firux/conectado'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
@@ -953,6 +963,7 @@ export interface FileRouteTypes {
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
+    | '/firux/conectado'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
@@ -1042,6 +1053,7 @@ export interface FileRouteTypes {
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
+    | '/firux/conectado'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
@@ -1125,6 +1137,7 @@ export interface RootRouteChildren {
   VerificarRoute: typeof VerificarRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BBannerIdRoute: typeof BBannerIdRoute
+  FiruxConectadoRoute: typeof FiruxConectadoRoute
   InstitutionFormsRoute: typeof InstitutionFormsRoute
   InstitutionProfileRoute: typeof InstitutionProfileRoute
   OfertaOfferIdRoute: typeof OfertaOfferIdRoute
@@ -1567,6 +1580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardWhatsappRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/firux/conectado': {
+      id: '/firux/conectado'
+      path: '/firux/conectado'
+      fullPath: '/firux/conectado'
+      preLoaderRoute: typeof FiruxConectadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/institution/forms': {
       id: '/institution/forms'
       path: '/institution/forms'
@@ -1892,6 +1912,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BBannerIdRoute: BBannerIdRoute,
+  FiruxConectadoRoute: FiruxConectadoRoute,
   InstitutionFormsRoute: InstitutionFormsRoute,
   InstitutionProfileRoute: InstitutionProfileRoute,
   OfertaOfferIdRoute: OfertaOfferIdRoute,

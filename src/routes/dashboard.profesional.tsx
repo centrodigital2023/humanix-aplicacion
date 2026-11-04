@@ -55,6 +55,7 @@ import { InstallAppButton } from "@/components/humanix/InstallAppButton";
 import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { newReferences, normalizeExtraction, type ExtractedProfile } from "@/lib/profileExtraction";
 import { BrebKeyCard } from "@/components/humanix/payments/BrebKeyCard";
+import { FiruxConnectCard } from "@/components/humanix/payments/FiruxConnectCard";
 import { WalletCard } from "@/components/humanix/payments/WalletCard";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
@@ -968,6 +969,9 @@ function ProDashboard() {
                 <WalletCard userId={userId} />
               </div>
             )}
+
+            {/* Conectar con Firux Pay: solo aparece con el flag encendido en el servidor */}
+            {userId && <FiruxConnectCard userId={userId} />}
 
             {/* Servicios de hoy: el siguiente paso (salir, llegar, registrar el parte) a un toque */}
             {userId && (

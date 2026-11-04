@@ -5,17 +5,59 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ChargeResult } from "./firux";
 import type { ChargeDeps } from "./firuxCharges.server";
+import type { ConnectDeps, ConnectResult } from "./firuxConnect.server";
+import type { ConnectView } from "./firuxConnect";
 
 export type { ChargeResult, ChargeView, ChargeErrorCode } from "./firux";
 
 async function deps(): Promise<ChargeDeps> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { supabaseChargeStore, firuxCreateCharge } = await import("./firuxCharges.server");
+  const { supabaseChargeStore, supabaseConnectionLookup, firuxCreateCharge } =
+    await import("./firuxCharges.server");
+  const { isFiruxConnectEnabled } = await import("./firuxConnect");
   const key = process.env.FIRUX_API_KEY;
   return {
     store: supabaseChargeStore(supabaseAdmin as never),
     firux: key ? firuxCreateCharge(key) : null,
     now: Date.now,
+    // «Conectar con Firux Pay»: apagado salvo FIRUX_CONNECT_ENABLED=true (y la migración 20261104140000 aplicada).
+    connect: {
+      enabled: !!key && isFiruxConnectEnabled(process.env),
+      connection: supabaseConnectionLookup(supabaseAdmin as never),
+      firuxFor: (accountId) => (key ? firuxCreateCharge(key, fetch, { accountId }) : null),
+    },
+  };
+}
+
+async function connectDeps(): Promise<ConnectDeps> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { supabaseConnectStore } = await import("./firuxConnect.server");
+  const { isFiruxConnectEnabled } = await import("./firuxConnect");
+  const { buildFiruxConnectUrl, exchangeFiruxConnectCode } = await import("./firuxConnectApi");
+  const key = process.env.FIRUX_API_KEY;
+  const clientId = process.env.FIRUX_CONNECT_CLIENT_ID;
+  const redirectUri =
+    process.env.FIRUX_CONNECT_REDIRECT_URI ?? "https://humanix.lat/firux/conectado";
+  const ready = !!key && !!clientId;
+  return {
+    enabled: !!key && isFiruxConnectEnabled(process.env),
+    store: supabaseConnectStore(supabaseAdmin as never),
+    authorizeUrl: ready
+      ? (state) => buildFiruxConnectUrl({ clientId: clientId!, redirectUri, state })
+      : null,
+    exchange: ready
+      ? (code) => exchangeFiruxConnectCode(fetch, { apiKey: key!, code, redirectUri })
+      : null,
+    now: Date.now,
+    randomState: () =>
+      Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
+        b.toString(16).padStart(2, "0"),
+      ).join(""),
+    sha256: async (s) =>
+      Array.from(
+        new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))),
+        (b) => b.toString(16).padStart(2, "0"),
+      ).join(""),
   };
 }
 
@@ -48,4 +90,49 @@ export const payInstitutionPlanWithBreb = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ChargeResult> => {
     const { chargeInstitutionPlan } = await import("./firuxCharges.server");
     return chargeInstitutionPlan(await deps(), context.userId, data.size);
+  });
+
+// ── «Conectar con Firux Pay» (profesional) ─────────────────────────────────────────────────────────────────────
+
+export type { ConnectView } from "./firuxConnect";
+
+/** Estado de la conexión del profesional. `disabled` mientras el flag esté apagado (la tarjeta no se muestra). */
+export const getFiruxConnectStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ view: ConnectView; termsVersion: string }> => {
+    const { connectStatus } = await import("./firuxConnect.server");
+    return connectStatus(await connectDeps(), context.userId);
+  });
+
+const startInput = z.object({ acceptTerms: z.boolean(), termsVersion: z.string().max(40) });
+
+/** Acepta la comisión vigente y devuelve la URL de Firux para conectar la cuenta. */
+export const startFiruxConnect = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => startInput.parse(data ?? {}))
+  .handler(async ({ data, context }): Promise<ConnectResult<{ url: string }>> => {
+    const { startConnect } = await import("./firuxConnect.server");
+    return startConnect(await connectDeps(), context.userId, data);
+  });
+
+const completeInput = z.object({
+  code: z.string().min(1).max(512),
+  state: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
+/** Firux volvió a /firux/conectado: confirma la conexión. */
+export const completeFiruxConnect = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => completeInput.parse(data ?? {}))
+  .handler(async ({ data, context }): Promise<ConnectResult<{ accountId: string }>> => {
+    const { completeConnect } = await import("./firuxConnect.server");
+    return completeConnect(await connectDeps(), context.userId, data);
+  });
+
+/** Desconecta la cuenta Firux: los turnos nuevos vuelven a la llave de Humanix y a la cola de pagos. */
+export const disconnectFiruxConnect = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ConnectResult<object>> => {
+    const { disconnect } = await import("./firuxConnect.server");
+    return disconnect(await connectDeps(), context.userId);
   });

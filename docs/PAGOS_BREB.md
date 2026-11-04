@@ -48,10 +48,46 @@ equipo dispersa desde el panel de Firux (la API de Firux no mueve dinero ni hace
 **Próximo — «Conectar con Firux Pay»** (en pruebas en Firux): cada profesional tiene su propia cuenta Firux y acepta la
 comisión de Humanix una vez; Humanix crea el cobro del turno *a nombre del profesional* con la comisión incluida, la
 plata le llega directo al profesional y la comisión a Humanix. Humanix no dispersa nada y la cola `payouts` deja de
-hacer falta para los turnos digitales. Cambios previstos cuando Firux publique la conexión: guardar la conexión de cada
-profesional y crear el cobro con ella (la inyección `ChargeDeps.firux` ya permite elegir la credencial por cobro).
+hacer falta para los turnos digitales.
 Costos informados por Firux: cuenta de Humanix en el plan Cobros Empresa (desde $150.000 + IVA al mes); el profesional
 no paga plan, solo 1 % + IVA por cobro (mínimo $500).
+
+### «Conectar con Firux Pay»: preparado, apagado
+
+Ya está en el código, detrás de `FIRUX_CONNECT_ENABLED` (apagado si no existe):
+
+- Migración `20261104140000_firux_connect.sql` (**aún no aplicada en producción**): tabla
+  `professional_firux_connections` (cuenta Firux del profesional, estado `pending`/`active`/`revoked`, versión y fecha
+  de la comisión aceptada, hash del `state` de un solo uso; la escribe solo el servidor), columnas `route`,
+  `firux_account_id` y `application_fee_cop` en `firux_charges`, `hx_queue_payout` que salta los turnos cobrados por la
+  cuenta del profesional y el aviso «El pago llegó a tu cuenta Firux» en `hx_firux_charge_paid`.
+- Regla (`src/lib/firuxConnect.ts`, probada): con el flag encendido, un turno `DIGITAL_BREB` cuyo profesional tiene
+  conexión `active` y la comisión vigente (`FIRUX_CONNECT_TERMS_VERSION`) aceptada se cobra a nombre de su cuenta con
+  `application_fee` = `service_bookings.platform_fee_amount` (ya trae la exención del primer turno). Recargas y planes
+  siempre van por la llave de Humanix.
+- **Respaldo:** si el flag está apagado, la conexión no sirve, no se puede leer o no hay credencial, el turno se cobra
+  como hoy y el pago sigue por `payouts` + llave Bre-B. Con el flag apagado el código no toca las columnas nuevas, así
+  que se puede publicar antes de aplicar la migración.
+- Flujo: tarjeta «Recibe tus pagos directo con Firux Pay» en el panel del profesional (acepta la comisión) →
+  `startFiruxConnect` → Firux → `/firux/conectado?code&state` → `completeFiruxConnect` → `active`. «Desconectar» deja
+  `revoked`.
+
+**Suposiciones sobre la API (Firux no la ha publicado; corregir en un solo lugar cuando salga):**
+
+| Qué | Suposición | Dónde se cambia |
+| --- | --- | --- |
+| Crear cobro a nombre del profesional | Misma llave de Humanix + encabezado `Firux-Account: <cuenta>` | `firuxCreateCharge` en `firuxCharges.server.ts` |
+| Comisión de Humanix en el cobro | Campo `application_fee` (COP enteros) en `POST /v1/charges` | `issue` en `firuxCharges.server.ts` |
+| Conectar la cuenta | Flujo tipo OAuth: `https://pay.firux.co/connect/authorize?client_id&redirect_uri&state&response_type=code` | `buildFiruxConnectUrl` en `firuxConnectApi.ts` |
+| Canjear el código | `POST /v1/connect/token` → `{ account_id }` | `exchangeFiruxConnectCode` en `firuxConnectApi.ts` |
+| Avisos de cobros conectados | Llegan al mismo webhook, con la misma firma y `charge.paid` | `firuxWebhook.ts` (sin cambios) |
+| Desconectar | Solo en Humanix (no se llama a Firux) | `disconnect` en `firuxConnect.server.ts` |
+
+Si Firux termina usando un token por profesional en vez del encabezado, `ChargeDeps.connect.firuxFor(accountId)` puede
+devolver un cobrador con ese token sin tocar la lógica.
+
+Para encenderlo: aplicar la migración, configurar `FIRUX_CONNECT_CLIENT_ID` y (opcional) `FIRUX_CONNECT_REDIRECT_URI`
+(por defecto `https://humanix.lat/firux/conectado`), y poner `FIRUX_CONNECT_ENABLED=true`.
 
 ## Configuración pendiente
 
