@@ -135,7 +135,7 @@ export function BookingPaymentCard({
         </p>
         <Button
           size="lg"
-          className="mt-2 h-16 w-full rounded-2xl text-lg font-bold"
+          className="mt-2 h-16 w-full rounded-2xl bg-biosensor text-lg font-bold text-white shadow-lg shadow-biosensor/40 hover:bg-biosensor/90"
           onClick={() => setOpen(true)}
         >
           <Zap className="mr-2 h-6 w-6" aria-hidden="true" /> Pagar {COP(booking.total_amount)} con

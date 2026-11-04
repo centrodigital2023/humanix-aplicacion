@@ -132,7 +132,11 @@ export function MyBookings({ userId, title = "Mis pedidos" }: { userId: string; 
                 <Link
                   to="/servicio/$bookingId"
                   params={{ bookingId: r.id }}
-                  className="inline-flex min-h-14 items-center gap-2 rounded-2xl bg-trust px-5 text-base font-bold text-trust-foreground shadow-md active:scale-95"
+                  className={
+                    !pending && r.payment_method === "DIGITAL_BREB" && !r.paid_at
+                      ? "flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-biosensor px-5 text-lg font-bold text-white shadow-lg shadow-biosensor/40 active:scale-95"
+                      : "inline-flex min-h-14 items-center gap-2 rounded-2xl bg-trust px-5 text-base font-bold text-trust-foreground shadow-md active:scale-95"
+                  }
                 >
                   {!pending && r.payment_method === "DIGITAL_BREB" && !r.paid_at ? (
                     <>

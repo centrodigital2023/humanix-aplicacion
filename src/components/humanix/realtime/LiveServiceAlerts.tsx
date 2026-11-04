@@ -110,7 +110,9 @@ function AlertCard({
   const [accepting, setAccepting] = useState(false);
   const [askPush, setAskPush] = useState(false);
   // En la página del mismo servicio el cambio ya se ve en pantalla: la alerta no se queda fija.
-  const sticky = alert.sticky && pathname !== alert.link;
+  // Solo las solicitudes nuevas (que piden «Aceptar») se quedan fijas; los cambios de estado se van solos
+  // para no tapar la pantalla de la familia o la institución.
+  const sticky = alert.sticky && alert.tone === "request" && pathname !== alert.link;
   const tone = TONE[alert.tone];
   const Icon = tone.icon;
 

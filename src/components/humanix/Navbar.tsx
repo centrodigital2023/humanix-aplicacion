@@ -34,7 +34,7 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
   const account = user ? (
     <Link
       to={pathForRole(user.primaryRole)}
-      className={`${pill} bg-primary text-primary-foreground shadow-md`}
+      className={`${pill} whitespace-nowrap bg-primary text-primary-foreground shadow-md`}
     >
       Mi panel
     </Link>
