@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { FileSignature, PenLine, ShieldCheck } from "lucide-react";
+import { FileSignature, PenLine, RefreshCw, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { friendlyError } from "@/lib/friendlyError";
 import { useMySmartContracts } from "@/hooks/use-institution-hub";
 import { contractStatusLabel, isSignableStatus } from "@/lib/contractTemplate";
 import { SmartContractDialog } from "./SmartContractDialog";
@@ -26,27 +28,66 @@ export function SmartContractCard({
 }) {
   const [contractId, setContractId] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [open, setOpen] = useState(false);
   const mine = useMySmartContracts(userId);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const { data } = await sb
+      setResolved(false);
+      setLoadError(null);
+      const { data, error } = await sb
         .from("smart_contract_shifts")
         .select("contract_id")
         .eq("booking_id", bookingId)
+        .limit(1)
         .maybeSingle();
       if (!active) return;
+      // Antes el error se ignoraba y la tarjeta desaparecía: ahora se dice y se puede reintentar.
+      if (error) {
+        setLoadError(friendlyError(error, "No pudimos cargar el contrato."));
+        return;
+      }
       setContractId((data as { contract_id: string } | null)?.contract_id ?? null);
       setResolved(true);
     })();
     return () => {
       active = false;
     };
-  }, [bookingId]);
+  }, [bookingId, attempt]);
 
-  if (!resolved) return null;
+  if (loadError) {
+    return (
+      <Card className="space-y-3 border-dashed p-5">
+        <div className="flex items-center gap-2">
+          <FileSignature className="h-4 w-4 text-copper" aria-hidden />
+          <h3 className="text-sm font-semibold">Contrato del servicio</h3>
+        </div>
+        <p className="text-xs text-muted-foreground" role="alert">
+          {loadError} Tu servicio sigue igual.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full"
+          onClick={() => setAttempt((n) => n + 1)}
+        >
+          <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden /> Reintentar
+        </Button>
+      </Card>
+    );
+  }
+  if (!resolved) {
+    return (
+      <Card className="space-y-3 p-5" aria-busy="true" aria-label="Cargando el contrato">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-9 w-full rounded-xl" />
+      </Card>
+    );
+  }
   if (!contractId) return <>{fallback}</>;
   const row = mine.data?.find((c) => c.contract_id === contractId);
   const needsMe = row ? isSignableStatus(row.status) && !row.i_signed : false;

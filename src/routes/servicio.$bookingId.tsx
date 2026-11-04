@@ -108,6 +108,7 @@ type Booking = {
   payment_method?: string | null;
   paid_at?: string | null;
   platform_fee_amount?: number | null;
+  platform_fee_pct?: number | null;
   professional_payout?: number | null;
   commission_exempt_cop?: number | null;
   /** Pago retenido (migración 20261104180000). */
@@ -630,14 +631,15 @@ function ServicePage() {
                     isPaid={contactOpen}
                     amountCOP={booking.total_amount}
                   />
-                  {booking.status !== "pending" && (isClient || isProfessional) && (
+                  {(isClient || isProfessional) && (
                     <SmartContractCard
                       bookingId={booking.id}
                       userId={userId}
                       fallback={
                         <ServiceContractCard
-                          bookingId={booking.id}
-                          party={isClient ? "family" : "professional"}
+                          booking={booking}
+                          side={isClient ? "client" : "professional"}
+                          peerName={peerName || undefined}
                         />
                       }
                     />
