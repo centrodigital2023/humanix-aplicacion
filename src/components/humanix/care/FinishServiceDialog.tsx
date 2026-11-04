@@ -54,6 +54,8 @@ type FinishProps = {
   patientName?: string | null;
   /** Cambia el estado a «completado». Devuelve true si funcionó. */
   onFinish: () => Promise<boolean>;
+  /** Turno en efectivo: recordatorio de cuánto cobrar y la comisión que se descuenta. */
+  cashNote?: string;
 };
 
 export function FinishServiceDialog({
@@ -63,6 +65,7 @@ export function FinishServiceDialog({
   professionalId,
   patientName,
   onFinish,
+  cashNote,
 }: FinishProps) {
   const add = useAddCareLog(bookingId, professionalId, patientName);
   const [busy, setBusy] = useState(false);
@@ -115,6 +118,11 @@ export function FinishServiceDialog({
             Un cierre cálido tranquiliza a la familia: cuéntale cómo quedó el paciente. Ella recibe
             el parte final y podrá darte las gracias.
           </DialogDescription>
+          {cashNote && (
+            <p className="rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-foreground">
+              {cashNote}
+            </p>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit((v) => finish(v))} className="space-y-4" noValidate>
@@ -194,10 +202,12 @@ type ConfirmProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onFinish: () => Promise<boolean>;
+  /** Turno en efectivo: recordatorio de cuánto entregar en mano. */
+  cashNote?: string;
 };
 
 /** La parte que contrata también puede dar por terminado el servicio. */
-export function ConfirmFinishDialog({ open, onOpenChange, onFinish }: ConfirmProps) {
+export function ConfirmFinishDialog({ open, onOpenChange, onFinish, cashNote }: ConfirmProps) {
   const [busy, setBusy] = useState(false);
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -208,6 +218,11 @@ export function ConfirmFinishDialog({ open, onOpenChange, onFinish }: ConfirmPro
             Al finalizar se cierra el parte del turno y podrás darle las gracias a tu profesional y
             calificar el servicio. No se puede deshacer.
           </AlertDialogDescription>
+          {cashNote && (
+            <p className="rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-foreground">
+              {cashNote}
+            </p>
+          )}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Todavía no</AlertDialogCancel>

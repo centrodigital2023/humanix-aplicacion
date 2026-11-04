@@ -1,7 +1,33 @@
 // «¿Cómo quieres pagar?» — dos tarjetas grandes y claras al pedir un turno. Bre-B va primero (es lo más fácil: el
 // celular abre el banco y listo); efectivo sigue disponible. La familia nunca paga comisión: el total es el total.
+// Con `professionalId` y `total`, pregunta a la base (`hx_pro_cash_status`, sin ver saldos) si ese profesional puede tomar el
+// turno en efectivo: si su billetera está bloqueada, efectivo se apaga; si le falta recargar, se avisa antes de pedir.
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { COP, MIN_BOOKING_COP } from "@/lib/commissionMatrix";
+
+export type ProCashStatus = "ok" | "needs_topup" | "blocked" | "too_low";
+
+/** ¿Este profesional puede tomar este turno en efectivo? Ante cualquier error (p. ej. sin sesión) se asume que sí: la base decide al aceptar. */
+export function useProCashStatus(professionalId: string | undefined, total: number) {
+  const rounded = Math.round(total / 1000) * 1000;
+  const q = useQuery({
+    queryKey: ["pro-cash-status", professionalId, rounded],
+    enabled: Boolean(professionalId) && total >= MIN_BOOKING_COP,
+    staleTime: 30_000,
+    queryFn: async (): Promise<ProCashStatus> => {
+      const { data, error } = await supabase.rpc("hx_pro_cash_status", {
+        p_professional: professionalId!,
+        p_total: Math.round(total),
+      });
+      if (error) return "ok";
+      return (data as ProCashStatus) ?? "ok";
+    },
+  });
+  return q.data ?? "ok";
+}
 
 export type PaymentMethod = "DIGITAL_BREB" | "CASH";
 
@@ -32,12 +58,23 @@ export function PaymentMethodPicker({
   onChange,
   proFirstName,
   size = "md",
+  professionalId,
+  total = 0,
 }: {
   value: PaymentMethod;
   onChange: (v: PaymentMethod) => void;
   proFirstName?: string;
   size?: "md" | "lg";
+  professionalId?: string;
+  total?: number;
 }) {
+  const cashStatus = useProCashStatus(professionalId, total);
+  const cashOff = cashStatus === "blocked";
+  const who = proFirstName ?? "El profesional";
+  useEffect(() => {
+    if (cashOff && value === "CASH") onChange("DIGITAL_BREB");
+  }, [cashOff, value, onChange]);
+
   return (
     <fieldset>
       <legend className={cn("font-semibold", size === "lg" ? "mb-3 text-lg" : "mb-2 text-sm")}>
@@ -46,18 +83,22 @@ export function PaymentMethodPicker({
       <div role="radiogroup" className="grid grid-cols-2 gap-2">
         {OPTIONS.map((o) => {
           const on = o.value === value;
+          const off = o.value === "CASH" && cashOff;
           return (
             <button
               key={o.value}
               type="button"
               role="radio"
               aria-checked={on}
+              aria-disabled={off}
+              disabled={off}
               onClick={() => onChange(o.value)}
               className={cn(
                 "relative flex flex-col items-start gap-1 rounded-2xl border-2 p-3 text-left transition active:scale-[0.98]",
                 on
                   ? "border-biosensor bg-biosensor/10 shadow-sm"
                   : "border-border bg-background hover:border-biosensor/40",
+                off && "cursor-not-allowed opacity-50 hover:border-border",
                 size === "lg" && "p-4",
               )}
             >
@@ -75,14 +116,30 @@ export function PaymentMethodPicker({
                   size === "lg" ? "text-sm" : "text-xs",
                 )}
               >
-                {o.value === "CASH" && proFirstName
-                  ? `Le pagas en mano a ${proFirstName} al terminar.`
-                  : o.line}
+                {off
+                  ? "No disponible por ahora con este profesional."
+                  : o.value === "CASH" && proFirstName
+                    ? `Le pagas en mano a ${proFirstName} al terminar.`
+                    : o.line}
               </span>
             </button>
           );
         })}
       </div>
+      {value === "CASH" && cashStatus === "needs_topup" && (
+        <p
+          className="mt-2 rounded-xl bg-copper/10 px-3 py-2 text-xs leading-snug text-foreground"
+          role="status"
+        >
+          💡 {who} necesita recargar su billetera Humanix para aceptar en efectivo. Le avisamos al
+          pedir; con Bre-B lo acepta al instante.
+        </p>
+      )}
+      {cashOff && (
+        <p className="mt-2 text-xs text-muted-foreground" role="status">
+          Hoy {proFirstName ?? "este profesional"} recibe pagos solo por Bre-B.
+        </p>
+      )}
     </fieldset>
   );
 }
@@ -90,6 +147,6 @@ export function PaymentMethodPicker({
 /** Aviso amable si el turno no llega al mínimo (la base también lo exige: `hx_booking_commission`). */
 export function minBookingMessage(total: number): string | null {
   return total > 0 && total < MIN_BOOKING_COP
-    ? `El turno mínimo es de ${COP(MIN_BOOKING_COP)}. Suma una hora más para continuar.`
+    ? `El turno mínimo es de ${COP(MIN_BOOKING_COP)}. Suma más tiempo para continuar.`
     : null;
 }

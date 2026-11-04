@@ -1,6 +1,7 @@
 // Matriz de comisiones y reglas de billetera de Humanix. Lógica pura y probada (`paymentsBreb.test.ts`).
-// La MISMA regla vive en SQL (migración 20261103160000): `booking_commission_pct` (escalón e institución),
-// `hx_first_shift_exempt` (primer turno), `compute_platform_fee` (comisión y neto) y `hx_booking_wallet_gate` (efectivo y cupo).
+// La MISMA regla vive en SQL (migraciones 20261103160000 y 20261104170000): `booking_commission_pct` (escalón e institución),
+// `hx_first_shift_exempt` (primer turno), `compute_platform_fee` (comisión y neto), `hx_booking_wallet_gate` (efectivo, cupo y
+// comisión apartada) y `get_my_wallet` (estado de la billetera).
 // Estas funciones explican y anticipan; la base decide.
 //
 // Todo en pesos colombianos enteros (sin centavos).
@@ -12,14 +13,17 @@
 //     hace 90 días o menos.
 //
 // Pago en efectivo (la familia le paga al profesional en mano): la comisión se descuenta de la billetera Humanix del profesional al
-// terminar el turno. Para aceptar, saldo + cupo (hasta −$30.000) debe cubrir la comisión; por debajo de −$30.000 no acepta turnos.
+// terminar el turno. Al aceptarlo, su comisión queda «apartada» hasta que termina o se cancela. Para aceptar otro, saldo + cupo
+// (hasta −$30.000) − lo apartado debe cubrir la nueva comisión; por debajo de −$30.000 no acepta turnos.
 
-export const MIN_BOOKING_COP = 45_000;
+export const MIN_BOOKING_COP = 20_000;
 export const FIRUX_MIN_COP = 2_000;
 export const FIRUX_MAX_COP = 12_000_000;
 export const FIRST_SHIFT_EXEMPT_CAP_COP = 30_000;
 export const FIRST_SHIFT_WINDOW_DAYS = 90;
 export const WALLET_CREDIT_LIMIT_COP = -30_000;
+/** Menos de esto libre para comisiones = «casi en el límite» (`hx_wallet_low_cop`). */
+export const WALLET_LOW_COP = 10_000;
 
 export const PRO_TIERS = [
   { minShifts: 60, pct: 10, label: "Alta frecuencia" },
@@ -100,31 +104,47 @@ export type CashCheck =
   | { ok: false; reason: "blocked" | "insufficient"; availableCOP: number; missingCOP: number };
 
 /**
- * ¿El profesional puede aceptar un turno en efectivo? Disponible = saldo + cupo (el cupo es hasta −$30.000).
+ * ¿El profesional puede aceptar un turno en efectivo? Libre = saldo + cupo (hasta −$30.000) − comisiones ya apartadas por
+ * otros turnos en efectivo aceptados y sin terminar.
  *  - Si el saldo ya está por debajo del cupo: bloqueado para turnos nuevos.
- *  - Si lo disponible no cubre la comisión: le falta recargar la diferencia.
+ *  - Si lo libre no cubre la comisión: le falta recargar la diferencia.
  */
 export function cashAcceptCheck(
   balanceCOP: number,
   feeCOP: number,
   creditLimitCOP = WALLET_CREDIT_LIMIT_COP,
+  reservedCOP = 0,
 ): CashCheck {
-  const available = Math.round(balanceCOP) - creditLimitCOP;
+  const available = Math.round(balanceCOP) - creditLimitCOP - Math.max(0, Math.round(reservedCOP));
   if (balanceCOP < creditLimitCOP)
     return {
       ok: false,
       reason: "blocked",
-      availableCOP: available,
+      availableCOP: Math.max(0, available),
       missingCOP: creditLimitCOP - balanceCOP,
     };
-  if (available < feeCOP)
+  if (feeCOP > 0 && available < feeCOP)
     return {
       ok: false,
       reason: "insufficient",
-      availableCOP: available,
-      missingCOP: feeCOP - available,
+      availableCOP: Math.max(0, available),
+      missingCOP: feeCOP - Math.max(0, available),
     };
   return { ok: true, availableCOP: available };
+}
+
+export type WalletHealth = "ok" | "credit" | "low" | "blocked";
+
+/** Estado de la billetera, igual que `get_my_wallet.health`: bloqueada, casi en el límite, usando cupo o al día. */
+export function walletHealth(
+  balanceCOP: number,
+  reservedCOP = 0,
+  creditLimitCOP = WALLET_CREDIT_LIMIT_COP,
+): WalletHealth {
+  if (balanceCOP < creditLimitCOP) return "blocked";
+  if (balanceCOP - creditLimitCOP - reservedCOP < WALLET_LOW_COP) return "low";
+  if (balanceCOP < 0) return "credit";
+  return "ok";
 }
 
 /** ¿Puede recibir turnos nuevos (de cualquier tipo)? Solo si su saldo no está por debajo del cupo. */

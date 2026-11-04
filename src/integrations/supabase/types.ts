@@ -5645,6 +5645,9 @@ export type Database = {
           commission_pct: number
           completed_30d: number
           credit_limit_cop: number
+          free_cop: number
+          health: string
+          reserved_cop: number
         }[]
       }
       get_or_create_booking_conversation: {
@@ -6020,6 +6023,10 @@ export type Database = {
         Returns: number
       }
       hx_pro_docs_complete: { Args: { p_uid: string }; Returns: boolean }
+      hx_pro_cash_status: {
+        Args: { p_professional: string; p_total: number }
+        Returns: string
+      }
       hx_pro_label: {
         Args: { p_full_name: string; p_short: boolean }
         Returns: string

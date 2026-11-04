@@ -1,19 +1,35 @@
-// Billetera Humanix del profesional: saldo, cupo (hasta −$30.000), comisión de hoy y cuánto falta para bajarla, y la
-// recarga express por Bre-B. Solo se usa para turnos en efectivo: la comisión se descuenta al terminar el turno.
+// Billetera Humanix del profesional, tipo InDrive: saldo, cupo (hasta −$30.000), lo apartado para comisiones de turnos en
+// efectivo ya aceptados, cuánto queda libre, avisos de saldo bajo o bloqueo, historial y recarga por Bre-B (rápida o del valor que
+// quiera). Solo se usa para turnos en efectivo: la comisión se descuenta al terminar el turno.
 // Los números los da la base (`get_my_wallet`); las reglas para explicarlos, `commissionMatrix.ts` (probadas).
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDownLeft, ArrowUpRight, Lock, Plus, TrendingDown, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronDown,
+  Lock,
+  Plus,
+  TrendingDown,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import {
   COP,
+  FIRUX_MAX_COP,
+  FIRUX_MIN_COP,
   PRO_TIERS,
   WALLET_CREDIT_LIMIT_COP,
+  type WalletHealth,
   nextTier,
   suggestedTopupCOP,
+  walletHealth,
 } from "@/lib/commissionMatrix";
 import { topupWalletWithBreb } from "@/lib/firux.functions";
 import { cn } from "@/lib/utils";
@@ -21,31 +37,46 @@ import { BrebPaySheet } from "./BrebPaySheet";
 
 export const walletQuery = (userId: string) => ["wallet", userId] as const;
 
-export function useWallet(userId: string) {
+const MOVEMENT_LABEL: Record<string, string> = {
+  topup: "Recarga por Bre-B",
+  commission_debit: "Comisión de turno en efectivo",
+  adjustment: "Ajuste de Humanix",
+};
+
+export function useWallet(userId: string, historySize = 5) {
   const qc = useQueryClient();
   const q = useQuery({
-    queryKey: walletQuery(userId),
+    queryKey: [...walletQuery(userId), historySize],
     enabled: Boolean(userId),
     queryFn: async () => {
       const [w, m] = await Promise.all([
         supabase.rpc("get_my_wallet"),
         supabase
           .from("wallet_movements")
-          .select("id, kind, amount_cop, created_at, note")
+          .select("id, kind, amount_cop, balance_after, booking_id, created_at, note")
           .eq("professional_id", userId)
           .order("created_at", { ascending: false })
-          .limit(4),
+          .limit(historySize + 1),
       ]);
       if (w.error) throw w.error;
       const row = w.data?.[0];
+      const balance = Number(row?.balance_cop ?? 0);
+      const limit = Number(row?.credit_limit_cop ?? WALLET_CREDIT_LIMIT_COP);
+      const reserved = Number(row?.reserved_cop ?? 0);
+      const rows = m.data ?? [];
       return {
-        balance: Number(row?.balance_cop ?? 0),
-        limit: Number(row?.credit_limit_cop ?? WALLET_CREDIT_LIMIT_COP),
-        available: Number(row?.available_cop ?? -WALLET_CREDIT_LIMIT_COP),
+        balance,
+        limit,
+        reserved,
+        free: Number(row?.free_cop ?? Math.max(0, balance - limit - reserved)),
+        available: Number(row?.available_cop ?? balance - limit),
         blocked: Boolean(row?.blocked),
+        health: ((row?.health as WalletHealth | undefined) ??
+          walletHealth(balance, reserved, limit)) as WalletHealth,
         completed30d: Number(row?.completed_30d ?? 0),
         pct: Number(row?.commission_pct ?? 15),
-        movements: m.data ?? [],
+        movements: rows.slice(0, historySize),
+        moreMovements: rows.length > historySize,
       };
     },
   });
@@ -54,6 +85,8 @@ export function useWallet(userId: string) {
     [
       { table: "wallets", filter: `professional_id=eq.${userId}` },
       { table: "firux_charges", filter: `user_id=eq.${userId}` },
+      // Aceptar, terminar o cancelar un turno en efectivo cambia lo apartado.
+      { table: "service_bookings", filter: `professional_id=eq.${userId}` },
     ],
     () => void qc.invalidateQueries({ queryKey: walletQuery(userId) }),
     Boolean(userId),
@@ -62,11 +95,20 @@ export function useWallet(userId: string) {
 }
 
 const QUICK = [20_000, 50_000, 100_000];
+const when = new Intl.DateTimeFormat("es-CO", {
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/Bogota",
+});
 
 export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: string }) {
-  const q = useWallet(userId);
+  const [historySize, setHistorySize] = useState(5);
+  const q = useWallet(userId, historySize);
   const qc = useQueryClient();
   const [amount, setAmount] = useState<number | null>(null);
+  const [custom, setCustom] = useState("");
 
   if (q.isLoading)
     return <div className="h-48 animate-pulse rounded-3xl bg-muted/60" aria-hidden="true" />;
@@ -74,11 +116,20 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
   const w = q.data;
   const next = nextTier(w.completed30d);
   const owe = w.balance < 0;
+  const cupo = -w.limit;
   // Cupo usado: de 0 a 30.000 (cuánto del crédito se está usando).
-  const creditUsed = Math.min(-w.limit, Math.max(0, -w.balance));
-  const missing = w.blocked ? w.limit - w.balance : 0;
+  const creditUsed = Math.min(cupo, Math.max(0, -w.balance));
+  const unblockCOP = w.blocked ? w.limit - w.balance : 0;
+  // Recarga sugerida: desbloquear, o dejar el cupo libre completo otra vez (deuda + lo apartado).
+  const suggested = w.blocked
+    ? suggestedTopupCOP(unblockCOP)
+    : w.health === "low"
+      ? suggestedTopupCOP(cupo - w.free)
+      : null;
   const tierFrom = next ? (next.pct === 12 ? 0 : 20) : 60;
   const tierTo = next ? (next.pct === 12 ? 20 : 60) : 60;
+  const customCOP = Math.round(Number(custom.replace(/\D/g, "")) || 0);
+  const customOk = customCOP >= FIRUX_MIN_COP && customCOP <= FIRUX_MAX_COP;
 
   return (
     <section
@@ -89,7 +140,11 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
       <div
         className={cn(
           "p-5",
-          w.blocked ? "bg-destructive/10" : "bg-gradient-to-br from-trust/10 to-biosensor/10",
+          w.health === "blocked"
+            ? "bg-destructive/10"
+            : w.health === "low"
+              ? "bg-copper/10"
+              : "bg-gradient-to-br from-trust/10 to-biosensor/10",
         )}
       >
         <div className="flex items-center justify-between gap-3">
@@ -111,39 +166,104 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
         </p>
         <p className="text-sm text-muted-foreground">
           {w.blocked
-            ? "Pasaste el cupo. Recarga para volver a recibir turnos."
+            ? `Pasaste el cupo de ${COP(cupo)}. Recarga para volver a recibir turnos.`
             : owe
-              ? `Estás usando ${COP(creditUsed)} de tu cupo de ${COP(-w.limit)}.`
-              : `Puedes aceptar turnos en efectivo con comisión de hasta ${COP(w.available)}.`}
+              ? `Estás usando ${COP(creditUsed)} de tu cupo de ${COP(cupo)}.`
+              : "Saldo a tu favor para comisiones de turnos en efectivo."}
         </p>
 
-        {w.blocked ? (
+        {!w.blocked && (
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-2xl bg-background/70 px-3 py-2">
+              <dt className="text-xs text-muted-foreground">Libre para efectivo</dt>
+              <dd className="font-bold tabular-nums">{COP(w.free)}</dd>
+            </div>
+            <div className="rounded-2xl bg-background/70 px-3 py-2">
+              <dt className="text-xs text-muted-foreground">Apartado</dt>
+              <dd className="font-bold tabular-nums">{COP(w.reserved)}</dd>
+            </div>
+          </dl>
+        )}
+        {w.reserved > 0 && !w.blocked && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            «Apartado» es la comisión de tus turnos en efectivo ya aceptados. Se descuenta cuando
+            terminan; si se cancelan, vuelve a quedar libre.
+          </p>
+        )}
+
+        {w.health === "low" && (
+          <p
+            className="mt-3 flex items-start gap-2 rounded-2xl bg-background/80 px-3 py-2 text-sm"
+            role="status"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-copper" aria-hidden="true" />
+            Te queda poco para aceptar turnos en efectivo. Los turnos por Bre-B los sigues
+            recibiendo normal.
+          </p>
+        )}
+
+        {suggested ? (
           <Button
             size="lg"
+            variant={w.blocked ? "default" : "secondary"}
             className="mt-4 h-14 w-full rounded-2xl text-base font-bold"
-            onClick={() => setAmount(suggestedTopupCOP(missing))}
+            onClick={() => setAmount(suggested)}
           >
-            <Lock className="mr-2 h-5 w-5" aria-hidden="true" /> Recargar{" "}
-            {COP(suggestedTopupCOP(missing))} y desbloquear
+            {w.blocked ? (
+              <Lock className="mr-2 h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
+            )}
+            Recargar {COP(suggested)}
+            {w.blocked ? " y desbloquear" : " y quedar al día"}
           </Button>
-        ) : (
-          <div className="mt-4">
-            <p className="mb-2 text-sm font-medium">Recarga en segundos con Bre-B</p>
-            <div className="grid grid-cols-3 gap-2">
-              {QUICK.map((v) => (
-                <Button
-                  key={v}
-                  variant="outline"
-                  className="h-12 rounded-2xl bg-background text-base font-bold"
-                  onClick={() => setAmount(v)}
-                >
-                  <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
-                  {COP(v).replace(/\s/g, "")}
-                </Button>
-              ))}
-            </div>
+        ) : null}
+
+        <div className="mt-4">
+          <p className="mb-2 text-sm font-medium">Recarga en segundos con Bre-B</p>
+          <div className="grid grid-cols-3 gap-2">
+            {QUICK.map((v) => (
+              <Button
+                key={v}
+                variant="outline"
+                className="h-12 rounded-2xl bg-background text-base font-bold"
+                onClick={() => setAmount(v)}
+              >
+                <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
+                {COP(v).replace(/\s/g, "")}
+              </Button>
+            ))}
           </div>
-        )}
+          <form
+            className="mt-2 flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (customOk) setAmount(customCOP);
+            }}
+          >
+            <Input
+              inputMode="numeric"
+              aria-label="Otro valor de recarga"
+              placeholder="Otro valor"
+              value={custom ? COP(customCOP).replace(/\s/g, "") : ""}
+              onChange={(e) => setCustom(e.target.value)}
+              className="h-12 rounded-2xl bg-background text-base"
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={!customOk}
+              className="h-12 rounded-2xl bg-background font-bold"
+            >
+              Recargar
+            </Button>
+          </form>
+          {custom && !customOk && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Desde {COP(FIRUX_MIN_COP)} hasta {COP(FIRUX_MAX_COP)}.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4 p-5">
@@ -172,30 +292,66 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
         </div>
 
         {w.movements.length > 0 && (
-          <ul className="divide-y divide-border rounded-2xl border border-border">
-            {w.movements.map((m) => {
-              const up = Number(m.amount_cop) > 0;
-              return (
-                <li key={m.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                  {up ? (
-                    <ArrowDownLeft className="h-4 w-4 text-biosensor" aria-hidden="true" />
-                  ) : (
-                    <ArrowUpRight className="h-4 w-4 text-copper" aria-hidden="true" />
-                  )}
-                  <span className="flex-1 truncate">{m.note ?? (up ? "Recarga" : "Comisión")}</span>
-                  <span
-                    className={cn(
-                      "font-semibold tabular-nums",
-                      up ? "text-biosensor" : "text-copper",
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Movimientos</h3>
+            <ul className="divide-y divide-border rounded-2xl border border-border">
+              {w.movements.map((m) => {
+                const amt = Number(m.amount_cop);
+                const up = amt > 0;
+                const label = m.note ?? MOVEMENT_LABEL[m.kind] ?? (up ? "Recarga" : "Comisión");
+                return (
+                  <li key={m.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                    {up ? (
+                      <ArrowDownLeft
+                        className="h-4 w-4 shrink-0 text-biosensor"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-copper" aria-hidden="true" />
                     )}
-                  >
-                    {up ? "+" : "−"}
-                    {COP(Math.abs(Number(m.amount_cop)))}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+                    <span className="min-w-0 flex-1">
+                      {m.booking_id ? (
+                        <Link
+                          to="/servicio/$bookingId"
+                          params={{ bookingId: m.booking_id }}
+                          className="block truncate underline-offset-2 hover:underline"
+                        >
+                          {label}
+                        </Link>
+                      ) : (
+                        <span className="block truncate">{label}</span>
+                      )}
+                      <span className="block text-xs text-muted-foreground">
+                        {when.format(new Date(m.created_at))} · saldo{" "}
+                        {Number(m.balance_after) < 0
+                          ? `−${COP(-Number(m.balance_after))}`
+                          : COP(Number(m.balance_after))}
+                      </span>
+                    </span>
+                    <span
+                      className={cn(
+                        "font-semibold tabular-nums",
+                        up ? "text-biosensor" : "text-copper",
+                      )}
+                    >
+                      {up ? "+" : "−"}
+                      {COP(Math.abs(amt))}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            {w.moreMovements && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 w-full"
+                onClick={() => setHistorySize((n) => n + 20)}
+              >
+                <ChevronDown className="mr-1 h-4 w-4" aria-hidden="true" /> Ver más movimientos
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -206,7 +362,10 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
         subtitle="Se suma a tu saldo apenas pagues."
         start={() => topupWalletWithBreb({ data: { amountCop: amount ?? 0 } })}
         paidMessage="Ya sumamos la recarga a tu billetera. ¡A seguir cuidando!"
-        onPaid={() => void qc.invalidateQueries({ queryKey: walletQuery(userId) })}
+        onPaid={() => {
+          setCustom("");
+          void qc.invalidateQueries({ queryKey: walletQuery(userId) });
+        }}
       />
     </section>
   );

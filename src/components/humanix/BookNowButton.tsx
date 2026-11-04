@@ -231,7 +231,12 @@ export function BookNowButton({
                 </div>
               </div>
 
-              <PaymentMethodPicker value={method} onChange={setMethod} />
+              <PaymentMethodPicker
+                value={method}
+                onChange={setMethod}
+                professionalId={professionalId}
+                total={total}
+              />
               {minBookingMessage(total) && (
                 <p role="alert" className="text-sm font-medium text-copper">
                   {minBookingMessage(total)}

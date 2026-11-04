@@ -304,6 +304,8 @@ export function QuickBooking({
                 value={method}
                 onChange={setMethod}
                 proFirstName={pro.name.split(" ")[0]}
+                professionalId={pro.id}
+                total={total}
                 size="lg"
               />
             </div>

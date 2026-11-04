@@ -14,6 +14,8 @@ import {
   nextTier,
   proTier,
   suggestedTopupCOP,
+  walletHealth,
+  MIN_BOOKING_COP,
 } from "./commissionMatrix";
 import {
   buildChargeBody,
@@ -150,6 +152,29 @@ describe("billetera para turnos en efectivo", () => {
     });
     expect(canTakeNewShifts(-30_000)).toBe(true);
     expect(canTakeNewShifts(-30_001)).toBe(false);
+  });
+  it("aparta la comisión de los turnos en efectivo aceptados y sin terminar", () => {
+    // Dos turnos de $100.000 al 15 %: $30.000 apartados; un tercero ya no cabe en el cupo.
+    expect(cashAcceptCheck(0, 15_000, -30_000, 15_000)).toEqual({ ok: true, availableCOP: 15_000 });
+    expect(cashAcceptCheck(0, 15_000, -30_000, 30_000)).toEqual({
+      ok: false,
+      reason: "insufficient",
+      availableCOP: 0,
+      missingCOP: 15_000,
+    });
+    // Si el turno no paga comisión (primer turno exonerado), se acepta aunque no quede nada libre.
+    expect(cashAcceptCheck(-30_000, 0, -30_000, 0)).toEqual({ ok: true, availableCOP: 0 });
+  });
+  it("estado de la billetera igual que get_my_wallet", () => {
+    expect(walletHealth(50_000)).toBe("ok");
+    expect(walletHealth(-5_000)).toBe("credit");
+    expect(walletHealth(-25_000)).toBe("low");
+    expect(walletHealth(0, 25_000)).toBe("low");
+    expect(walletHealth(-30_000)).toBe("low");
+    expect(walletHealth(-30_001)).toBe("blocked");
+  });
+  it("el turno mínimo es de $20.000", () => {
+    expect(MIN_BOOKING_COP).toBe(20_000);
   });
   it("recarga sugerida: a miles hacia arriba y desde el mínimo de Firux", () => {
     expect(suggestedTopupCOP(5_200)).toBe(6_000);

@@ -1,7 +1,8 @@
 // El pago del turno, visto por cada lado y siempre en una frase:
 //   Familia     · Bre-B sin pagar y ya aceptado → un botón grande «Pagar $X con Bre-B» (abre la hoja con QR y banco).
-//               · Bre-B antes de que acepten → «Pagarás cuando {nombre} acepte».  · Pagado → ✅.  · Efectivo → en mano.
-//   Profesional · Bre-B pagado → cuánto le llega a su llave.  · Sin pagar → que espere.  · Efectivo → comisión de billetera.
+//               · Bre-B antes de que acepten → «Pagarás cuando {nombre} acepte».  · Pagado → ✅.  · Efectivo → cuánto entregar en mano.
+//   Profesional · Bre-B pagado → cuánto le llega a su llave.  · Sin pagar → que espere.  · Efectivo → cuánto cobrar y la
+//               comisión apartada (al aceptar) o descontada (al terminar) de su billetera.
 import { useState } from "react";
 import { CheckCircle2, Hourglass, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,13 +51,18 @@ export function BookingPaymentCard({
 
   if (side === "client") {
     if (cash) {
+      const done = booking.status === "completed";
       return (
         <div className={box}>
           <p className="text-base font-semibold">
-            💵 Pagas en efectivo a {peerFirstName} al terminar.
+            {done
+              ? `💵 Turno en efectivo: ${COP(booking.total_amount)} a ${peerFirstName}.`
+              : `💵 Al terminar, le pagas ${COP(booking.total_amount)} en mano a ${peerFirstName}.`}
           </p>
           <p className="text-sm text-muted-foreground">
-            Sin comisión para ti: solo el valor del turno.
+            {done
+              ? "Si aún no se lo entregaste, hazlo ahora. Sin comisión para ti."
+              : "Sin comisión para ti: solo el valor del turno. Ten el efectivo listo."}
           </p>
         </div>
       );
@@ -118,12 +124,22 @@ export function BookingPaymentCard({
   const fee = Number(booking.platform_fee_amount ?? 0);
   const exempt = Number(booking.commission_exempt_cop ?? 0);
   if (cash) {
+    const done = booking.status === "completed";
+    const accepted = booking.status !== "pending";
     return (
       <div className={box}>
-        <p className="text-base font-semibold">💵 Te pagan en efectivo al terminar.</p>
+        <p className="text-base font-semibold">
+          {done
+            ? `💵 Cobraste ${COP(booking.total_amount)} en efectivo.`
+            : `💵 Al terminar te pagan ${COP(booking.total_amount)} en efectivo.`}
+        </p>
         <p className="text-sm text-muted-foreground">
           {fee > 0
-            ? `Al terminar descontamos ${COP(fee)} de comisión de tu billetera Humanix.`
+            ? done
+              ? `Descontamos ${COP(fee)} de comisión de tu billetera Humanix.`
+              : accepted
+                ? `Tienes ${COP(fee)} de comisión apartados en tu billetera; se descuentan al terminar.`
+                : `Al aceptar apartamos ${COP(fee)} de comisión de tu billetera; se descuentan al terminar.`
             : "Este turno no paga comisión 🎉"}
           {exempt > 0 && ` (primer turno con esta familia: te ahorraste ${COP(exempt)})`}
         </p>

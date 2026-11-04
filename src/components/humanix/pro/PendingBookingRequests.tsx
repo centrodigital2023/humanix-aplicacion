@@ -1,11 +1,18 @@
 // Solicitudes nuevas al profesional, arriba del todo y en vivo, como en inDrive: cuánto pagan, cuándo, hace cuánto
 // llegó y un botón grande para aceptar sin salir del panel (o ver el detalle antes).
+// Si es en efectivo y la billetera no alcanza para la comisión (o está bloqueada), el botón pasa a «Recargar $X y aceptar»:
+// abre la recarga por Bre-B y, apenas entra la plata, acepta el turno solo.
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BellRing, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { BellRing, CheckCircle2, ChevronRight, Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BrebPaySheet } from "@/components/humanix/payments/BrebPaySheet";
+import { useWallet, walletQuery } from "@/components/humanix/payments/WalletCard";
 import { acceptPendingBooking, usePendingBookings } from "@/hooks/use-pending-bookings";
+import { COP, cashAcceptCheck, suggestedTopupCOP } from "@/lib/commissionMatrix";
+import { topupWalletWithBreb } from "@/lib/firux.functions";
 import { useNow } from "@/hooks/use-now";
 import { friendlyError } from "@/lib/friendlyError";
 import { waitingLabel } from "@/lib/serviceFlow";
@@ -29,6 +36,19 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const now = useNow(30_000);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const wallet = useWallet(userId);
+  const qc = useQueryClient();
+  // Recarga en curso para poder aceptar: el turno y el valor.
+  const [topup, setTopup] = useState<{ bookingId: string; amount: number } | null>(null);
+
+  /** Lo que le falta para aceptar este turno (0 si alcanza o si aún no se sabe: la base decide al aceptar). */
+  const missingFor = (b: { payment_method: string | null; platform_fee_amount: number | null }) => {
+    const w = wallet.data;
+    if (!w) return 0;
+    const fee = b.payment_method === "CASH" ? Number(b.platform_fee_amount ?? 0) : 0;
+    const check = cashAcceptCheck(w.balance, fee, w.limit, w.reserved);
+    return check.ok ? 0 : check.missingCOP;
+  };
 
   const accept = async (bookingId: string) => {
     setAccepting(bookingId);
@@ -88,6 +108,8 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
       <ul className="space-y-3">
         {query.data.map((booking) => {
           const cash = booking.payment_method === "CASH";
+          const missing = missingFor(booking);
+          const topupFor = suggestedTopupCOP(missing);
           return (
             <li
               key={booking.id}
@@ -109,20 +131,39 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
                   </p>
                 </div>
               </div>
+              {missing > 0 && (
+                <p className="mt-3 rounded-xl bg-copper/10 px-3 py-2 text-sm" role="status">
+                  {wallet.data?.blocked
+                    ? `Tu billetera pasó el cupo. Recarga ${COP(topupFor)} para volver a recibir turnos.`
+                    : `Te faltan ${COP(missing)} en tu billetera para aceptarlo en efectivo.`}
+                </p>
+              )}
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <Button
-                  size="lg"
-                  className="min-h-12 text-base font-bold"
-                  disabled={accepting !== null}
-                  onClick={() => void accept(booking.id)}
-                >
-                  {accepting === booking.id ? (
-                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                  ) : (
-                    <CheckCircle2 className="h-5 w-5" aria-hidden />
-                  )}
-                  Aceptar
-                </Button>
+                {missing > 0 ? (
+                  <Button
+                    size="lg"
+                    className="min-h-12 text-base font-bold"
+                    disabled={accepting !== null}
+                    onClick={() => setTopup({ bookingId: booking.id, amount: topupFor })}
+                  >
+                    <Zap className="h-5 w-5" aria-hidden />
+                    Recargar {COP(topupFor)} y aceptar
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="min-h-12 text-base font-bold"
+                    disabled={accepting !== null}
+                    onClick={() => void accept(booking.id)}
+                  >
+                    {accepting === booking.id ? (
+                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5" aria-hidden />
+                    )}
+                    Aceptar
+                  </Button>
+                )}
                 <Button asChild size="lg" variant="outline" className="min-h-12 text-base">
                   <Link to="/servicio/$bookingId" params={{ bookingId: booking.id }}>
                     Ver detalle <ChevronRight className="h-4 w-4" aria-hidden />
@@ -133,6 +174,20 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
           );
         })}
       </ul>
+      <BrebPaySheet
+        open={topup !== null}
+        onOpenChange={(o) => !o && setTopup(null)}
+        title="Recargar y aceptar"
+        subtitle="Apenas pagues, aceptamos el turno por ti."
+        start={() => topupWalletWithBreb({ data: { amountCop: topup?.amount ?? 0 } })}
+        paidMessage="Recarga lista. Estamos aceptando el turno…"
+        onPaid={() => {
+          const id = topup?.bookingId;
+          setTopup(null);
+          void qc.invalidateQueries({ queryKey: walletQuery(userId) });
+          if (id) void accept(id);
+        }}
+      />
     </section>
   );
 }

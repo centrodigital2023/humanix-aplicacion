@@ -14,13 +14,25 @@ lógica). En producción no había suscripciones activas ni pagos aprobados de M
 
 - Primer turno de cada pareja (quien contrata, profesional): sin comisión hasta $30.000 si quien contrata se registró hace
   90 días o menos.
-- Turno mínimo $45.000. Formas de pago: `DIGITAL_BREB` (por defecto) o `CASH`.
-- Efectivo: la comisión se descuenta de la **billetera** del profesional al terminar el turno. Cupo hasta −$30.000; para
-  aceptar un turno en efectivo, saldo + cupo debe cubrir la comisión; por debajo de −$30.000 no recibe turnos nuevos. La
-  billetera se recarga con un cobro Bre-B normal.
+- Turno mínimo $20.000 (desde el 4 nov 2026; antes $45.000). Formas de pago: `DIGITAL_BREB` (por defecto) o `CASH`.
+- Efectivo, tipo InDrive (migración `20261104170000_cash_wallet.sql`): la familia elige «💵 Efectivo · le pagas en mano a
+  {nombre} al terminar». La comisión se descuenta de la **billetera** del profesional al terminar el turno.
+  - Cupo hasta −$30.000. Por debajo del cupo no recibe turnos nuevos (de ningún tipo).
+  - **Comisión apartada:** al aceptar un turno en efectivo su comisión queda apartada hasta que termina o se cancela. Para
+    aceptar otro: saldo + cupo − apartado ≥ comisión (`hx_booking_wallet_gate`, bloquea la fila de la billetera). Así varios
+    turnos en efectivo aceptados a la vez nunca hunden la billetera bajo el cupo.
+  - Si no le alcanza, la solicitud muestra «Recargar $X y aceptar»: recarga por Bre-B y, al confirmarse, acepta sola.
+  - La familia ve antes de pedir si ese profesional puede tomar efectivo (`hx_pro_cash_status`, sin exponer saldos):
+    `blocked` apaga la opción; `needs_topup` avisa que el profesional debe recargar.
+  - `get_my_wallet` devuelve saldo, cupo, apartado, libre y `health` (`ok` | `credit` | `low` | `blocked`; `low` = menos de
+    $10.000 libres). Avisos automáticos (`trg_wallet_movement_notify`): casi en el límite (una vez hasta la siguiente
+    recarga), bloqueada y desbloqueada.
+  - La billetera se recarga con un cobro Bre-B normal (valores rápidos u otro valor de $2.000 a $12.000.000).
 
 Regla espejo: `src/lib/commissionMatrix.ts` (probada) = `booking_commission_pct` / `hx_first_shift_exempt` en SQL
-(migración `20261103160000_breb_wallet_commission.sql`, aplicada en producción el 3 nov 2026 tras simulacro).
+(migración `20261103160000_breb_wallet_commission.sql`, aplicada en producción el 3 nov 2026 tras simulacro) y
+`cashAcceptCheck` / `walletHealth` = `hx_booking_wallet_gate` / `get_my_wallet` (`20261104170000_cash_wallet.sql`, **aún no
+aplicada en producción**).
 
 ## Flujo
 

@@ -688,6 +688,15 @@ function ServicePage() {
           onOpenChange={setFinishOpen}
           bookingId={booking.id}
           professionalId={booking.professional_id}
+          cashNote={
+            booking.payment_method === "CASH"
+              ? `💵 Cobra ${COP(booking.total_amount)} en efectivo.${
+                  Number(booking.platform_fee_amount ?? 0) > 0
+                    ? ` Descontamos ${COP(Number(booking.platform_fee_amount))} de comisión de tu billetera.`
+                    : ""
+                }`
+              : undefined
+          }
           onFinish={() =>
             updateStatus({ status: "completed", completed_at: new Date().toISOString() })
           }
@@ -697,6 +706,11 @@ function ServicePage() {
         <ConfirmFinishDialog
           open={finishOpen}
           onOpenChange={setFinishOpen}
+          cashNote={
+            booking.payment_method === "CASH"
+              ? `💵 Recuerda entregarle ${COP(booking.total_amount)} en efectivo a ${firstName}.`
+              : undefined
+          }
           onFinish={() =>
             updateStatus({ status: "completed", completed_at: new Date().toISOString() })
           }
