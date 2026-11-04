@@ -54,7 +54,6 @@ import { ProfileImporter } from "@/components/humanix/ProfileImporter";
 import { InstallAppButton } from "@/components/humanix/InstallAppButton";
 import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { newReferences, normalizeExtraction, type ExtractedProfile } from "@/lib/profileExtraction";
-import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
@@ -1368,17 +1367,6 @@ function ProDashboard() {
 
                 {/* Referidos — gana meses gratis */}
                 {userId && <ReferralCard userId={userId} />}
-
-                {/* Suscripción */}
-                {userId && (
-                  <div className="rounded-2xl border border-border bg-card/95 overflow-hidden">
-                    <MercadoPagoSubscription
-                      userId={userId}
-                      defaultPlan="pro_monthly"
-                      plans={["pro_monthly", "pro_premium_monthly"]}
-                    />
-                  </div>
-                )}
               </div>
             </details>
           </div>

@@ -51,7 +51,6 @@ import { WalletPanel } from "@/components/humanix/WalletPanel";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
 import { IpsBranchBilling } from "@/components/humanix/IpsBranchBilling";
 import { SmartInstitutionProfileForm } from "@/components/humanix/SmartInstitutionProfileForm";
-import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
 import { HumanixAssistant } from "@/components/humanix/HumanixAssistant";
 import { NotificationsBell } from "@/components/humanix/NotificationsBell";
@@ -1272,12 +1271,6 @@ function InstitutionDashboard() {
                 </div>
               )}
             </div>
-
-            <MercadoPagoSubscription
-              userId={user.id}
-              defaultPlan="institution_monthly"
-              plans={["institution_monthly"]}
-            />
 
             <div className="space-y-2">
               <p className="text-sm font-semibold flex items-center gap-1.5">
