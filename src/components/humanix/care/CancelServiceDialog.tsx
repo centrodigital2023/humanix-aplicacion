@@ -33,6 +33,11 @@ type Props = {
   party: CancelParty;
   /** `offer`: el servicio nació de un turno publicado, así que si el profesional cancela se activa el plan B. */
   mode?: "direct" | "offer";
+  /** Qué pasa con el dinero (devolución Bre-B, comisión apartada del efectivo). Ver `cancelMoneyNote`. */
+  moneyNote?: string;
+  /** «Rechazar» cuando el profesional aún no aceptó. */
+  title?: string;
+  confirmLabel?: string;
   /** Devuelve true cuando la reserva quedó cancelada (el diálogo se cierra). */
   onConfirm: (patch: Patch) => Promise<boolean>;
 };
@@ -42,6 +47,9 @@ export function CancelServiceDialog({
   onOpenChange,
   party,
   mode = "direct",
+  moneyNote,
+  title = "Cancelar el servicio",
+  confirmLabel = "Cancelar servicio",
   onConfirm,
 }: Props) {
   const {
@@ -70,9 +78,14 @@ export function CancelServiceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cancelar el servicio</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{cancelConsequence(party, mode)}</DialogDescription>
         </DialogHeader>
+        {moneyNote && (
+          <p className="rounded-xl bg-muted px-3 py-2 text-sm font-semibold text-foreground">
+            {moneyNote}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
           <fieldset className="space-y-2">
@@ -138,7 +151,7 @@ export function CancelServiceDialog({
               ) : (
                 <XCircle className="mr-2 h-4 w-4" aria-hidden="true" />
               )}
-              Cancelar servicio
+              {confirmLabel}
             </Button>
           </DialogFooter>
         </form>

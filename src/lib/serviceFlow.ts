@@ -138,6 +138,12 @@ const ALERT_TYPES: Record<string, { tone: LiveAlertTone; sticky: boolean }> = {
   escrow_refunded: { tone: "alert", sticky: false },
   refund_queued: { tone: "info", sticky: true },
   refund_paid: { tone: "good", sticky: false },
+  // Acciones del servicio (migración 20261104190000)
+  booking_reschedule_requested: { tone: "request", sticky: true },
+  booking_reschedule_accepted: { tone: "good", sticky: false },
+  booking_reschedule_declined: { tone: "info", sticky: false },
+  service_issue_peer: { tone: "alert", sticky: true },
+  service_issue_received: { tone: "info", sticky: false },
 };
 
 const BOOKING_LINK = /^\/servicio\/([0-9a-f-]{36})$/i;

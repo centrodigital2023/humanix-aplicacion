@@ -148,3 +148,17 @@ Para encenderlo: aplicar la migración, configurar `FIRUX_CONNECT_CLIENT_ID` y (
   `FIRUX_WEBHOOK_SECRET` (`whsec_…`). Se crean en Firux → Ajustes → Conexiones API y se muestran una sola vez.
 - URL del webhook en Firux: `https://humanix.lat/api/public/firux/webhook`.
 - Prueba: crear un cobro desde la app y simularlo con `POST /v1/charges/{id}/simulate_payment` (solo llaves de prueba).
+
+## Acciones del servicio y pagos (migración 20261104190000)
+
+Pantalla `/servicio/$bookingId` (la abren la familia, la EPS/IPS y el profesional). Reglas en `src/lib/serviceActions.ts`.
+
+| Acción | Quién | Cuándo | Qué pasa con el dinero |
+| --- | --- | --- | --- |
+| Cancelar / Rechazar | ambas partes | Pedido, Aceptado, En camino | Bre-B retenido → devolución completa automática (`trg_sb_escrow`, `booking_refunds`). Bre-B sin pagar → nada. Efectivo → la comisión apartada se libera sola (`hx_wallet_reserved` solo cuenta turnos abiertos). |
+| Confirmar que terminó | familia / EPS | Cuidando | Bre-B → libera el pago retenido. Efectivo → la comisión se descuenta de la billetera. |
+| Reprogramar | ambas partes | Pedido, Aceptado | Ninguno: cambia solo la hora (`hx_request_reschedule`, `hx_answer_reschedule`). |
+| Reportar un problema | ambas partes | Aceptado → Cuidando (y 72 h tras terminar) | Ninguno: radicado PQRS ligado al turno (`hx_report_service_issue`). El reclamo del pago retenido tras terminar es `hx_report_booking_problem` (tarjeta de pago). |
+| Escribir | ambas partes | desde Aceptado | — |
+
+Ya «Cuidando» no se cancela desde la app (`trg_guard_cancel_in_progress`, el equipo sí puede): se reporta y el equipo decide con `hx_escrow_resolve`.

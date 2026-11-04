@@ -14,6 +14,9 @@ import {
   XCircle,
   Eye,
   Lock,
+  MessageCircle,
+  CalendarClock as CalendarEdit,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/humanix/Navbar";
@@ -38,6 +41,18 @@ import {
   FinishServiceDialog,
 } from "@/components/humanix/care/FinishServiceDialog";
 import { KudosCard } from "@/components/humanix/care/KudosCard";
+import { ReportIssueDialog } from "@/components/humanix/care/ReportIssueDialog";
+import {
+  RescheduleDialog,
+  ReschedulePrompt,
+  useOpenReschedule,
+} from "@/components/humanix/care/RescheduleService";
+import {
+  cancelLabel,
+  cancelMoneyNote,
+  serviceActions,
+  type ActionSide,
+} from "@/lib/serviceActions";
 import { useCareReport } from "@/hooks/use-care-loop";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
@@ -148,6 +163,8 @@ function ServicePage() {
   const [hasRating, setHasRating] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [clientOrigin, setClientOrigin] = useState<"institution" | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const now = useNow(30_000);
@@ -280,6 +297,11 @@ function ServicePage() {
   const isClient = !!booking && userId === booking.client_id;
   /** Círculo de cuidado (o personal): solo lectura. */
   const isViewer = !!booking && !!userId && !isProfessional && !isClient;
+  const side: ActionSide = isProfessional ? "professional" : isClient ? "client" : "viewer";
+  const reschedule = useOpenReschedule(
+    bookingId,
+    !!booking && !isViewer && ["pending", "confirmed"].includes(booking.status),
+  );
 
   // Quien solo mira (círculo) puede no poder leer el perfil del profesional: el servidor da el nombre corto.
   const viewerReport = useCareReport(bookingId, isViewer);
@@ -320,6 +342,11 @@ function ServicePage() {
   const completed = booking.status === "completed";
   const cancelled = booking.status === "cancelled";
   const canAct = (isProfessional || isClient) && !completed && !cancelled;
+  const actions = serviceActions(side, booking);
+  const goToChat = () =>
+    document
+      .getElementById("chat-servicio")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   const proAction = nextProfessionalAction(booking.status);
   const firstName = displayPeer.split(" ")[0];
 
@@ -460,6 +487,17 @@ function ServicePage() {
                 </Link>
               </div>
             )}
+            {reschedule.request && !isViewer && (
+              <ReschedulePrompt
+                request={reschedule.request}
+                userId={userId}
+                peerFirstName={firstName}
+                onAnswered={(r) => {
+                  void reschedule.reload();
+                  if (r === "accepted") void refetchBooking();
+                }}
+              />
+            )}
             {isProfessional && proAction && !completed && !cancelled && (
               <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur sm:static sm:z-auto sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0">
                 <button
@@ -512,23 +550,53 @@ function ServicePage() {
                       Acciones del servicio
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {booking.status === "in_progress" && isClient && (
+                      {actions.includes("confirm_finish") && (
                         <ActionButton
                           icon={<CheckCircle2 className="h-4 w-4" />}
-                          label="Finalizar servicio"
+                          label="Confirmar que terminó"
                           onClick={() => setFinishOpen(true)}
                           tone="bio"
                         />
                       )}
-                      <ActionButton
-                        icon={<XCircle className="h-4 w-4" />}
-                        label={
-                          isProfessional && booking.status === "pending" ? "Rechazar" : "Cancelar"
-                        }
-                        onClick={() => setCancelOpen(true)}
-                        tone="fuchsia"
-                      />
+                      {actions.includes("contact") && (
+                        <ActionButton
+                          icon={<MessageCircle className="h-4 w-4" />}
+                          label={`Escribirle a ${firstName}`}
+                          onClick={goToChat}
+                          tone="outline"
+                        />
+                      )}
+                      {actions.includes("reschedule") && (
+                        <ActionButton
+                          icon={<CalendarEdit className="h-4 w-4" />}
+                          label="Reprogramar"
+                          onClick={() => setRescheduleOpen(true)}
+                          tone="outline"
+                        />
+                      )}
+                      {actions.includes("report") && (
+                        <ActionButton
+                          icon={<AlertTriangle className="h-4 w-4" />}
+                          label="Reportar un problema"
+                          onClick={() => setReportOpen(true)}
+                          tone="copper"
+                        />
+                      )}
+                      {actions.includes("cancel") && (
+                        <ActionButton
+                          icon={<XCircle className="h-4 w-4" />}
+                          label={cancelLabel(side, booking.status)}
+                          onClick={() => setCancelOpen(true)}
+                          tone="fuchsia"
+                        />
+                      )}
                     </div>
+                    {booking.status === "in_progress" && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        El turno ya empezó: si algo salió mal, repórtalo y el equipo de Humanix
+                        decide qué pasa con el pago.
+                      </p>
+                    )}
                     {booking.service_address && (
                       <p className="mt-4 text-xs text-muted-foreground">
                         <strong className="text-foreground">Dirección:</strong>{" "}
@@ -575,11 +643,13 @@ function ServicePage() {
                     />
                   )}
                   {contactOpen ? (
-                    <BookingChat
-                      conversationId={conversationId}
-                      currentUserId={userId}
-                      peerName={displayPeer}
-                    />
+                    <div id="chat-servicio" className="scroll-mt-24">
+                      <BookingChat
+                        conversationId={conversationId}
+                        currentUserId={userId}
+                        peerName={displayPeer}
+                      />
+                    </div>
                   ) : (
                     <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-card/70 p-5 text-sm text-muted-foreground">
                       <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -690,7 +760,36 @@ function ServicePage() {
           onOpenChange={setCancelOpen}
           party={isProfessional ? "professional" : "client"}
           mode={booking.job_offer_id ? "offer" : "direct"}
-          onConfirm={(patch) => updateStatus(patch)}
+          moneyNote={cancelMoneyNote(isProfessional ? "professional" : "client", booking)}
+          title={
+            isProfessional && booking.status === "pending" ? "Rechazar el servicio" : undefined
+          }
+          confirmLabel={
+            isProfessional && booking.status === "pending" ? "Rechazar servicio" : undefined
+          }
+          onConfirm={async (patch) => {
+            const ok = await updateStatus(patch);
+            // El servidor pasa el pago a devolución y libera la comisión apartada: se relee para mostrarlo.
+            if (ok) void refetchBooking();
+            return ok;
+          }}
+        />
+      )}
+      {canAct && (
+        <RescheduleDialog
+          open={rescheduleOpen}
+          onOpenChange={setRescheduleOpen}
+          bookingId={booking.id}
+          currentAt={booking.scheduled_at}
+          onSent={() => void reschedule.reload()}
+        />
+      )}
+      {canAct && (
+        <ReportIssueDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          bookingId={booking.id}
+          side={isProfessional ? "professional" : "client"}
         />
       )}
       {isProfessional && !completed && !cancelled && (
@@ -743,17 +842,19 @@ function ActionButton({
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  tone: "bio" | "copper" | "fuchsia";
+  tone: "bio" | "copper" | "fuchsia" | "outline";
 }) {
   const cls = {
+    outline: "border border-border bg-card text-foreground",
     bio: "bg-biosensor text-biosensor-foreground",
     copper: "bg-copper text-copper-foreground",
     fuchsia: "bg-fuchsia-neural text-fuchsia-neural-foreground",
   }[tone];
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${cls} hover:opacity-95 transition`}
+      className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${cls} hover:opacity-95 transition`}
     >
       {icon}
       {label}
