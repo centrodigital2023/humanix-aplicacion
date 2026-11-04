@@ -117,15 +117,32 @@ export function ProWelcome({
         </section>
 
         <div className="space-y-3">
-          <FamilyFold
-            id="bienvenida-foto"
-            emoji={done("photo") ? "✅" : "📸"}
-            title="1. Tu foto"
-            hint={done("photo") ? "Lista" : "Las familias eligen a quien ven"}
-            defaultOpen={firstOpen === "photo"}
+          <div
+            className={cn(
+              "relative rounded-2xl",
+              !done("photo") &&
+                "ring-2 ring-biosensor shadow-lg shadow-biosensor/30 ring-offset-2 ring-offset-background",
+            )}
           >
-            <AvatarUploader userId={userId} initialUrl={avatarUrl} onChange={onAvatar} />
-          </FamilyFold>
+            {!done("photo") && (
+              <span className="absolute -top-3 right-4 z-10 rounded-full bg-biosensor px-3 py-0.5 text-xs font-bold text-white shadow motion-safe:animate-bounce">
+                ¡Te falta este!
+              </span>
+            )}
+            <FamilyFold
+              id="bienvenida-foto"
+              emoji={done("photo") ? "✅" : "📸"}
+              title="1. Tu foto"
+              hint={
+                done("photo")
+                  ? "Lista"
+                  : "Con tu foto, las familias confían más y te eligen primero"
+              }
+              defaultOpen={firstOpen === "photo" || !done("photo")}
+            >
+              <AvatarUploader userId={userId} initialUrl={avatarUrl} onChange={onAvatar} />
+            </FamilyFold>
+          </div>
 
           <FamilyFold
             id="bienvenida-trabajo"
