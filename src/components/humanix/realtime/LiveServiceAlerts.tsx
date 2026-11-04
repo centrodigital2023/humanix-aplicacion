@@ -176,7 +176,11 @@ function AlertCard({
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {alert.bookingId && (
-          <Button size="sm" onClick={() => void accept()} disabled={accepting}>
+          <Button
+            onClick={() => void accept()}
+            disabled={accepting}
+            className="h-11 flex-1 bg-biosensor px-6 text-base font-bold text-white shadow-lg shadow-biosensor/40 ring-2 ring-biosensor/40 ring-offset-2 ring-offset-background hover:bg-biosensor/90 motion-safe:animate-pulse"
+          >
             {accepting ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
