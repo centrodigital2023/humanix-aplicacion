@@ -2631,6 +2631,7 @@ export type Database = {
           legal_representative_phone: string | null
           lng: number | null
           nit: string | null
+          onboarding_complete: boolean
           updated_at: string
           user_id: string
           verified: boolean | null
@@ -2654,6 +2655,7 @@ export type Database = {
           legal_representative_phone?: string | null
           lng?: number | null
           nit?: string | null
+          onboarding_complete?: boolean
           updated_at?: string
           user_id: string
           verified?: boolean | null
@@ -2677,6 +2679,7 @@ export type Database = {
           legal_representative_phone?: string | null
           lng?: number | null
           nit?: string | null
+          onboarding_complete?: boolean
           updated_at?: string
           user_id?: string
           verified?: boolean | null
