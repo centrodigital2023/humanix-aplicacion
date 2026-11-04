@@ -19,7 +19,6 @@ import { InstallAppButton } from "@/components/humanix/InstallAppButton";
 import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { OffersMap, type MapPoint } from "@/components/humanix/OffersMap";
 import { LiveMapSection } from "@/components/humanix/LiveMapSection";
-import { MercadoPagoSubscription } from "@/components/humanix/MercadoPagoSubscription";
 import { SmartFamilyProfileForm } from "@/components/humanix/SmartFamilyProfileForm";
 
 import { DangerZoneCard } from "@/components/humanix/DangerZoneCard";
@@ -492,11 +491,6 @@ function FamilyDashboard() {
                   >
                     Comparar planes <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
-                  <MercadoPagoSubscription
-                    userId={user.id}
-                    defaultPlan="essential_monthly"
-                    plans={["essential_monthly", "family_premium_monthly"]}
-                  />
                 </div>
               </FamilyFold>
 
