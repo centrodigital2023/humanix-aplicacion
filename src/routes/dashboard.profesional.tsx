@@ -55,6 +55,7 @@ import { InstallAppButton } from "@/components/humanix/InstallAppButton";
 import { ShareAppButton } from "@/components/humanix/ShareAppButton";
 import { newReferences, normalizeExtraction, type ExtractedProfile } from "@/lib/profileExtraction";
 import { BrebKeyCard } from "@/components/humanix/payments/BrebKeyCard";
+import { EarningsCard } from "@/components/humanix/payments/EarningsCard";
 import { FiruxConnectCard } from "@/components/humanix/payments/FiruxConnectCard";
 import { WalletCard } from "@/components/humanix/payments/WalletCard";
 import { AiCreditsBalance } from "@/components/humanix/AiCreditsBalance";
@@ -961,6 +962,9 @@ function ProDashboard() {
 
             {/* Alertas SOS de las personas que atiendo (solo aparece si hay alguna) */}
             {userId && <SosAlertsPanel userId={userId} />}
+
+            {/* Saldo individual: retenido, por llegar a su llave Bre-B y recibido */}
+            {userId && <EarningsCard userId={userId} />}
 
             {/* Cómo recibe su plata: llave Bre-B (pagos digitales) y billetera (comisión de turnos en efectivo) */}
             {userId && (

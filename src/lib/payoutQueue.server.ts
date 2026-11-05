@@ -5,7 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-export type PayoutStatus = "needs_key" | "queued" | "sent" | "paid" | "failed";
+export type PayoutStatus = "needs_key" | "queued" | "sending" | "sent" | "paid" | "failed";
 
 export interface PayoutRow {
   id: string;
@@ -32,7 +32,13 @@ export interface PayoutQueue {
 }
 
 export type PayoutErrorCode =
-  "forbidden" | "invalid_input" | "not_found" | "already_paid" | "needs_key" | "failed";
+  | "forbidden"
+  | "invalid_input"
+  | "not_found"
+  | "already_paid"
+  | "needs_key"
+  | "in_flight"
+  | "failed";
 
 export type PayoutResult<T> =
   ({ ok: true } & T) | { ok: false; code: PayoutErrorCode; message: string };
@@ -43,6 +49,7 @@ const MESSAGES: Record<PayoutErrorCode, string> = {
   not_found: "No encontramos ese pago.",
   already_paid: "Ese pago ya estaba marcado como enviado.",
   needs_key: "El profesional aún no tiene llave Bre-B: no se puede marcar como enviado.",
+  in_flight: "Ese pago se está enviando por Bre-B en este momento. Espera unos segundos.",
   failed: "No pudimos actualizar el pago. Inténtalo de nuevo.",
 };
 
@@ -50,7 +57,7 @@ function fail(code: PayoutErrorCode): { ok: false; code: PayoutErrorCode; messag
   return { ok: false, code, message: MESSAGES[code] };
 }
 
-const STATUSES: PayoutStatus[] = ["needs_key", "queued", "sent", "paid", "failed"];
+const STATUSES: PayoutStatus[] = ["needs_key", "queued", "sending", "sent", "paid", "failed"];
 
 /** Totales por estado (pura). */
 export function summarizePayouts(
@@ -72,6 +79,7 @@ export function summarizePayouts(
 export function sortPayouts<T extends Pick<PayoutRow, "status" | "created_at">>(rows: T[]): T[] {
   const rank: Record<PayoutStatus, number> = {
     queued: 0,
+    sending: 1,
     sent: 1,
     failed: 2,
     needs_key: 3,
@@ -169,6 +177,8 @@ export async function markPayout(
       return fail("already_paid");
     case "needs_key":
       return fail("needs_key");
+    case "in_flight":
+      return fail("in_flight");
     default:
       return fail("failed");
   }

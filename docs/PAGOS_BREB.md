@@ -92,7 +92,7 @@ de la familia (SECURITY DEFINER) encienden `hx.escrow` solo dentro de su transac
 **Hoy (con la llave de Humanix):** el dinero de los turnos llega a la cuenta Firux de Humanix. La cola `payouts` + la
 llave Bre-B del profesional (`professional_payout_keys`, tarjeta «Tu llave Bre-B») dicen cuánto y a quién pagar; el
 equipo dispersa desde el panel de Firux (la API de Firux no mueve dinero ni hace dispersiones).
-El equipo trabaja la cola en **/superadmin/pagos** (solo staff): ve cuánto pagar, a qué llave y a quién, copia la
+Con la dispersión automática (abajo) esto pasa solo; a mano queda como respaldo. El equipo trabaja la cola en **/superadmin/pagos** (solo staff): ve cuánto pagar, a qué llave y a quién, copia la
 llave, paga en Firux y marca «Enviado» con la referencia de Firux, o «Falló» con el motivo (`hx_mark_payout`, avisa
 al profesional). Cuando el profesional guarda o corrige su llave, sus pagos `needs_key`/`failed` pasan solos a
 `queued` con la llave nueva (`trg_payout_key_sync`). Ambos en la migración `20261104160000_breb_payouts_ops.sql`
@@ -141,6 +141,73 @@ devolver un cobrador con ese token sin tocar la lógica.
 
 Para encenderlo: aplicar la migración, configurar `FIRUX_CONNECT_CLIENT_ID` y (opcional) `FIRUX_CONNECT_REDIRECT_URI`
 (por defecto `https://humanix.lat/firux/conectado`), y poner `FIRUX_CONNECT_ENABLED=true`.
+
+## Reparto, dispersión automática y conciliación (migración 20261105100000)
+
+Cada pago que entra de una familia se reparte en esa misma transacción y, al liberarse, sale solo a la llave Bre-B del
+profesional. Humanix se queda con la comisión de la matriz (15 / 12 / 10 %, planes institucionales y la exención del
+primer turno, sin cambios). Lógica en `src/lib/dispersion.ts`, `dispersion.server.ts` y `reconciliation.ts` (probadas).
+
+1. **Reparto por transacción** (`payment_splits`): cuando Firux confirma el pago del turno se fija el reparto de ese
+   cobro: `gross_cop` = lo que pagó la familia, `platform_fee_cop` = `service_bookings.platform_fee_amount`,
+   `professional_cop` = el resto. Una fila por turno; la suma siempre cuadra (restricción en la tabla).
+2. **Libro de partida doble** (`ledger_entries`): cada fila mueve plata de una cuenta a otra, así el libro siempre suma
+   cero. Lo escriben solo triggers, con una `ref` única (un aviso repetido no anota dos veces).
+
+   | Evento | Desde → hacia |
+   | --- | --- |
+   | Familia paga el turno | external → escrow |
+   | Se libera (confirmó, 24 h o el equipo) | escrow → platform (comisión) y escrow → professional (neto) |
+   | Dispersión aceptada por Firux | professional → in_transit |
+   | Firux confirma que llegó | in_transit → external |
+   | Firux la rechaza | in_transit → professional (vuelve al saldo) |
+   | Pago manual marcado en el panel | professional → external |
+   | Devolución a la familia | escrow → external |
+   | Recarga de billetera | external → wallet |
+   | Comisión de turno en efectivo | wallet → platform |
+   | Plan institucional | external → platform |
+
+   Lo existente entra al libro una vez al aplicar la migración (relleno idempotente).
+3. **Dispersión automática** (apagada hasta encenderla): al liberarse un pago, `hx_queue_payout` deja la fila en
+   `payouts` (`queued`) y el trigger `trg_payout_kick` despierta al despachador `POST /api/public/firux/dispatch` con
+   pg_net (en el mismo segundo). Un reloj `hx-dispersion-tick` (pg_cron, cada minuto) es el respaldo. El despachador
+   reclama lotes de 50 (`hx_claim_payouts`, `FOR UPDATE SKIP LOCKED`), los envía a Firux 5 en paralelo y anota cada
+   resultado (`hx_payout_result`). Estados: `queued → sending → sent → paid`.
+   - Error pasajero (red, 5xx, 429, credencial): vuelve a la cola con espera de 1 min, 5 min, 30 min y 2 h; al 5.º
+     intento queda `failed`. Un 401/403 detiene el lote (nunca se culpa la llave del profesional por un error nuestro).
+   - Rechazo (llave inválida): `failed` y aviso al profesional; al corregir su llave vuelve sola a la cola.
+   - `Idempotency-Key` = id del pago + huella de la llave de destino: un reintento nunca paga dos veces. Un pago que
+     quedó `sending` más de 10 min (servidor caído) vuelve a la cola con la misma llave.
+   - El aviso firmado `payout.paid` / `payout.failed` llega al mismo webhook (`hx_payout_webhook`).
+   - El pago manual desde /superadmin/pagos sigue funcionando (respaldo); no deja marcar un pago mientras se envía.
+4. **Saldos por profesional**: tarjeta «Tus pagos» en el panel del profesional (`get_my_earnings`): retenido, por
+   llegar (por dispersar + en camino) y recibido (30 días y total), más la comisión de Humanix de los últimos 30 días.
+   Se actualiza sola.
+5. **Conciliación** en /superadmin/pagos (`hx_reconciliation`, solo staff): recaudado y comisión de 30 días, lo que
+   debe haber en la cuenta Firux según el libro (retenido + por dispersar + en camino + comisión + billeteras) para
+   compararlo con el saldo real, saldo de cada profesional, libro en CSV (31 días) y la lista de diferencias: cobro
+   pagado fuera del libro, monto cobrado distinto, turno cerrado con plata retenida, saldo distinto a la cola, en camino
+   distinto a lo enviado, billetera distinta, dispersión sin confirmar hace más de 1 h. Botón «Dispersar ahora».
+
+**Suposiciones sobre la API de dispersiones (Firux no la ha publicado; corregir en un solo lugar):**
+
+| Qué | Suposición | Dónde se cambia |
+| --- | --- | --- |
+| Crear dispersión | `POST /v1/payouts` con la llave de Humanix: `{ amount, currency: "COP", external_reference: <id del pago>, description, destination: { type: "breb_key", key_type, key } }` + `Idempotency-Key` | `buildPayoutBody` (`dispersion.ts`), `firuxSendPayout` (`dispersion.server.ts`) |
+| Respuesta | `{ id, status: pending \| processing \| paid \| failed, failure_reason? }`; 409 con `id` = ya la tiene | `classifyPayoutResponse` |
+| Tipos de llave | `phone`, `document`, `email`, `alias` (los mismos de Humanix) | `KEY_TYPE` en `dispersion.ts` |
+| Aviso | `payout.paid` / `payout.failed` (también `payout.succeeded` / `payout.returned`) con `data.id` y `external_reference`, misma firma | `parsePayoutEvent` |
+| Lote masivo | Un `POST` por pago en paralelo (si Firux publica un endpoint de lote, se cambia en `runDispersion`) | `dispersion.server.ts` |
+
+**Para encenderla:**
+
+1. Aplicar la migración `20261105100000_split_dispersion_ledger.sql` (si se aplica 20261104160000 después, volver a
+   aplicar esta, que trae la versión nueva de `hx_mark_payout` y del cambio de llave).
+2. En Lovable Cloud: `FIRUX_PAYOUTS_ENABLED=true` y `FIRUX_DISPATCH_SECRET` (un valor largo al azar).
+3. En la base: `UPDATE hx_dispersion_config SET enabled = true, dispatch_url = 'https://humanix.lat/api/public/firux/dispatch', secret = '<el mismo FIRUX_DISPATCH_SECRET>';`
+4. En Firux: confirmar que la cuenta tiene dispersiones habilitadas y saldo, y que el webhook envía los avisos `payout.*`.
+
+Sin el paso 2 nada sale solo: los pagos liberados siguen en la cola y el equipo los paga a mano como hoy.
 
 ## Configuración pendiente
 

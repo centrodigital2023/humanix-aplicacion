@@ -5,7 +5,10 @@
 //   3. `charge.paid` → `hx_firux_charge_paid` aplica el pago en una sola transacción (turno pagado, recarga o plan) y es
 //      idempotente: un aviso repetido devuelve `already_applied` y no suma dos veces.
 //   4. `charge.expired` / `charge.failed` → el cobro pendiente se marca así para que la pantalla ofrezca otro QR.
+//   5. `payout.paid` / `payout.failed` (dispersión automática, migración 20261105100000) → `hx_payout_webhook` cierra el
+//      pago al profesional (llegó a su llave, o vuelve a su saldo para corregir la llave). Idempotente.
 import { parseFiruxEvent, verifyFiruxSignature } from "./firux";
+import { parsePayoutEvent } from "./dispersion";
 
 export interface WebhookStore {
   /** Anota el aviso; devuelve falso si ya estaba (mismo proveedor e id). */
@@ -18,6 +21,13 @@ export interface WebhookStore {
   markEvent(id: string, processed: boolean, errorCode: string | null): Promise<void>;
   applyPaid(firuxId: string, amountPaid: number): Promise<string>;
   markCharge(firuxId: string, status: "expired" | "failed"): Promise<void>;
+  /** Resultado de una dispersión. Devuelve el estado final o `unknown_payout`. */
+  applyPayout?(e: {
+    payoutId: string;
+    reference: string | null;
+    status: "paid" | "failed";
+    reason: string | null;
+  }): Promise<string>;
 }
 
 export interface WebhookConfig {
@@ -48,7 +58,10 @@ export async function handleFiruxWebhook(request: Request, cfg: WebhookConfig): 
   });
   if (!valid) return json(401, { error: "invalid_signature" });
 
-  const event = parseFiruxEvent(rawBody);
+  const payoutEvent = parsePayoutEvent(rawBody);
+  const event = payoutEvent
+    ? { type: payoutEvent.type, chargeId: payoutEvent.payoutId, reference: null, amountPaid: 0 }
+    : parseFiruxEvent(rawBody);
   if (!event) {
     // Eventos firmados sin cobro (`webhook.test` del botón «Enviar prueba», `payment.notified` del Verificador):
     // se acusa recibo para que Firux no reintente; no mueven dinero aquí.
@@ -74,7 +87,16 @@ export async function handleFiruxWebhook(request: Request, cfg: WebhookConfig): 
 
   try {
     let result = "ignored";
-    if (event.type === "charge.paid") {
+    if (payoutEvent) {
+      result = store.applyPayout
+        ? await store.applyPayout({
+            payoutId: payoutEvent.payoutId,
+            reference: payoutEvent.reference,
+            status: payoutEvent.type === "payout.paid" ? "paid" : "failed",
+            reason: payoutEvent.reason,
+          })
+        : "ignored";
+    } else if (event.type === "charge.paid") {
       result = await store.applyPaid(event.chargeId, event.amountPaid);
     } else if (event.type === "charge.expired" || event.type === "charge.failed") {
       await store.markCharge(
@@ -83,7 +105,10 @@ export async function handleFiruxWebhook(request: Request, cfg: WebhookConfig): 
       );
       result = "marked";
     }
-    const errorCode = result === "unknown_charge" || result === "underpaid" ? result : null;
+    const errorCode =
+      result === "unknown_charge" || result === "underpaid" || result === "unknown_payout"
+        ? result
+        : null;
     await store.markEvent(eventId, errorCode === null, errorCode);
     return json(200, { received: true, result });
   } catch (e) {
@@ -120,6 +145,16 @@ export function supabaseWebhookStore(
       const { data, error } = await admin.rpc("hx_firux_charge_paid", {
         p_firux_id: firuxId,
         p_amount_paid: amountPaid,
+      });
+      if (error) throw new Error(error.message);
+      return String(data);
+    },
+    async applyPayout(e) {
+      const { data, error } = await admin.rpc("hx_payout_webhook", {
+        p_firux_id: e.payoutId,
+        p_reference: e.reference,
+        p_status: e.status,
+        p_error: e.reason,
       });
       if (error) throw new Error(error.message);
       return String(data);

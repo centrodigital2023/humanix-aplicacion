@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { handleFiruxWebhook } from "@/lib/firuxWebhook";
 
-// Aviso firmado de Firux (`charge.paid`, `charge.expired`, `charge.failed`). Registrar en Firux:
+// Aviso firmado de Firux (`charge.paid`, `charge.expired`, `charge.failed`, `payout.paid`, `payout.failed`). Registrar en Firux:
 // https://humanix.lat/api/public/firux/webhook
 export const Route = createFileRoute("/api/public/firux/webhook")({
   server: {

@@ -1,5 +1,6 @@
-// Pagos a profesionales (cola `payouts`). El dinero de los turnos Bre-B llega a la cuenta Firux de Humanix; el equipo
-// dispersa desde el panel de Firux a la llave Bre-B de cada profesional y aquí lo marca como enviado (o fallido).
+// Pagos a profesionales (cola `payouts`). El dinero de los turnos Bre-B llega a la cuenta Firux de Humanix. Con la
+// dispersión automática encendida (FIRUX_PAYOUTS_ENABLED) cada pago liberado sale solo a la llave Bre-B del profesional;
+// si no, o como respaldo, el equipo paga desde el panel de Firux y aquí lo marca como enviado (o fallido).
 // Solo staff: la lista y las marcas pasan por el servidor (`payoutQueue.functions.ts`).
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -23,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { AppShell, type NavItem } from "@/components/humanix/AppShell";
 import { EscrowOpsPanel } from "@/components/humanix/payments/EscrowOpsPanel";
+import { ReconciliationPanel } from "@/components/humanix/payments/ReconciliationPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,7 +59,8 @@ export const Route = createFileRoute("/superadmin/pagos")({
 
 const STATUS_LABEL: Record<PayoutStatus, string> = {
   queued: "Por pagar",
-  sent: "Enviado",
+  sending: "Enviando",
+  sent: "En camino",
   failed: "Falló",
   needs_key: "Sin llave",
   paid: "Pagado",
@@ -65,6 +68,7 @@ const STATUS_LABEL: Record<PayoutStatus, string> = {
 
 const STATUS_VARIANT: Record<PayoutStatus, "default" | "secondary" | "destructive" | "outline"> = {
   queued: "default",
+  sending: "secondary",
   sent: "secondary",
   failed: "destructive",
   needs_key: "outline",
@@ -124,10 +128,13 @@ function PagosPage() {
     <AppShell nav={NAV} title="Pagos a profesionales (Bre-B)" user={user} onLogout={logout}>
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Paga cada turno desde el panel de Firux a la llave Bre-B del profesional y márcalo aquí.
-          El profesional recibe un aviso. Un turno entra aquí solo cuando su pago se libera: la
-          familia confirmó que terminó, pasaron 24 h sin reportes o el equipo decidió un reclamo.
+          Un turno entra aquí solo cuando su pago se libera: la familia confirmó que terminó,
+          pasaron 24 h sin reportes o el equipo decidió un reclamo. Ahí se reparte: la comisión
+          queda para Humanix y el resto sale a la llave Bre-B del profesional, solo si la dispersión
+          automática está encendida. Si no, págalo desde el panel de Firux y márcalo aquí.
         </p>
+
+        <ReconciliationPanel />
 
         <EscrowOpsPanel />
 
