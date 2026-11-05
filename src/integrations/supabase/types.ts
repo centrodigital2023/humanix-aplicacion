@@ -4298,6 +4298,56 @@ export type Database = {
         }
         Relationships: []
       }
+      service_contract_acceptances: {
+        Row: {
+          accepted_at: string
+          booking_id: string
+          consents: string[]
+          id: string
+          ip: string | null
+          key_terms: Json
+          party: string
+          terms_version: string
+          text_sha256: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          booking_id: string
+          consents?: string[]
+          id?: string
+          ip?: string | null
+          key_terms: Json
+          party: string
+          terms_version: string
+          text_sha256: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          booking_id?: string
+          consents?: string[]
+          id?: string
+          ip?: string | null
+          key_terms?: Json
+          party?: string
+          terms_version?: string
+          text_sha256?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contract_acceptances_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_rating_dimensions: {
         Row: {
           booking_id: string
@@ -5944,6 +5994,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      hx_accept_service_contract: {
+        Args: {
+          p_booking_id: string
+          p_consents: string[]
+          p_text_sha256: string
+          p_user_agent?: string
+          p_version: string
+        }
+        Returns: Json
+      }
       hx_acting_institution: {
         Args: { p_module: string; p_uid: string }
         Returns: string
@@ -6274,6 +6334,7 @@ export type Database = {
         Args: { p_booking: string; p_detail: string; p_kind: string }
         Returns: Json
       }
+      hx_request_ip: { Args: never; Returns: string }
       hx_request_reschedule: {
         Args: { p_booking: string; p_new_at: string; p_note?: string }
         Returns: string
@@ -6293,6 +6354,10 @@ export type Database = {
           reveals_left: number
           whatsapp: string
         }[]
+      }
+      hx_service_contract_status: {
+        Args: { p_booking_id: string }
+        Returns: Json
       }
       hx_sha256: { Args: { p_text: string }; Returns: string }
       hx_sos_audience: {
