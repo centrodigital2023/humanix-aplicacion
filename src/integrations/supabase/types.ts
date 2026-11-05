@@ -652,7 +652,7 @@ export type Database = {
             foreignKeyName: "booking_refunds_charge_id_fkey"
             columns: ["charge_id"]
             isOneToOne: true
-            referencedRelation: "payment_charges"
+            referencedRelation: "firux_charges"
             referencedColumns: ["id"]
           },
         ]
@@ -1625,6 +1625,65 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: []
+      }
+      firux_charges: {
+        Row: {
+          amount_cop: number
+          amount_paid_cop: number | null
+          booking_id: string | null
+          created_at: string
+          expires_at: string | null
+          firux_id: string | null
+          id: string
+          kind: string
+          paid_at: string | null
+          payment_url: string | null
+          plan_key: string | null
+          qr_emv: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_cop: number
+          amount_paid_cop?: number | null
+          booking_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          firux_id?: string | null
+          id?: string
+          kind: string
+          paid_at?: string | null
+          payment_url?: string | null
+          plan_key?: string | null
+          qr_emv?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_cop?: number
+          amount_paid_cop?: number | null
+          booking_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          firux_id?: string | null
+          id?: string
+          kind?: string
+          paid_at?: string | null
+          payment_url?: string | null
+          plan_key?: string | null
+          qr_emv?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "firux_charges_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       form_responses: {
         Row: {
@@ -3290,65 +3349,6 @@ export type Database = {
           },
         ]
       }
-      payment_charges: {
-        Row: {
-          amount_cop: number
-          amount_paid_cop: number | null
-          booking_id: string | null
-          created_at: string
-          expires_at: string | null
-          provider_tx_id: string | null
-          id: string
-          kind: string
-          paid_at: string | null
-          checkout_url: string | null
-          plan_key: string | null
-          provider: string
-          status: string
-          user_id: string
-        }
-        Insert: {
-          amount_cop: number
-          amount_paid_cop?: number | null
-          booking_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          provider_tx_id?: string | null
-          id?: string
-          kind: string
-          paid_at?: string | null
-          checkout_url?: string | null
-          plan_key?: string | null
-          provider?: string
-          status?: string
-          user_id: string
-        }
-        Update: {
-          amount_cop?: number
-          amount_paid_cop?: number | null
-          booking_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          provider_tx_id?: string | null
-          id?: string
-          kind?: string
-          paid_at?: string | null
-          checkout_url?: string | null
-          plan_key?: string | null
-          provider?: string
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_charges_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "service_bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       payment_webhook_events: {
         Row: {
           error_code: string | null
@@ -4188,7 +4188,7 @@ export type Database = {
           duration_hours: number
           emergency_phone: string | null
           escrow_status: string | null
-          charge_id: string | null
+          firux_charge_id: string | null
           hourly_rate: number
           id: string
           job_offer_id: string | null
@@ -4229,7 +4229,7 @@ export type Database = {
           duration_hours?: number
           emergency_phone?: string | null
           escrow_status?: string | null
-          charge_id?: string | null
+          firux_charge_id?: string | null
           hourly_rate: number
           id?: string
           job_offer_id?: string | null
@@ -4270,7 +4270,7 @@ export type Database = {
           duration_hours?: number
           emergency_phone?: string | null
           escrow_status?: string | null
-          charge_id?: string | null
+          firux_charge_id?: string | null
           hourly_rate?: number
           id?: string
           job_offer_id?: string | null
@@ -6127,12 +6127,8 @@ export type Database = {
         Args: { p_client: string; p_fee: number; p_professional: string }
         Returns: number
       }
-      hx_charge_attempt: {
-        Args: { p_charge: string; p_provider_tx: string; p_status: string }
-        Returns: string
-      }
-      hx_charge_paid: {
-        Args: { p_amount_paid: number; p_charge: string; p_provider_tx: string }
+      hx_firux_charge_paid: {
+        Args: { p_amount_paid: number; p_firux_id: string }
         Returns: string
       }
       hx_free_commission_pct: { Args: never; Returns: number }
