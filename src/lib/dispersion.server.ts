@@ -1,8 +1,7 @@
-// Despachador de la dispersión automática (servidor). Reclama un lote de pagos listos, los envía a Firux en paralelo y
-// anota cada resultado en la base. Inyectable y probado (`dispersion.server.test.ts`). Las reglas puras están en
-// `dispersion.ts`.
+// Despachador de la dispersión automática (servidor). Reclama un lote de pagos listos, los envía a Wompi (Pagos a
+// Terceros, Bre-B) en paralelo y anota cada resultado en la base. Inyectable y probado (`dispersion.test.ts`). Las reglas
+// puras están en `dispersion.ts`.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { FIRUX_API } from "./firux";
 import {
   buildPayoutBody,
   classifyPayoutResponse,
@@ -10,7 +9,7 @@ import {
   DISPATCH_CONCURRENCY,
   mapLimit,
   type ClaimedPayout,
-  type FiruxPayoutBody,
+  type WompiPayoutBody,
   type PayoutOutcome,
 } from "./dispersion";
 
@@ -22,15 +21,17 @@ export interface DispersionStore {
   finishBatch(batchId: string): Promise<void>;
 }
 
-export type FiruxPayoutSend = (
-  body: FiruxPayoutBody,
+export type WompiPayoutSend = (
+  body: WompiPayoutBody,
   idempotencyKey: string,
 ) => Promise<{ httpStatus: number; json: unknown } | { networkError: string }>;
 
 export interface DispersionDeps {
   enabled: boolean;
   store: DispersionStore;
-  send: FiruxPayoutSend | null;
+  send: WompiPayoutSend | null;
+  /** Cuenta de origen en Wompi (`GET /accounts`): WOMPI_PAYOUTS_ACCOUNT_ID. */
+  accountId: string;
 }
 
 export interface DispatchSummary {
@@ -63,7 +64,7 @@ export async function runDispersion(
   rounds = 4,
 ): Promise<DispatchSummary> {
   if (!deps.enabled) return empty("disabled");
-  if (!deps.send) return empty("not_configured");
+  if (!deps.send || !deps.accountId) return empty("not_configured");
   const send = deps.send;
   const sum = empty();
   for (let round = 0; round < rounds; round++) {
@@ -73,19 +74,24 @@ export async function runDispersion(
     let stop = false;
     await mapLimit(batch, DISPATCH_CONCURRENCY, async (p) => {
       let outcome: PayoutOutcome;
-      const built = buildPayoutBody(p);
+      const built = buildPayoutBody(p, deps.accountId);
       if (!built.ok) {
         outcome = { status: "failed", error: built.error };
       } else if (stop) {
-        // Firux dijo que la credencial no sirve: no seguimos golpeando; el resto vuelve a la cola.
-        outcome = { status: "retry", error: "skipped_after_auth_error" };
+        // Wompi dijo que la credencial no sirve o no hay saldo: no seguimos golpeando; el resto vuelve a la cola sin
+        // haberse enviado (por eso puede repetir la misma llave de idempotencia).
+        outcome = { status: "retry", error: "skipped_after_account_error" };
       } else {
         try {
           outcome = classifyPayoutResponse(await send(built.body, built.idempotencyKey));
         } catch (e) {
           outcome = { status: "retry", error: e instanceof Error ? e.message : "send_failed" };
         }
-        if (outcome.status === "retry" && /^firux_40[13]/.test(outcome.error)) stop = true;
+        if (
+          outcome.status === "retry" &&
+          /^wompi_(40[13]|insufficient_balance)/.test(outcome.error)
+        )
+          stop = true;
       }
       const final = await deps.store.result(p.id, outcome);
       if (final === "sent") sum.sent += 1;
@@ -114,14 +120,16 @@ export function supabaseDispersionStore(admin: SupabaseClient): DispersionStore 
       return ((data ?? []) as ClaimedPayout[]).map((r) => ({
         ...r,
         amount_cop: Number(r.amount_cop),
+        idem_gen: Number(r.idem_gen ?? 0),
       }));
     },
     async result(payoutId, outcome) {
       const { data, error } = await admin.rpc("hx_payout_result", {
         p_payout: payoutId,
         p_status: outcome.status,
-        p_firux_id: outcome.firuxId ?? null,
+        p_provider_id: outcome.providerId ?? null,
         p_error: "error" in outcome ? outcome.error : null,
+        p_definitive: "definitive" in outcome ? !!outcome.definitive : false,
       });
       if (error) throw new Error(`hx_payout_result: ${error.message}`);
       return String(data);
@@ -132,16 +140,21 @@ export function supabaseDispersionStore(admin: SupabaseClient): DispersionStore 
   };
 }
 
-/** `POST /v1/payouts` con la llave de Humanix (ASUNCIÓN: ver `dispersion.ts`). */
-export function firuxSendPayout(apiKey: string, fetchImpl: typeof fetch = fetch): FiruxPayoutSend {
+/** `POST /v2/payouts` de la API de Pagos a Terceros de Wompi. */
+export function wompiSendPayout(
+  cfg: { apiKey: string; userPrincipalId: string; baseUrl: string },
+  fetchImpl: typeof fetch = fetch,
+): WompiPayoutSend {
   return async (body, idempotencyKey) => {
     try {
-      const r = await fetchImpl(`${FIRUX_API}/payouts`, {
+      const r = await fetchImpl(`${cfg.baseUrl}/payouts`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          "x-api-key": cfg.apiKey,
+          "user-principal-id": cfg.userPrincipalId,
+          "idempotency-key": idempotencyKey,
+          "business-application-id": "WOMPI_PAYOUTS",
           "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(15_000),
@@ -162,12 +175,17 @@ export function firuxSendPayout(apiKey: string, fetchImpl: typeof fetch = fetch)
 /** Dependencias reales desde el entorno del servidor. */
 export async function dispersionDepsFromEnv(): Promise<DispersionDeps> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { isDispersionEnabled } = await import("./dispersion");
-  const key = process.env.FIRUX_API_KEY;
+  const { isDispersionEnabled, payoutsApiBase } = await import("./dispersion");
+  const apiKey = process.env.WOMPI_PAYOUTS_API_KEY;
+  const userPrincipalId = process.env.WOMPI_PAYOUTS_USER_ID;
   return {
     enabled: isDispersionEnabled(process.env),
     store: supabaseDispersionStore(supabaseAdmin as never),
-    send: key ? firuxSendPayout(key) : null,
+    send:
+      apiKey && userPrincipalId
+        ? wompiSendPayout({ apiKey, userPrincipalId, baseUrl: payoutsApiBase(process.env) })
+        : null,
+    accountId: process.env.WOMPI_PAYOUTS_ACCOUNT_ID ?? "",
   };
 }
 
@@ -179,7 +197,7 @@ export function sameSecret(a: string, b: string): boolean {
   return d === 0;
 }
 
-/** `POST /api/public/firux/dispatch` (lo llama la base con pg_net o el reloj). Solo con `Authorization: Bearer <secreto>`. */
+/** `POST /api/public/wompi/dispatch` (lo llama la base con pg_net o el reloj). Solo con `Authorization: Bearer <secreto>`. */
 export async function handleDispatchRequest(
   request: Request,
   cfg: { secret: string | undefined; deps: () => Promise<DispersionDeps> },
@@ -204,7 +222,7 @@ export async function handleDispatchRequest(
     const summary = await runDispersion(await cfg.deps(), trigger);
     return json(200, summary);
   } catch (e) {
-    console.error("[firux-dispatch]", e instanceof Error ? e.message : e);
+    console.error("[wompi-dispatch]", e instanceof Error ? e.message : e);
     return json(500, { error: "dispatch_failed" });
   }
 }

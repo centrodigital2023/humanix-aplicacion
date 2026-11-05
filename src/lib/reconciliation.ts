@@ -12,7 +12,7 @@ export interface ProfessionalBalance {
   held: number;
   /** Liberado, por dispersar. */
   available: number;
-  /** Enviado a Firux, esperando confirmación. */
+  /** Enviado a Wompi, esperando confirmación. */
   in_transit: number;
   /** Ya llegó a su llave Bre-B (total). */
   paid: number;
@@ -47,12 +47,12 @@ export interface Reconciliation {
 
 export const ISSUE_LABEL: Record<IssueCode, string> = {
   charge_not_in_ledger: "Cobro pagado que no está en el libro",
-  amount_mismatch: "Firux cobró un monto distinto al pedido",
+  amount_mismatch: "Wompi cobró un monto distinto al pedido",
   escrow_leftover: "Turno cerrado con dinero aún retenido",
   payout_queue_mismatch: "Saldo por dispersar distinto a la cola de pagos",
   in_transit_mismatch: "Dinero en camino distinto a los pagos enviados",
   wallet_mismatch: "Billetera del libro distinta a la billetera guardada",
-  payout_stuck: "Dispersión sin confirmar de Firux hace más de 1 hora",
+  payout_stuck: "Dispersión sin confirmar de Wompi hace más de 1 hora",
 };
 
 export const ACCOUNT_LABEL: Record<LedgerAccount, string> = {
@@ -64,9 +64,9 @@ export const ACCOUNT_LABEL: Record<LedgerAccount, string> = {
   wallet: "Billeteras de profesionales",
 };
 
-/** Lo que Humanix debería tener hoy en su cuenta Firux según el libro: lo retenido + lo que debe a profesionales
- * (por dispersar y en camino) + su comisión + las billeteras. Es el número que se compara con el saldo de Firux. */
-export function expectedFiruxBalance(a: Partial<Record<LedgerAccount, number>>): number {
+/** Lo que Humanix debería tener hoy en su cuenta Wompi según el libro: lo retenido + lo que debe a profesionales
+ * (por dispersar y en camino) + su comisión + las billeteras. Es el número que se compara con el saldo de Wompi. */
+export function expectedWompiBalance(a: Partial<Record<LedgerAccount, number>>): number {
   return (
     (a.escrow ?? 0) +
     (a.professional ?? 0) +
@@ -78,7 +78,7 @@ export function expectedFiruxBalance(a: Partial<Record<LedgerAccount, number>>):
 
 /** Un libro de partida doble siempre suma cero: si no, algo se anotó mal. */
 export function ledgerBalanced(a: Partial<Record<LedgerAccount, number>>): boolean {
-  return expectedFiruxBalance(a) + (a.external ?? 0) === 0;
+  return expectedWompiBalance(a) + (a.external ?? 0) === 0;
 }
 
 /** Normaliza lo que devuelve la base (números que llegan como texto, listas vacías). */
@@ -135,7 +135,7 @@ function csvCell(v: unknown): string {
   return /[",\n;]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-/** Libro en CSV para cruzar con el extracto de Firux. */
+/** Libro en CSV para cruzar con el extracto de Wompi. */
 export function ledgerToCsv(rows: LedgerRow[]): string {
   const head = [
     "fecha",

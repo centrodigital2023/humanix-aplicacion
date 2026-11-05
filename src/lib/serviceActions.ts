@@ -95,14 +95,14 @@ export function cancelMoneyNote(side: Exclude<ActionSide, "viewer">, b: ActionBo
     return "Era en efectivo: no pagas nada.";
   }
   if (isBrebPaid(b)) {
-    // Con «Conectar con Firux Pay» el dinero va directo al profesional y no queda retenido: no hay devolución automática.
+    // Ya liberado: el dinero salió al profesional, así que no hay devolución automática.
     if (b.escrow_status === "released") {
       return side === "client"
         ? `Tu pago de ${COP(total)} ya se le entregó al profesional: el equipo de Humanix te contacta para devolvértelo.`
         : `El pago de ${COP(total)} ya te llegó: el equipo de Humanix te contacta para devolvérselo a quien te contrató.`;
     }
     return side === "client"
-      ? `Te devolvemos los ${COP(total)} que pagaste con Bre-B. Llegan a la misma cuenta.`
+      ? `Te devolvemos los ${COP(total)} que pagaste. Llegan a tu llave Bre-B.`
       : `Le devolvemos a quien te contrató los ${COP(total)} que pagó con Bre-B.`;
   }
   return side === "client"

@@ -1,5 +1,5 @@
 // El pago del turno, visto por cada lado y siempre en una frase. Pago retenido tipo InDrive (`src/lib/escrow.ts`):
-//   Familia     · Bre-B sin pagar → un botón grande «Pagar $X con Bre-B» desde que pide el turno (hoja con QR y banco).
+//   Familia     · Pago digital sin pagar → un botón grande «Pagar $X» desde que pide el turno (checkout de Wompi).
 //               · Pagado → 🔒 protegido por Humanix. · Terminado → «¿Todo bien?»: liberar o reportar (24 h).
 //               · Cancelado con pago → devolución completa a su llave Bre-B.  · Efectivo → cuánto entregar en mano.
 //   Profesional · Sin pagar → que espere el 🔒 antes de salir. · Pagado → asegurado. · Terminado → por liberar / liberado.
@@ -9,9 +9,9 @@ import { CheckCircle2, Hourglass, ShieldCheck, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { COP } from "@/lib/commissionMatrix";
 import { canClientDecide, canPayBooking, escrowStage, hoursToRelease } from "@/lib/escrow";
-import { payBookingWithBreb } from "@/lib/firux.functions";
+import { payBooking } from "@/lib/payments.functions";
 import { cn } from "@/lib/utils";
-import { BrebPaySheet } from "./BrebPaySheet";
+import { PaySheet } from "./PaySheet";
 import { EscrowDecision, RefundPanel } from "./EscrowPanel";
 
 export type PaymentBooking = {
@@ -138,19 +138,18 @@ export function BookingPaymentCard({
           className="mt-2 h-16 w-full rounded-2xl bg-biosensor text-lg font-bold text-white shadow-lg shadow-biosensor/40 hover:bg-biosensor/90"
           onClick={() => setOpen(true)}
         >
-          <Zap className="mr-2 h-6 w-6" aria-hidden="true" /> Pagar {COP(booking.total_amount)} con
-          Bre-B
+          <Zap className="mr-2 h-6 w-6" aria-hidden="true" /> Pagar {COP(booking.total_amount)}
         </Button>
         <p className="mt-2 text-center text-xs text-muted-foreground">
           Humanix guarda tu pago y solo se lo entrega a {peerFirstName} cuando confirmes que el
           turno terminó. Si se cancela, te devolvemos todo. Sin comisión para ti.
         </p>
-        <BrebPaySheet
+        <PaySheet
           open={open}
           onOpenChange={setOpen}
           title="Pagar turno"
           subtitle={`Turno con ${peerFirstName}`}
-          start={() => payBookingWithBreb({ data: { bookingId: booking.id } })}
+          start={() => payBooking({ data: { bookingId: booking.id } })}
           paidMessage={`Tu pago quedó protegido. Le avisamos a ${peerFirstName}.`}
           onPaid={onPaid}
         />
@@ -190,7 +189,7 @@ export function BookingPaymentCard({
   const PRO_COPY: Record<string, { icon: "ok" | "wait"; title: string; body: string }> = {
     unpaid: {
       icon: "wait",
-      title: "La familia aún no ha pagado con Bre-B",
+      title: "La familia aún no ha pagado",
       body: "Espera a ver «Pago asegurado» antes de salir. Te avisamos al instante.",
     },
     protected: {

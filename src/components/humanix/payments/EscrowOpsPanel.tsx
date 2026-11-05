@@ -164,7 +164,7 @@ export function EscrowOpsPanel() {
         <div className="space-y-3">
           <h2 className="font-display text-lg font-bold">Devoluciones a familias</h2>
           <p className="text-sm text-muted-foreground">
-            Envía la devolución desde el panel de Firux a la llave Bre-B de la familia y márcala
+            Envía la devolución desde el panel de Wompi a la llave Bre-B de la familia y márcala
             aquí.
           </p>
           {data.refunds.map((r) => {
@@ -204,7 +204,7 @@ export function EscrowOpsPanel() {
                 </div>
                 {r.status === "paid" && r.provider_ref && (
                   <p className="text-xs text-muted-foreground">
-                    Referencia Firux: {r.provider_ref}
+                    Referencia Wompi: {r.provider_ref}
                   </p>
                 )}
                 {r.status === "failed" && r.error_code && (
@@ -214,7 +214,7 @@ export function EscrowOpsPanel() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
                       className="max-w-xs"
-                      placeholder="Referencia de Firux o motivo"
+                      placeholder="Referencia de Wompi o motivo"
                       value={refs[r.id] ?? ""}
                       onChange={(e) => setRefs((x) => ({ ...x, [r.id]: e.target.value }))}
                     />

@@ -1,4 +1,4 @@
-// Tabla de precios oficial (nov 2026, Bre-B con Firux), una prueba por regla.
+// Tabla de precios oficial (nov 2026, Bre-B con Wompi), una prueba por regla.
 import { describe, expect, it } from "vitest";
 import { INSTITUTION_PLANS, PLAN_CATALOG, bookingCommissionPct } from "./plans";
 import { buildPriceBreakdown } from "./pricing";

@@ -1,21 +1,17 @@
-// Hoja de pago con Bre-B (Firux). Una sola pantalla, pensada para el celular:
-//   1. Un botón grande «Abrir mi banco» (enlace de pago de Firux) — en el celular es todo lo que hay que hacer.
-//   2. El QR, para pagar desde otro teléfono o desde el computador.
-//   3. El estado en vivo (Realtime sobre `firux_charges`): apenas llega el aviso firmado, la hoja celebra.
-// El monto lo pone siempre el servidor; aquí solo se muestra.
+// Hoja de pago con Wompi. Una sola pantalla, pensada para el celular:
+//   1. Un botón grande «Pagar con Wompi» que abre el checkout seguro de Wompi (Bre-B, Nequi, PSE, Bancolombia o tarjeta,
+//      según lo que la cuenta de Humanix tenga activo en Wompi).
+//   2. El estado en vivo (Realtime sobre `payment_charges`): apenas llega el aviso firmado de Wompi, la hoja celebra.
+// El monto y el enlace firmado los pone siempre el servidor; aquí solo se muestran.
 import { useCallback, useEffect, useRef, useState } from "react";
-import QRCode from "react-qr-code";
 import {
   CheckCircle2,
-  Copy,
-  Landmark,
+  ExternalLink,
   Loader2,
-  QrCode,
   RefreshCw,
   ShieldCheck,
   Smartphone,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
   Drawer,
   DrawerContent,
@@ -25,7 +21,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { CHARGE_ERROR_MESSAGE, type ChargeResult, type ChargeView } from "@/lib/firux";
+import { CHARGE_ERROR_MESSAGE, type ChargeResult, type ChargeView } from "@/lib/wompi";
 import { COP } from "@/lib/commissionMatrix";
 
 type Phase =
@@ -35,7 +31,7 @@ type Phase =
   | { kind: "expired"; charge: ChargeView }
   | { kind: "error"; message: string };
 
-export interface BrebPaySheetProps {
+export interface PaySheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** «Pagar turno», «Recargar billetera»… */
@@ -49,7 +45,7 @@ export interface BrebPaySheetProps {
   onPaid?: () => void;
 }
 
-export function BrebPaySheet({
+export function PaySheet({
   open,
   onOpenChange,
   title,
@@ -57,9 +53,8 @@ export function BrebPaySheet({
   start,
   paidMessage,
   onPaid,
-}: BrebPaySheetProps) {
+}: PaySheetProps) {
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
-  const [showQr, setShowQr] = useState(false);
   const startRef = useRef(start);
   startRef.current = start;
   const onPaidRef = useRef(onPaid);
@@ -82,22 +77,24 @@ export function BrebPaySheet({
   }, []);
 
   useEffect(() => {
-    if (open) {
-      setShowQr(false);
-      void load();
-    }
+    if (open) void load();
   }, [open, load]);
 
   const chargeId = phase.kind === "ready" ? phase.charge.chargeId : null;
 
-  // Estado en vivo del cobro: el aviso de Firux lo marca pagado y aquí se ve al instante.
+  // Estado en vivo del cobro: el aviso de Wompi lo marca pagado y aquí se ve al instante.
   useEffect(() => {
     if (!chargeId) return;
     const channel = supabase
-      .channel(`firux_charge:${chargeId}:${Math.random().toString(36).slice(2, 8)}`)
+      .channel(`payment_charge:${chargeId}:${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "firux_charges", filter: `id=eq.${chargeId}` },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "payment_charges",
+          filter: `id=eq.${chargeId}`,
+        },
         (payload) => {
           const status = String((payload.new as { status?: string }).status ?? "");
           setPhase((p) => {
@@ -118,15 +115,6 @@ export function BrebPaySheet({
   useEffect(() => {
     if (phase.kind === "paid") onPaidRef.current?.();
   }, [phase.kind]);
-
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Código copiado. Pégalo en la opción «Pagar con código» de tu banco.");
-    } catch {
-      toast.error("No pudimos copiar. Usa el QR o el botón de tu banco.");
-    }
-  };
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -184,57 +172,24 @@ export function BrebPaySheet({
 
               {phase.kind === "expired" ? (
                 <div className="space-y-3 text-center">
-                  <p>Este código ya no sirve. Generemos uno nuevo, toma un segundo.</p>
+                  <p>Ese intento de pago no se completó. Preparemos uno nuevo, toma un segundo.</p>
                   <Button size="lg" className="w-full" onClick={() => void load()}>
-                    <RefreshCw className="mr-2 h-5 w-5" aria-hidden="true" /> Generar un código
-                    nuevo
+                    <RefreshCw className="mr-2 h-5 w-5" aria-hidden="true" /> Intentar de nuevo
                   </Button>
                 </div>
               ) : (
                 <>
-                  {phase.charge.paymentUrl && (
+                  {phase.charge.checkoutUrl && (
                     <Button asChild size="lg" className="h-16 w-full rounded-2xl text-lg font-bold">
-                      <a href={phase.charge.paymentUrl} target="_blank" rel="noopener noreferrer">
-                        <Landmark className="mr-2 h-6 w-6" aria-hidden="true" /> Abrir mi banco y
-                        pagar
+                      <a href={phase.charge.checkoutUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-6 w-6" aria-hidden="true" /> Pagar con Wompi
                       </a>
                     </Button>
                   )}
-
-                  {phase.charge.qrEmv && (phase.charge.paymentUrl ? showQr : true) ? (
-                    <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-background p-4">
-                      <div className="rounded-2xl bg-white p-3">
-                        <QRCode
-                          value={phase.charge.qrEmv}
-                          size={196}
-                          aria-label="Código QR Bre-B para pagar"
-                        />
-                      </div>
-                      <p className="text-center text-sm text-muted-foreground">
-                        Abre la app de tu banco, Nequi o Daviplata → <strong>Pagar con QR</strong> →
-                        escanea.
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void copy(phase.charge.qrEmv!)}
-                      >
-                        <Copy className="mr-2 h-4 w-4" aria-hidden="true" /> Copiar código
-                      </Button>
-                    </div>
-                  ) : (
-                    phase.charge.qrEmv && (
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="w-full rounded-2xl"
-                        onClick={() => setShowQr(true)}
-                      >
-                        <QrCode className="mr-2 h-5 w-5" aria-hidden="true" /> Pagar con QR desde
-                        otro celular
-                      </Button>
-                    )
-                  )}
+                  <p className="text-center text-sm text-muted-foreground">
+                    Se abre el pago seguro de Wompi (Grupo Bancolombia). Elige cómo pagar y vuelve
+                    aquí: verás la confirmación sola.
+                  </p>
 
                   <div className="flex items-center justify-center gap-2 rounded-2xl bg-biosensor/10 px-4 py-3 text-sm">
                     <Loader2 className="h-4 w-4 animate-spin text-biosensor" aria-hidden="true" />
@@ -245,12 +200,12 @@ export function BrebPaySheet({
 
               <ul className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <li className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-biosensor" aria-hidden="true" /> Bre-B del
-                  Banco de la República
+                  <ShieldCheck className="h-4 w-4 text-biosensor" aria-hidden="true" /> Wompi de
+                  Grupo Bancolombia
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <Smartphone className="h-4 w-4 text-biosensor" aria-hidden="true" /> Cualquier
-                  banco, Nequi o Daviplata
+                  <Smartphone className="h-4 w-4 text-biosensor" aria-hidden="true" /> Bre-B, Nequi,
+                  PSE o Bancolombia
                 </li>
               </ul>
             </div>

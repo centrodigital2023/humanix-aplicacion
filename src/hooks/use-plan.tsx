@@ -39,7 +39,7 @@ export type UserPlanState = {
 
 /**
  * Nivel efectivo de la cuenta, con la misma regla que `plan_key_for()` en SQL: familias y profesionales tienen todas
- * sus funciones gratis; la institución abre las suyas con el plan anual (que escribe solo el aviso de pago de Firux).
+ * sus funciones gratis; la institución abre las suyas con el plan anual (que escribe solo el aviso de pago de Wompi).
  */
 export function usePlan(userId: string | null | undefined): UserPlanState {
   const [state, setState] = useState<Omit<UserPlanState, "has" | "can" | "def" | "refresh">>(

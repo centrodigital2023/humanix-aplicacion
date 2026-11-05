@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { COP } from "@/lib/commissionMatrix";
 import {
   ACCOUNT_LABEL,
-  expectedFiruxBalance,
+  expectedWompiBalance,
   ISSUE_LABEL,
   ledgerBalanced,
   type LedgerAccount,
@@ -115,11 +115,11 @@ export function ReconciliationPanel() {
               <p className="font-display text-xl font-bold">{COP(res.data.platform_fees_30d)}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs text-muted-foreground">Debe haber en la cuenta Firux</p>
+              <p className="text-xs text-muted-foreground">Debe haber en la cuenta Wompi</p>
               <p className="font-display text-xl font-bold">
-                {COP(expectedFiruxBalance(res.data.accounts))}
+                {COP(expectedWompiBalance(res.data.accounts))}
               </p>
-              <p className="text-xs text-muted-foreground">Compáralo con el saldo en Firux</p>
+              <p className="text-xs text-muted-foreground">Compáralo con el saldo en Wompi</p>
             </Card>
           </div>
 

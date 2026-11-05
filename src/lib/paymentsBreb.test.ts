@@ -18,12 +18,12 @@ import {
   MIN_BOOKING_COP,
 } from "./commissionMatrix";
 import {
-  buildChargeBody,
-  firuxSignatureFor,
-  parseFiruxEvent,
-  payLink,
-  verifyFiruxSignature,
-} from "./firux";
+  buildCheckoutUrl,
+  parseWompiTransactionEvent,
+  verifyWompiEvent,
+  wompiApiBase,
+  wompiIntegritySignature,
+} from "./wompi";
 
 describe("llave Bre-B", () => {
   it("adivina el tipo por lo que se escribe", () => {
@@ -176,68 +176,148 @@ describe("billetera para turnos en efectivo", () => {
   it("el turno mínimo es de $20.000", () => {
     expect(MIN_BOOKING_COP).toBe(20_000);
   });
-  it("recarga sugerida: a miles hacia arriba y desde el mínimo de Firux", () => {
+  it("recarga sugerida: a miles hacia arriba y desde el mínimo de cobro", () => {
     expect(suggestedTopupCOP(5_200)).toBe(6_000);
     expect(suggestedTopupCOP(100)).toBe(2_000);
     expect(suggestedTopupCOP(0)).toBe(2_000);
   });
 });
 
-describe("Firux", () => {
-  it("cobro en COP enteros entre $2.000 y $12.000.000", () => {
-    expect(buildChargeBody({ amountCop: 100000.4, reference: "b1", description: "Turno" })).toEqual(
-      {
-        ok: true,
-        body: { amount: 100000, external_reference: "b1", description: "Turno" },
-      },
-    );
-    expect(buildChargeBody({ amountCop: 1999, reference: "b1", description: "" })).toMatchObject({
-      ok: false,
-    });
+describe("Wompi", () => {
+  it("firma de integridad: vectores oficiales de docs.wompi.co", async () => {
+    const secret = "prod_integrity_Z5mMke9x0k8gpErbDqwrJXMqsI6SFli6";
     expect(
-      buildChargeBody({ amountCop: 12_000_001, reference: "b1", description: "" }),
-    ).toMatchObject({ ok: false });
-    expect(buildChargeBody({ amountCop: 5000, reference: " ", description: "" })).toMatchObject({
+      await wompiIntegritySignature({
+        reference: "sk8-438k4-xmxm392-sn2m",
+        amountInCents: 2490000,
+        integritySecret: secret,
+      }),
+    ).toBe("37c8407747e595535433ef8f6a811d853cd943046624a0ec04662b17bbf33bf5");
+  });
+
+  it("enlace del checkout: centavos, referencia, firma y límites de $2.000 a $12.000.000", async () => {
+    const r = await buildCheckoutUrl({
+      publicKey: "pub_test_abc",
+      integritySecret: "test_integrity_x",
+      amountCop: 100000.4,
+      reference: "c1",
+      redirectUrl: "https://humanix.lat/pago/exito",
+      expirationTime: "2026-11-06T10:00:00.000Z",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const u = new URL(r.url);
+    expect(u.origin + u.pathname).toBe("https://checkout.wompi.co/p/");
+    expect(u.searchParams.get("amount-in-cents")).toBe("10000000");
+    expect(u.searchParams.get("currency")).toBe("COP");
+    expect(u.searchParams.get("reference")).toBe("c1");
+    expect(u.searchParams.get("redirect-url")).toBe("https://humanix.lat/pago/exito");
+    expect(u.searchParams.get("signature:integrity")).toBe(
+      await wompiIntegritySignature({
+        reference: "c1",
+        amountInCents: 10000000,
+        expirationTime: "2026-11-06T10:00:00.000Z",
+        integritySecret: "test_integrity_x",
+      }),
+    );
+    const base = { publicKey: "pub_test_abc", integritySecret: "s", reference: "c1" };
+    expect(await buildCheckoutUrl({ ...base, amountCop: 1999 })).toMatchObject({ ok: false });
+    expect(await buildCheckoutUrl({ ...base, amountCop: 12_000_001 })).toMatchObject({ ok: false });
+    expect(await buildCheckoutUrl({ ...base, amountCop: 5000, reference: " " })).toMatchObject({
       error: "missing_reference",
     });
+    expect(await buildCheckoutUrl({ ...base, integritySecret: "", amountCop: 5000 })).toMatchObject(
+      {
+        error: "not_configured",
+      },
+    );
   });
-  it("firma HMAC con ventana de 5 minutos", async () => {
+
+  it("sandbox o producción según la llave pública", () => {
+    expect(wompiApiBase("pub_test_x")).toBe("https://sandbox.wompi.co/v1");
+    expect(wompiApiBase("pub_prod_x")).toBe("https://production.wompi.co/v1");
+  });
+
+  // El ejemplo de la página de eventos de cobros trae un checksum ilustrativo que no corresponde a su propia cadena;
+  // la regla es la misma que la de Pagos a Terceros (cuyo vector oficial sí cuadra, abajo).
+  it("firma de eventos de cobros: valores + timestamp + secreto", async () => {
     const body = JSON.stringify({
-      type: "charge.paid",
-      data: { charge_id: "ch_1", external_reference: "b1", amount_paid: 100000 },
+      event: "transaction.updated",
+      data: {
+        transaction: {
+          id: "1234-1610641025-49201",
+          amount_in_cents: 4490000,
+          reference: "MZQ3X2DE2SMX",
+          status: "APPROVED",
+          payment_method_type: "NEQUI",
+        },
+      },
+      environment: "prod",
+      signature: {
+        properties: ["transaction.id", "transaction.status", "transaction.amount_in_cents"],
+        checksum: "5A18EC5E8FDB7DF463E9F94774CBA8F583BA21BD04A09CEFF2EA68A4BC0AEFBE",
+      },
+      timestamp: 1530291411,
     });
-    const ts = "1793750000";
-    const sig = await firuxSignatureFor("secreto", ts, body);
-    const ok = (o: Partial<Parameters<typeof verifyFiruxSignature>[0]>) =>
-      verifyFiruxSignature({
-        rawBody: body,
-        timestamp: ts,
-        signature: `v1=${sig}`,
-        secret: "secreto",
-        nowSeconds: 1793750100,
-        ...o,
-      });
-    expect(await ok({})).toBe(true);
-    expect(await ok({ signature: `v1=abc, v1=${sig}` })).toBe(true);
-    expect(await ok({ secret: "otro" })).toBe(false);
-    expect(await ok({ rawBody: body.replace("100000", "1") })).toBe(false);
-    expect(await ok({ nowSeconds: 1793750000 + 301 })).toBe(false);
-    expect(await ok({ timestamp: null })).toBe(false);
-  });
-  it("lee el evento", () => {
+    const secret = "prod_events_OcHnIzeBl5socpwByQ4hA52Em3USQ93Z";
+    expect(await verifyWompiEvent({ rawBody: body, secret })).toBe(true);
     expect(
-      parseFiruxEvent(
-        '{"type":"charge.paid","data":{"charge_id":"ch_1","external_reference":"b1","amount_paid":100000}}',
+      await verifyWompiEvent({
+        rawBody: body,
+        headerChecksum: "5a18ec5e8fdb7df463e9f94774cba8f583ba21bd04a09ceff2ea68a4bc0aefbe",
+        secret,
+      }),
+    ).toBe(true);
+    expect(await verifyWompiEvent({ rawBody: body, secret: "otro" })).toBe(false);
+    expect(await verifyWompiEvent({ rawBody: body.replace("4490000", "1"), secret })).toBe(false);
+    expect(await verifyWompiEvent({ rawBody: body, headerChecksum: "abc", secret })).toBe(false);
+    expect(await verifyWompiEvent({ rawBody: "no-json", secret })).toBe(false);
+  });
+
+  it("firma de eventos: vector oficial (pagos a terceros, timestamp en ms)", async () => {
+    const body = JSON.stringify({
+      event: "transaction.updated",
+      data: {
+        transaction: {
+          id: "04a6e53d-a244-4140-ab9e-48fa541f9fe5",
+          status: "FAILED",
+          amountInCents: 7500000,
+        },
+      },
+      signature: {
+        properties: ["transaction.id", "transaction.status", "transaction.amountInCents"],
+        checksum: "82f0e769716170e202edfd348f604bd8461cdeeb416594cde563a890215a5282",
+      },
+      timestamp: 1747673128600,
+    });
+    expect(
+      await verifyWompiEvent({
+        rawBody: body,
+        secret: "prod_events_7b193c8afd7b47949f90d443cb1e1742",
+      }),
+    ).toBe(true);
+  });
+
+  it("lee transaction.updated de cobros", () => {
+    expect(
+      parseWompiTransactionEvent(
+        '{"event":"transaction.updated","data":{"transaction":{"id":"t1","reference":"c1","status":"approved","amount_in_cents":10000050,"payment_method_type":"PSE"}},"timestamp":1}',
       ),
     ).toEqual({
-      type: "charge.paid",
-      chargeId: "ch_1",
-      reference: "b1",
-      amountPaid: 100000,
+      type: "transaction.updated",
+      transactionId: "t1",
+      reference: "c1",
+      status: "APPROVED",
+      amountCop: 100000,
+      paymentMethod: "PSE",
+      timestamp: "1",
     });
-    expect(parseFiruxEvent("no-json")).toBeNull();
-    expect(parseFiruxEvent('{"type":"charge.paid","data":{}}')).toBeNull();
-    expect(payLink({ payment_url: "https://pay.firux.co/x" })).toBe("https://pay.firux.co/x");
-    expect(payLink({ payment_url: "javascript:alert(1)" })).toBeNull();
+    expect(parseWompiTransactionEvent("no-json")).toBeNull();
+    expect(parseWompiTransactionEvent('{"event":"nequi_token.updated","data":{}}')).toBeNull();
+    expect(
+      parseWompiTransactionEvent(
+        '{"event":"transaction.updated","data":{"transaction":{"id":"t1"}}}',
+      ),
+    ).toBeNull();
   });
 });

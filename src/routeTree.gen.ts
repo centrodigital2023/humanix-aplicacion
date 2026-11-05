@@ -70,7 +70,6 @@ import { Route as DashboardInstitucionRouteImport } from './routes/dashboard.ins
 import { Route as DashboardMonitoreoRouteImport } from './routes/dashboard.monitoreo'
 import { Route as DashboardProfesionalRouteImport } from './routes/dashboard.profesional'
 import { Route as DashboardWhatsappRouteImport } from './routes/dashboard.whatsapp'
-import { Route as FiruxConectadoRouteImport } from './routes/firux.conectado'
 import { Route as InstitutionFormsRouteImport } from './routes/institution.forms'
 import { Route as InstitutionProfileRouteImport } from './routes/institution.profile'
 import { Route as OfertaOfferIdRouteImport } from './routes/oferta.$offerId'
@@ -95,8 +94,9 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as DashboardFamiliaBienvenidaRouteImport } from './routes/dashboard.familia_.bienvenida'
 import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboard.familia_.onboarding'
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
-import { Route as ApiPublicFiruxDispatchRouteImport } from './routes/api/public/firux/dispatch'
-import { Route as ApiPublicFiruxWebhookRouteImport } from './routes/api/public/firux/webhook'
+import { Route as ApiPublicWompiDispatchRouteImport } from './routes/api/public/wompi/dispatch'
+import { Route as ApiPublicWompiPayoutsWebhookRouteImport } from './routes/api/public/wompi/payouts-webhook'
+import { Route as ApiPublicWompiWebhookRouteImport } from './routes/api/public/wompi/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 
@@ -406,11 +406,6 @@ const DashboardWhatsappRoute = DashboardWhatsappRouteImport.update({
   path: '/whatsapp',
   getParentRoute: () => DashboardRoute,
 } as any)
-const FiruxConectadoRoute = FiruxConectadoRouteImport.update({
-  id: '/firux/conectado',
-  path: '/firux/conectado',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const InstitutionFormsRoute = InstitutionFormsRouteImport.update({
   id: '/institution/forms',
   path: '/institution/forms',
@@ -534,14 +529,20 @@ const DashboardInstitucionOnboardingRoute =
     path: '/onboarding',
     getParentRoute: () => DashboardInstitucionRoute,
   } as any)
-const ApiPublicFiruxDispatchRoute = ApiPublicFiruxDispatchRouteImport.update({
-  id: '/api/public/firux/dispatch',
-  path: '/api/public/firux/dispatch',
+const ApiPublicWompiDispatchRoute = ApiPublicWompiDispatchRouteImport.update({
+  id: '/api/public/wompi/dispatch',
+  path: '/api/public/wompi/dispatch',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicFiruxWebhookRoute = ApiPublicFiruxWebhookRouteImport.update({
-  id: '/api/public/firux/webhook',
-  path: '/api/public/firux/webhook',
+const ApiPublicWompiPayoutsWebhookRoute =
+  ApiPublicWompiPayoutsWebhookRouteImport.update({
+    id: '/api/public/wompi/payouts-webhook',
+    path: '/api/public/wompi/payouts-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWompiWebhookRoute = ApiPublicWompiWebhookRouteImport.update({
+  id: '/api/public/wompi/webhook',
+  path: '/api/public/wompi/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
@@ -616,7 +617,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
-  '/firux/conectado': typeof FiruxConectadoRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
@@ -642,8 +642,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/familia/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
-  '/api/public/firux/dispatch': typeof ApiPublicFiruxDispatchRoute
-  '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
+  '/api/public/wompi/dispatch': typeof ApiPublicWompiDispatchRoute
+  '/api/public/wompi/payouts-webhook': typeof ApiPublicWompiPayoutsWebhookRoute
+  '/api/public/wompi/webhook': typeof ApiPublicWompiWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -706,7 +707,6 @@ export interface FileRoutesByTo {
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
-  '/firux/conectado': typeof FiruxConectadoRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
@@ -732,8 +732,9 @@ export interface FileRoutesByTo {
   '/dashboard/familia/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
-  '/api/public/firux/dispatch': typeof ApiPublicFiruxDispatchRoute
-  '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
+  '/api/public/wompi/dispatch': typeof ApiPublicWompiDispatchRoute
+  '/api/public/wompi/payouts-webhook': typeof ApiPublicWompiPayoutsWebhookRoute
+  '/api/public/wompi/webhook': typeof ApiPublicWompiWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -799,7 +800,6 @@ export interface FileRoutesById {
   '/dashboard/monitoreo': typeof DashboardMonitoreoRoute
   '/dashboard/profesional': typeof DashboardProfesionalRoute
   '/dashboard/whatsapp': typeof DashboardWhatsappRoute
-  '/firux/conectado': typeof FiruxConectadoRoute
   '/institution/forms': typeof InstitutionFormsRoute
   '/institution/profile': typeof InstitutionProfileRoute
   '/oferta/$offerId': typeof OfertaOfferIdRoute
@@ -825,8 +825,9 @@ export interface FileRoutesById {
   '/dashboard/familia_/bienvenida': typeof DashboardFamiliaBienvenidaRoute
   '/dashboard/familia_/onboarding': typeof DashboardFamiliaOnboardingRoute
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
-  '/api/public/firux/dispatch': typeof ApiPublicFiruxDispatchRoute
-  '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
+  '/api/public/wompi/dispatch': typeof ApiPublicWompiDispatchRoute
+  '/api/public/wompi/payouts-webhook': typeof ApiPublicWompiPayoutsWebhookRoute
+  '/api/public/wompi/webhook': typeof ApiPublicWompiWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -893,7 +894,6 @@ export interface FileRouteTypes {
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
-    | '/firux/conectado'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
@@ -919,8 +919,9 @@ export interface FileRouteTypes {
     | '/dashboard/familia/bienvenida'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
-    | '/api/public/firux/dispatch'
-    | '/api/public/firux/webhook'
+    | '/api/public/wompi/dispatch'
+    | '/api/public/wompi/payouts-webhook'
+    | '/api/public/wompi/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -983,7 +984,6 @@ export interface FileRouteTypes {
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
-    | '/firux/conectado'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
@@ -1009,8 +1009,9 @@ export interface FileRouteTypes {
     | '/dashboard/familia/bienvenida'
     | '/dashboard/familia/onboarding'
     | '/dashboard/institucion/onboarding'
-    | '/api/public/firux/dispatch'
-    | '/api/public/firux/webhook'
+    | '/api/public/wompi/dispatch'
+    | '/api/public/wompi/payouts-webhook'
+    | '/api/public/wompi/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   id:
@@ -1075,7 +1076,6 @@ export interface FileRouteTypes {
     | '/dashboard/monitoreo'
     | '/dashboard/profesional'
     | '/dashboard/whatsapp'
-    | '/firux/conectado'
     | '/institution/forms'
     | '/institution/profile'
     | '/oferta/$offerId'
@@ -1101,8 +1101,9 @@ export interface FileRouteTypes {
     | '/dashboard/familia_/bienvenida'
     | '/dashboard/familia_/onboarding'
     | '/dashboard/institucion/onboarding'
-    | '/api/public/firux/dispatch'
-    | '/api/public/firux/webhook'
+    | '/api/public/wompi/dispatch'
+    | '/api/public/wompi/payouts-webhook'
+    | '/api/public/wompi/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   fileRoutesById: FileRoutesById
@@ -1161,7 +1162,6 @@ export interface RootRouteChildren {
   VerificarRoute: typeof VerificarRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BBannerIdRoute: typeof BBannerIdRoute
-  FiruxConectadoRoute: typeof FiruxConectadoRoute
   InstitutionFormsRoute: typeof InstitutionFormsRoute
   InstitutionProfileRoute: typeof InstitutionProfileRoute
   OfertaOfferIdRoute: typeof OfertaOfferIdRoute
@@ -1170,8 +1170,9 @@ export interface RootRouteChildren {
   ProfesionalProIdRoute: typeof ProfesionalProIdRoute
   ServicioBookingIdRoute: typeof ServicioBookingIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
-  ApiPublicFiruxDispatchRoute: typeof ApiPublicFiruxDispatchRoute
-  ApiPublicFiruxWebhookRoute: typeof ApiPublicFiruxWebhookRoute
+  ApiPublicWompiDispatchRoute: typeof ApiPublicWompiDispatchRoute
+  ApiPublicWompiPayoutsWebhookRoute: typeof ApiPublicWompiPayoutsWebhookRoute
+  ApiPublicWompiWebhookRoute: typeof ApiPublicWompiWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
 }
@@ -1605,13 +1606,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardWhatsappRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/firux/conectado': {
-      id: '/firux/conectado'
-      path: '/firux/conectado'
-      fullPath: '/firux/conectado'
-      preLoaderRoute: typeof FiruxConectadoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/institution/forms': {
       id: '/institution/forms'
       path: '/institution/forms'
@@ -1780,18 +1774,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardInstitucionOnboardingRouteImport
       parentRoute: typeof DashboardInstitucionRoute
     }
-    '/api/public/firux/dispatch': {
-      id: '/api/public/firux/dispatch'
-      path: '/api/public/firux/dispatch'
-      fullPath: '/api/public/firux/dispatch'
-      preLoaderRoute: typeof ApiPublicFiruxDispatchRouteImport
+    '/api/public/wompi/dispatch': {
+      id: '/api/public/wompi/dispatch'
+      path: '/api/public/wompi/dispatch'
+      fullPath: '/api/public/wompi/dispatch'
+      preLoaderRoute: typeof ApiPublicWompiDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/firux/webhook': {
-      id: '/api/public/firux/webhook'
-      path: '/api/public/firux/webhook'
-      fullPath: '/api/public/firux/webhook'
-      preLoaderRoute: typeof ApiPublicFiruxWebhookRouteImport
+    '/api/public/wompi/payouts-webhook': {
+      id: '/api/public/wompi/payouts-webhook'
+      path: '/api/public/wompi/payouts-webhook'
+      fullPath: '/api/public/wompi/payouts-webhook'
+      preLoaderRoute: typeof ApiPublicWompiPayoutsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/wompi/webhook': {
+      id: '/api/public/wompi/webhook'
+      path: '/api/public/wompi/webhook'
+      fullPath: '/api/public/wompi/webhook'
+      preLoaderRoute: typeof ApiPublicWompiWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/preview': {
@@ -1953,7 +1954,6 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BBannerIdRoute: BBannerIdRoute,
-  FiruxConectadoRoute: FiruxConectadoRoute,
   InstitutionFormsRoute: InstitutionFormsRoute,
   InstitutionProfileRoute: InstitutionProfileRoute,
   OfertaOfferIdRoute: OfertaOfferIdRoute,
@@ -1962,8 +1962,9 @@ const rootRouteChildren: RootRouteChildren = {
   ProfesionalProIdRoute: ProfesionalProIdRoute,
   ServicioBookingIdRoute: ServicioBookingIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
-  ApiPublicFiruxDispatchRoute: ApiPublicFiruxDispatchRoute,
-  ApiPublicFiruxWebhookRoute: ApiPublicFiruxWebhookRoute,
+  ApiPublicWompiDispatchRoute: ApiPublicWompiDispatchRoute,
+  ApiPublicWompiPayoutsWebhookRoute: ApiPublicWompiPayoutsWebhookRoute,
+  ApiPublicWompiWebhookRoute: ApiPublicWompiWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
 }

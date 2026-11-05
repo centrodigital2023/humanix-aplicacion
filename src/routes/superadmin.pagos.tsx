@@ -1,6 +1,6 @@
-// Pagos a profesionales (cola `payouts`). El dinero de los turnos Bre-B llega a la cuenta Firux de Humanix. Con la
-// dispersión automática encendida (FIRUX_PAYOUTS_ENABLED) cada pago liberado sale solo a la llave Bre-B del profesional;
-// si no, o como respaldo, el equipo paga desde el panel de Firux y aquí lo marca como enviado (o fallido).
+// Pagos a profesionales (cola `payouts`). El dinero de los turnos Bre-B llega a la cuenta Wompi de Humanix. Con la
+// dispersión automática encendida (WOMPI_PAYOUTS_ENABLED) cada pago liberado sale solo a la llave Bre-B del profesional;
+// si no, o como respaldo, el equipo paga desde el panel de Wompi y aquí lo marca como enviado (o fallido).
 // Solo staff: la lista y las marcas pasan por el servidor (`payoutQueue.functions.ts`).
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -131,7 +131,7 @@ function PagosPage() {
           Un turno entra aquí solo cuando su pago se libera: la familia confirmó que terminó,
           pasaron 24 h sin reportes o el equipo decidió un reclamo. Ahí se reparte: la comisión
           queda para Humanix y el resto sale a la llave Bre-B del profesional, solo si la dispersión
-          automática está encendida. Si no, págalo desde el panel de Firux y márcalo aquí.
+          automática está encendida. Si no, págalo desde el panel de Wompi y márcalo aquí.
         </p>
 
         <ReconciliationPanel />
@@ -205,7 +205,7 @@ function PagosPage() {
                     </div>
                     {p.status === "paid" && p.provider_ref && (
                       <p className="text-xs text-muted-foreground">
-                        Referencia Firux: {p.provider_ref}
+                        Referencia Wompi: {p.provider_ref}
                       </p>
                     )}
                     {p.status === "failed" && p.error_code && (
@@ -215,7 +215,7 @@ function PagosPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Input
                           className="max-w-xs"
-                          placeholder="Referencia de Firux o motivo"
+                          placeholder="Referencia de Wompi o motivo"
                           value={refs[p.id] ?? ""}
                           onChange={(e) => setRefs((r) => ({ ...r, [p.id]: e.target.value }))}
                         />

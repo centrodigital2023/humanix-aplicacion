@@ -1,5 +1,5 @@
 // Cola de pagos a profesionales (turnos Bre-B pagados y terminados, con la llave de Humanix). Hoy el equipo dispersa
-// a mano desde el panel de Firux (la API de Firux no mueve dinero): esta lógica lista la cola para el staff y marca
+// a mano desde el panel de Wompi (Pagos a Terceros) cuando la dispersión automática está apagada: esta lógica lista la cola para el staff y marca
 // cada pago como enviado o fallido con `hx_mark_payout` (solo service_role, migración 20261104160000).
 // Inyectable y probada (`payoutQueue.server.test.ts`).
 import type { SupabaseClient } from "@supabase/supabase-js";

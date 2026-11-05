@@ -3,7 +3,7 @@
 //   - src/lib/commissionMatrix.ts (matriz de comisiones, probada)
 //   - src/routes/planes.tsx (página de precios)
 //
-// Modelo (aprobado el 3 nov 2026, pagos por Bre-B con Firux, sin Mercado Pago):
+// Modelo (aprobado el 3 nov 2026, pagos por Bre-B con Wompi, sin Mercado Pago):
 //   Familia       Gratis, con todas sus funciones (nivel `family_premium_monthly`). La familia nunca paga comisión.
 //   Profesional   Gratis, con todas sus funciones (nivel `pro_monthly`). Comisión por turno: 15 % (0–19 turnos en
 //                 30 días), 12 % (20–59) o 10 % (60 o más). Primer turno de cada pareja: exonerado hasta $30.000.

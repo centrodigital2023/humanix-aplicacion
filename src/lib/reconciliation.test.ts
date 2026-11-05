@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  expectedFiruxBalance,
+  expectedWompiBalance,
   ledgerBalanced,
   ledgerToCsv,
   normalizeReconciliation,
@@ -17,8 +17,8 @@ describe("conciliación", () => {
     platform: 36_000,
     wallet: -9_000,
   };
-  it("lo que debe haber en Firux y que el libro cuadre", () => {
-    expect(expectedFiruxBalance(accounts)).toBe(95_000);
+  it("lo que debe haber en Wompi y que el libro cuadre", () => {
+    expect(expectedWompiBalance(accounts)).toBe(95_000);
     expect(ledgerBalanced(accounts)).toBe(true);
     expect(ledgerBalanced({ ...accounts, platform: 35_000 })).toBe(false);
   });

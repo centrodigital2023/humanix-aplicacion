@@ -1,14 +1,14 @@
 // Plan Institucional anual: dos tamaños de sede, un solo pago al año por Bre-B. Activo → vigencia y renovación.
-// El precio y el plan los pone el servidor (`payInstitutionPlanWithBreb`); el plan lo activa solo el aviso de pago.
+// El precio y el plan los pone el servidor (`payInstitutionPlan`); el plan lo activa solo el aviso de pago.
 import { useState } from "react";
 import { Building2, CheckCircle2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlan } from "@/hooks/use-plan";
 import { COP, INSTITUTION_PLANS, type InstitutionSize } from "@/lib/commissionMatrix";
-import { payInstitutionPlanWithBreb } from "@/lib/firux.functions";
+import { payInstitutionPlan } from "@/lib/payments.functions";
 import { planValidity } from "@/lib/plans";
 import { cn } from "@/lib/utils";
-import { BrebPaySheet } from "./BrebPaySheet";
+import { PaySheet } from "./PaySheet";
 
 const SIZES: InstitutionSize[] = ["small", "large"];
 
@@ -99,12 +99,12 @@ export function InstitutionPlanCard({ userId }: { userId: string }) {
         </div>
       )}
 
-      <BrebPaySheet
+      <PaySheet
         open={open}
         onOpenChange={setOpen}
         title="Plan Institucional"
         subtitle={`${chosen.label} · 12 meses`}
-        start={() => payInstitutionPlanWithBreb({ data: { size } })}
+        start={() => payInstitutionPlan({ data: { size } })}
         paidMessage="Tu plan queda activo por un año. ¡Bienvenidos!"
         onPaid={() => void plan.refresh()}
       />

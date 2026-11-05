@@ -22,8 +22,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import {
   COP,
-  FIRUX_MAX_COP,
-  FIRUX_MIN_COP,
+  PAYMENT_MAX_COP,
+  PAYMENT_MIN_COP,
   PRO_TIERS,
   WALLET_CREDIT_LIMIT_COP,
   type WalletHealth,
@@ -31,9 +31,9 @@ import {
   suggestedTopupCOP,
   walletHealth,
 } from "@/lib/commissionMatrix";
-import { topupWalletWithBreb } from "@/lib/firux.functions";
+import { topupWallet } from "@/lib/payments.functions";
 import { cn } from "@/lib/utils";
-import { BrebPaySheet } from "./BrebPaySheet";
+import { PaySheet } from "./PaySheet";
 
 export const walletQuery = (userId: string) => ["wallet", userId] as const;
 
@@ -84,7 +84,7 @@ export function useWallet(userId: string, historySize = 5) {
     `wallet-${userId}`,
     [
       { table: "wallets", filter: `professional_id=eq.${userId}` },
-      { table: "firux_charges", filter: `user_id=eq.${userId}` },
+      { table: "payment_charges", filter: `user_id=eq.${userId}` },
       // Aceptar, terminar o cancelar un turno en efectivo cambia lo apartado.
       { table: "service_bookings", filter: `professional_id=eq.${userId}` },
     ],
@@ -129,7 +129,7 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
   const tierFrom = next ? (next.pct === 12 ? 0 : 20) : 60;
   const tierTo = next ? (next.pct === 12 ? 20 : 60) : 60;
   const customCOP = Math.round(Number(custom.replace(/\D/g, "")) || 0);
-  const customOk = customCOP >= FIRUX_MIN_COP && customCOP <= FIRUX_MAX_COP;
+  const customOk = customCOP >= PAYMENT_MIN_COP && customCOP <= PAYMENT_MAX_COP;
 
   return (
     <section
@@ -260,7 +260,7 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
           </form>
           {custom && !customOk && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Desde {COP(FIRUX_MIN_COP)} hasta {COP(FIRUX_MAX_COP)}.
+              Desde {COP(PAYMENT_MIN_COP)} hasta {COP(PAYMENT_MAX_COP)}.
             </p>
           )}
         </div>
@@ -355,12 +355,12 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
         )}
       </div>
 
-      <BrebPaySheet
+      <PaySheet
         open={amount !== null}
         onOpenChange={(o) => !o && setAmount(null)}
         title="Recargar billetera"
         subtitle="Se suma a tu saldo apenas pagues."
-        start={() => topupWalletWithBreb({ data: { amountCop: amount ?? 0 } })}
+        start={() => topupWallet({ data: { amountCop: amount ?? 0 } })}
         paidMessage="Ya sumamos la recarga a tu billetera. ¡A seguir cuidando!"
         onPaid={() => {
           setCustom("");

@@ -49,9 +49,13 @@ export async function dispatchNow(
   const { runDispersion } = await import("./dispersion.server");
   const summary = await runDispersion(await deps(), "staff", userId);
   if (summary.reason === "disabled")
-    return { ok: false, message: "La dispersión automática está apagada (FIRUX_PAYOUTS_ENABLED)." };
+    return { ok: false, message: "La dispersión automática está apagada (WOMPI_PAYOUTS_ENABLED)." };
   if (summary.reason === "not_configured")
-    return { ok: false, message: "Falta la llave de Firux (FIRUX_API_KEY)." };
+    return {
+      ok: false,
+      message:
+        "Falta la llave de Wompi (WOMPI_PAYOUTS_API_KEY, WOMPI_PAYOUTS_USER_ID y WOMPI_PAYOUTS_ACCOUNT_ID).",
+    };
   return { ok: true, summary };
 }
 

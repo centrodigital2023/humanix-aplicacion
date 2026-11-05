@@ -8,11 +8,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BellRing, CheckCircle2, ChevronRight, Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { BrebPaySheet } from "@/components/humanix/payments/BrebPaySheet";
+import { PaySheet } from "@/components/humanix/payments/PaySheet";
 import { useWallet, walletQuery } from "@/components/humanix/payments/WalletCard";
 import { acceptPendingBooking, usePendingBookings } from "@/hooks/use-pending-bookings";
 import { COP, cashAcceptCheck, suggestedTopupCOP } from "@/lib/commissionMatrix";
-import { topupWalletWithBreb } from "@/lib/firux.functions";
+import { topupWallet } from "@/lib/payments.functions";
 import { useNow } from "@/hooks/use-now";
 import { friendlyError } from "@/lib/friendlyError";
 import { waitingLabel } from "@/lib/serviceFlow";
@@ -174,12 +174,12 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
           );
         })}
       </ul>
-      <BrebPaySheet
+      <PaySheet
         open={topup !== null}
         onOpenChange={(o) => !o && setTopup(null)}
         title="Recargar y aceptar"
         subtitle="Apenas pagues, aceptamos el turno por ti."
-        start={() => topupWalletWithBreb({ data: { amountCop: topup?.amount ?? 0 } })}
+        start={() => topupWallet({ data: { amountCop: topup?.amount ?? 0 } })}
         paidMessage="Recarga lista. Estamos aceptando el turno…"
         onPaid={() => {
           const id = topup?.bookingId;

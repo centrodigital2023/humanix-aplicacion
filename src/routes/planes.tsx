@@ -1,5 +1,5 @@
 // Planes y precios (nov 2026): familias y profesionales gratis; instituciones, plan anual por tamaño de sede. Todos los
-// pagos por Bre-B (Firux), dentro de Humanix. Las cifras salen de `commissionMatrix.ts` y `plans.ts`, nunca a mano.
+// pagos en línea con Wompi, dentro de Humanix. Las cifras salen de `commissionMatrix.ts` y `plans.ts`, nunca a mano.
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
-import { BrebPaySheet } from "@/components/humanix/payments/BrebPaySheet";
+import { PaySheet } from "@/components/humanix/payments/PaySheet";
 import { buildSeo, jsonLdString, faqLd, breadcrumbLd } from "@/lib/seo";
 import { pricingProductLd } from "@/lib/planSeo";
 import {
@@ -37,7 +37,7 @@ import {
   WALLET_CREDIT_LIMIT_COP,
   type InstitutionSize,
 } from "@/lib/commissionMatrix";
-import { payInstitutionPlanWithBreb } from "@/lib/firux.functions";
+import { payInstitutionPlan } from "@/lib/payments.functions";
 import { usePlan } from "@/hooks/use-plan";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useAudience } from "@/hooks/use-audience";
@@ -54,7 +54,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Cómo pago un turno?",
-    a: "Al pedir el turno eliges Bre-B o efectivo. Con Bre-B, cuando el profesional acepta te aparece el botón «Pagar con Bre-B»: tocas «Abrir mi banco», confirmas y listo. Funciona con cualquier banco, Nequi o Daviplata. Si prefieres efectivo, le pagas en mano al terminar.",
+    a: "Al pedir el turno eliges pago en línea o efectivo. En línea, tocas «Pagar» y se abre el pago seguro de Wompi (Grupo Bancolombia): pagas con Bre-B, Nequi, PSE, botón Bancolombia o tarjeta, según lo que tengas. Si prefieres efectivo, le pagas en mano al terminar.",
   },
   {
     q: "¿Cuánto cobra Humanix al profesional?",
@@ -78,7 +78,7 @@ const PLAN_FAQS = [
   },
   {
     q: "¿Los pagos son seguros?",
-    a: "Sí. Bre-B es el sistema de pagos inmediatos del Banco de la República: pagas desde la app de tu propio banco, sin compartir tarjetas ni claves con Humanix. El pago se confirma con un aviso firmado del proveedor y nunca por WhatsApp.",
+    a: "Sí. El pago lo procesa Wompi, la pasarela de Grupo Bancolombia: Humanix nunca ve tus tarjetas ni claves. El pago se confirma con un aviso firmado de Wompi y nunca por WhatsApp.",
   },
 ];
 
@@ -307,12 +307,12 @@ function PlansPage() {
       </main>
       <Footer />
 
-      <BrebPaySheet
+      <PaySheet
         open={paySize !== null}
         onOpenChange={(o) => !o && setPaySize(null)}
         title="Plan Institucional"
         subtitle={paySize ? `${INSTITUTION_PLANS[paySize].label} · 12 meses` : undefined}
-        start={() => payInstitutionPlanWithBreb({ data: { size: paySize ?? "small" } })}
+        start={() => payInstitutionPlan({ data: { size: paySize ?? "small" } })}
         paidMessage="Tu plan queda activo por un año. ¡Bienvenidos!"
         onPaid={() => void plan.refresh()}
       />
@@ -492,12 +492,12 @@ function HowToPay() {
     {
       emoji: "📝",
       title: "Pides el turno",
-      text: "Eliges Bre-B o efectivo. El turno mínimo es de " + COP(MIN_BOOKING_COP) + ".",
+      text: "Eliges pago en línea o efectivo. El turno mínimo es de " + COP(MIN_BOOKING_COP) + ".",
     },
     {
       emoji: "✅",
       title: "El profesional acepta",
-      text: "Te avisamos al instante y aparece el botón «Pagar con Bre-B».",
+      text: "Te avisamos al instante y aparece el botón «Pagar».",
     },
     {
       emoji: "🏦",

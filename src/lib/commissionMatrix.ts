@@ -17,8 +17,8 @@
 // (hasta −$30.000) − lo apartado debe cubrir la nueva comisión; por debajo de −$30.000 no acepta turnos.
 
 export const MIN_BOOKING_COP = 20_000;
-export const FIRUX_MIN_COP = 2_000;
-export const FIRUX_MAX_COP = 12_000_000;
+export const PAYMENT_MIN_COP = 2_000;
+export const PAYMENT_MAX_COP = 12_000_000;
 export const FIRST_SHIFT_EXEMPT_CAP_COP = 30_000;
 export const FIRST_SHIFT_WINDOW_DAYS = 90;
 export const WALLET_CREDIT_LIMIT_COP = -30_000;
@@ -155,10 +155,10 @@ export function canTakeNewShifts(
   return balanceCOP >= creditLimitCOP;
 }
 
-/** Recarga sugerida: lo que falta, redondeado hacia arriba a miles y nunca menos que el mínimo de Firux. */
+/** Recarga sugerida: lo que falta, redondeado hacia arriba a miles y nunca menos que el mínimo de cobro. */
 export function suggestedTopupCOP(missingCOP: number): number {
-  const m = Math.max(FIRUX_MIN_COP, Math.ceil(Math.max(0, missingCOP) / 1000) * 1000);
-  return Math.min(m, FIRUX_MAX_COP);
+  const m = Math.max(PAYMENT_MIN_COP, Math.ceil(Math.max(0, missingCOP) / 1000) * 1000);
+  return Math.min(m, PAYMENT_MAX_COP);
 }
 
 export const COP = (n: number) =>

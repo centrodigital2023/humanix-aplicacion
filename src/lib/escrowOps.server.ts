@@ -208,7 +208,7 @@ const markInput = z.object({
   reference: z.string().trim().max(120).default(""),
 });
 
-/** Marca una devolución como enviada desde Firux (con la referencia) o fallida (con el motivo). */
+/** Marca una devolución como enviada desde Wompi (con la referencia) o fallida (con el motivo). */
 export async function markRefund(
   admin: SupabaseClient,
   userId: string,

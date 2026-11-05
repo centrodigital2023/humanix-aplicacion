@@ -55,17 +55,17 @@ vi.mock("@/hooks/use-pending-bookings", () => ({
   usePendingBookings: () => ({ isLoading: false, error: null, data: pending, refetch: vi.fn() }),
   acceptPendingBooking: vi.fn(async () => true),
 }));
-vi.mock("@/lib/firux.functions", () => ({ topupWalletWithBreb: vi.fn() }));
-vi.mock("./BrebPaySheet", () => ({
-  BrebPaySheet: ({ open, title }: { open: boolean; title: string }) =>
+vi.mock("@/lib/payments.functions", () => ({ topupWallet: vi.fn() }));
+vi.mock("./PaySheet", () => ({
+  PaySheet: ({ open, title }: { open: boolean; title: string }) =>
     open ? <div role="dialog">{title}</div> : null,
 }));
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
   useNavigate: () => vi.fn(),
 }));
-vi.mock("@/components/humanix/payments/BrebPaySheet", () => ({
-  BrebPaySheet: ({ open, title }: { open: boolean; title: string }) =>
+vi.mock("@/components/humanix/payments/PaySheet", () => ({
+  PaySheet: ({ open, title }: { open: boolean; title: string }) =>
     open ? <div role="dialog">{title}</div> : null,
 }));
 
