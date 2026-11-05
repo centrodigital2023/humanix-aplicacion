@@ -652,7 +652,7 @@ export type Database = {
             foreignKeyName: "booking_refunds_charge_id_fkey"
             columns: ["charge_id"]
             isOneToOne: true
-            referencedRelation: "firux_charges"
+            referencedRelation: "payment_charges"
             referencedColumns: ["id"]
           },
         ]
@@ -1625,65 +1625,6 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: []
-      }
-      firux_charges: {
-        Row: {
-          amount_cop: number
-          amount_paid_cop: number | null
-          booking_id: string | null
-          created_at: string
-          expires_at: string | null
-          firux_id: string | null
-          id: string
-          kind: string
-          paid_at: string | null
-          payment_url: string | null
-          plan_key: string | null
-          qr_emv: string | null
-          status: string
-          user_id: string
-        }
-        Insert: {
-          amount_cop: number
-          amount_paid_cop?: number | null
-          booking_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          firux_id?: string | null
-          id?: string
-          kind: string
-          paid_at?: string | null
-          payment_url?: string | null
-          plan_key?: string | null
-          qr_emv?: string | null
-          status?: string
-          user_id: string
-        }
-        Update: {
-          amount_cop?: number
-          amount_paid_cop?: number | null
-          booking_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          firux_id?: string | null
-          id?: string
-          kind?: string
-          paid_at?: string | null
-          payment_url?: string | null
-          plan_key?: string | null
-          qr_emv?: string | null
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "firux_charges_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "service_bookings"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       form_responses: {
         Row: {
@@ -2976,6 +2917,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_entries: {
+        Row: {
+          amount_cop: number
+          booking_id: string | null
+          charge_id: string | null
+          created_at: string
+          from_account: string
+          from_pro: string | null
+          id: number
+          memo: string | null
+          payout_id: string | null
+          ref: string
+          refund_id: string | null
+          to_account: string
+          to_pro: string | null
+        }
+        Insert: {
+          amount_cop: number
+          booking_id?: string | null
+          charge_id?: string | null
+          created_at?: string
+          from_account: string
+          from_pro?: string | null
+          id?: number
+          memo?: string | null
+          payout_id?: string | null
+          ref: string
+          refund_id?: string | null
+          to_account: string
+          to_pro?: string | null
+        }
+        Update: {
+          amount_cop?: number
+          booking_id?: string | null
+          charge_id?: string | null
+          created_at?: string
+          from_account?: string
+          from_pro?: string | null
+          id?: number
+          memo?: string | null
+          payout_id?: string | null
+          ref?: string
+          refund_id?: string | null
+          to_account?: string
+          to_pro?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -3345,6 +3334,122 @@ export type Database = {
             columns: ["job_offer_id"]
             isOneToOne: false
             referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_charges: {
+        Row: {
+          amount_cop: number
+          amount_paid_cop: number | null
+          booking_id: string | null
+          checkout_url: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          kind: string
+          paid_at: string | null
+          plan_key: string | null
+          provider: string
+          provider_tx_id: string | null
+          qr_emv: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_cop: number
+          amount_paid_cop?: number | null
+          booking_id?: string | null
+          checkout_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kind: string
+          paid_at?: string | null
+          plan_key?: string | null
+          provider?: string
+          provider_tx_id?: string | null
+          qr_emv?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_cop?: number
+          amount_paid_cop?: number | null
+          booking_id?: string | null
+          checkout_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          paid_at?: string | null
+          plan_key?: string | null
+          provider?: string
+          provider_tx_id?: string | null
+          qr_emv?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_charges_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_splits: {
+        Row: {
+          booking_id: string
+          charge_id: string | null
+          commission_pct: number
+          created_at: string
+          exempt_cop: number
+          gross_cop: number
+          payer_id: string
+          platform_fee_cop: number
+          professional_cop: number
+          professional_id: string
+        }
+        Insert: {
+          booking_id: string
+          charge_id?: string | null
+          commission_pct: number
+          created_at?: string
+          exempt_cop?: number
+          gross_cop: number
+          payer_id: string
+          platform_fee_cop: number
+          professional_cop: number
+          professional_id: string
+        }
+        Update: {
+          booking_id?: string
+          charge_id?: string | null
+          commission_pct?: number
+          created_at?: string
+          exempt_cop?: number
+          gross_cop?: number
+          payer_id?: string
+          platform_fee_cop?: number
+          professional_cop?: number
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_splits_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_splits_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "payment_charges"
             referencedColumns: ["id"]
           },
         ]
@@ -4178,6 +4283,7 @@ export type Database = {
           arrived_at: string | null
           cancel_reason: string | null
           cancelled_at: string | null
+          charge_id: string | null
           client_confirmed_at: string | null
           client_id: string
           commission_exempt_cop: number
@@ -4188,7 +4294,6 @@ export type Database = {
           duration_hours: number
           emergency_phone: string | null
           escrow_status: string | null
-          firux_charge_id: string | null
           hourly_rate: number
           id: string
           job_offer_id: string | null
@@ -4219,6 +4324,7 @@ export type Database = {
           arrived_at?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
+          charge_id?: string | null
           client_confirmed_at?: string | null
           client_id: string
           commission_exempt_cop?: number
@@ -4229,7 +4335,6 @@ export type Database = {
           duration_hours?: number
           emergency_phone?: string | null
           escrow_status?: string | null
-          firux_charge_id?: string | null
           hourly_rate: number
           id?: string
           job_offer_id?: string | null
@@ -4260,6 +4365,7 @@ export type Database = {
           arrived_at?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
+          charge_id?: string | null
           client_confirmed_at?: string | null
           client_id?: string
           commission_exempt_cop?: number
@@ -4270,7 +4376,6 @@ export type Database = {
           duration_hours?: number
           emergency_phone?: string | null
           escrow_status?: string | null
-          firux_charge_id?: string | null
           hourly_rate?: number
           id?: string
           job_offer_id?: string | null
@@ -6162,6 +6267,14 @@ export type Database = {
       }
       hx_care_plan: { Args: { p_inst: string }; Returns: Json }
       hx_cell: { Args: { p: number; p_size?: number }; Returns: number }
+      hx_charge_attempt: {
+        Args: { p_charge: string; p_provider_tx: string; p_status: string }
+        Returns: string
+      }
+      hx_charge_paid: {
+        Args: { p_amount_paid: number; p_charge: string; p_provider_tx: string }
+        Returns: string
+      }
       hx_circle_limit: { Args: { p_plan: string }; Returns: number }
       hx_confirm_booking_done: { Args: { p_booking: string }; Returns: string }
       hx_cop: { Args: { p_amount: number }; Returns: string }
@@ -6231,6 +6344,28 @@ export type Database = {
       hx_institution_size: { Args: { p_user: string }; Returns: string }
       hx_json_num: { Args: { p: Json; p_key: string }; Returns: number }
       hx_json_texts: { Args: { p: Json }; Returns: string[] }
+      hx_ledger_balance: {
+        Args: { p_account: string; p_pro: string }
+        Returns: number
+      }
+      hx_ledger_charge_paid: { Args: { p_charge: string }; Returns: undefined }
+      hx_ledger_move: {
+        Args: {
+          p_amount: number
+          p_booking: string
+          p_charge: string
+          p_from: string
+          p_from_pro: string
+          p_memo: string
+          p_payout: string
+          p_ref: string
+          p_refund: string
+          p_to: string
+          p_to_pro: string
+        }
+        Returns: boolean
+      }
+      hx_ledger_release: { Args: { p_booking: string }; Returns: undefined }
       hx_mark_refund: {
         Args: { p_ref: string; p_refund: string; p_status: string }
         Returns: string
@@ -6366,6 +6501,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      hx_split_booking: { Args: { p_booking: string }; Returns: undefined }
       hx_staff_modules: { Args: never; Returns: string[] }
       hx_text_array_ok: {
         Args: { p: string[]; p_items: number; p_len: number }
