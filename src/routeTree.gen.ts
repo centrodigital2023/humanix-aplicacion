@@ -97,6 +97,7 @@ import { Route as DashboardFamiliaOnboardingRouteImport } from './routes/dashboa
 import { Route as DashboardInstitucionOnboardingRouteImport } from './routes/dashboard.institucion.onboarding'
 import { Route as ApiPublicFiruxDispatchRouteImport } from './routes/api/public/firux/dispatch'
 import { Route as ApiPublicFiruxWebhookRouteImport } from './routes/api/public/firux/webhook'
+import { Route as ApiPublicWompiWebhookRouteImport } from './routes/api/public/wompi/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 
@@ -544,6 +545,11 @@ const ApiPublicFiruxWebhookRoute = ApiPublicFiruxWebhookRouteImport.update({
   path: '/api/public/firux/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWompiWebhookRoute = ApiPublicWompiWebhookRouteImport.update({
+  id: '/api/public/wompi/webhook',
+  path: '/api/public/wompi/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -644,6 +650,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/api/public/firux/dispatch': typeof ApiPublicFiruxDispatchRoute
   '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
+  '/api/public/wompi/webhook': typeof ApiPublicWompiWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -734,6 +741,7 @@ export interface FileRoutesByTo {
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/api/public/firux/dispatch': typeof ApiPublicFiruxDispatchRoute
   '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
+  '/api/public/wompi/webhook': typeof ApiPublicWompiWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -827,6 +835,7 @@ export interface FileRoutesById {
   '/dashboard/institucion/onboarding': typeof DashboardInstitucionOnboardingRoute
   '/api/public/firux/dispatch': typeof ApiPublicFiruxDispatchRoute
   '/api/public/firux/webhook': typeof ApiPublicFiruxWebhookRoute
+  '/api/public/wompi/webhook': typeof ApiPublicWompiWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
@@ -921,6 +930,7 @@ export interface FileRouteTypes {
     | '/dashboard/institucion/onboarding'
     | '/api/public/firux/dispatch'
     | '/api/public/firux/webhook'
+    | '/api/public/wompi/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -1011,6 +1021,7 @@ export interface FileRouteTypes {
     | '/dashboard/institucion/onboarding'
     | '/api/public/firux/dispatch'
     | '/api/public/firux/webhook'
+    | '/api/public/wompi/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   id:
@@ -1103,6 +1114,7 @@ export interface FileRouteTypes {
     | '/dashboard/institucion/onboarding'
     | '/api/public/firux/dispatch'
     | '/api/public/firux/webhook'
+    | '/api/public/wompi/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
   fileRoutesById: FileRoutesById
@@ -1172,6 +1184,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicFiruxDispatchRoute: typeof ApiPublicFiruxDispatchRoute
   ApiPublicFiruxWebhookRoute: typeof ApiPublicFiruxWebhookRoute
+  ApiPublicWompiWebhookRoute: typeof ApiPublicWompiWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
 }
@@ -1794,6 +1807,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFiruxWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/wompi/webhook': {
+      id: '/api/public/wompi/webhook'
+      path: '/api/public/wompi/webhook'
+      fullPath: '/api/public/wompi/webhook'
+      preLoaderRoute: typeof ApiPublicWompiWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -1964,6 +1984,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicFiruxDispatchRoute: ApiPublicFiruxDispatchRoute,
   ApiPublicFiruxWebhookRoute: ApiPublicFiruxWebhookRoute,
+  ApiPublicWompiWebhookRoute: ApiPublicWompiWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
 }
