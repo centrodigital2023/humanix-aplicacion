@@ -184,7 +184,7 @@ export function BrebPaySheet({
 
               {phase.kind === "expired" ? (
                 <div className="space-y-3 text-center">
-                  <p>Este código ya no sirve. Generemos uno nuevo, toma un segundo.</p>
+                  <p>Este enlace de pago venció. Generemos uno nuevo, toma un segundo.</p>
                   <Button size="lg" className="w-full" onClick={() => void load()}>
                     <RefreshCw className="mr-2 h-5 w-5" aria-hidden="true" /> Generar un código
                     nuevo
@@ -195,8 +195,7 @@ export function BrebPaySheet({
                   {phase.charge.paymentUrl && (
                     <Button asChild size="lg" className="h-16 w-full rounded-2xl text-lg font-bold">
                       <a href={phase.charge.paymentUrl} target="_blank" rel="noopener noreferrer">
-                        <Landmark className="mr-2 h-6 w-6" aria-hidden="true" /> Abrir mi banco y
-                        pagar
+                        <Landmark className="mr-2 h-6 w-6" aria-hidden="true" /> Pagar ahora
                       </a>
                     </Button>
                   )}
@@ -245,12 +244,12 @@ export function BrebPaySheet({
 
               <ul className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <li className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-biosensor" aria-hidden="true" /> Bre-B del
-                  Banco de la República
+                  <ShieldCheck className="h-4 w-4 text-biosensor" aria-hidden="true" /> Pago seguro
+                  con Wompi
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <Smartphone className="h-4 w-4 text-biosensor" aria-hidden="true" /> Cualquier
-                  banco, Nequi o Daviplata
+                  <Smartphone className="h-4 w-4 text-biosensor" aria-hidden="true" /> PSE,
+                  tarjeta, Nequi o Bancolombia
                 </li>
               </ul>
             </div>

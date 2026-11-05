@@ -156,12 +156,12 @@ export type ChargeErrorCode =
 export type ChargeResult = { ok: true; charge: ChargeView } | { ok: false; code: ChargeErrorCode };
 
 export const CHARGE_ERROR_MESSAGE: Record<ChargeErrorCode, string> = {
-  not_configured: "Los pagos con Bre-B se están activando. Inténtalo en unos minutos.",
+  not_configured: "Los pagos se están activando. Inténtalo en unos minutos.",
   not_found: "No encontramos este turno.",
   forbidden: "Solo quien reservó puede pagar este turno.",
   not_payable: "Podrás pagar cuando el profesional confirme el turno.",
   already_paid: "Este turno ya está pagado. ¡Gracias!",
   cash_booking: "Este turno se paga en efectivo directamente al profesional.",
   amount_out_of_range: "El monto debe estar entre $2.000 y $12.000.000.",
-  provider_error: "No pudimos generar el código de pago. Inténtalo de nuevo en un momento.",
+  provider_error: "No pudimos preparar tu pago. Inténtalo de nuevo en un momento.",
 };

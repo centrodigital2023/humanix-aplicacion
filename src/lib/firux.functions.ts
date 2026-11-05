@@ -12,20 +12,23 @@ export type { ChargeResult, ChargeView, ChargeErrorCode } from "./firux";
 
 async function deps(): Promise<ChargeDeps> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { supabaseChargeStore, supabaseConnectionLookup, firuxCreateCharge } =
-    await import("./firuxCharges.server");
-  const { isFiruxConnectEnabled } = await import("./firuxConnect");
-  const key = process.env.FIRUX_API_KEY;
+  const { supabaseChargeStore } = await import("./firuxCharges.server");
+  const { wompiCreateCharge } = await import("./wompi");
+  const publicKey = process.env.WOMPI_PUBLIC_KEY;
+  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
   return {
     store: supabaseChargeStore(supabaseAdmin as never),
-    firux: key ? firuxCreateCharge(key) : null,
+    // Pasarela: Wompi (Firux fue retirado el 5 nov 2026).
+    firux:
+      publicKey && integritySecret
+        ? wompiCreateCharge({
+            publicKey,
+            integritySecret,
+            redirectUrl: process.env.WOMPI_REDIRECT_URL ?? "https://humanix.lat/pago/exito",
+          })
+        : null,
     now: Date.now,
-    // «Conectar con Firux Pay»: apagado salvo FIRUX_CONNECT_ENABLED=true (y la migración 20261104140000 aplicada).
-    connect: {
-      enabled: !!key && isFiruxConnectEnabled(process.env),
-      connection: supabaseConnectionLookup(supabaseAdmin as never),
-      firuxFor: (accountId) => (key ? firuxCreateCharge(key, fetch, { accountId }) : null),
-    },
+    connect: { enabled: false, connection: async () => null, firuxFor: () => null },
   };
 }
 
