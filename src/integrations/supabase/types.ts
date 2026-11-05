@@ -1724,6 +1724,30 @@ export type Database = {
         }
         Relationships: []
       }
+      hx_dispersion_config: {
+        Row: {
+          dispatch_url: string | null
+          enabled: boolean
+          id: boolean
+          secret: string | null
+          updated_at: string
+        }
+        Insert: {
+          dispatch_url?: string | null
+          enabled?: boolean
+          id?: boolean
+          secret?: string | null
+          updated_at?: string
+        }
+        Update: {
+          dispatch_url?: string | null
+          enabled?: boolean
+          id?: boolean
+          secret?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inst_alerts: {
         Row: {
           ack_note: string | null
@@ -3493,45 +3517,105 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_batches: {
+        Row: {
+          count: number
+          created_at: string
+          failed: number
+          finished_at: string | null
+          id: string
+          requested_by: string | null
+          sent: number
+          total_cop: number
+          trigger: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          requested_by?: string | null
+          sent?: number
+          total_cop?: number
+          trigger: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          requested_by?: string | null
+          sent?: number
+          total_cop?: number
+          trigger?: string
+        }
+        Relationships: []
+      }
       payouts: {
         Row: {
           amount_cop: number
+          attempts: number
+          batch_id: string | null
           booking_id: string | null
           created_at: string
           error_code: string | null
           id: string
+          idem_gen: number
           key_type: string | null
           key_value: string | null
+          next_attempt_at: string | null
+          paid_at: string | null
           professional_id: string
+          provider_payout_id: string | null
           provider_ref: string | null
+          sent_at: string | null
           status: string
           updated_at: string
+          via: string | null
         }
         Insert: {
           amount_cop: number
+          attempts?: number
+          batch_id?: string | null
           booking_id?: string | null
           created_at?: string
           error_code?: string | null
           id?: string
+          idem_gen?: number
           key_type?: string | null
           key_value?: string | null
+          next_attempt_at?: string | null
+          paid_at?: string | null
           professional_id: string
+          provider_payout_id?: string | null
           provider_ref?: string | null
+          sent_at?: string | null
           status?: string
           updated_at?: string
+          via?: string | null
         }
         Update: {
           amount_cop?: number
+          attempts?: number
+          batch_id?: string | null
           booking_id?: string | null
           created_at?: string
           error_code?: string | null
           id?: string
+          idem_gen?: number
           key_type?: string | null
           key_value?: string | null
+          next_attempt_at?: string | null
+          paid_at?: string | null
           professional_id?: string
+          provider_payout_id?: string | null
           provider_ref?: string | null
+          sent_at?: string | null
           status?: string
           updated_at?: string
+          via?: string | null
         }
         Relationships: [
           {
@@ -5979,6 +6063,18 @@ export type Database = {
           pro_total: number
         }[]
       }
+      get_my_earnings: {
+        Args: never
+        Returns: {
+          available_cop: number
+          fees_30d_cop: number
+          held_cop: number
+          in_transit_cop: number
+          needs_key: boolean
+          paid_30d_cop: number
+          paid_total_cop: number
+        }[]
+      }
       get_my_profile: {
         Args: never
         Returns: {
@@ -6276,6 +6372,22 @@ export type Database = {
         Returns: string
       }
       hx_circle_limit: { Args: { p_plan: string }; Returns: number }
+      hx_claim_payouts: {
+        Args: { p_by: string; p_limit: number; p_trigger: string }
+        Returns: {
+          amount_cop: number
+          attempts: number
+          batch_id: string
+          booking_id: string
+          id: string
+          idem_gen: number
+          key_type: string
+          key_value: string
+          payee_email: string
+          payee_name: string
+          professional_id: string
+        }[]
+      }
       hx_confirm_booking_done: { Args: { p_booking: string }; Returns: string }
       hx_cop: { Args: { p_amount: number }; Returns: string }
       hx_dashboard_link: { Args: { p_user: string }; Returns: string }
@@ -6296,6 +6408,7 @@ export type Database = {
       }
       hx_escrow_tick: { Args: never; Returns: number }
       hx_escrow_window: { Args: never; Returns: string }
+      hx_finish_batch: { Args: { p_batch: string }; Returns: undefined }
       hx_first_shift_exempt: {
         Args: { p_client: string; p_fee: number; p_professional: string }
         Returns: number
@@ -6344,6 +6457,7 @@ export type Database = {
       hx_institution_size: { Args: { p_user: string }; Returns: string }
       hx_json_num: { Args: { p: Json; p_key: string }; Returns: number }
       hx_json_texts: { Args: { p: Json }; Returns: string[] }
+      hx_kick_dispersion: { Args: never; Returns: boolean }
       hx_ledger_balance: {
         Args: { p_account: string; p_pro: string }
         Returns: number
@@ -6366,6 +6480,10 @@ export type Database = {
         Returns: boolean
       }
       hx_ledger_release: { Args: { p_booking: string }; Returns: undefined }
+      hx_mark_payout: {
+        Args: { p_payout: string; p_ref: string; p_status: string }
+        Returns: string
+      }
       hx_mark_refund: {
         Args: { p_ref: string; p_refund: string; p_status: string }
         Returns: string
@@ -6439,6 +6557,29 @@ export type Database = {
         Returns: string
       }
       hx_paid_plans: { Args: never; Returns: string[] }
+      hx_payout_notify: {
+        Args: { p_amount: number; p_pro: string; p_status: string }
+        Returns: undefined
+      }
+      hx_payout_result: {
+        Args: {
+          p_definitive?: boolean
+          p_error: string
+          p_payout: string
+          p_provider_id: string
+          p_status: string
+        }
+        Returns: string
+      }
+      hx_payout_webhook: {
+        Args: {
+          p_error: string
+          p_provider_id: string
+          p_reference: string
+          p_status: string
+        }
+        Returns: string
+      }
       hx_ping_map: { Args: never; Returns: undefined }
       hx_ping_service_offers: { Args: never; Returns: undefined }
       hx_plan_visibility_boost: { Args: { p_user: string }; Returns: number }
@@ -6461,6 +6602,7 @@ export type Database = {
         Args: { p_booking: string; p_charge: string; p_reason: string }
         Returns: string
       }
+      hx_reconciliation: { Args: never; Returns: Json }
       hx_report_booking_problem: {
         Args: { p_booking: string; p_reason: string }
         Returns: string

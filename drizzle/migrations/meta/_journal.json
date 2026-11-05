@@ -169,6 +169,13 @@
       "when": 1793919218123,
       "tag": "0023_wompi_payments_part1",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793919390301,
+      "tag": "0024_wompi_payments_part2",
+      "breakpoints": true
     }
   ]
 }
