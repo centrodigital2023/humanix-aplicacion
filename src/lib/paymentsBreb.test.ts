@@ -107,6 +107,16 @@ describe("matriz de comisiones", () => {
     expect(INSTITUTION_PLANS.small.annualCOP).toBe(12 * 290_000);
     expect(INSTITUTION_PLANS.large.annualCOP).toBe(12 * 490_000);
   });
+  it("la exoneración del primer turno se usa una sola vez por pareja", () => {
+    expect(
+      commissionQuote({
+        ...base,
+        previousShiftsTogether: 0,
+        clientAgeDays: 10,
+        exemptionUsedTogether: true,
+      }),
+    ).toMatchObject({ feeCOP: 15_000, exemptCOP: 0, firstShift: false });
+  });
   it("primer turno de la pareja: exonerado hasta $30.000 si quien contrata tiene ≤ 90 días", () => {
     expect(
       commissionQuote({ ...base, previousShiftsTogether: 0, clientAgeDays: 10 }),

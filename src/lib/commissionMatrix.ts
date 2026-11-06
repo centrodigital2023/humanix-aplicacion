@@ -10,7 +10,8 @@
 //   - Si contrata una familia: 15 % (0–19 turnos completados en los últimos 30 días), 12 % (20–59), 10 % (60 o más).
 //   - Si contrata una institución con plan: 12 % (sede de 1 a 9 profesionales) o 10 % (10 o más).
 //   - Primer turno de cada pareja (quien contrata, profesional): exonerado hasta $30.000 de comisión, si quien contrata se registró
-//     hace 90 días o menos.
+//     hace 90 días o menos. Una sola vez por pareja: si otro turno abierto de la pareja ya la usó, el nuevo paga normal
+//     (migración 20261106150000).
 //
 // Pago en efectivo (la familia le paga al profesional en mano): la comisión se descuenta de la billetera Humanix del profesional al
 // terminar el turno. Al aceptarlo, su comisión queda «apartada» hasta que termina o se cancela. Para aceptar otro, saldo + cupo
@@ -74,6 +75,8 @@ export interface CommissionInput {
   previousShiftsTogether: number;
   /** Días desde que quien contrata se registró. */
   clientAgeDays: number;
+  /** Otro turno de la pareja, sin cancelar, ya tiene la exoneración del primer turno. */
+  exemptionUsedTogether?: boolean;
 }
 
 export interface CommissionQuote {
@@ -93,6 +96,7 @@ export function commissionQuote(i: CommissionInput): CommissionQuote {
   const gross = Math.round((total * pct) / 100);
   const firstShift =
     (i.previousShiftsTogether ?? 0) === 0 &&
+    !i.exemptionUsedTogether &&
     (i.clientAgeDays ?? Infinity) <= FIRST_SHIFT_WINDOW_DAYS;
   const exempt = firstShift ? Math.min(gross, FIRST_SHIFT_EXEMPT_CAP_COP) : 0;
   const fee = gross - exempt;
