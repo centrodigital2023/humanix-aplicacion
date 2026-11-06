@@ -3,6 +3,8 @@ import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAppUser } from "@/hooks/use-app-user";
 import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
+import { useProAvailability } from "@/hooks/use-pro-availability";
+import { subscribeOpenOffersPing } from "@/hooks/use-opportunity-feed";
 import {
   Loader2,
   Sparkles,
@@ -237,8 +239,11 @@ function ProDashboard() {
   // `null` mientras se decide (así el panel no parpadea antes de la bienvenida).
   const [welcomeOpen, setWelcomeOpen] = useState<boolean | null>(null);
   const [offersSubTab, setOffersSubTab] = useState("familias");
-  const [isOnline, setIsOnline] = useState(false);
-  const [togglingOnline, setTogglingOnline] = useState(false);
+  // «Disponible»: una sola fuente para el inicio y el panel, sincronizada en vivo entre pestañas y dispositivos.
+  const availability = useProAvailability(userId);
+  const isOnline = availability.available;
+  const [togglingProfile, setTogglingProfile] = useState(false);
+  const togglingOnline = availability.saving || togglingProfile;
   const [docSummary, setDocSummary] = useState<Record<string, boolean>>({});
 
   // IA onboarding
@@ -401,7 +406,6 @@ function ProDashboard() {
       if (p.data) {
         const pp = p.data as unknown as ProProfile;
         setProfile(pp);
-        setIsOnline(pp.available ?? false);
         setSpecialty(pp.specialty ?? "");
         setYears(pp.years_experience ?? "");
         setRethus(pp.rethus_number ?? "");
@@ -420,6 +424,7 @@ function ProDashboard() {
         const ins = await supabase.from("professional_profiles").insert({ user_id: uid });
         if (ins.error)
           console.warn("[pro dashboard] could not create empty profile:", ins.error.message);
+        else void availability.refetch();
       }
     } catch (err) {
       console.error("[pro dashboard] loadAll failed:", err);
@@ -473,6 +478,21 @@ function ProDashboard() {
     !!userId,
   );
 
+  // Una oferta que otro profesional toma (pasa a «filled») ya no es visible por RLS, así que su UPDATE no llega por
+  // postgres_changes: el aviso privado sin datos `offers_changed` sí llega y recarga la lista.
+  useEffect(() => {
+    if (!userId) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribeOpenOffersPing(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void loadLive(userId).catch(() => undefined), 600);
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [userId]);
+
   // Cambios del perfil hechos por el servidor (verificación, calificación, turnos): solo las cifras, nunca el formulario.
   useRealtimeRefresh(
     `pro-dash-profile-${userId ?? "anon"}`,
@@ -493,7 +513,6 @@ function ProDashboard() {
       if (!data) return;
       const pp = data as unknown as ProProfile;
       setProfile(pp);
-      setIsOnline(pp.available ?? false);
     },
     !!userId,
   );
@@ -573,33 +592,29 @@ function ProDashboard() {
   // «Disponible» es la misma marca que usa el mapa y los contadores en vivo (`available`): no te oculta, te marca. Antes este interruptor
   // escribía `active`, que sí oculta el perfil del mapa y del buscador, y los contadores no cambiaban.
   const toggleOnline = async () => {
-    if (!userId) return;
-    setTogglingOnline(true);
+    if (!userId || availability.saving) return;
     const next = !isOnline;
-    try {
-      const { error } = await supabase
-        .from("professional_profiles")
-        .update({ available: next } as never)
-        .eq("user_id", userId);
-      if (error) throw error;
-      setIsOnline(next);
-      setProfile((prev) => (prev ? { ...prev, available: next } : prev));
-      toast.success(
-        next
-          ? "¡Estás disponible! Familias e IPS te ven disponible en el mapa, aunque cierres Humanix o apagues el celular."
-          : "Cambiaste a no disponible: sigues en el mapa, marcado como no disponible.",
+    const res = await availability.setAvailable(next);
+    if (!res.ok) {
+      toast.error(
+        res.reason === "no_profile"
+          ? "Aún no tienes perfil profesional: completa «Lo que haces» y vuelve a intentarlo."
+          : "No se pudo actualizar tu disponibilidad. Revisa tu conexión e intenta otra vez.",
       );
-    } catch {
-      toast.error("No se pudo actualizar tu disponibilidad.");
-    } finally {
-      setTogglingOnline(false);
+      return;
     }
+    setProfile((prev) => (prev ? { ...prev, available: res.available } : prev));
+    toast.success(
+      res.available
+        ? "¡Estás disponible! Familias e IPS te ven disponible en el mapa, aunque cierres Humanix o apagues el celular."
+        : "Cambiaste a no disponible: sigues en el mapa, marcado como no disponible.",
+    );
   };
 
   // Quien había apagado su perfil con el interruptor antiguo (`active = false`) lo vuelve a mostrar desde «¿Me ven en el mapa?».
   const showProfileAgain = async () => {
     if (!userId) return;
-    setTogglingOnline(true);
+    setTogglingProfile(true);
     try {
       const { error } = await supabase
         .from("professional_profiles")
@@ -611,7 +626,7 @@ function ProDashboard() {
     } catch {
       toast.error("No se pudo volver a mostrar tu perfil.");
     } finally {
-      setTogglingOnline(false);
+      setTogglingProfile(false);
     }
   };
 
@@ -1088,7 +1103,7 @@ function ProDashboard() {
                 <LivePulseBar role="professional" />
                 <ProMapVisibility
                   userId={userId}
-                  profile={profile}
+                  profile={profile ? { ...profile, available: isOnline } : profile}
                   busy={togglingOnline}
                   onAction={onVisibilityAction}
                 />

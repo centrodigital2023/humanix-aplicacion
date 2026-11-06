@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { pendingBookingsKey } from "@/hooks/use-pending-bookings";
 import { playAlertSound, showSystemNotification } from "@/lib/alertSound";
 import {
+  alertKeyForNotification,
   isRecent,
+  isRetiredNotification,
   liveAlertFromBooking,
   liveAlertFromNotification,
   pushAlert,
@@ -40,6 +42,8 @@ type BookingRow = PendingBookingRow & { status: string };
  *   clave —el aviso de `notifications` y el INSERT en `service_bookings`—, así basta con que llegue una.
  *   Si la solicitud deja de estar pendiente (la aceptó, la cancelaron), la alerta se va sola.
  * - Familia, EPS/IPS y círculo: Aceptado, En camino, Cuidando, Terminado y alertas del parte.
+ * - Avisos de ofertas a varios profesionales (`new_offer`, invitaciones de equipo): cuando otro la toma, la base marca el
+ *   aviso como retirado (UPDATE en `notifications`) y la alerta se quita sola.
  * - Al (re)conectar se recupera lo perdido: solicitudes aún pendientes y avisos de los últimos minutos.
  *
  * Realtime respeta RLS: cada quien solo recibe sus filas.
@@ -136,6 +140,20 @@ export function useRealtimeProfessionalFeed(userId: string | null, isProfessiona
         (payload) => {
           const alert = liveAlertFromNotification(payload.new as NotificationRow);
           if (alert) add(alert, true);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          // Otro profesional tomó la oferta (o se cerró): la base retira el aviso y aquí se quita la alerta.
+          const row = payload.new as NotificationRow;
+          if (isRetiredNotification(row)) remove(alertKeyForNotification(row));
         },
       );
 

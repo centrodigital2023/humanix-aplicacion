@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Check, Clock, MapPin, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useProAvailability } from "@/hooks/use-pro-availability";
+import { subscribeOpenOffersPing } from "@/hooks/use-opportunity-feed";
 import type { AppUser } from "@/hooks/use-app-user";
 import { TINTS, primaryBtn } from "./ui";
 import { useSpeakOnChange, useVoice } from "./voice";
@@ -45,8 +47,10 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
   const { say } = useVoice();
   const isPro = Boolean(user?.roles.includes("professional"));
-  const [available, setAvailable] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Misma fuente que el panel: si lo cambias en el panel o en otro dispositivo, aquí se ve al instante.
+  const availability = useProAvailability(user?.id, isPro);
+  const available = availability.available;
+  const saving = availability.saving;
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [dismissed, setDismissed] = useState<string[]>([]);
@@ -63,13 +67,12 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
       const { data } = await (supabase as any)
         .from("professional_profiles")
         .select(
-          "available, home_city, full_name, avatar_url, specialty, years_experience, avg_rating, verified, rethus_verified",
+          "home_city, full_name, avatar_url, specialty, years_experience, avg_rating, verified, rethus_verified",
         )
         .eq("user_id", user.id)
         .maybeSingle();
       if (!active || !data) return;
       const d = data as {
-        available?: boolean | null;
         home_city?: string | null;
         full_name?: string | null;
         avatar_url?: string | null;
@@ -79,7 +82,6 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
         verified?: boolean | null;
         rethus_verified?: boolean | null;
       };
-      setAvailable(Boolean(d.available));
       setProCity(d.home_city ?? null);
       if (d.full_name) {
         const slug = d.full_name
@@ -98,7 +100,7 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
           rating: d.avg_rating ?? undefined,
           rethusBadge: Boolean(d.verified || d.rethus_verified),
           certBadge: Boolean(d.verified),
-          availableNow: Boolean(d.available),
+          availableNow: false,
         });
       }
     })();
@@ -127,11 +129,20 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
         timer = setTimeout(() => setReloadTick((t) => t + 1), 400);
       })
       .subscribe();
+    // Cuando otro profesional toma la oferta, pasa a «filled» y RLS ya no deja ver la fila: ese UPDATE no llega por
+    // postgres_changes. El aviso privado sin datos `offers_changed` (solo profesionales) sí llega y la lista se recarga.
+    const unsubscribePing = isPro
+      ? subscribeOpenOffersPing(() => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => setReloadTick((t) => t + 1), 400);
+        })
+      : () => undefined;
     return () => {
       if (timer) clearTimeout(timer);
+      unsubscribePing();
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [isPro]);
 
   useEffect(() => {
     let active = true;
@@ -164,19 +175,17 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
       goSignup();
       return;
     }
+    if (saving) return;
     const next = !available;
-    setAvailable(next);
-    setSaving(true);
     setStatusMsg(null);
-    const { error } = await supabase
-      .from("professional_profiles")
-      .update({ available: next })
-      .eq("user_id", user.id);
-    setSaving(false);
-    if (error) {
-      setAvailable(!next);
-      setStatusMsg("No se pudo cambiar. Intenta otra vez.");
-      say("No se pudo cambiar. Intenta otra vez.");
+    const res = await availability.setAvailable(next);
+    if (!res.ok) {
+      const fail =
+        res.reason === "no_profile"
+          ? "Primero completa tu perfil en «Mi perfil»."
+          : "No se pudo cambiar. Intenta otra vez.";
+      setStatusMsg(fail);
+      say(fail);
       return;
     }
     const msg = next
@@ -373,7 +382,7 @@ export function ProfessionalFlow({ user }: { user: AppUser | null }) {
           <p className="text-sm text-muted-foreground mb-4">
             Compártela antes de cada servicio. Tu familia sabe exactamente quién viene.
           </p>
-          <ProfessionalShareCard pro={proCardData} compact />
+          <ProfessionalShareCard pro={{ ...proCardData, availableNow: available }} compact />
         </section>
       )}
     </div>

@@ -176,3 +176,22 @@ describe("isRecent", () => {
     expect(isRecent("no-es-fecha", now)).toBe(false);
   });
 });
+
+describe("avisos retirados", () => {
+  it("un aviso con meta.retired no es alerta ni se muestra", async () => {
+    const { isRetiredNotification, liveAlertFromNotification } = await import("./serviceFlow");
+    const base = {
+      id: "n1",
+      type: "new_offer",
+      title: "Nueva oferta",
+      body: null,
+      link: "/dashboard/profesional",
+      created_at: "2026-11-06T10:00:00Z",
+    };
+    expect(isRetiredNotification({ meta: null })).toBe(false);
+    expect(isRetiredNotification({ meta: { offer_id: "o1" } })).toBe(false);
+    expect(isRetiredNotification({ meta: { offer_id: "o1", retired: "taken" } })).toBe(true);
+    expect(liveAlertFromNotification({ ...base, meta: { offer_id: "o1" } })).not.toBeNull();
+    expect(liveAlertFromNotification({ ...base, meta: { retired: "taken" } })).toBeNull();
+  });
+});

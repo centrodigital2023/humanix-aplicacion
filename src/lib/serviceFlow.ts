@@ -168,13 +168,28 @@ function bookingIdOf(n: NotificationRow): string | undefined {
   return m?.[1];
 }
 
+/**
+ * Aviso retirado por la base (`meta.retired`, migración 20261106100000): la oferta o necesidad ya la tomó otro
+ * profesional, se cerró o se borró. Ya no se muestra ni en la campana ni como alerta flotante.
+ */
+export function isRetiredNotification(n: Pick<NotificationRow, "meta">): boolean {
+  const meta = n.meta as { retired?: unknown } | null | undefined;
+  return Boolean(meta && typeof meta === "object" && meta.retired);
+}
+
+/** Clave de la alerta flotante que nace de un aviso (la misma que usa `liveAlertFromNotification`). */
+export function alertKeyForNotification(n: NotificationRow): string {
+  const bookingId = n.type === "booking_requested" ? bookingIdOf(n) : undefined;
+  return bookingId ? `request:${bookingId}` : `n:${n.id}`;
+}
+
 /** Convierte un aviso de `notifications` en alerta flotante; null si ese tipo no merece interrumpir. */
 export function liveAlertFromNotification(n: NotificationRow): LiveAlert | null {
   const kind = ALERT_TYPES[n.type];
-  if (!kind) return null;
+  if (!kind || isRetiredNotification(n)) return null;
   const bookingId = bookingIdOf(n);
   return {
-    key: n.type === "booking_requested" && bookingId ? `request:${bookingId}` : `n:${n.id}`,
+    key: alertKeyForNotification(n),
     tone: kind.tone,
     title: n.title,
     body: n.body ?? "",

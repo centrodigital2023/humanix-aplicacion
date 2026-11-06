@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "@tanstack/react-router";
 import { notificationTone } from "@/lib/careLoop";
+import { isRetiredNotification } from "@/lib/serviceFlow";
 
 type Notification = {
   id: string;
@@ -12,6 +13,7 @@ type Notification = {
   body: string | null;
   link: string | null;
   read_at: string | null;
+  meta?: unknown;
   created_at: string;
 };
 
@@ -46,7 +48,8 @@ export function NotificationsBell({ userId }: { userId: string }) {
         .order("created_at", { ascending: false })
         .limit(20);
       if (active) {
-        setItems(data ?? []);
+        // Avisos de ofertas que ya tomó otro profesional (o se cerraron): no se muestran.
+        setItems((data ?? []).filter((n) => !isRetiredNotification(n)));
         setLoading(false);
       }
     };
@@ -70,6 +73,24 @@ export function NotificationsBell({ userId }: { userId: string }) {
             [notification, ...prev.filter((n) => n.id !== notification.id)].slice(0, 20),
           );
           // La alerta flotante con sonido la muestra `LiveServiceAlerts` en toda la app.
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          if (!active) return;
+          const row = payload.new as Notification;
+          setItems((prev) =>
+            isRetiredNotification(row)
+              ? prev.filter((n) => n.id !== row.id)
+              : prev.map((n) => (n.id === row.id ? { ...n, ...row } : n)),
+          );
         },
       )
       .subscribe((status) => {

@@ -95,6 +95,7 @@ describe("useRealtimeProfessionalFeed", () => {
     const hook = setup();
     expect(state.handlers.map((h) => `${h.table}:${h.event}:${h.filter}`)).toEqual([
       `notifications:INSERT:user_id=eq.${NIXON}`,
+      `notifications:UPDATE:user_id=eq.${NIXON}`,
       `service_bookings:INSERT:professional_id=eq.${NIXON}`,
       `service_bookings:UPDATE:professional_id=eq.${NIXON}`,
     ]);
@@ -130,6 +131,38 @@ describe("useRealtimeProfessionalFeed", () => {
     expect(state.removed).toBeGreaterThan(0);
   });
 
+  it("quita el aviso de una oferta cuando otro profesional la toma (la base lo retira)", () => {
+    sessionStorage.clear();
+    state.tables.notifications = [];
+    state.tables.service_bookings = [];
+    const hook = setup();
+    const row = {
+      id: "n-offer",
+      type: "new_offer",
+      title: "Nueva oferta de una institución cerca de ti",
+      body: "Clínica: Turno noche · Pasto · $120.000",
+      link: "/dashboard/profesional",
+      meta: { kind: "institution_offer", offer_id: "o1" },
+      created_at: new Date().toISOString(),
+    };
+    act(() => fire("notifications", "INSERT", row));
+    expect(hook.result.current.alerts).toHaveLength(1);
+
+    // Marcar como leído sin retirar no la quita.
+    act(() => fire("notifications", "UPDATE", { ...row, read_at: new Date().toISOString() }));
+    expect(hook.result.current.alerts).toHaveLength(1);
+
+    act(() =>
+      fire("notifications", "UPDATE", {
+        ...row,
+        read_at: new Date().toISOString(),
+        meta: { ...row.meta, retired: "taken" },
+      }),
+    );
+    expect(hook.result.current.alerts).toHaveLength(0);
+    hook.unmount();
+  });
+
   it("al conectarse recupera solicitudes pendientes que llegaron antes", async () => {
     sessionStorage.clear();
     state.tables.notifications = [];
@@ -160,7 +193,7 @@ describe("useRealtimeProfessionalFeed", () => {
   it("la familia o la EPS/IPS solo escucha sus avisos y ve cuando aceptan", () => {
     sessionStorage.clear();
     const hook = setup(false);
-    expect(state.handlers.map((h) => h.table)).toEqual(["notifications"]);
+    expect(state.handlers.map((h) => h.table)).toEqual(["notifications", "notifications"]);
     act(() =>
       fire("notifications", "INSERT", {
         id: "n2",
