@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { AdSenseAd } from "@/components/humanix/AdSenseAd";
 import { Link } from "@tanstack/react-router";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
@@ -199,6 +200,10 @@ export function SeoLanding({
             </div>
           </section>
         ) : null}
+
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <AdSenseAd />
+        </div>
 
         {/* FINAL CTA --------------------------------------------------- */}
         <section className="mx-auto max-w-5xl px-4 sm:px-6 mt-16">

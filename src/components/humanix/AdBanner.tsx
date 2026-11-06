@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { AdSenseAd } from "./AdSenseAd";
 import { supabase } from "@/integrations/supabase/client";
 import { X } from "lucide-react";
 
@@ -41,8 +42,6 @@ export function AdBanner({
 }: AdBannerProps) {
   const [banner, setBanner] = useState<InternalBanner | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const [adsenseLoaded, setAdsenseLoaded] = useState(false);
-  const adsRef = useRef<HTMLModElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -63,22 +62,6 @@ export function AdBanner({
       mounted = false;
     };
   }, [slot]);
-
-  useEffect(() => {
-    if (banner || !adsenseSlot || adsenseLoaded) return;
-    const timer = setTimeout(() => {
-      try {
-        const win = window as any;
-        if (win.adsbygoogle && adsRef.current) {
-          (win.adsbygoogle = win.adsbygoogle || []).push({});
-          setAdsenseLoaded(true);
-        }
-      } catch {
-        // AdSense not loaded yet
-      }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [banner, adsenseSlot, adsenseLoaded]);
 
   if (dismissed) return null;
 
@@ -160,15 +143,7 @@ export function AdBanner({
             <X className="h-3 w-3 text-white" />
           </button>
         )}
-        <ins
-          ref={adsRef}
-          className="adsbygoogle block"
-          style={{ display: "block" }}
-          data-ad-client={import.meta.env.VITE_ADSENSE_PUBLISHER_ID ?? "ca-pub-XXXXXXXXXXXXXXXX"}
-          data-ad-slot={adsenseSlot}
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        />
+        <AdSenseAd slot={adsenseSlot} className="my-0" />
       </div>
     );
   }

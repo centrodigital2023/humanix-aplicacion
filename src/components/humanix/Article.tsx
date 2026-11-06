@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { AdSenseAd } from "@/components/humanix/AdSenseAd";
 import { Link } from "@tanstack/react-router";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
@@ -73,6 +74,8 @@ export function Article({
           <div className="mt-8 prose prose-invert prose-sm sm:prose-base max-w-none [&_h2]:font-display [&_h2]:mt-10 [&_h2]:mb-3 [&_h3]:mt-6 [&_p]:leading-relaxed">
             {children}
           </div>
+
+          <AdSenseAd />
 
           <div className="mt-12 rounded-2xl border border-border bg-card p-6 text-center">
             <h2 className="font-display text-xl font-bold">¿Necesitas cuidado en casa hoy?</h2>

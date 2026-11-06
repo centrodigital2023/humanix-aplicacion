@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Outlet, useMatches } from "@tanstack/react-router";
+import { AdSenseAd } from "@/components/humanix/AdSenseAd";
 import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
@@ -114,6 +115,10 @@ function ResourcesLayout() {
             ))}
           </div>
         </section>
+
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <AdSenseAd />
+        </div>
       </main>
 
       <Footer />

@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import { ADSENSE_PUBLISHER_ID, adsenseHeadLoader } from "@/lib/adsense";
 import {
   Outlet,
   Link,
@@ -165,12 +166,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
             __html: `(function(){var G='${import.meta.env.VITE_GA4_MEASUREMENT_ID || ""}';if(!G||G.startsWith('G-X'))return;function load(){if(window.gtag)return;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+G;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config',G,{send_page_view:true,cookie_flags:'max-age=7200;secure;samesite=none'});}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:4000})}else{setTimeout(load,3000)}})();`,
           }}
         />
-        {/* Google AdSense — carga diferida para no penalizar CWV */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var P='${import.meta.env.VITE_ADSENSE_PUBLISHER_ID || ""}';if(!P||P.includes('XXXX'))return;function loadAds(){if(document.querySelector('script[src*="adsbygoogle"]'))return;var s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+P;document.head.appendChild(s);}if('requestIdleCallback' in window){requestIdleCallback(loadAds,{timeout:5000})}else{setTimeout(loadAds,4000)}})();`,
-          }}
-        />
+        {/* Google AdSense — script único, diferido; nunca en app nativa ni rutas privadas (src/lib/adsense.ts) */}
+        {ADSENSE_PUBLISHER_ID ? (
+          <>
+            <meta name="google-adsense-account" content={ADSENSE_PUBLISHER_ID} />
+            <script dangerouslySetInnerHTML={{ __html: adsenseHeadLoader() }} />
+          </>
+        ) : null}
         {/* Defer Meta Pixel hasta idle para no bloquear el hilo principal */}
         <script
           dangerouslySetInnerHTML={{
