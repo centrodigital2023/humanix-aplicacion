@@ -24,7 +24,6 @@ const {
   organizationLd,
   websiteLd,
   localBusinessLd,
-  webApplicationLd,
 } = seo;
 
 import appCss from "../styles.css?url";
@@ -189,14 +188,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: seo.jsonLdString(localBusinessLd()) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: seo.jsonLdString(webApplicationLd()) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: seo.jsonLdString(seo.siteLinksSearchBoxLd()) }}
         />
       </head>
       <body>

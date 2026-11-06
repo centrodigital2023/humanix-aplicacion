@@ -14,7 +14,7 @@ import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { Button } from "@/components/ui/button";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
-import { buildSeo, SITE_URL } from "@/lib/seo";
+import { buildSeo } from "@/lib/seo";
 
 export const Route = createFileRoute("/tecnologia")({
   head: () =>
@@ -23,7 +23,6 @@ export const Route = createFileRoute("/tecnologia")({
       path: "/tecnologia",
       description:
         "Matching semántico, geolocalización en vivo, validación anti-fraude IA y análisis de sentimiento por voz. La arquitectura que potencia el talento humano en salud de Colombia.",
-      image: `${SITE_URL}/og/tecnologia.svg`,
       imageAlt: "Humanix Tecnología · IA en tiempo real para salud en Colombia",
     }),
   component: TecnologiaPage,

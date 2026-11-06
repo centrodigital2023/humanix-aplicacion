@@ -1,8 +1,12 @@
+import { MIN_BOOKING_COP } from "./commissionMatrix";
+
 export const SITE_NAME = "Humanix";
 export const SITE_URL = "https://humanix.lat";
 export const SITE_DESCRIPTION =
   "Plataforma premium con IA en tiempo real que conecta profesionales de salud con familias y clínicas en Colombia.";
 export const SOCIAL_IMAGE_URL = "https://humanix.lat/og/humanix-share.png";
+/** Imágenes rastreables del sitio: horizontal 1200×630 y logo cuadrado. Existen en `public/`. */
+export const SITE_IMAGES = [SOCIAL_IMAGE_URL, `${SITE_URL}/logo-humanix.png`] as const;
 export const SOCIAL_IMAGE_ALT = "Humanix · Talento humano en salud verificado con IA para Colombia";
 export const SOCIAL_IMAGE_WIDTH = "1200";
 export const SOCIAL_IMAGE_HEIGHT = "630";
@@ -127,9 +131,11 @@ export function organizationLd() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
     logo: `${SITE_URL}/logo-humanix.png`,
+    image: [...SITE_IMAGES],
     sameAs: [
       "https://www.facebook.com/feskawsay",
       "https://www.instagram.com/feskawsay/",
@@ -154,12 +160,14 @@ export function websiteLd() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
     name: SITE_NAME,
     url: SITE_URL,
     inLanguage: "es-CO",
+    publisher: { "@id": `${SITE_URL}/#organization` },
     potentialAction: {
       "@type": "SearchAction",
-      target: `${SITE_URL}/buscar?q={search_term_string}`,
+      target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/buscar?q={search_term_string}` },
       "query-input": "required name=search_term_string",
     },
   } as const;
@@ -198,8 +206,9 @@ export function localBusinessLd() {
     "@id": `${SITE_URL}/#localbusiness`,
     name: SITE_NAME,
     url: SITE_URL,
-    image: SOCIAL_IMAGE_URL,
+    image: [...SITE_IMAGES],
     logo: `${SITE_URL}/logo-humanix.png`,
+    parentOrganization: { "@id": `${SITE_URL}/#organization` },
     telephone: "+573147444715",
     email: "centrodigital2023@gmail.com",
     priceRange: "$$",
@@ -234,43 +243,50 @@ export function localBusinessLd() {
   } as const;
 }
 
-/** WebApplication schema — destaca la plataforma como SaaS buscable */
-export function webApplicationLd() {
+// Sin WebApplication/SoftwareApplication: Google exige «aggregateRating» o «review» en ese tipo y Humanix no publica calificaciones
+// sobre sí mismo (las reseñas propias no son elegibles y antes había 4,9 de 128 inventadas). La plataforma ya queda descrita por
+// Organization, LocalBusiness y WebSite.
+
+/** Desde cuándo rigen los precios publicados (cambio a Bre-B y turno mínimo de $20.000). */
+export const PRICES_VALID_FROM = "2026-11-04";
+
+/** Vigencia del precio publicada: fin del año siguiente al de la fecha dada (así nunca queda vencida en el buscador). */
+export function priceValidUntil(now: Date = new Date()): string {
+  return `${now.getUTCFullYear() + 1}-12-31`;
+}
+
+/**
+ * Oferta de un servicio de cuidado: «desde» el turno mínimo real. Es un servicio (no un producto con envío ni devoluciones), así que
+ * no lleva GTIN, shippingDetails ni hasMerchantReturnPolicy; tampoco cantidades ni precios máximos inventados.
+ */
+export function careServiceOffer(path: string, now: Date = new Date()) {
   return {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    name: SITE_NAME,
-    url: SITE_URL,
-    applicationCategory: "HealthApplication",
-    operatingSystem: "Any",
-    inLanguage: "es-CO",
-    offers: {
-      "@type": "Offer",
-      price: "0",
+    "@type": "Offer",
+    url: `${SITE_URL}${path}`,
+    priceCurrency: "COP",
+    price: String(MIN_BOOKING_COP),
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
       priceCurrency: "COP",
+      minPrice: MIN_BOOKING_COP,
+      price: MIN_BOOKING_COP,
+      description: "Turno desde $20.000; el valor final lo acuerdan la familia y el profesional.",
     },
-    // Sin «aggregateRating»: antes decía 4,9 de 128 reseñas inventadas. Google sanciona las reseñas que no son reales; solo se
-    // publican calificaciones que salgan de la base.
+    availability: "https://schema.org/InStock",
+    validFrom: PRICES_VALID_FROM,
+    priceValidUntil: priceValidUntil(now),
+    seller: { "@id": `${SITE_URL}/#organization` },
   } as const;
 }
 
-/** SiteLinksSearchBox — aparece en SERP con buscador integrado */
-export function siteLinksSearchBoxLd() {
+/** Referencia al proveedor (la Organization del layout raíz) con nombre y logo, por si se lee aislado. */
+export function providerRef() {
   return {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
-    potentialAction: [
-      {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${SITE_URL}/buscar?q={search_term_string}`,
-        },
-        "query-input": "required name=search_term_string",
-      },
-    ],
+    logo: `${SITE_URL}/logo-humanix.png`,
   } as const;
 }
 

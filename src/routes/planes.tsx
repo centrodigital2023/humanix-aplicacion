@@ -19,8 +19,8 @@ import { Navbar } from "@/components/humanix/Navbar";
 import { Footer } from "@/components/humanix/Footer";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
 import { PaySheet } from "@/components/humanix/payments/PaySheet";
-import { buildSeo, jsonLdString, faqLd, breadcrumbLd } from "@/lib/seo";
-import { pricingProductLd } from "@/lib/planSeo";
+import { buildSeo, jsonLdString, faqLd } from "@/lib/seo";
+import { pricingServiceLd } from "@/lib/planSeo";
 import {
   PLAN_CATALOG,
   planValidity,
@@ -159,22 +159,11 @@ function PlansPage() {
     <div className="min-h-screen bg-background">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdString(pricingProductLd()) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(pricingServiceLd()) }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(faqLd(PLAN_FAQS)) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLdString(
-            breadcrumbLd([
-              { name: "Inicio", path: "/" },
-              { name: "Planes y precios", path: "/planes" },
-            ]),
-          ),
-        }}
       />
       <BreadcrumbJsonLd
         items={[

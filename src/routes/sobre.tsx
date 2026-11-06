@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ContentPage } from "@/components/humanix/ContentPage";
 import { Building2, Users, MapPin, Star, Shield, Zap, Heart } from "lucide-react";
-import { buildSeo, jsonLdString, breadcrumbLd, SITE_URL, SITE_NAME } from "@/lib/seo";
+import { buildSeo, jsonLdString, SITE_URL, SITE_NAME, SITE_IMAGES } from "@/lib/seo";
 import { SocialIcons } from "@/components/humanix/SocialIcons";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
 
@@ -14,14 +14,16 @@ const aboutPageLd = {
     "Humanix es la plataforma premium de salud que conecta profesionales verificados con familias y clínicas en Colombia usando IA en tiempo real.",
   mainEntity: {
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
+    logo: `${SITE_URL}/logo-humanix.png`,
+    image: [...SITE_IMAGES],
     foundingDate: "2023",
     foundingLocation: {
       "@type": "Place",
       name: "Bogotá, Colombia",
     },
-    numberOfEmployees: { "@type": "QuantitativeValue", value: "15" },
     areaServed: { "@type": "Country", name: "Colombia" },
     slogan: "Talento humano en salud, verificado con IA",
     knowsAbout: [
@@ -89,17 +91,6 @@ function SobrePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(aboutPageLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLdString(
-            breadcrumbLd([
-              { name: "Inicio", path: "/" },
-              { name: "Sobre Humanix", path: "/sobre" },
-            ]),
-          ),
-        }}
       />
       <BreadcrumbJsonLd
         items={[

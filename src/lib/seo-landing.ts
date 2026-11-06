@@ -1,4 +1,11 @@
-import { SITE_URL, SITE_NAME, SOCIAL_IMAGE_URL } from "@/lib/seo";
+import {
+  SITE_URL,
+  SITE_NAME,
+  SITE_IMAGES,
+  SOCIAL_IMAGE_URL,
+  careServiceOffer,
+  providerRef,
+} from "@/lib/seo";
 
 /** Catálogo de ciudades atendidas para landings SEO locales. */
 export const CITIES = [
@@ -57,36 +64,32 @@ export const SPECIALTIES = [
   },
 ] as const;
 
-/** Construye JSON-LD `Service` para una landing de especialidad o ciudad. */
+/**
+ * Construye JSON-LD `Service` para una landing de especialidad o ciudad. Es un servicio de cuidado (no Product): Google no le pide
+ * GTIN, envío ni devoluciones. La oferta es «desde» el turno mínimo real, sin conteos ni precios máximos inventados.
+ */
 export function serviceLd(opts: {
   name: string;
   description: string;
   path: string;
   areaName?: string;
+  serviceType?: string;
 }) {
   return {
     "@context": "https://schema.org",
     "@type": "Service",
+    "@id": `${SITE_URL}${opts.path}#service`,
     name: opts.name,
-    serviceType: opts.name,
+    serviceType: opts.serviceType ?? opts.name,
     description: opts.description,
-    provider: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: SITE_URL,
-    },
+    provider: providerRef(),
+    brand: { "@type": "Brand", name: SITE_NAME },
     areaServed: opts.areaName
       ? { "@type": "City", name: opts.areaName }
       : { "@type": "Country", name: "Colombia" },
     url: `${SITE_URL}${opts.path}`,
-    image: SOCIAL_IMAGE_URL,
-    offers: {
-      "@type": "AggregateOffer",
-      priceCurrency: "COP",
-      lowPrice: "25000",
-      highPrice: "3500000",
-      offerCount: "120",
-    },
+    image: [...SITE_IMAGES],
+    offers: careServiceOffer(opts.path),
   } as const;
 }
 

@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { Article } from "@/components/humanix/Article";
-import { buildSeo, SITE_URL } from "@/lib/seo";
+import { buildSeo } from "@/lib/seo";
 import { articleLd } from "@/lib/seo-landing";
 import { ARTICLES } from "@/content/recursos";
 
@@ -8,7 +8,9 @@ export const Route = createFileRoute("/recursos/$slug")({
   loader: ({ params }) => {
     const article = ARTICLES[params.slug];
     if (!article) throw notFound();
-    return { article };
+    // Solo datos serializables: el cuerpo es JSX y no se puede enviar del servidor al navegador (antes daba error 500).
+    const { body: _body, ...meta } = article;
+    return { article: meta };
   },
   head: ({ loaderData, params }) => {
     const article = loaderData?.article;
@@ -41,8 +43,8 @@ export const Route = createFileRoute("/recursos/$slug")({
 });
 
 function ArticlePage() {
-  const { article } = Route.useLoaderData();
   const { slug } = Route.useParams();
+  const article = ARTICLES[slug];
   return (
     <Article
       title={article.title}
@@ -54,7 +56,6 @@ function ArticlePage() {
         description: article.excerpt,
         path: `/recursos/${slug}`,
         datePublished: article.publishedDate,
-        image: `${SITE_URL}/og/familias.svg`,
       })}
       related={article.related}
     >

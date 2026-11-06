@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { fetchNasa, type NasaApod } from "@/lib/nasa";
-import { buildSeo, SITE_URL } from "@/lib/seo";
+import { buildSeo } from "@/lib/seo";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/cosmos")({
@@ -17,7 +17,6 @@ export const Route = createFileRoute("/cosmos")({
       path: "/cosmos",
       description:
         "Imagen astronómica del día (APOD) de NASA traducida al español por IA. Una pausa cósmica para inspirar el cuidado humano.",
-      image: `${SITE_URL}/og/tecnologia.svg`,
       imageAlt: "Humanix Cosmos · APOD de NASA",
       noindex: true,
     }),

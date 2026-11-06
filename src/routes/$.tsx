@@ -29,6 +29,17 @@ const ALL_CITIES: Record<string, { name: string; region: string }> = {
   neiva: { name: "Neiva", region: "Huila" },
 };
 
+// Página propia de cada especialidad, para la miga de pan (la especialidad sin página propia se omite).
+const SPECIALTY_PAGE: Record<string, string | undefined> = {
+  "auxiliar-enfermeria": "/auxiliar-enfermeria",
+  "cuidado-adulto-mayor": "/cuidado-adulto-mayor",
+  "cuidado-pediatrico": "/cuidado-pediatrico",
+  "cuidado-paliativo": "/cuidado-paliativo",
+  "cuidado-postoperatorio": "/cuidado-postoperatorio",
+  "cuidador-domicilio": "/cuidador-domicilio",
+  fisioterapia: "/fisioterapia-domicilio",
+};
+
 // Sorted longest-first so "santa-marta" matches before "marta"
 const CITY_SLUGS = Object.keys(ALL_CITIES).sort((a, b) => b.length - a.length);
 
@@ -281,7 +292,10 @@ function Page() {
       intro={specData.intro(cityName, cityInfo.region)}
       breadcrumbs={[
         { name: "Inicio", path: "/" },
-        { name: specData.title, path: `/${parsed.specialty}` },
+        // Solo enlaza la especialidad si tiene página propia (no hay /fisioterapia ni /terapia-respiratoria).
+        ...(SPECIALTY_PAGE[parsed.specialty]
+          ? [{ name: specData.title, path: SPECIALTY_PAGE[parsed.specialty] as string }]
+          : []),
         { name: cityName, path },
       ]}
       serviceJsonLd={serviceLd({
@@ -289,6 +303,7 @@ function Page() {
         description: specData.intro(cityName, cityInfo.region),
         path,
         areaName: cityName,
+        serviceType: specData.serviceType,
       })}
       bullets={specData.bullets(cityName)}
       faqs={specData.faqs(cityName)}

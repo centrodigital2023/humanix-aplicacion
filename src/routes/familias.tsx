@@ -8,18 +8,17 @@ import { HumanixAssistant } from "@/components/humanix/HumanixAssistant";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
 import * as seo from "@/lib/seo";
-const { buildSeo, SITE_URL, SITE_NAME } = seo;
+const { buildSeo, SITE_URL, SITE_NAME, SITE_IMAGES } = seo;
 
 const familiasServiceLd = {
   "@context": "https://schema.org",
   "@type": "Service",
   name: "Humanix · Cuidado en casa verificado",
   serviceType: "Contratación de cuidadores y enfermeros a domicilio",
-  provider: {
-    "@type": "Organization",
-    name: SITE_NAME,
-    url: SITE_URL,
-  },
+  "@id": `${SITE_URL}/familias#service`,
+  provider: seo.providerRef(),
+  brand: { "@type": "Brand", name: SITE_NAME },
+  image: [...SITE_IMAGES],
   areaServed: {
     "@type": "Country",
     name: "Colombia",
@@ -28,15 +27,10 @@ const familiasServiceLd = {
     "@type": "Audience",
     audienceType: "Familias con adulto mayor, postoperatorio o pediátrico",
   },
-  offers: {
-    "@type": "AggregateOffer",
-    priceCurrency: "COP",
-    lowPrice: "25000",
-    highPrice: "3500000",
-    offerCount: "500",
-  },
+  // Servicio desde el turno mínimo real; sin conteos ni precios máximos inventados.
+  offers: seo.careServiceOffer("/familias"),
   url: `${SITE_URL}/familias`,
-} as const;
+};
 
 export const Route = createFileRoute("/familias")({
   head: () =>
@@ -45,7 +39,6 @@ export const Route = createFileRoute("/familias")({
       path: "/familias",
       description:
         "Contrata cuidadores y enfermeros verificados con RETHUS para tu familia en Colombia. Geolocalización en vivo, botón de emergencia 24/7 y pagos protegidos.",
-      image: `${SITE_URL}/og/familias.svg`,
       imageAlt: "Humanix para familias · cuidado humano verificado en Colombia",
     }),
   component: FamiliasPage,

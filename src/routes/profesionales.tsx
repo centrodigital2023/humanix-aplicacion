@@ -17,18 +17,17 @@ import { HumanixAssistant } from "@/components/humanix/HumanixAssistant";
 import { HabeasDataConsent } from "@/components/humanix/HabeasDataConsent";
 import { BreadcrumbJsonLd } from "@/components/humanix/BreadcrumbJsonLd";
 import * as seo from "@/lib/seo";
-const { buildSeo, SITE_URL, SITE_NAME } = seo;
+const { buildSeo, SITE_URL, SITE_NAME, SITE_IMAGES } = seo;
 
 const profesionalesServiceLd = {
   "@context": "https://schema.org",
   "@type": "Service",
   name: "Humanix · Marketplace laboral para talento humano en salud",
   serviceType: "Marketplace de empleos para enfermeros, auxiliares y cuidadores",
-  provider: {
-    "@type": "Organization",
-    name: SITE_NAME,
-    url: SITE_URL,
-  },
+  "@id": `${SITE_URL}/profesionales#service`,
+  provider: seo.providerRef(),
+  brand: { "@type": "Brand", name: SITE_NAME },
+  image: [...SITE_IMAGES],
   areaServed: {
     "@type": "Country",
     name: "Colombia",
@@ -47,7 +46,6 @@ export const Route = createFileRoute("/profesionales")({
       path: "/profesionales",
       description:
         "Enfermeros, auxiliares y cuidadores: encuentra turnos por hora, jornada o paquetes en toda Colombia. Verificación RETHUS, Trust Score y pagos en Nequi al instante.",
-      image: `${SITE_URL}/og/profesionales.svg`,
       imageAlt: "Humanix para profesionales · turnos, pagos en Nequi y Trust Score",
     }),
   component: ProfesionalesPage,
