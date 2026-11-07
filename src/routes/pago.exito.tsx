@@ -1,6 +1,7 @@
 // Regreso desde el checkout de Wompi (`/pago/exito?id=<transacción>`). El navegador no decide nada: el servidor consulta la
 // transacción directo en Wompi y, si es de un cobro de esta persona, la aplica igual que el aviso firmado (idempotente).
 // Si la sesión no está o Wompi aún no responde, igual llega el aviso y el panel se actualiza en vivo.
+import { trackPendingChargePaid } from "@/lib/metaPixel";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
@@ -36,8 +37,10 @@ function PagoExito() {
       .then((r) => {
         if (!alive) return;
         if (!r.ok) setView("pending");
-        else if (r.status === "paid") setView("paid");
-        else if (r.status === "failed" || r.status === "underpaid") setView("failed");
+        else if (r.status === "paid") {
+          setView("paid");
+          trackPendingChargePaid(r.kind);
+        } else if (r.status === "failed" || r.status === "underpaid") setView("failed");
         else setView("pending");
       })
       .catch(() => alive && setView("pending"));

@@ -297,6 +297,7 @@ function PlansPage() {
       <Footer />
 
       <PaySheet
+        pixelKind="plan"
         open={paySize !== null}
         onOpenChange={(o) => !o && setPaySize(null)}
         title="Plan Institucional"

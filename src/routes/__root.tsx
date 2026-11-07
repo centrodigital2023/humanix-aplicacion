@@ -1,5 +1,7 @@
 import { Suspense, lazy } from "react";
 import { ADSENSE_PUBLISHER_ID, adsenseHeadLoader } from "@/lib/adsense";
+import { metaPixelHeadLoader, metaPixelNoscriptSrc } from "@/lib/metaPixel";
+import { MetaPixelRouteTracker } from "@/components/humanix/MetaPixelRouteTracker";
 import {
   Outlet,
   Link,
@@ -173,12 +175,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
             <script dangerouslySetInnerHTML={{ __html: adsenseHeadLoader() }} />
           </>
         ) : null}
-        {/* Defer Meta Pixel hasta idle para no bloquear el hilo principal */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){function load(){if(window.fbq)return;!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','2544561375984277');fbq('track','PageView');}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:3500})}else{setTimeout(load,2500)}})();`,
-          }}
-        />
+        {/* Píxel de Meta — cola inmediata, script diferido; reglas de privacidad en src/lib/metaPixel.ts */}
+        <script dangerouslySetInnerHTML={{ __html: metaPixelHeadLoader() }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: seo.jsonLdString(organizationLd()) }}
@@ -198,7 +196,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
             height="1"
             width="1"
             style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=2544561375984277&ev=PageView&noscript=1"
+            src={metaPixelNoscriptSrc()}
             alt=""
           />
         </noscript>
@@ -233,6 +231,7 @@ function RootComponent() {
       <Toaster richColors position="top-right" />
       <ConfirmHost />
       <GlobalExperience />
+      <MetaPixelRouteTracker />
     </AppQueryProvider>
   );
 }

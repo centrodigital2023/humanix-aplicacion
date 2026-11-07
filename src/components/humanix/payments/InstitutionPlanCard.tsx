@@ -100,6 +100,7 @@ export function InstitutionPlanCard({ userId }: { userId: string }) {
       )}
 
       <PaySheet
+        pixelKind="plan"
         open={open}
         onOpenChange={setOpen}
         title="Plan Institucional"

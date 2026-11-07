@@ -3,6 +3,7 @@
 //      según lo que la cuenta de Humanix tenga activo en Wompi).
 //   2. El estado en vivo (Realtime sobre `payment_charges`): apenas llega el aviso firmado de Wompi, la hoja celebra.
 // El monto y el enlace firmado los pone siempre el servidor; aquí solo se muestran.
+import { trackChargePaid, trackCheckoutStarted, type PixelChargeKind } from "@/lib/metaPixel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -43,6 +44,8 @@ export interface PaySheetProps {
   /** Texto de la celebración. */
   paidMessage?: string;
   onPaid?: () => void;
+  /** Qué se cobra, para el píxel de Meta (InitiateCheckout / Purchase). Sin datos personales. */
+  pixelKind?: PixelChargeKind;
 }
 
 export function PaySheet({
@@ -53,6 +56,7 @@ export function PaySheet({
   start,
   paidMessage,
   onPaid,
+  pixelKind,
 }: PaySheetProps) {
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const startRef = useRef(start);
@@ -115,6 +119,16 @@ export function PaySheet({
   useEffect(() => {
     if (phase.kind === "paid") onPaidRef.current?.();
   }, [phase.kind]);
+
+  // Píxel de Meta: una vez por cobro (se deduplica por chargeId).
+  const pixelCharge = phase.kind === "ready" || phase.kind === "paid" ? phase.charge : null;
+  useEffect(() => {
+    if (!pixelKind || !pixelCharge) return;
+    if (phase.kind === "ready")
+      trackCheckoutStarted(pixelKind, pixelCharge.chargeId, pixelCharge.amountCop);
+    else if (phase.kind === "paid")
+      trackChargePaid(pixelKind, pixelCharge.chargeId, pixelCharge.amountCop);
+  }, [pixelKind, phase.kind, pixelCharge?.chargeId, pixelCharge?.amountCop]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>

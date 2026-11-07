@@ -145,6 +145,7 @@ export function BookingPaymentCard({
           turno terminó. Si se cancela, te devolvemos todo. Sin comisión para ti.
         </p>
         <PaySheet
+          pixelKind="booking"
           open={open}
           onOpenChange={setOpen}
           title="Pagar turno"

@@ -356,6 +356,7 @@ export function WalletCard({ userId, id = "billetera" }: { userId: string; id?: 
       </div>
 
       <PaySheet
+        pixelKind="topup"
         open={amount !== null}
         onOpenChange={(o) => !o && setAmount(null)}
         title="Recargar billetera"

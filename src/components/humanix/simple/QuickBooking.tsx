@@ -2,6 +2,7 @@
 // Crea un service_booking real (igual que BookNowButton) y lleva al
 // seguimiento en vivo /servicio/$id. La familia elige cómo pagar: Bre-B (desde su banco, cuando el profesional
 // acepta) o efectivo al profesional. Nunca paga comisión.
+import { trackPixelOnce } from "@/lib/metaPixel";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
@@ -156,6 +157,8 @@ export function QuickBooking({
       return;
     }
     clearPendingBooking();
+    trackPixelOnce(data.id, "Lead", { value: total, content_name: "Solicitud de turno" });
+    trackPixelOnce(data.id, "Schedule", { content_name: "Solicitud de turno" });
     say("Listo. Te llevamos al seguimiento.");
     navigate({ to: "/servicio/$bookingId", params: { bookingId: data.id } });
   };

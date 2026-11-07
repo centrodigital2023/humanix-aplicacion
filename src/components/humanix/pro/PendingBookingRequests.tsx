@@ -175,6 +175,7 @@ export function PendingBookingRequests({ userId }: { userId: string }) {
         })}
       </ul>
       <PaySheet
+        pixelKind="topup"
         open={topup !== null}
         onOpenChange={(o) => !o && setTopup(null)}
         title="Recargar y aceptar"

@@ -1,5 +1,6 @@
 // "Pedir" — crea un service_booking y abre /servicio/$id.
 // Usado en cards de profesionales y en cards de ofertas (precarga datos).
+import { trackPixelOnce } from "@/lib/metaPixel";
 import { useState } from "react";
 import { Loader2, Calendar, Clock, MapPin, ShieldCheck } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -103,6 +104,8 @@ export function BookNowButton({
         .select("id")
         .single();
       if (error) throw error;
+      trackPixelOnce(data.id, "Lead", { value: total, content_name: "Solicitud de turno" });
+      trackPixelOnce(data.id, "Schedule", { content_name: "Solicitud de turno" });
       toast.success("Servicio creado", {
         description: "Te llevamos al seguimiento en vivo.",
       });

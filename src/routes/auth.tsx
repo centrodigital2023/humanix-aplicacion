@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { trackPixel } from "@/lib/metaPixel";
 import { HomeButton } from "@/components/humanix/HomeButton";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -254,6 +255,8 @@ function AuthPage() {
           },
         });
         if (error) throw error;
+        // Píxel de Meta: solo el tipo de cuenta, nunca correo, nombre ni teléfono.
+        trackPixel("CompleteRegistration", { content_name: role, status: "signup" });
 
         // Con la sesión abierta se aplica ya el código de referido; si falta confirmar el correo, lo aplica `useAppUser`
         // al entrar. Sin bloquear el registro.
