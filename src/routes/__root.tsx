@@ -2,6 +2,8 @@ import { Suspense, lazy } from "react";
 import { ADSENSE_PUBLISHER_ID, adsenseHeadLoader } from "@/lib/adsense";
 import { metaPixelHeadLoader, metaPixelNoscriptSrc } from "@/lib/metaPixel";
 import { MetaPixelRouteTracker } from "@/components/humanix/MetaPixelRouteTracker";
+import { ConsentBanner } from "@/components/humanix/ConsentBanner";
+import { consentHeadScript } from "@/lib/consent";
 import {
   Outlet,
   Link,
@@ -149,6 +151,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es-CO" suppressHydrationWarning>
       <head>
+        {/* Consentimiento (Consent Mode v2 + Meta): PRIMERO, antes de GA4, AdSense y el píxel. Ver src/lib/consent.ts */}
+        <script dangerouslySetInnerHTML={{ __html: consentHeadScript() }} />
         <HeadContent />
         {/* Modo oscuro por defecto, aplicado antes de pintar (sin destello claro); «Claro» queda guardado por persona. */}
         <script
@@ -165,7 +169,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         {/* Google Analytics 4 — deferred, no bloquea render */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var G='${import.meta.env.VITE_GA4_MEASUREMENT_ID || ""}';if(!G||G.startsWith('G-X'))return;function load(){if(window.gtag)return;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+G;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config',G,{send_page_view:true,cookie_flags:'max-age=7200;secure;samesite=none'});}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:4000})}else{setTimeout(load,3000)}})();`,
+            __html: `(function(){var G='${import.meta.env.VITE_GA4_MEASUREMENT_ID || ""}';if(!G||G.startsWith('G-X'))return;function load(){if(window.__hxGa)return;window.__hxGa=1;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+G;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];var gtag=window.gtag=window.gtag||function(){dataLayer.push(arguments)};gtag('js',new Date());gtag('config',G,{send_page_view:true,cookie_flags:'max-age=7200;secure;samesite=none'});}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:4000})}else{setTimeout(load,3000)}})();`,
           }}
         />
         {/* Google AdSense — script único, diferido; nunca en app nativa ni rutas privadas (src/lib/adsense.ts) */}
@@ -232,6 +236,7 @@ function RootComponent() {
       <ConfirmHost />
       <GlobalExperience />
       <MetaPixelRouteTracker />
+      <ConsentBanner />
     </AppQueryProvider>
   );
 }

@@ -116,9 +116,19 @@ function PrivacidadPage() {
 
         <LegalSection title="6. Uso de cookies y píxeles">
           <p>
-            Utilizamos cookies propias y de terceros para optimizar la navegación, recordar sesiones
-            y analizar el tráfico. El Usuario puede configurar su navegador para bloquearlas; esto
-            podría limitar ciertas funciones operativas de la Plataforma.
+            Utilizamos cookies propias necesarias para que la Plataforma funcione (sesión, seguridad
+            y preferencias). Solo con la autorización previa del Usuario, otorgada en el aviso de
+            cookies, usamos además cookies y píxeles de terceros: Google Analytics y Google AdSense
+            (medición y anuncios) y el píxel de Meta (medición de campañas). Mientras no haya
+            autorización, o si el Usuario elige «Solo necesarias», estas herramientas quedan
+            desactivadas y los anuncios que se muestren no son personalizados.
+          </p>
+          <p>
+            Nunca se comparten con estos terceros datos de salud, de pacientes ni datos de contacto.
+            Los anuncios y el píxel no se usan en paneles internos ni en la app móvil, y las
+            pantallas con información del servicio no se registran. El Usuario puede cambiar su
+            elección cuando quiera desde el enlace «Cookies» al pie de cada página. También
+            respetamos la señal Global Privacy Control del navegador.
           </p>
         </LegalSection>
 

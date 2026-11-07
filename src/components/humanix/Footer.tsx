@@ -4,6 +4,7 @@ import { SocialIcons } from "./SocialIcons";
 import { CONTACT } from "@/lib/social";
 import { useAudience } from "@/hooks/use-audience";
 import type { Audience } from "@/lib/audience";
+import { openConsentPreferences } from "@/lib/consent";
 
 type FooterLink = {
   label: string;
@@ -158,6 +159,14 @@ export function Footer() {
             <p className="text-xs text-muted-foreground">
               Hecho con <span className="text-fuchsia-neural">♥</span> en Colombia
             </p>
+            <span className="text-muted-foreground/40">·</span>
+            <button
+              type="button"
+              onClick={openConsentPreferences}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cookies
+            </button>
             <span className="text-muted-foreground/40">·</span>
             <Link
               to="/admin"

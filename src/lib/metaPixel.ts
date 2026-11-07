@@ -14,6 +14,8 @@
  *  - Los parámetros pasan por una lista blanca: nunca nombres, correos, teléfonos, direcciones ni notas clínicas.
  */
 
+import { getConsent } from "@/lib/consent";
+
 const DEFAULT_PIXEL_IDS = ["1005277195957747", "2544561375984277"];
 
 function parseIds(raw: string | undefined): string[] {
@@ -93,6 +95,8 @@ function trackingRefused(): boolean {
   } catch {
     /* almacenamiento bloqueado */
   }
+  // «Solo necesarias» en el aviso de cookies: el píxel ni se carga.
+  if (getConsent() === "denied") return true;
   return false;
 }
 
@@ -117,6 +121,8 @@ export function ensureMetaPixel(): boolean {
   }
   const fbq = window.fbq!;
   fbq.disablePushState = true;
+  // Sin elección aún: el píxel queda en espera y no envía nada hasta «Aceptar» (consent grant).
+  if (getConsent() !== "granted") fbq("consent", "revoke");
   for (const id of META_PIXEL_IDS) {
     fbq("set", "autoConfig", false, id);
     fbq("init", id);
@@ -139,7 +145,7 @@ export function metaPixelHeadLoader(): string {
   if (!META_PIXEL_IDS.length) return "";
   return `(function(){var I=${JSON.stringify(META_PIXEL_IDS)},B=${JSON.stringify(
     PIXEL_BLOCKED_PREFIXES,
-  )},N=${JSON.stringify(PIXEL_NO_PAGEVIEW_PREFIXES)},p=location.pathname;function m(L){for(var i=0;i<L.length;i++){if(p===L[i]||p.indexOf(L[i]+'/')===0||p.indexOf(L[i]+'.')===0)return true}return false}try{if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())return;if(navigator.globalPrivacyControl)return;if(localStorage.getItem('${OPT_OUT_KEY}')==='1')return;}catch(e){}if(m(B))return;!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window,document);fbq.disablePushState=true;for(var j=0;j<I.length;j++){fbq('set','autoConfig',false,I[j]);fbq('init',I[j]);}window.__hxPixel=true;if(!m(N))fbq('track','PageView');function load(){if(document.querySelector('script[src="${SCRIPT_SRC}"]'))return;var t=document.createElement('script');t.async=true;t.src='${SCRIPT_SRC}';document.head.appendChild(t);}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:3500})}else{setTimeout(load,2500)}})();`;
+  )},N=${JSON.stringify(PIXEL_NO_PAGEVIEW_PREFIXES)},p=location.pathname;function m(L){for(var i=0;i<L.length;i++){if(p===L[i]||p.indexOf(L[i]+'/')===0||p.indexOf(L[i]+'.')===0)return true}return false}try{if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())return;if(navigator.globalPrivacyControl)return;if(localStorage.getItem('${OPT_OUT_KEY}')==='1')return;}catch(e){}if(window.__hxConsent==='denied')return;if(m(B))return;!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window,document);fbq.disablePushState=true;if(window.__hxConsent!=='granted')fbq('consent','revoke');for(var j=0;j<I.length;j++){fbq('set','autoConfig',false,I[j]);fbq('init',I[j]);}window.__hxPixel=true;if(!m(N)&&window.__hxConsent==='granted')fbq('track','PageView');function load(){if(document.querySelector('script[src="${SCRIPT_SRC}"]'))return;var t=document.createElement('script');t.async=true;t.src='${SCRIPT_SRC}';document.head.appendChild(t);}if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:3500})}else{setTimeout(load,2500)}})();`;
 }
 
 /** URL del píxel para <noscript> (solo el primero). */
@@ -232,7 +238,7 @@ export function trackPixelOnce(
 
 /** PageView para navegación dentro de la SPA (la primera página la registra el head). */
 export function trackPixelPageView(pathname: string): void {
-  if (!pageViewAllowedOnPath(pathname)) return;
+  if (!pageViewAllowedOnPath(pathname) || getConsent() !== "granted") return;
   trackPixel("PageView");
 }
 
