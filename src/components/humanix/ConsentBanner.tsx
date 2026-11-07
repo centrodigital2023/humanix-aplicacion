@@ -11,6 +11,7 @@ import {
   setConsent,
   type ConsentChoice,
 } from "@/lib/consent";
+import { recordHabeasAcceptance } from "@/components/humanix/HabeasDataConsent";
 import { ensureMetaPixel, pageViewAllowedOnPath, trackPixelPageView } from "@/lib/metaPixel";
 
 export function ConsentBanner() {
@@ -28,6 +29,9 @@ export function ConsentBanner() {
 
   const choose = (choice: ConsentChoice) => {
     const before = getConsent();
+    // Cualquiera de los dos botones acepta el aviso Habeas Data (necesario para el servicio). Se marca en
+    // localStorage de inmediato, antes de setConsent, para que ese otro aviso no aparezca después.
+    void recordHabeasAcceptance();
     setConsent(choice);
     if (choice === "granted" && before !== "granted") {
       // setConsent ya dio «grant» al píxel en espera; si no estaba (rechazo previo) se instala ahora.
@@ -50,9 +54,10 @@ export function ConsentBanner() {
           <div className="min-w-0">
             <p className="text-sm font-semibold">Tu privacidad, tu decisión</p>
             <p className="mt-1 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Usamos cookies necesarias para que Humanix funcione. Con tu permiso también usamos
-              cookies de Google y Meta para medir visitas y mostrarte anuncios útiles. Nunca
-              compartimos datos de salud ni de pacientes.{" "}
+              Tratamos tus datos según la Ley 1581 de 2012 (Habeas Data). Usamos cookies necesarias
+              para que Humanix funcione. Con tu permiso también usamos cookies de Google y Meta para
+              medir visitas y mostrarte anuncios útiles. Nunca compartimos datos de salud ni de
+              pacientes.{" "}
               <Link to="/privacidad" className="underline underline-offset-4 text-foreground">
                 Política de privacidad
               </Link>

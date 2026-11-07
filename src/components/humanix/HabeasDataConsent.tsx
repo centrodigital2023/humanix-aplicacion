@@ -4,40 +4,54 @@ import { useEffect, useState } from "react";
 import { Shield, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { CONSENT_EVENT, needsConsentPrompt } from "@/lib/consent";
 
 const KEY = "hx_habeas_v1";
+
+/** Guarda la aceptación del aviso Habeas Data (local + backend si hay sesión). También la usa el aviso de cookies. */
+export async function recordHabeasAcceptance(): Promise<void> {
+  try {
+    if (localStorage.getItem(KEY) === "1") return; // ya registrado
+    localStorage.setItem(KEY, "1");
+  } catch {
+    // ignore
+  }
+  try {
+    const { data: sess } = await supabase.auth.getSession();
+    if (sess.session) {
+      await supabase.from("user_consents").insert({
+        user_id: sess.session.user.id,
+        consent_type: "habeas_data_v1",
+        granted: true,
+        user_agent: navigator.userAgent,
+      });
+    }
+  } catch {
+    // silencioso
+  }
+}
 
 export function HabeasDataConsent() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem(KEY) !== "1") setShow(true);
-    } catch {
-      setShow(true);
-    }
+    const check = () => {
+      // Si el aviso de cookies está pidiendo permiso, ese aviso ya cubre Habeas Data: no se apilan dos.
+      if (needsConsentPrompt()) return setShow(false);
+      try {
+        setShow(localStorage.getItem(KEY) !== "1");
+      } catch {
+        setShow(true);
+      }
+    };
+    check();
+    window.addEventListener(CONSENT_EVENT, check);
+    return () => window.removeEventListener(CONSENT_EVENT, check);
   }, []);
 
   const accept = async () => {
-    try {
-      localStorage.setItem(KEY, "1");
-    } catch {
-      // ignore
-    }
     setShow(false);
-    try {
-      const { data: sess } = await supabase.auth.getSession();
-      if (sess.session) {
-        await supabase.from("user_consents").insert({
-          user_id: sess.session.user.id,
-          consent_type: "habeas_data_v1",
-          granted: true,
-          user_agent: navigator.userAgent,
-        });
-      }
-    } catch {
-      // silencioso
-    }
+    await recordHabeasAcceptance();
   };
 
   if (!show) return null;
