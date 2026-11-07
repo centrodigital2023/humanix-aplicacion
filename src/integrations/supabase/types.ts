@@ -220,6 +220,48 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_thresholds: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          max_value: number | null
+          min_value: number | null
+          notify_email: boolean
+          notify_push: boolean
+          notify_whatsapp: boolean
+          patient_id: string
+          updated_at: string
+          vital_type: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          notify_email?: boolean
+          notify_push?: boolean
+          notify_whatsapp?: boolean
+          patient_id: string
+          updated_at?: string
+          vital_type: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          notify_email?: boolean
+          notify_push?: boolean
+          notify_whatsapp?: boolean
+          patient_id?: string
+          updated_at?: string
+          vital_type?: string
+        }
+        Relationships: []
+      }
       applicant_contact_reveals: {
         Row: {
           application_id: string | null
@@ -1721,6 +1763,54 @@ export type Database = {
           metadata?: Json
           status?: string
           trigger_type?: string
+        }
+        Relationships: []
+      }
+      health_compliance: {
+        Row: {
+          auto_blocked: boolean
+          created_at: string
+          curso_bioseguridad_expires: string | null
+          examen_ocupacional_expires: string | null
+          id: string
+          last_checked_at: string | null
+          poliza_rc_expires: string | null
+          primeros_auxilios_expires: string | null
+          professional_id: string
+          status: string
+          updated_at: string
+          vacuna_hepatitis_b_expires: string | null
+          vacuna_tetano_expires: string | null
+        }
+        Insert: {
+          auto_blocked?: boolean
+          created_at?: string
+          curso_bioseguridad_expires?: string | null
+          examen_ocupacional_expires?: string | null
+          id?: string
+          last_checked_at?: string | null
+          poliza_rc_expires?: string | null
+          primeros_auxilios_expires?: string | null
+          professional_id: string
+          status?: string
+          updated_at?: string
+          vacuna_hepatitis_b_expires?: string | null
+          vacuna_tetano_expires?: string | null
+        }
+        Update: {
+          auto_blocked?: boolean
+          created_at?: string
+          curso_bioseguridad_expires?: string | null
+          examen_ocupacional_expires?: string | null
+          id?: string
+          last_checked_at?: string | null
+          poliza_rc_expires?: string | null
+          primeros_auxilios_expires?: string | null
+          professional_id?: string
+          status?: string
+          updated_at?: string
+          vacuna_hepatitis_b_expires?: string | null
+          vacuna_tetano_expires?: string | null
         }
         Relationships: []
       }
@@ -3362,6 +3452,65 @@ export type Database = {
           },
         ]
       }
+      patient_risk_scores: {
+        Row: {
+          ai_summary: string | null
+          booking_id: string | null
+          calculated_at: string
+          calculated_by: string | null
+          created_at: string
+          factors: Json | null
+          id: string
+          level: string
+          patient_id: string
+          previous_score: number | null
+          recommendations: Json | null
+          score: number
+          tenant_id: string | null
+          trend: string | null
+        }
+        Insert: {
+          ai_summary?: string | null
+          booking_id?: string | null
+          calculated_at?: string
+          calculated_by?: string | null
+          created_at?: string
+          factors?: Json | null
+          id?: string
+          level: string
+          patient_id: string
+          previous_score?: number | null
+          recommendations?: Json | null
+          score: number
+          tenant_id?: string | null
+          trend?: string | null
+        }
+        Update: {
+          ai_summary?: string | null
+          booking_id?: string | null
+          calculated_at?: string
+          calculated_by?: string | null
+          created_at?: string
+          factors?: Json | null
+          id?: string
+          level?: string
+          patient_id?: string
+          previous_score?: number | null
+          recommendations?: Json | null
+          score?: number
+          tenant_id?: string | null
+          trend?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_risk_scores_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_charges: {
         Row: {
           amount_cop: number
@@ -4361,6 +4510,57 @@ export type Database = {
           },
         ]
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+          reward_mp_payment_id: string | null
+          rewarded_at: string | null
+          status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+          reward_mp_payment_id?: string | null
+          rewarded_at?: string | null
+          status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+          reward_mp_payment_id?: string | null
+          rewarded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       service_bookings: {
         Row: {
           application_id: string | null
@@ -4487,6 +4687,104 @@ export type Database = {
         }
         Relationships: []
       }
+      service_checkins: {
+        Row: {
+          booking_id: string
+          checkin_accuracy_m: number | null
+          checkin_address: string | null
+          checkin_at: string | null
+          checkin_lat: number | null
+          checkin_lng: number | null
+          checkout_accuracy_m: number | null
+          checkout_address: string | null
+          checkout_at: string | null
+          checkout_lat: number | null
+          checkout_lng: number | null
+          created_at: string
+          digital_signature_url: string | null
+          distance_from_patient_m: number | null
+          duration_minutes: number | null
+          evidence_urls: string[] | null
+          id: string
+          notes: string | null
+          patient_id: string | null
+          professional_id: string
+          signature_hash: string | null
+          sos_at: string | null
+          sos_lat: number | null
+          sos_lng: number | null
+          sos_triggered: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          checkin_accuracy_m?: number | null
+          checkin_address?: string | null
+          checkin_at?: string | null
+          checkin_lat?: number | null
+          checkin_lng?: number | null
+          checkout_accuracy_m?: number | null
+          checkout_address?: string | null
+          checkout_at?: string | null
+          checkout_lat?: number | null
+          checkout_lng?: number | null
+          created_at?: string
+          digital_signature_url?: string | null
+          distance_from_patient_m?: number | null
+          duration_minutes?: number | null
+          evidence_urls?: string[] | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          professional_id: string
+          signature_hash?: string | null
+          sos_at?: string | null
+          sos_lat?: number | null
+          sos_lng?: number | null
+          sos_triggered?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          checkin_accuracy_m?: number | null
+          checkin_address?: string | null
+          checkin_at?: string | null
+          checkin_lat?: number | null
+          checkin_lng?: number | null
+          checkout_accuracy_m?: number | null
+          checkout_address?: string | null
+          checkout_at?: string | null
+          checkout_lat?: number | null
+          checkout_lng?: number | null
+          created_at?: string
+          digital_signature_url?: string | null
+          distance_from_patient_m?: number | null
+          duration_minutes?: number | null
+          evidence_urls?: string[] | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          professional_id?: string
+          signature_hash?: string | null
+          sos_at?: string | null
+          sos_lat?: number | null
+          sos_lng?: number | null
+          sos_triggered?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_checkins_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "service_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_contract_acceptances: {
         Row: {
           accepted_at: string
@@ -4584,10 +4882,18 @@ export type Database = {
           booking_id: string
           comment: string | null
           created_at: string
+          flagged_at: string | null
+          flagged_by: string | null
+          flagged_reason: string | null
           id: string
+          moderated_at: string | null
+          moderated_by: string | null
           rated_id: string
           rater_id: string
+          response_at: string | null
+          response_text: string | null
           stars: number
+          status: string
           voice_transcript: string | null
           voice_url: string | null
         }
@@ -4599,10 +4905,18 @@ export type Database = {
           booking_id: string
           comment?: string | null
           created_at?: string
+          flagged_at?: string | null
+          flagged_by?: string | null
+          flagged_reason?: string | null
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
           rated_id: string
           rater_id: string
+          response_at?: string | null
+          response_text?: string | null
           stars: number
+          status?: string
           voice_transcript?: string | null
           voice_url?: string | null
         }
@@ -4614,10 +4928,18 @@ export type Database = {
           booking_id?: string
           comment?: string | null
           created_at?: string
+          flagged_at?: string | null
+          flagged_by?: string | null
+          flagged_reason?: string | null
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
           rated_id?: string
           rater_id?: string
+          response_at?: string | null
+          response_text?: string | null
           stars?: number
+          status?: string
           voice_transcript?: string | null
           voice_url?: string | null
         }
@@ -5760,6 +6082,34 @@ export type Database = {
       }
       accept_slot_proposal: { Args: { p_proposal_id: string }; Returns: string }
       ad_track: { Args: { _id: string; _kind: string }; Returns: undefined }
+      admin_list_users: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          city: string
+          created_at: string
+          email: string
+          email_confirmed: boolean
+          full_name: string
+          has_profile: boolean
+          institution_name: string
+          institution_type: string
+          institution_verified: boolean
+          is_institution_staff: boolean
+          last_sign_in_at: string
+          pending_documents: number
+          phone: string
+          pro_blocked: boolean
+          pro_published: boolean
+          pro_specialty: string
+          pro_verification: string
+          pro_verified: boolean
+          roles: string[]
+          signup_role: string
+          staff_institution: string
+          user_id: string
+        }[]
+      }
       ai_credits_monthly_allowance: {
         Args: { p_user_id: string }
         Returns: number
@@ -5774,6 +6124,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_referral_code: { Args: { p_code: string }; Returns: string }
       apply_to_family_need: {
         Args: { p_message?: string; p_need_ids: string[]; p_rate?: number }
         Returns: string
@@ -5890,6 +6241,10 @@ export type Database = {
       create_contract_for_application: {
         Args: { p_application_id: string; p_pairs: Json }
         Returns: string
+      }
+      create_default_thresholds: {
+        Args: { p_patient_id: string }
+        Returns: undefined
       }
       decline_application: {
         Args: { p_application_id: string; p_note?: string }
@@ -6013,6 +6368,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      flag_rating: {
+        Args: { p_rating_id: string; p_reason?: string }
+        Returns: undefined
+      }
       get_ai_credits_balance: {
         Args: { p_user_id: string }
         Returns: {
@@ -6114,6 +6473,7 @@ export type Database = {
         Args: { _booking_id: string }
         Returns: string
       }
+      get_or_create_referral_code: { Args: never; Returns: string }
       get_platform_counts: {
         Args: never
         Returns: {
@@ -6195,6 +6555,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      health_compliance_status: {
+        Args: {
+          p_today: string
+          r: Database["public"]["Tables"]["health_compliance"]["Row"]
+        }
+        Returns: string
+      }
       hx_accept_service_contract: {
         Args: {
           p_booking_id: string
@@ -6222,6 +6589,10 @@ export type Database = {
       }
       hx_can_access_alert: {
         Args: { p_booking: string; p_patient: string; p_type: string }
+        Returns: boolean
+      }
+      hx_can_rate: {
+        Args: { p_booking: string; p_rated: string }
         Returns: boolean
       }
       hx_can_track_booking: {
@@ -6408,6 +6779,7 @@ export type Database = {
       }
       hx_escrow_tick: { Args: never; Returns: number }
       hx_escrow_window: { Args: never; Returns: string }
+      hx_evidence_booking: { Args: { p_name: string }; Returns: string }
       hx_finish_batch: { Args: { p_batch: string }; Returns: undefined }
       hx_first_shift_exempt: {
         Args: { p_client: string; p_fee: number; p_professional: string }
@@ -6455,6 +6827,10 @@ export type Database = {
       hx_inst_purge_device_obs: { Args: { p_inst: string }; Returns: number }
       hx_inst_purge_failures: { Args: never; Returns: number }
       hx_institution_size: { Args: { p_user: string }; Returns: string }
+      hx_is_care_professional_of: {
+        Args: { p_patient: string }
+        Returns: boolean
+      }
       hx_json_num: { Args: { p: Json; p_key: string }; Returns: number }
       hx_json_texts: { Args: { p: Json }; Returns: string[] }
       hx_kick_dispersion: { Args: never; Returns: boolean }
@@ -6615,6 +6991,10 @@ export type Database = {
       hx_request_reschedule: {
         Args: { p_booking: string; p_new_at: string; p_note?: string }
         Returns: string
+      }
+      hx_retire_offer_notifications: {
+        Args: { p_need: string; p_offer: string; p_reason: string }
+        Returns: number
       }
       hx_reveal_pro_contact: {
         Args: {
@@ -7119,6 +7499,10 @@ export type Database = {
         Args: { p_action: string; p_offer_id: string; p_reason?: string }
         Returns: undefined
       }
+      moderate_rating: {
+        Args: { p_keep: boolean; p_note?: string; p_rating_id: string }
+        Returns: undefined
+      }
       my_active_services: {
         Args: { p_limit?: number }
         Returns: {
@@ -7203,6 +7587,14 @@ export type Database = {
           id: string
           kinds: string[]
           message: string
+        }[]
+      }
+      my_referral_summary: {
+        Args: never
+        Returns: {
+          code: string
+          registered: number
+          rewarded: number
         }[]
       }
       my_slot_proposals: {
@@ -7408,9 +7800,14 @@ export type Database = {
         Args: { p_code: string; p_user: string }
         Returns: Json
       }
+      refresh_health_compliance: { Args: never; Returns: number }
       release_expired_reservations: { Args: never; Returns: undefined }
       respond_circle_invitation: {
         Args: { p_accept: boolean; p_id: string }
+        Returns: undefined
+      }
+      respond_to_rating: {
+        Args: { p_rating_id: string; p_response: string }
         Returns: undefined
       }
       reveal_applicant_contact: {
