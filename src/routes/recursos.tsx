@@ -7,13 +7,17 @@ import { ArrowRight, BookOpen } from "lucide-react";
 import { buildSeo } from "@/lib/seo";
 
 export const Route = createFileRoute("/recursos")({
-  head: () =>
-    buildSeo({
-      title: "Recursos · Guías de Cuidado en Casa",
-      path: "/recursos",
-      description:
-        "Guías prácticas sobre cuidado en casa, cuánto cuesta una enfermera a domicilio, cómo verificar RETHUS, postoperatorio, signos de alarma y más.",
-    }),
+  // En un artículo (/recursos/$slug) el hijo pone su propio canonical; si este layout también
+  // lo pusiera, la página tendría dos canonical y Google podría ignorar el del artículo.
+  head: ({ matches }) =>
+    matches.some((m) => (m.routeId as string) === "/recursos/$slug")
+      ? {}
+      : buildSeo({
+          title: "Recursos · Guías de Cuidado en Casa",
+          path: "/recursos",
+          description:
+            "Guías prácticas sobre cuidado en casa, cuánto cuesta una enfermera a domicilio, cómo verificar RETHUS, postoperatorio, signos de alarma y más.",
+        }),
   component: ResourcesLayout,
 });
 

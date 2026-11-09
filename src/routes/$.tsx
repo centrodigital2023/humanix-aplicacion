@@ -244,6 +244,14 @@ function parseSlug(slug: string): { specialty: string; city: string } | null {
 }
 
 export const Route = createFileRoute("/$")({
+  // Valida la URL en el loader para que una ruta inexistente responda 404 de verdad.
+  // Si solo se lanzara notFound() en el componente, el servidor respondía 200 con «index»
+  // y Google lo marcaba como «Soft 404».
+  loader: ({ params }) => {
+    const parsed = parseSlug(params._splat ?? "");
+    if (!parsed || !ALL_CITIES[parsed.city] || !SPECIALTY_DATA[parsed.specialty]) throw notFound();
+    return null;
+  },
   head: ({ params }: { params: Record<string, string> }) => {
     const slug = params["*"] ?? "";
     const parsed = parseSlug(slug);

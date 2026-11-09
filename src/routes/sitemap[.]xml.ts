@@ -11,6 +11,8 @@ type StaticEntry = {
   changefreq: "daily" | "weekly" | "monthly";
 };
 
+// Solo páginas públicas e indexables. No incluir paneles internos (/talento-humano), páginas con
+// noindex (/cosmos) ni de cuenta (/creditos): Google marca el sitemap con «Excluida por noindex».
 const STATIC_ROUTES: StaticEntry[] = [
   { path: "/", priority: 1.0, changefreq: "daily" },
   { path: "/buscar", priority: 0.95, changefreq: "daily" },
@@ -21,9 +23,6 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: "/verificar", priority: 0.92, changefreq: "daily" },
   // Core platform pages
   { path: "/confianza", priority: 0.88, changefreq: "weekly" },
-  { path: "/talento-humano", priority: 0.85, changefreq: "weekly" },
-  { path: "/cosmos", priority: 0.8, changefreq: "weekly" },
-  { path: "/creditos", priority: 0.82, changefreq: "weekly" },
   { path: "/eps-ips", priority: 0.88, changefreq: "weekly" },
   { path: "/tecnologia", priority: 0.8, changefreq: "weekly" },
   // Specialty landings

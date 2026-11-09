@@ -54,7 +54,9 @@ type SearchParams = {
 export const Route = createFileRoute("/buscar")({
   validateSearch: (search: Record<string, unknown>): SearchParams => {
     const tabRaw = search.tab;
-    const tab = tabRaw === "ofertas" ? "ofertas" : "profesionales";
+    // Sin valor por defecto: si se rellenara "profesionales", /buscar redirigiría a /buscar?tab=profesionales
+    // y Google lo marcaría como «Página con redirección». El componente ya usa "profesionales" si falta.
+    const tab = tabRaw === "ofertas" || tabRaw === "profesionales" ? tabRaw : undefined;
     const modalityRaw = search.modality;
     const modality =
       modalityRaw === "hour" ||

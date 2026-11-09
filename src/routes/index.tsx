@@ -294,7 +294,12 @@ function Home() {
 
   // Mientras sabemos quién es (sesión / elección guardada), un espacio sereno.
   if (!audience && !ready) {
-    return shell(<main id="contenido" className="min-h-[60vh]" aria-busy="true" />);
+    return shell(
+      <main id="contenido" className="min-h-[60vh]" aria-busy="true">
+        {/* El servidor aún no sabe el perfil: al menos un título para buscadores y lectores de pantalla. */}
+        <h1 className="sr-only">Cuidado en casa y talento en salud verificado en Colombia</h1>
+      </main>,
+    );
   }
 
   // Sin perfil: solo la pregunta "¿Quién eres?".

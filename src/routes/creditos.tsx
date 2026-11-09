@@ -11,6 +11,8 @@ export const Route = createFileRoute("/creditos")({
       path: "/creditos",
       description:
         "Consulta el saldo y la vigencia de tus créditos de inteligencia artificial en Humanix.",
+      // Página de cuenta: sin sesión no muestra contenido, así que no se indexa.
+      noindex: true,
     }),
   component: CreditosPage,
 });
