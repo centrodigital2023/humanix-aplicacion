@@ -3,7 +3,7 @@
 // Nunca muestra los otros perfiles: cada persona ve solo su experiencia.
 import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { MessageCircle, Moon, Sun } from "lucide-react";
+import { Download, MessageCircle, Moon, Sun } from "lucide-react";
 import { HomeButton } from "./HomeButton";
 import { Logo } from "./Logo";
 import { useTheme } from "@/hooks/use-theme";
@@ -19,7 +19,8 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
   const { theme, toggleTheme } = useTheme();
   const { user, audience } = useAudience();
   const [scrolled, setScrolled] = useState(false);
-  const isHome = useRouterState({ select: (st) => st.location.pathname === "/" });
+  const pathname = useRouterState({ select: (st) => st.location.pathname });
+  const isHome = pathname === "/";
 
   useEffect(() => {
     if (isStatic) return;
@@ -77,6 +78,16 @@ export function Navbar({ static: isStatic = false }: { static?: boolean }) {
 
         <div className="flex items-center gap-2">
           {!isHome && <HomeButton />}
+          {pathname !== "/descargar" && (
+            <Link
+              to="/descargar"
+              aria-label="Descargar la app"
+              title="Descargar la app"
+              className="inline-flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            >
+              <Download className="h-5 w-5" aria-hidden="true" />
+            </Link>
+          )}
           <button
             type="button"
             onClick={toggleTheme}
